@@ -127,25 +127,11 @@ public class VelocityModeChanger extends IteratingSystem {
     Vector2 currentVelocity = velocity.velocity;
     if (currentVelocity.isZero()) {
       AnimData animData = mAnimData.get(entityId);
-      if (mMonster.has(entityId) && hasMovementIntent(entityId)) {
-        // Box2D can report zero displacement for a tick while an active path
-        // is being resolved (contact correction, room seams, or a dynamic
-        // unit footprint).  Native D2 keeps the walk COF selected during that
-        // intent; switching to NU here makes the body slide while its feet
-        // remain on the idle frame.  Use the configured effective speed so
-        // the visual animation continues until Pathfinder clears the intent.
-        boolean running = mRunning.has(entityId);
-        int baseAnimSpeed = resolveMonsterBaseAnimationSpeed(entityId, running, animData);
-        setMovementMode(entityId,
-            running ? mMovementModes.get(entityId).RN : mMovementModes.get(entityId).WL,
-            currentVelocity);
-        float intendedSpeed = velocity.speed(running) * velocity.movementMultiplier();
-        animData.override = movementAnimationRate(
-            baseAnimSpeed, intendedSpeed, running ? velocity.runSpeed : velocity.walkSpeed);
-      } else {
-        setMovementMode(entityId, mMovementModes.get(entityId).NU, currentVelocity);
-        animData.override = -1;
-      }
+      // A retained path target is a request, not actual movement. Collision
+      // recovery may keep it while the monster is stationary. Restore NU and
+      // its native animation rate until movement resumes (D2Game 0x6FC63680).
+      setMovementMode(entityId, mMovementModes.get(entityId).NU, currentVelocity);
+      animData.override = -1;
     } else if (mMonster.has(entityId)) {
       AnimData animData = mAnimData.get(entityId);
       boolean running = mRunning.has(entityId);
@@ -170,22 +156,6 @@ public class VelocityModeChanger extends IteratingSystem {
             velocity.walkSpeed, velocity.runSpeed, false, velocity.nativePlayerVelocityBonus);
       }
     }
-  }
-
-  private boolean hasMovementIntent(int entityId) {
-    if (!mPathfind.has(entityId)) return false;
-    Pathfind pathfind = mPathfind.get(entityId);
-    return pathfind.path != null
-        || pathfind.targetEntityId != Engine.INVALID_ENTITY
-        || !pathfind.target.isZero(0.0001f)
-        || !pathfind.destination.isZero(0.0001f);
-  }
-
-  static int movementAnimationRate(
-      int baseAnimSpeed, float movementSpeed, float baseVelocity) {
-    if (baseAnimSpeed <= 0) return 1;
-    int scaled = scaleAnimationSpeed(baseAnimSpeed, movementSpeed, baseVelocity);
-    return scaled > 0 ? scaled : baseAnimSpeed;
   }
 
   private void setMovementMode(int entityId, byte mode, Vector2 velocity) {
