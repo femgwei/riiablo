@@ -855,8 +855,8 @@ public final class NecromancerSkills {
 
   /** Native difficulty divisor used by Dim Vision/Terror/Attract/Confuse AI curses. */
   public static int curseDifficultyDivisor(DifficultyLevels.Entry difficulty) {
-    return difficulty != null && difficulty.AiCurseDivisor > 0
-        ? difficulty.AiCurseDivisor : 1;
+    return com.riiablo.engine.server.combat.NativeDifficultyRules.aiCurseDivisor(
+        com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(0, difficulty));
   }
 
   /** Evaluates native curse length and applies the difficulty reduction where required. */

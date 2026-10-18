@@ -4,6 +4,12 @@ package com.riiablo.engine.server.combat;
 public final class NativeDifficultyRules {
   private NativeDifficultyRules() {}
 
+  /** Table-driven reduction for AI curse duration; absent/invalid rows use one. */
+  public static int aiCurseDivisor(NativeCombatContext context) {
+    return context.difficultyRow() == null ? 1
+        : Math.max(1, context.difficultyRow().AiCurseDivisor);
+  }
+
   /** D2MOO SKILLS_AuraCallback_StaticField: Classic has no difficulty floor. */
   public static int staticFieldLifeFloorPercent(NativeCombatContext context, boolean expansion) {
     if (!expansion || context.difficultyRow() == null) return 0;

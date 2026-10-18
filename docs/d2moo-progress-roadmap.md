@@ -5000,6 +5000,12 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- AI 诅咒难度规则迁移：`NecromancerSkills.curseDifficultyDivisor` 委托上下文规则
+  `NativeDifficultyRules.aiCurseDivisor`，统一消费 `DifficultyLevels.AiCurseDivisor`；
+  只影响原先使用此除数的 AI 诅咒，保留缺表、零值和负值回退 1 的行为。
+  增加注入表值/旧接口委托/非法值测试。本轮为局部抽取，按用户要求不运行编译或测试；
+  仅检查 diff，运行验收留待另一台电脑。
+
 - Static Field 首个表驱动消费者迁移：生产 `ServerSkillSystem` 将当前难度表行注入
   `NativeCombatContext`，由 `NativeDifficultyRules` 读取 `StaticFieldMin`；旧技能 helper
   委托相同规则。保持 Classic 无下限、缺表返回 0、负表值归零的现有行为。

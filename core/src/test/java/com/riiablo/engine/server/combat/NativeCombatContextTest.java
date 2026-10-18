@@ -6,6 +6,20 @@ import org.junit.jupiter.api.Test;
 
 class NativeCombatContextTest {
   @Test
+  void aiCurseDivisorUsesTableAndSafelyHandlesMissingOrInvalidValues() {
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    row.AiCurseDivisor = 7;
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(1, row);
+    assertEquals(7, NativeDifficultyRules.aiCurseDivisor(context));
+    assertEquals(7, com.riiablo.engine.server.skill.NecromancerSkills.curseDifficultyDivisor(row));
+    row.AiCurseDivisor = 0;
+    assertEquals(1, NativeDifficultyRules.aiCurseDivisor(context));
+    row.AiCurseDivisor = -2;
+    assertEquals(1, NativeDifficultyRules.aiCurseDivisor(context));
+    assertEquals(1, NativeDifficultyRules.aiCurseDivisor(NativeCombatContext.normal()));
+  }
+  @Test
   void staticFieldConsumesInjectedTableOnlyInExpansion() {
     com.riiablo.codec.excel.DifficultyLevels.Entry row =
         new com.riiablo.codec.excel.DifficultyLevels.Entry();
