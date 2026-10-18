@@ -178,13 +178,13 @@ class DiabPrisonIntegrationTest extends RiiabloTest {
     final ServerEntityFactory factory=new ServerEntityFactory();final EventSystem events=new EventSystem();
     final DynamicUnitCollisionSystem collisions=new DynamicUnitCollisionSystem();final Pathfinder path=new Pathfinder();
     final World world;final int source,target;int ticks;
-    Fixture(String boss) {
+    Fixture(String boss, com.artemis.BaseSystem... extra) {
       Riiablo.anim=com.riiablo.codec.D2.loadFromFile(Riiablo.mpqs.resolve("data/global/eanimdata.d2"));
       world=new World(new WorldConfigurationBuilder().with(events,new ItemManager(),
           new ObjectInteractor(),new WarpInteractor(),new ItemInteractor(),new CofManager(),
           new StateUpdater(),new Actioneer(),new ServerSkillSystem(),new ServerMonsterCorpseSystem(),
           new SequenceHandler(),new AnimStepper(),new AnimDataResolver(),collisions,path,
-          new VelocityAdder(),factory).build().register("map",map).register("factory",factory)
+          new VelocityAdder(),factory).with(extra).build().register("map",map).register("factory",factory)
           .register("townPortalRegistry",new com.riiablo.engine.server.portal.TownPortalRegistry()));
       Riiablo.engine=world;world.setDelta(SimulationClock.STEP_SECONDS);
       target=factory.createPlayer("PrisonTarget",Riiablo.AMAZON,128,128);

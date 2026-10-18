@@ -140,6 +140,64 @@ public final class D2PathStep {
         return new D2Path.Point(x, y);
     }
 
+    /**
+     * Ordinary non-missile branch of Step.cpp's sub_6FDACEC0. Inputs are raw
+     * fp16 velocity vectors, NOT world-units/second. The caller owns path
+     * flags, room recaching, distance accounting and the waypoint cursor.
+     * A collision callback must atomically relocate the footprint, restoring
+     * the old footprint on rejection (COLLISION_TryTeleportUnitCollisionMask).
+     */
+    public static StepResult stepUnit(int x, int y, int velocityX, int velocityY,
+            int targetX, int targetY, UnitStepCollision collision) {
+        if (collision == null) throw new NullPointerException("collision");
+        if (velocityX == 0 && velocityY == 0) {
+            return new StepResult(fitToFp16Center(x), fitToFp16Center(y), false, false, 0);
+        }
+        int dx = targetX - x, dy = targetY - y;
+        long maximum = Math.max(Math.abs((long) velocityX), Math.abs((long) velocityY));
+        boolean reached = Math.abs((long) dx) <= maximum && Math.abs((long) dy) <= maximum;
+        if (reached) { velocityX = dx; velocityY = dy; }
+        int endX = x + velocityX, endY = y + velocityY;
+        int endCellX = fromFp16(endX), endCellY = fromFp16(endY);
+        if (fromFp16(x) == endCellX && fromFp16(y) == endCellY) {
+            return new StepResult(endX, endY, reached, false, 0);
+        }
+        D2Path.Point delta = fitStepDelta(velocityX, velocityY);
+        int steps = 0;
+        while (fromFp16(x) != endCellX || fromFp16(y) != endCellY) {
+            int nextX = x + delta.x, nextY = y + delta.y;
+            int cellX = fromFp16(x), cellY = fromFp16(y);
+            int nextCellX = fromFp16(nextX), nextCellY = fromFp16(nextY);
+            if (cellX != nextCellX || cellY != nextCellY) {
+                if (!collision.tryMove(cellX, cellY, nextCellX, nextCellY)) {
+                    return new StepResult(fitToFp16Center(x), fitToFp16Center(y), false, true, steps);
+                }
+                // Native PATH_MAX_STEP_LEN is ten; the final precision still
+                // comes from the requested endpoint, not the fitted vector.
+                if (++steps >= 10) break;
+            }
+            x = nextX;
+            y = nextY;
+        }
+        return new StepResult(endX, endY, reached, false, steps);
+    }
+
+    @FunctionalInterface
+    public interface UnitStepCollision {
+        boolean tryMove(int oldX, int oldY, int newX, int newY);
+    }
+
+    public static final class StepResult {
+        public final int x, y, crossedCells;
+        public final boolean reachedTarget, blocked;
+
+        private StepResult(int x, int y, boolean reachedTarget, boolean blocked, int crossedCells) {
+            this.x = x; this.y = y;
+            this.reachedTarget = reachedTarget; this.blocked = blocked;
+            this.crossedCells = crossedCells;
+        }
+    }
+
     public static final class DirectionVector {
         public final int x;
         public final int y;

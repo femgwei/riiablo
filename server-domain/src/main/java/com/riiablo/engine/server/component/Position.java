@@ -41,6 +41,16 @@ public class Position extends PooledComponent {
     return (float) (Integer.toUnsignedLong(raw) / 65536.0 - 0.5);
   }
 
+  /** Advance only from explicitly supplied native vectors and waypoint precision. */
+  public D2PathStep.StepResult stepNativeUnit(int velocityX, int velocityY,
+      int targetX, int targetY, D2PathStep.UnitStepCollision collision) {
+    requireNativePrecision();
+    D2PathStep.StepResult result = D2PathStep.stepUnit(nativePrecisionX, nativePrecisionY,
+        velocityX, velocityY, targetX, targetY, collision);
+    setNativePrecision(result.x, result.y);
+    return result;
+  }
+
   /** Legacy writes cannot establish precision; detected divergence is latched. */
   public boolean hasNativePrecision() {
     if (nativePrecisionKnown

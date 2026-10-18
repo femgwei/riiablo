@@ -14,6 +14,55 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationStepperTest extends RiiabloTest {
+  @Test void mummySequenceFollowsBackwardRepeatedAndHeldAuthoritativeFrames() {
+    Riiablo.colors = new com.riiablo.Colors();
+    World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());
+    try {
+      int id = world.create();
+      Animation animation = world.getMapper(AnimationWrapper.class).create(id).animation;
+      animation.setCOF(COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/DI/COF/DIRNHTH.cof")));
+      AnimData data = world.getMapper(AnimData.class).create(id);
+      data.speed = 512;
+      com.riiablo.engine.server.component.Sequence sequence = world.getMapper(
+          com.riiablo.engine.server.component.Sequence.class).create(id);
+      sequence.nativeMummy = true;
+      world.setDelta(SimulationClock.STEP_SECONDS);
+      for (int frame : new int[] {0, 1, 1, 5, 3, 0, 0}) {
+        data.frame = frame << 8;
+        world.process();
+        assertEquals(frame, animation.getFrame());
+      }
+      sequence.nativeMummy = false;
+      world.process();
+      assertEquals(2, animation.getFrame());
+    } finally { world.dispose(); }
+  }
+
+  @Test void activeInfernoKeepsAuthoritativeFramesAfterSequenceComponentRemoval() {
+    Riiablo.colors = new com.riiablo.Colors();
+    World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());
+    try {
+      int id = world.create();
+      Animation animation = world.getMapper(AnimationWrapper.class).create(id).animation;
+      animation.setCOF(COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/DM/COF/DMS1HTH.cof")));
+      AnimData data = world.getMapper(AnimData.class).create(id);
+      data.speed = 256;
+      com.riiablo.engine.server.component.Casting cast = world.getMapper(
+          com.riiablo.engine.server.component.Casting.class).create(id);
+      cast.monInferno = new com.riiablo.engine.server.NativeMonInferno(Riiablo.files.skills.get(319), 6, 1);
+      cast.monInferno.started = true;
+      world.setDelta(SimulationClock.STEP_SECONDS);
+      for (int frame : new int[] {10, 11, 10, 0}) {
+        data.frame = frame << 8;
+        world.process();
+        assertEquals(frame, animation.getFrame());
+      }
+      cast.monInferno = null;
+      world.process();
+      assertEquals(1, animation.getFrame());
+    } finally { world.dispose(); }
+  }
+
   @Test void genericMonsterMonSeqUsesAuthoritativeFramesAndReleasesAtSequenceEnd() {
     Riiablo.colors = new com.riiablo.Colors();
     World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());

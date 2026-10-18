@@ -60,6 +60,7 @@ public class DeathHandler extends PassiveSystem {
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<PlayerCorpse> mPlayerCorpse;
+  protected ComponentMapper<com.riiablo.engine.server.component.MapWrapper> mMapWrapper;
   protected ComponentMapper<Selectable> mSelectable;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<Velocity> mVelocity;
@@ -494,6 +495,11 @@ public class DeathHandler extends PassiveSystem {
     
     // Add Corpse component to mark it as a corpse
     mCorpse.create(corpseEntityId).reset(PlayerCorpse.CORPSE_DURATION, false);
+    com.riiablo.engine.server.component.MapWrapper sourceMap = mMapWrapper.get(playerId);
+    if (sourceMap != null) mMapWrapper.create(corpseEntityId).set(sourceMap.map, sourceMap.zone);
+    com.riiablo.engine.server.DynamicUnitCollisionSystem collision =
+        world.getSystem(com.riiablo.engine.server.DynamicUnitCollisionSystem.class);
+    if (collision != null) collision.reservePlayerCorpse(playerId, corpseEntityId);
     
     log.info("Created corpse entity {} at death location ({}, {}) for player {}", 
         corpseEntityId, deathLocation.x, deathLocation.y, playerId);

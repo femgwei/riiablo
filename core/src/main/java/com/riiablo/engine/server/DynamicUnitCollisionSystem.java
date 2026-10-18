@@ -26,8 +26,10 @@ import com.riiablo.logger.Logger;
 public class DynamicUnitCollisionSystem extends BaseSystem {
   private static final Logger log = LogManager.getLogger(DynamicUnitCollisionSystem.class);
   protected ComponentMapper<Class> mClass;
+  protected ComponentMapper<com.riiablo.engine.server.component.Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<com.riiablo.engine.server.component.Corpse> mCorpse;
+  protected ComponentMapper<com.riiablo.engine.server.component.PlayerCorpse> mPlayerCorpse;
   protected ComponentMapper<com.riiablo.engine.server.component.UnitLifecycle> mLifecycle;
   protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<Position> mPosition;
@@ -47,6 +49,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   private final com.badlogic.gdx.utils.IntSet spawnMissiles = new com.badlogic.gdx.utils.IntSet();
   private final com.badlogic.gdx.utils.IntSet spawnUnits = new com.badlogic.gdx.utils.IntSet();
   private final com.badlogic.gdx.utils.IntSet corpseUnits = new com.badlogic.gdx.utils.IntSet();
+  private final com.badlogic.gdx.utils.IntSet playerCorpses = new com.badlogic.gdx.utils.IntSet();
   private final boolean enabled;
   private final Vector2 candidate = new Vector2();
   private final Vector2 resolved = new Vector2();
@@ -61,6 +64,17 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   @Override
   protected void initialize() {
+    world.getAspectSubscriptionManager().get(Aspect.all(
+        com.riiablo.engine.server.component.PlayerCorpse.class,
+        com.riiablo.engine.server.component.Corpse.class, Position.class))
+        .addSubscriptionListener(new EntitySubscription.SubscriptionListener() {
+          @Override public void inserted(IntBag ids) {
+            for (int i = 0; i < ids.size(); i++) playerCorpses.add(ids.get(i));
+          }
+          @Override public void removed(IntBag ids) {
+            for (int i = 0; i < ids.size(); i++) playerCorpses.remove(ids.get(i));
+          }
+        });
     world.getAspectSubscriptionManager().get(Aspect.all(Monster.class, Position.class))
         .addSubscriptionListener(new EntitySubscription.SubscriptionListener() {
           @Override public void inserted(IntBag ids) {
@@ -305,7 +319,21 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     grid.remove(id);
   }
 
+  /** The retained inventory corpse, not the respawnable player, owns this box. */
+  public void reservePlayerCorpse(int playerId, int corpseId) {
+    grid.remove(playerId);
+    playerCorpses.add(corpseId);
+  }
+
   private boolean hasSpawnCorpse(int sourceId, Map.Zone zone, int x, int y) {
+    for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = playerCorpses.iterator(); it.hasNext;) {
+      int id = it.next();
+      if (id == sourceId || mPlayer.has(id) || !mPlayerCorpse.has(id) || !mCorpse.has(id)
+          || !mPosition.has(id) || !sharesCollisionSpace(zone, id)) continue;
+      Position position = mPosition.get(id);
+      if (Math.abs(Map.round(position.position.x) - x) <= 1
+          && Math.abs(Map.round(position.position.y) - y) <= 1) return true;
+    }
     for (com.badlogic.gdx.utils.IntSet.IntSetIterator it = corpseUnits.iterator(); it.hasNext;) {
       int id = it.next();
       if (id == sourceId || !mMonster.has(id) || !mPosition.has(id)
@@ -444,6 +472,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   }
 
   public boolean hasPresence(int entityId) {
+    if (isPlayer(entityId) && mPlayerCorpse.has(entityId)) return false;
     if (mMonster.has(entityId) && mMonster.get(entityId).nativeCorpseCollision) return false;
     if (mCasting.has(entityId) && mCasting.get(entityId).monsterHatchStarted) return false;
     if (!mClass.has(entityId) || !mVelocity.has(entityId)) return false;

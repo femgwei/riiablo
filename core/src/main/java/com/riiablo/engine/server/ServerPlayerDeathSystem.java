@@ -106,6 +106,11 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
     corpse.equippedItems.putAll(marker.equippedItems);
     corpse.cursorItem = marker.cursorItem;
     mCorpse.create(corpseId).reset(PlayerCorpse.CORPSE_DURATION, false);
+    // Keep the dead body's collision space when the owner respawns in town.
+    MapWrapper sourceMap = mMapWrapper.get(playerId);
+    if (sourceMap != null) mMapWrapper.create(corpseId).set(sourceMap.map, sourceMap.zone);
+    DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
+    if (collision != null) collision.reservePlayerCorpse(playerId, corpseId);
 
     setLife(playerId, 0f);
     if (mUnitStates.has(playerId) && mUnitStates.get(playerId).stateList != null) {
