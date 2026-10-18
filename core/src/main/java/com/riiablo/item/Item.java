@@ -365,7 +365,18 @@ public class Item {
       }
     }
 
-    return pictureId >= 0 ? typeEntry.InvGfx[pictureId] : base.invfile;
+    // Older generated items omitted the VarInvGfx index entirely. For charms
+    // the base invfile is a placeholder, not a charm icon. Resolve a stable
+    // valid variant without changing the saved item or inventing affixes.
+    if (typeEntry != null && typeEntry.VarInvGfx > 0
+        && typeEntry.InvGfx != null && typeEntry.InvGfx.length > 0) {
+      int count = Math.min(typeEntry.VarInvGfx, typeEntry.InvGfx.length);
+      // D2Common ITEMS_GetVarInvGfxString clamps both ends of the index.
+      int index = Math.min(Math.max(0, pictureId), count - 1);
+      String graphic = typeEntry.InvGfx[index];
+      if (graphic != null && !graphic.isEmpty()) return graphic;
+    }
+    return base.invfile;
   }
 
   public String getInvColor() {

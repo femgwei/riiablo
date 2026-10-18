@@ -73,6 +73,15 @@ public class ItemGenerator extends PassiveSystem {
   /** Authoritative seeded item creation used by server drops. */
   public Item generateLootItem(String code, int itemLevel, Quality requested,
       int seed, int difficulty) {
+    // A container/legacy drop can request NORMAL before resolving its item
+    // type. ItemTypes.Magic still supplies the native minimum quality (notably
+    // charms); otherwise we create a white charm with no affix payload.
+    ItemEntry base = ItemUtils.getBase(files(), code);
+    com.riiablo.codec.excel.ItemTypes.Entry type = files().ItemTypes.get(base.type);
+    if (base.quest == 0 && type != null && !type.Normal && type.Magic
+        && (requested == null || requested.ordinal() < Quality.MAGIC.ordinal())) {
+      requested = Quality.MAGIC;
+    }
     NativeRng rng = new NativeRng(seed);
     if (requested == Quality.MAGIC || requested == Quality.RARE) {
       Item item = generateQuestReward(code, itemLevel, requested, seed, rng);
@@ -233,6 +242,7 @@ public class ItemGenerator extends PassiveSystem {
       addMagicAffix(magic, files().MagicSuffix.get(magicSuffix), properties);
     }
     item.attrs.reset();
+    NativeItemGeneration.rollInventoryGraphic(item, rng::nextInt);
     return item;
   }
 
@@ -422,6 +432,9 @@ public class ItemGenerator extends PassiveSystem {
 
   private void applyNativeTraits(Item item, Quality quality, int itemLevel,
       int difficulty, int seed, NativeRng rng) {
+    if (item.pictureId == Item.NO_PICTURE_ID) {
+      NativeItemGeneration.rollInventoryGraphic(item, rng::nextInt);
+    }
     NativeItemGeneration.rollStaffMods(item, itemLevel, 0, files().skills, rng::nextInt);
     NativeItemGeneration.rollEthereal(item, quality, rng::nextInt);
     NativeItemGeneration.rollSockets(item, quality, itemLevel, difficulty,

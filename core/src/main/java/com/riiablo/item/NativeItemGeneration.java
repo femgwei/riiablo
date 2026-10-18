@@ -12,6 +12,15 @@ import com.riiablo.codec.excel.Weapons;
 
 /** Data-only D2Game item initialization and trait rules. */
 public final class NativeItemGeneration {
+  /** D2GAME item initialization rolls the primary type's VarInvGfx index. */
+  public static void rollInventoryGraphic(Item item, RandomSource random) {
+    if (item == null || item.typeEntry == null || random == null) return;
+    int count = Math.min(8, item.typeEntry.VarInvGfx);
+    if (item.typeEntry.InvGfx == null) return;
+    count = Math.min(count, item.typeEntry.InvGfx.length);
+    if (count > 0) item.pictureId = (byte) random.nextInt(count);
+  }
+
   private NativeItemGeneration() {}
 
   public interface RandomSource {

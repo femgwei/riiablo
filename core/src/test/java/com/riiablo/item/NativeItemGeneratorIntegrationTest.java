@@ -18,6 +18,53 @@ import org.junit.jupiter.api.Test;
 /** Real Excel/MPQ half of the native item-generation test gate. */
 class NativeItemGeneratorIntegrationTest extends RiiabloTest {
   @Test
+  void charmDropsCannotBecomeAffixlessWhiteItemsAndPersistTheirGraphic() {
+    ItemGenerator generator = new ItemGenerator();
+    for (String code : new String[] {"cm1", "cm2", "cm3"}) {
+      Set<Integer> pictures = new HashSet<>();
+      for (Quality requested : new Quality[] {null, Quality.LOW, Quality.NORMAL, Quality.HIGH, Quality.MAGIC}) {
+        for (int seed = 1; seed <= 12; seed++) {
+          Item charm = generator.generateLootItem(code, 2, requested, seed, 0);
+          assertEquals(Quality.MAGIC, charm.quality, code);
+          assertFalse(charm.isIdentified());
+          assertTrue(charm.qualityId != 0);
+          assertFalse(charm.attrs.list(0).isEmpty());
+          assertTrue(charm.pictureId >= 0 && charm.pictureId < charm.typeEntry.VarInvGfx);
+          pictures.add((int) charm.pictureId);
+          assertEquals(charm.typeEntry.InvGfx[charm.pictureId], charm.getInvFileName());
+          assertFalse(charm.base.invfile.equals(charm.getInvFileName()));
+          io.netty.buffer.ByteBuf buffer = io.netty.buffer.Unpooled.buffer();
+          try {
+            new ItemWriter().writeItem(charm, com.riiablo.io.ByteOutput.wrap(buffer));
+            Item restored = new ItemReader().readItem(com.riiablo.io.ByteInput.wrap(buffer));
+            assertEquals(charm.quality, restored.quality);
+            assertEquals(charm.qualityId, restored.qualityId);
+            assertEquals(charm.pictureId, restored.pictureId);
+            assertEquals(charm.getInvFileName(), restored.getInvFileName());
+            assertFalse(restored.attrs.list(0).isEmpty());
+          } finally { buffer.release(); }
+        }
+      }
+      assertTrue(pictures.size() > 1, "inventory graphics must actually be rolled");
+    }
+  }
+
+  @Test
+  void oldAffixlessCharmUsesValidIconWithoutSilentlyRerollingItsStats() {
+    Item charm = new ItemGenerator().generate("cm1");
+    charm.id = 1318;
+    charm.ilvl = 2;
+    charm.quality = Quality.NORMAL;
+    charm.pictureId = Item.NO_PICTURE_ID;
+    assertEquals("invch1", charm.getInvFileName());
+    assertEquals(Quality.NORMAL, charm.quality);
+    assertEquals(Item.NO_PICTURE_ID, charm.pictureId);
+    assertEquals(0, charm.attrs.list().numLists());
+    charm.pictureId = 7;
+    assertEquals("invch7", charm.getInvFileName());
+  }
+
+  @Test
   void explicitItemDataSurvivesGenerationRequirementsAndWireRoundTripWithoutGlobals() {
     com.riiablo.Files files = com.riiablo.Riiablo.files;
     ItemGenerator generator = new ItemGenerator(files);
