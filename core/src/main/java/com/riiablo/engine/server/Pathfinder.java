@@ -686,7 +686,16 @@ public class Pathfinder extends IteratingSystem {
     if (target == null || targetEntityId == Engine.INVALID_ENTITY) {
       return false;
     }
+    if (dynamicCollision != null) dynamicCollision.beginPathQuery();
+    try {
+      return findDynamicApproachInCollisionSnapshot(entityId, target, targetEntityId, source);
+    } finally {
+      if (dynamicCollision != null) dynamicCollision.endPathQuery();
+    }
+  }
 
+  private boolean findDynamicApproachInCollisionSnapshot(
+      int entityId, Vector2 target, int targetEntityId, Vector2 source) {
     int size = mSize.get(entityId).size;
     for (int radius = 1; radius <= DYNAMIC_DETOUR_RADIUS; radius++) {
       for (int dy = -radius; dy <= radius; dy++) {
@@ -761,6 +770,18 @@ public class Pathfinder extends IteratingSystem {
   }
 
   private boolean findPath(int src, Vector2 srcPos, Vector2 targetPos,
+      int flags, int size, GraphPath path, int targetEntityId,
+      boolean includeDynamicObstacles) {
+    if (dynamicCollision != null) dynamicCollision.beginPathQuery();
+    try {
+      return findPathInCollisionSnapshot(src, srcPos, targetPos, flags, size, path,
+          targetEntityId, includeDynamicObstacles);
+    } finally {
+      if (dynamicCollision != null) dynamicCollision.endPathQuery();
+    }
+  }
+
+  private boolean findPathInCollisionSnapshot(int src, Vector2 srcPos, Vector2 targetPos,
       int flags, int size, GraphPath path, int targetEntityId,
       boolean includeDynamicObstacles) {
     if (mMonster.has(src) && !isMonsterTargetDestinationAllowed(src, targetPos)) {

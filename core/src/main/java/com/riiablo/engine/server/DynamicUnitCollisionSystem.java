@@ -52,6 +52,18 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   private final IntMap<LegacyFootprint> legacy = new IntMap<>();
   private final com.badlogic.gdx.utils.IntSet registered = new com.badlogic.gdx.utils.IntSet();
   private EntitySubscription positioned;
+  private int pathQueryDepth;
+
+  /** A synchronous search reads one collision snapshot, including its smoothing queries. */
+  public void beginPathQuery() {
+    if (pathQueryDepth == 0) synchronizeNativeAll();
+    pathQueryDepth++;
+  }
+
+  public void endPathQuery() {
+    if (pathQueryDepth <= 0) throw new IllegalStateException("Unbalanced path query");
+    pathQueryDepth--;
+  }
   private static final class LegacyFootprint {
     int x, y, size;
     Map.Zone zone;
@@ -418,7 +430,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       int x, int y, int size) {
     Map.Zone zone = zoneOf(moverId);
     if (enabled && nativeZone(zone)) {
-      synchronizeNativeAll();
+      if (pathQueryDepth == 0) synchronizeNativeAll();
       return shared.check(zone, x, y, testPattern(size), size, dynamicMoveMask(moverId),
           moverId, pathIgnored(moverId, targetId)) == 0;
     }
@@ -437,7 +449,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   public boolean isFreeForPath(Map.Zone destination, int moverId, int targetId,
       int x, int y, int size) {
     if (enabled && nativeZone(destination)) {
-      synchronizeNativeAll();
+      if (pathQueryDepth == 0) synchronizeNativeAll();
       return shared.check(destination, x, y, testPattern(size), size, dynamicMoveMask(moverId),
           moverId, pathIgnored(moverId, targetId)) == 0;
     }

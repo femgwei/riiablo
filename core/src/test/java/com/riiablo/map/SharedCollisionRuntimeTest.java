@@ -17,8 +17,9 @@ class SharedCollisionRuntimeTest {
     final Map map = new Map(1, 0);
     final Map.Zone zone = zone(10, 10, 30, 30, 109);
     final DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
+    final ObjectCollisionUpdater objects = org.mockito.Mockito.spy(new ObjectCollisionUpdater());
     final World world = new World(new WorldConfigurationBuilder()
-        .with(new ObjectCollisionUpdater(), collision).build().register("map", map));
+        .with(objects, collision).build().register("map", map));
 
     final com.badlogic.gdx.Application previousApp = com.badlogic.gdx.Gdx.app;
     Fixture() {
@@ -71,6 +72,33 @@ class SharedCollisionRuntimeTest {
       f.collision.rebuildNow();
       assertEquals(0, f.flags(20, 20));
       assertEquals(0, f.flags(21, 21));
+    }
+  }
+
+  @Test void pathSearchSynchronizesOnceAndNextSearchSeesMovedBlocker() {
+    try (Fixture f = new Fixture()) {
+      int mover = f.unit(true, 15, 15, 1);
+      int blocker = f.unit(false, 25, 25, 2);
+      f.world.process();
+      org.mockito.Mockito.clearInvocations(f.objects);
+      f.collision.beginPathQuery();
+      try {
+        f.collision.beginPathQuery();
+        try {
+          for (int i = 0; i < 2400; i++) {
+            assertFalse(f.collision.isFreeForPath(mover, -1, 25, 25, 1));
+            assertTrue(f.collision.isFreeForPath(f.zone, mover, -1, 30, 30, 1));
+          }
+        } finally { f.collision.endPathQuery(); }
+      } finally { f.collision.endPathQuery(); }
+      org.mockito.Mockito.verify(f.objects, org.mockito.Mockito.times(1)).synchronizeCollision();
+      f.position(blocker, 28, 25);
+      f.collision.beginPathQuery();
+      try {
+        assertTrue(f.collision.isFreeForPath(mover, -1, 25, 25, 1));
+        assertFalse(f.collision.isFreeForPath(mover, -1, 28, 25, 1));
+      } finally { f.collision.endPathQuery(); }
+      org.mockito.Mockito.verify(f.objects, org.mockito.Mockito.times(2)).synchronizeCollision();
     }
   }
 

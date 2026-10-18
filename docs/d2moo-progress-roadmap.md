@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-19 寻路碰撞查询性能
+
+- 用户日志出现寻路独占 244ms 的逻辑尖峰。定位到原生地图的每个候选格查询都会
+  `synchronizeNativeAll`，反复遍历全部单位、对象并构造 footprint。
+- 对照 D2MOO AStar.cpp 和本地 1.10f D2Common.dll 的 0x6FDA6D50，邻居探索直接读取
+  碰撞网格。Java 现改为每次同步寻路开始时同步一次；节点查询、路径平滑和同一轮
+  绕路候选共用可嵌套的查询边界，finally 恢复。独立查询及现有生成/移动/死亡同步保留。
+- 回归覆盖 4800 次格子查询只同步一次、嵌套退出以及下一次查询看见已移动阻挡物。
+  此项消除静态确认的重复扫描，不等同于原版 30 怪动态性能验收；实际 FPS 待跨电脑验证。
+- 验证：SharedCollisionRuntimeTest 15 项全过，DynamicUnitCollisionSystemTest 12 项全过；
+  寻路专项共计本轮 87 项中 86 项通过。唯一失败为 RecoveryTarget 的既有技能冲锋夹具
+  `files().skills` 空指针（发生在查询边界之前），未混入本次修复。真实 1.10f
+  `:desktop:offscreenCamp` 正常完成、Gradle 返回 0，关闭资源检查 PASS。
+
 ## 2026-10-19 A2 随机冠军与头目群
 
 - 补齐 A2 原生地图人口入口缺失的随机冠军、金色头目和仆从分支；共用入口的 A3–A5 同步生效。
