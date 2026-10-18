@@ -170,20 +170,28 @@ abstract class NativeDecisionAI extends AI {
       int bonus) {
     com.badlogic.gdx.math.Vector2 s = mPosition.get(entityId).position;
     com.badlogic.gdx.math.Vector2 t = mPosition.get(targetId).position;
-    int distance = com.riiablo.engine.server.combat.NativeMeleeDistance.between(
-        (int) s.x, (int) s.y, mSize.has(entityId) ? mSize.get(entityId).size : 1,
-        (int) t.x, (int) t.y, mSize.has(targetId) ? mSize.get(targetId).size : 1);
+    // AITACTICS_MoveInRadiusToTarget uses AIUTIL's full source-size
+    // coordinate distance, not D2Common's combat-distance lookup table.
+    // Use the same host cell projection as the live melee predicate. In
+    // negative map coordinates, truncation can report zero approach distance
+    // while the rounded combat cells are still outside attack range.
+    int sx = Math.round(s.x), sy = Math.round(s.y);
+    int tx = Math.round(t.x), ty = Math.round(t.y);
+    int size = mSize.has(entityId) ? mSize.get(entityId).size : 1;
+    int dx = Math.abs(tx - sx), dy = Math.abs(ty - sy);
+    int xSizeDistance = Math.abs(dx - size), ySizeDistance = Math.abs(dy - size);
+    int distance = (Math.min(xSizeDistance, ySizeDistance)
+        + 2 * Math.max(xSizeDistance, ySizeDistance)) / 2;
     int sign = Integer.compare(distance, desiredDistance);
     int diff = Math.min(Math.abs(distance - desiredDistance), maxStep);
-    int dx = Math.abs((int) t.x - (int) s.x), dy = Math.abs((int) t.y - (int) s.y);
     int sum = Math.max(dx + dy, diff), x = 0, y = 0;
     if (sum > 0) {
       x = diff * dx / sum; y = diff * dy / sum;
       while (x + y < diff) { x++; y++; }
     }
     return walkToPoint(new com.badlogic.gdx.math.Vector2(
-        (int) s.x + sign * x * Integer.compare((int) t.x, (int) s.x),
-        (int) s.y + sign * y * Integer.compare((int) t.y, (int) s.y)),
+        sx + sign * x * Integer.compare(tx, sx),
+        sy + sign * y * Integer.compare(ty, sy)),
         bonus, Engine.INVALID_ENTITY);
   }
 

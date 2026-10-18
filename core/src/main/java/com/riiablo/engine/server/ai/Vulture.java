@@ -19,6 +19,9 @@ public class Vulture extends NativeDecisionAI {
   private byte groundIdle, groundWalk, groundRun;
   private boolean savedModes;
   private String landingStatus = "NOT_REQUESTED";
+  private long lastTraceFrame = Long.MIN_VALUE / 2;
+  private static final com.riiablo.logger.Logger log =
+      com.riiablo.logger.LogManager.getLogger(Vulture.class);
 
   public Vulture(int entityId) { super(entityId); }
 
@@ -138,13 +141,28 @@ public class Vulture extends NativeDecisionAI {
     return false;
   }
 
+  /** Read-only once-per-second sample around the reported approach/hover boundary. */
+  private void traceApproach(int targetId, float distance, boolean combat) {
+    if ((!monster.vultureAirborne && distance > 8f) || nativeFrame() - lastTraceFrame < 25) return;
+    lastTraceFrame = nativeFrame();
+    Vector2 source = mPosition.get(entityId).position;
+    Vector2 target = targetId == Engine.INVALID_ENTITY ? null : mPosition.get(targetId).position;
+    log.info("[VULTURE_APPROACH] frame={} entity={} target={} state={} pos={} targetPos={} "
+            + "distance={} combat={} flight={} waypoint=({}, {}) landing={} path={} sequence={} casting={}",
+        nativeFrame(), entityId, targetId, getState(), source, target, distance, combat,
+        aiParam0, aiParam1, aiParam2, landingStatus, mPathfind.has(entityId),
+        mSequence.has(entityId), mCasting.has(entityId));
+  }
+
   @Override protected void thinkWithoutTarget() {
+    traceApproach(Engine.INVALID_ENTITY, Float.MAX_VALUE, false);
     if (aiParam0 > 0) {
       if (!land(Engine.INVALID_ENTITY)) { aiParam0 = 8; delayDecision(12); }
     } else idle(12);
   }
 
   @Override protected void think(int targetId, float distance, boolean combat) {
+    traceApproach(targetId, distance, combat);
     Vector2 s = mPosition.get(entityId).position;
     Vector2 t = mPosition.get(targetId).position;
     int dx = (int) s.x - (int) t.x, dy = (int) s.y - (int) t.y;

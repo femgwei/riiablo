@@ -1,0 +1,19 @@
+tick=-1 BEGIN monster=vulture4 scenario=vulture-flight-cycle seed=1 difficulty=0 level=78 fixture=synthetic_open_arena playerHP=1000000 oracle=NONE
+tick=1 VultureCycle TAKEOFF pos=(145.76562,128.0)
+tick=1 sample subject=1 ai=Vulture state=FLYING pos=(145.76562,128.0) casting=false path=true nativeRooms=false decision={decisions=1 target=0 approach=NOT_REQUESTED frame=1 due=13 componentActionLock=false flight=27 waypoint=(0,0) landing=NOT_REQUESTED}
+tick=1 pathGeometry size=2 goal=(128.0,128.0) terrainBlocked=false dynamicBlocked=false freeGoalNeighbors=8
+tick=26 sample subject=1 ai=Vulture state=FLYING pos=(140.46274,126.17192) casting=false path=true nativeRooms=false decision={decisions=3 target=0 approach=NOT_REQUESTED frame=26 due=37 componentActionLock=false flight=25 waypoint=(94,95) landing=NOT_REQUESTED}
+tick=51 sample subject=1 ai=Vulture state=FLYING pos=(135.59709,122.90749) casting=false path=true nativeRooms=false decision={decisions=5 target=0 approach=NOT_REQUESTED frame=51 due=61 componentActionLock=false flight=23 waypoint=(94,95) landing=NOT_REQUESTED}
+tick=76 sample subject=1 ai=Vulture state=FLYING pos=(130.73145,119.64307) casting=false path=true nativeRooms=false decision={decisions=7 target=0 approach=NOT_REQUESTED frame=76 due=85 componentActionLock=false flight=21 waypoint=(94,95) landing=NOT_REQUESTED}
+tick=101 sample subject=1 ai=Vulture state=FLYING pos=(125.865715,116.37864) casting=false path=true nativeRooms=false decision={decisions=9 target=0 approach=NOT_REQUESTED frame=101 due=109 componentActionLock=false flight=19 waypoint=(94,95) landing=NOT_REQUESTED}
+tick=126 sample subject=1 ai=Vulture state=FLYING pos=(120.99988,113.11421) casting=false path=true nativeRooms=false decision={decisions=11 target=0 approach=NOT_REQUESTED frame=126 due=133 componentActionLock=false flight=17 waypoint=(94,95) landing=NOT_REQUESTED}
+tick=151 sample subject=1 ai=Vulture state=FLYING pos=(116.13404,109.849785) casting=false path=true nativeRooms=false decision={decisions=13 target=0 approach=NOT_REQUESTED frame=151 due=157 componentActionLock=false flight=15 waypoint=(94,95) landing=NOT_REQUESTED}
+tick=176 sample subject=1 ai=Vulture state=FLYING pos=(111.2682,106.58536) casting=false path=true nativeRooms=false decision={decisions=15 target=0 approach=NOT_REQUESTED frame=176 due=181 componentActionLock=false flight=13 waypoint=(94,95) landing=NOT_REQUESTED}
+tick=194 VultureCycle LANDING_S2 pos=(108.209625,103.580734)
+tick=201 sample subject=1 ai=Vulture state=MOVE pos=(108.943344,102.113304) casting=false path=true nativeRooms=false decision={decisions=17 target=0 approach=NOT_REQUESTED frame=201 due=205 componentActionLock=true flight=-1 waypoint=(0,0) landing=S2_STARTED}
+tick=226 sample subject=1 ai=Vulture state=MOVE pos=(106.0,103.0) casting=false path=false nativeRooms=false decision={decisions=19 target=0 approach=NOT_REQUESTED frame=226 due=229 componentActionLock=false flight=0 waypoint=(0,0) landing=S2_STARTED}
+tick=234 SkillDo subject=1 skill=0 target=0 srvdofunc=1
+tick=246 Damage subject=1 victim=0 amount=15.0
+tick=246 SkillDo subject=1 skill=0 target=0 srvdofunc=1
+tick=246 VultureCycle POST_LANDING_DAMAGE pos=(106.0,103.0)
+tick=246 END status=ACTION_OBSERVED ticks=246 special=VULTURE_FLIGHT_LANDING_DAMAGE_OBSERVED
