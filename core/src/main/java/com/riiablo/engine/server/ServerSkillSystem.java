@@ -145,6 +145,21 @@ public class ServerSkillSystem extends PassiveSystem {
     emitLightningEnchantedBolts(source);
   }
 
+  /** Native sub_6FC6CD30: a soft reaction releases immediately unless already GH. */
+  @Subscribe
+  public void onLightningEnchantedSoftHit(com.riiablo.engine.server.event.MonsterSoftHitEvent event) {
+    int source = event.victim;
+    if (!mMonster.has(source) || !mCofReference.has(source)) return;
+    int mode = mCofReference.get(source).mode;
+    if (mode == Engine.Monster.MODE_GH || mode == Engine.Monster.MODE_DT
+        || mode == Engine.Monster.MODE_DD) return;
+    Monster monster = mMonster.get(source);
+    if (!MonsterRank.isUnique(monster.rank)
+        || !com.riiablo.engine.server.monster.MonsterAffix.hasAffix(monster.affixes,
+            com.riiablo.engine.server.monster.MonsterAffix.LIGHTNING_ENCHANTED)) return;
+    resolveLightningEnchantedHit(source);
+  }
+
   @Subscribe
   public void onFireEnchantedDeath(DeathEvent event) {
     if (!mMonster.has(event.victim) || !mPosition.has(event.victim)) return;

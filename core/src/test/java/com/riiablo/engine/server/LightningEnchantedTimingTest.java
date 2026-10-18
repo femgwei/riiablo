@@ -11,6 +11,42 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
 class LightningEnchantedTimingTest {
+  @Test void softHitReleasesImmediatelySharesCooldownAndDoesNotDuplicateGh() {
+    ServerSkillSystem system = spy(new ServerSkillSystem());
+    doNothing().when(system).emitLightningEnchantedBolts(anyInt());
+    EntityFactory factory = mock(EntityFactory.class);
+    World world = new World(new WorldConfigurationBuilder().with(new EventSystem(), system, factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(1, 0)));
+    try {
+      world.setDelta(1f / 25f);
+      int id = world.create();
+      Monster monster = world.getMapper(Monster.class).create(id);
+      monster.rank = MonsterRank.UNIQUE;
+      monster.affixes = MonsterAffix.LIGHTNING_ENCHANTED;
+      CofReference cof = world.getMapper(CofReference.class).create(id);
+      cof.mode = Engine.Monster.MODE_A1;
+      world.getMapper(NativePathIdentity.class).create(id).allocated(world, id);
+      for (int i = 0; i < 10; i++) world.process();
+      system.onLightningEnchantedSoftHit(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(id));
+      verify(system).emitLightningEnchantedBolts(id);
+      system.onLightningEnchantedSoftHit(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(id));
+      verify(system, times(1)).emitLightningEnchantedBolts(id);
+      for (int i = 0; i < 10; i++) world.process();
+      cof.mode = Engine.Monster.MODE_GH;
+      system.onLightningEnchantedSoftHit(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(id));
+      verify(system, times(1)).emitLightningEnchantedBolts(id);
+      cof.mode = Engine.Monster.MODE_A1;
+      system.onLightningEnchantedSoftHit(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(id));
+      verify(system, times(2)).emitLightningEnchantedBolts(id);
+      for (int i = 0; i < 10; i++) world.process();
+      cof.mode = Engine.Monster.MODE_DT;
+      system.onLightningEnchantedSoftHit(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(id));
+      cof.mode = Engine.Monster.MODE_A1;
+      monster.rank = MonsterRank.NORMAL;
+      system.onLightningEnchantedSoftHit(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(id));
+      verify(system, times(2)).emitLightningEnchantedBolts(id);
+    } finally { world.dispose(); }
+  }
   @Test void getHitDefersTwoFramesAndTenFrameIntervalExcludesOrdinaryModes() {
     ServerSkillSystem system = spy(new ServerSkillSystem());
     doNothing().when(system).emitLightningEnchantedBolts(anyInt());

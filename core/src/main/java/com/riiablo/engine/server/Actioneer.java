@@ -4772,6 +4772,7 @@ public class Actioneer extends PassiveSystem {
    * avoids the original sequence interruption bug.</p>
    */
   void queueHitReaction(int victimId, CombatSystem.CombatResult combat) {
+    if (combat != null && combat.blocked && !combat.blockAnimationAllowed) return;
     if (combat != null && combat.isAmazonPassiveDefense()) {
       log.debug("[HIT_REACTION] victim={} skipped=amazon_passive_defense type={}",
           victimId, combat.defenseType);
@@ -4830,6 +4831,7 @@ public class Actioneer extends PassiveSystem {
       if (type == Class.Type.MON) {
         world.getMapper(com.riiablo.engine.server.component.NativeAiState.class)
             .create(victimId).previousMode = 19;
+        events.dispatch(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(victimId));
       }
       // Preserve the existing soft GH behavior for a unit that is actively
       // casting; only a real shield BL is authoritative enough to interrupt it.

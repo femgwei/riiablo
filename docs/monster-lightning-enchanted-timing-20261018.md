@@ -22,8 +22,21 @@ the ten-frame boundary. Fire/cold death tests are rerun for shared queue changes
 
 Limits: native callback index 4 (sub_6FC6CD30) also releases immediately for
 GETHIT/SOFTHIT result paths when the actual mode is not GH (SUnitDmg.cpp:2128-2144).
-That result-flag boundary is not exposed by the current damage event, so this
-batch does not implement that soft-hit branch. Also unverified:
+Follow-up: MonsterSoftHitEvent now connects Actioneer's active-casting reaction
+suppression and MissileCollisionSystem's started-sequence reaction suppression.
+It is dispatched at the reaction decision, not from arbitrary positive damage.
+The LE subscriber skips GH/death/non-unique units and immediately runs the same
+ten-frame release guard. Blocked packets with suppressed block animation are
+excluded before they can fall into this soft reaction path.
+
+Timing regression verifies immediate soft release, interval suppression,
+GH duplicate suppression, death exclusion and non-unique exclusion. This tests
+the event consumer; production near-melee and missile reaction producers still
+need end-to-end scenario coverage.
+
+The adapter's active-action suppression policy is not a complete translation of
+native damage result flags or sub_6FCC1870. No claim of full native SOFTHIT
+classification is made. Also unverified:
 nLastAnimMode flag behavior, exact native EVENT replacement policy, charged-bolt
 path initialization and missile damage/collision remain unverified in this batch.
 Scarab still has its earlier damage-event adapter and needs separate repair.

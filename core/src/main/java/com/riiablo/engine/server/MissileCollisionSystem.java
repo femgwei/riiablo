@@ -2399,6 +2399,7 @@ public class MissileCollisionSystem extends IteratingSystem {
    * D2MOO's dedicated passive-defense animation transition.
    */
   private void queueHitReaction(int victimId, CombatSystem.CombatResult combat) {
+    if (combat != null && combat.blocked && !combat.blockAnimationAllowed) return;
     if (combat != null && combat.isAmazonPassiveDefense()) {
       log.debug("[HIT_REACTION] victim={} skipped=amazon_passive_defense type={} source=missile",
           victimId, combat.defenseType);
@@ -2446,6 +2447,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
     } else if (mSequence.has(victimId) && mSequence.get(victimId).started) {
       // Preserve an in-progress native skill sequence for ordinary soft GH.
+      if (type == Class.Type.MON) {
+        events.dispatch(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(victimId));
+      }
       return;
     }
     byte reaction = type == Class.Type.PLR
