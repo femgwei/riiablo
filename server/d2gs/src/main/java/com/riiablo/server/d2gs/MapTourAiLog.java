@@ -65,10 +65,14 @@ final class MapTourAiLog implements AutoCloseable {
   synchronized void requireNoRuntimeFailures() throws IOException {
     if (fallbacks != 0 || errors != 0) throw new IOException("AI tour has fallbackRecords="
         + fallbacks + " errors=" + errors + "; inspect ai-events.log");
-    for (Counts row : counts.values()) {
-      if (row.nativeCombatant && row.behaviorRecords() > 0) return;
-    }
+    if (hasCombatantBehavior()) return;
     throw new IOException("No native combatant behavior observed; initialization/NPC logs are insufficient");
+  }
+
+  synchronized boolean hasCombatantBehavior() {
+    for (Counts row : counts.values())
+      if (row.nativeCombatant && row.behaviorRecords() > 0) return true;
+    return false;
   }
 
   private final class Capture implements Appender {

@@ -9,6 +9,10 @@ $summary = @(
   '[AI_TOUR] SUMMARY run=COMPLETED coverage=OBSERVED_RUNTIME_ONLY oracle=NONE correctness=NOT_ASSERTED warnings=0 errors=0 fallbackRecords=0',
   '[AI_TOUR] MONSTER monster=zombie1 ai=Zombie initRecords=1 moveRecords=1 decisionRecords=0 skillCastRecords=0 meleeDamageRecords=0 nativeCombatant=true evidence=BEHAVIOR_OBSERVED')
 Assert-AiTourEvidence -Lines $valid -Summary $summary
+$encounter = @($valid) + @(
+  '[MAP_TOUR] AI_OBSERVE_BEGIN level=2 reason=ENCOUNTER entity=42 firstTick=210 requiredTicks=200 playerAttacks=0',
+  '[MAP_TOUR] AI_OBSERVE_END level=2 reason=ENCOUNTER entity=42 firstTick=210 lastTick=410 observedTicks=200 playerAttacks=0 correctness=NOT_ASSERTED')
+Assert-AiTourEvidence -Lines $encounter -Summary $summary
 $cases = @(
   @{ lines = @($valid -replace 'lastTick=210', 'lastTick=209'); summary = $summary },
   @{ lines = @($valid -replace 'observedTicks=200', 'observedTicks=199'); summary = $summary },
@@ -20,7 +24,11 @@ $cases = @(
   @{ lines = $valid; summary = @($summary -replace 'errors=0', 'errors=1') },
   @{ lines = $valid; summary = @($summary -replace 'fallbackRecords=0', 'fallbackRecords=1') },
   @{ lines = $valid; summary = @($summary -replace 'BEHAVIOR_OBSERVED', 'INIT_ONLY_NO_BEHAVIOR_EVIDENCE') },
-  @{ lines = $valid; summary = @($summary -replace 'nativeCombatant=true', 'nativeCombatant=false') })
+  @{ lines = $valid; summary = @($summary -replace 'nativeCombatant=true', 'nativeCombatant=false') },
+  @{ lines = @($encounter -replace 'lastTick=410', 'lastTick=409'); summary = $summary },
+  @{ lines = @($encounter -replace 'observedTicks=200 playerAttacks=0', 'observedTicks=200 playerAttacks=1'); summary = $summary },
+  @{ lines = @($encounter | Where-Object { $_ -notmatch 'AI_OBSERVE_END.*ENCOUNTER' }); summary = $summary },
+  @{ lines = @($encounter -replace 'ENCOUNTER entity=42 firstTick=210 requiredTicks=200', 'ENCOUNTER entity=42 firstTick=210 requiredTicks=100'); summary = $summary })
 foreach ($case in $cases) {
   $rejected = $false
   try { Assert-AiTourEvidence -Lines $case.lines -Summary $case.summary } catch { $rejected = $true }

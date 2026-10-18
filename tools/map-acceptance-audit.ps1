@@ -31,6 +31,24 @@ function Assert-AiTourEvidence {
       throw "Invalid authoritative tick evidence level=$level"
     }
   }
+  # Encounter and blocker windows carry the same contract as level-entry
+  # windows. Extra evidence must never bypass the no-attacks/tick checks.
+  $begins = @($Lines -match '^\[MAP_TOUR\] AI_OBSERVE_BEGIN ')
+  $ends = @($Lines -match '^\[MAP_TOUR\] AI_OBSERVE_END ')
+  if ($begins.Count -ne $ends.Count) { throw 'Unpaired AI observation windows' }
+  foreach ($line in $begins) {
+    if ($line -notmatch '^\[MAP_TOUR\] AI_OBSERVE_BEGIN level=(\d+) reason=(.+) firstTick=(\d+) requiredTicks=(\d+) playerAttacks=0$') {
+      throw 'Invalid AI observation begin record'
+    }
+    $level = $Matches[1]; $reason = [regex]::Escape($Matches[2])
+    $first = [long]$Matches[3]; $ticks = [long]$Matches[4]
+    $matching = @($ends -match "^\[MAP_TOUR\] AI_OBSERVE_END level=$level reason=$reason firstTick=$first lastTick=\d+ observedTicks=\d+ playerAttacks=0 correctness=NOT_ASSERTED$")
+    if ($ticks -ne $required -or $matching.Count -ne 1) { throw 'Invalid AI observation pair' }
+    $null = $matching[0] -match 'lastTick=(\d+) observedTicks=(\d+)'
+    if ([long]$Matches[2] -lt $ticks -or [long]$Matches[1] - $first -ne [long]$Matches[2]) {
+      throw 'Invalid AI observation duration'
+    }
+  }
 }
 
 function Get-MapLogIssues {

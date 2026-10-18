@@ -92,10 +92,12 @@ public class MapTourAiLogTest {
       capture.record(Level.INFO, "test", "[MONSTER_MOVE] entity=1");
       capture.record(Level.INFO, "test", "[MONSTER_AI_INIT] entity=2 monster=zombie1 ai=Zombie nativeCombatant=true");
       capture.record(Level.DEBUG, "test", "[MONSTER_AI_TICK] entity=2 sample=AFTER_AI_UPDATE");
+      assertFalse(capture.hasCombatantBehavior());
       assertTrue(capture.summaryText().contains("thinkSamples=1 movementSamples=0 nativeCombatant=true evidence=AI_TICK_ONLY_NO_ACTION"));
       try { capture.requireNoRuntimeFailures(); fail("no combatant behavior"); }
       catch (IOException expected) { assertTrue(expected.getMessage().contains("No native combatant behavior")); }
       capture.record(Level.INFO, "test", "[MONSTER_MOVE] entity=2");
+      assertTrue(capture.hasCombatantBehavior());
       capture.requireNoRuntimeFailures();
     }
   }

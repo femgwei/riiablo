@@ -5148,6 +5148,9 @@ public final class D2GSHeadlessClient {
           }
           if (config.tourAiObserve && com.riiablo.map.MapTourPlan.townOutdoorDestination(level) < 0) {
             observeTourAi(input, level, "LEVEL_ENTRY", report);
+            if (aiLog != null && !aiLog.hasCombatantBehavior()) {
+              sequence = approachTourAi(input, output, level, sequence, report);
+            }
             // Monsters can move during observation. Never route using the old sample.
             loaded = D2GS.headlessMapTourSample(playerId, next, true);
           }
@@ -5567,6 +5570,56 @@ public final class D2GSHeadlessClient {
         + " casts=" + casts + " activeBaseline=" + activeBaseline
         + " resume=REPLAN noTeleport=true");
     return false;
+  }
+
+  /** Reach a naturally visible hostile via ground inputs, without combat recovery or teleport. */
+  private long approachTourAi(DataInputStream input, OutputStream output, int level,
+      long sequence, java.io.PrintWriter report) throws Exception {
+    java.util.List<Snapshot> candidates = new java.util.ArrayList<>();
+    for (Snapshot candidate : monsters.values()) {
+      Visibility visible = visibility.get(candidate.entityId);
+      if (!candidate.deleted && !candidate.dead && candidate.everActive && candidate.hasPosition
+          && candidate.hasVitals && candidate.life > 0 && isHostileMonster(candidate, false)
+          && visible != null && !visible.deleted && visible.levelId == level) candidates.add(candidate);
+    }
+    candidates.sort(java.util.Comparator.comparingDouble((Snapshot candidate) ->
+        new Vector2(candidate.x, candidate.y).dst2(playerX, playerY))
+        .thenComparingInt(candidate -> candidate.entityId));
+    int attempts = 0;
+    for (Snapshot candidate : candidates) {
+      if (++attempts > 8) break;
+      Vector2 position = D2GS.headlessMapTourSample(playerId, -1, true).position;
+      // A six-subtile stand-off wakes ordinary sight/approach without occupying
+      // the monster's footprint. Planning remains on the production shared grid.
+      Vector2 offset = new Vector2(position).sub(candidate.x, candidate.y);
+      if (offset.isZero()) offset.set(1, 0);
+      offset.setLength(6);
+      Vector2 target = new Vector2(Math.round(candidate.x + offset.x), Math.round(candidate.y + offset.y));
+      java.util.List<Vector2> route = position.dst2(target) <= 4 ? java.util.Collections.emptyList()
+          : D2GS.headlessMapTourRoute(playerId, target);
+      if (position.dst2(target) > 4 && route.isEmpty()) continue;
+      float distance = 0;
+      Vector2 previous = position;
+      for (Vector2 point : route) { distance += previous.dst(point); previous = point; }
+      if (distance > 128) continue;
+      tourLog(report, "AI_APPROACH", "level=" + level + " entity=" + candidate.entityId
+          + " target=" + target + " waypoints=" + route.size() + " playerAttacks=0 movement=PRODUCTION_TCP");
+      try {
+        for (Vector2 point : route) walkTour(input, output, point, level, sequence++, report, "AI_APPROACH");
+      } catch (TourMovementBlock blocked) {
+        MapTourProbe.Sample state = D2GS.headlessMapTourSample(playerId, -1, true);
+        send(output, movementIntentPacket(state.position.x, state.position.y,
+            mapTourMovementSequence++, 0L, 0L));
+        tourLog(report, "AI_APPROACH_BLOCKED", "level=" + level + " entity=" + candidate.entityId
+            + " reason=" + blocked.getMessage() + " playerAttacks=0");
+        continue;
+      }
+      observeTourAi(input, level, "ENCOUNTER entity=" + candidate.entityId, report);
+      if (aiLog.hasCombatantBehavior()) return mapTourMovementSequence;
+    }
+    tourLog(report, "AI_APPROACH_NO_EVIDENCE", "level=" + level
+        + " candidates=" + candidates.size() + " playerAttacks=0 correctness=NOT_ASSERTED");
+    return mapTourMovementSequence;
   }
 
   /** Consume real TCP traffic without sending attacks or changing the simulation. */
