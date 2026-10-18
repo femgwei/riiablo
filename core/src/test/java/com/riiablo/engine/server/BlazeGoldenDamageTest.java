@@ -54,7 +54,10 @@ class BlazeGoldenDamageTest extends RiiabloTest {
     assertEquals(8, skill.EMax);
     assertArrayEquals(new int[] {2, 3, 4, 6, 9}, skill.EMinLev);
     assertArrayEquals(new int[] {2, 3, 4, 6, 9}, skill.EMaxLev);
-    assertTrue(skill.EDmgSymPerCalc == null || skill.EDmgSymPerCalc.isEmpty());
+    assertTrue(skill.EDmgSymPerCalc == null || skill.EDmgSymPerCalc.isEmpty(),
+        "Expected the 1.10f Blaze row without synergy; EDmgSymPerCalc="
+            + skill.EDmgSymPerCalc + "; home=" + Riiablo.home
+            + ". Select the native installation with -Pd2Home=<1.10f directory>.");
     assertEquals(5, row.pSrvDoFunc);
     assertEquals(3, row.pSrvDmgFunc);
     assertEquals(0, row.DamageRate,

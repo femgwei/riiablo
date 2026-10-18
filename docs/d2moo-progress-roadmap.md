@@ -5000,6 +5000,18 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- Blaze 黄金测试数据差异定位：默认 `D2_HOME=G:\BaiduNetdiskDownload\Diablo II`
+  读取到 `EDmgSymPerCalc=skill('Warmth'.blvl)*par8+skill('Fire Wall'.blvl)*par7`，
+  不满足该测试的 1.10f 无协同表前提。改用用户提供的 `Diablo II 1.10F` 目录，
+  上轮同组 75 项定向测试全部通过，未改运行时伤害逻辑或放宽黄金断言。
+  D2MOO `D2Skills.cpp` 的 `SKILLS_GetMinElemDamage` 明确读取表内协同公式，不能
+  为使测试通过而忽略当前版本公式。Blaze 断言新增实际公式、安装路径及选择数据源提示。
+  `:core:test` 新增显式 `-Pd2Home` 参数（优先于环境变量），并将所选路径登记为测试输入，
+  避免切换安装路径却复用此前测试结果。该参数仅用于 core 普通 test 任务，不修改全局环境。
+  PowerShell 复验命令（其他电脑替换为其实际 1.10f 路径）：
+  `.\gradlew.bat :core:test '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --tests '*CombatSystemTest' --tests '*NativeCombatContextTest' --tests '*BlazeGoldenDamageTest' --tests '*FireWallGoldenDamageTest' --tests '*StaticFieldGoldenDamageTest' --tests '*SorceressStaticFieldIntegrationTest' --no-daemon`。
+  使用新增参数再次执行该命令，75 项全部通过，模块边界检查通过；未执行客户端实机验证。
+
 - 固定每帧伤害与静态力场表行传递：Blaze/Fire Wall 的唯一生产结算入口传入当前
   难度表上下文；Static Field 抗性结算复用生命下限规则已有上下文，避免下限与抗性
   使用不同难度来源。两个计算入口均保留整数兼容重载，未改 8.8 精度、MDR/PvP/吸收

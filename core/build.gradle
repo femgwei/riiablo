@@ -126,6 +126,11 @@ dependencies {
 }
 
 test {
+  // Native golden tests must be reproducible against the selected installation,
+  // not whichever version happens to be registered on the developer machine.
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
   useJUnitPlatform {
     // A few legacy decoder tests are interactive resource previews backed by
     // LWJGL. They render until a developer closes the window and therefore
