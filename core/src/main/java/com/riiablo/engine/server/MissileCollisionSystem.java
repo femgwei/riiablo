@@ -2108,7 +2108,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             targetAttrs, mPlayer.has(targetId), missile.elementalAttackerPlayer,
             missile.fixedElementalType, raw, missile.elementalPiercePercent,
             missile.elementalDamageRate, stateList(targetId),
-            combatDifficulty(missile.ownerId, targetId));
+            nativeDifficultyContext(combatDifficulty(missile.ownerId, targetId)));
     StatRef life = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
     if (life == null || life.asFixed() <= 0f) return;
     StatRef maximum = targetAttrs.get(Stat.maxhp, StatRef.obtain());

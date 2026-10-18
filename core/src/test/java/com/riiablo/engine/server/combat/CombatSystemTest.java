@@ -983,6 +983,54 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void fixedRateUsesCustomTableAndSkipsFoldedResistancePenalty() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(2, row);
+    for (int penalty : new int[] {-37, 12}) {
+      row.ResistPenalty = penalty;
+      int expected = 256 * (100 - penalty);
+      assertEquals(expected, combat.calculateFixedElementalRateDamage(
+          defender, true, false, CombatSystem.DAMAGE_FIRE, 25600, 0, 41, null, context).damageFixed);
+      assertEquals(25600, combat.calculateFixedElementalRateDamage(
+          defender, false, false, CombatSystem.DAMAGE_FIRE, 25600, 0, 41, null, context).damageFixed);
+      assertEquals(25600, combat.calculateFixedElementalRateDamage(
+          defender, true, false, CombatSystem.DAMAGE_MAGIC, 25600, 0, 41, null, context).damageFixed);
+      defender.base().put(Stat.fireresist, penalty);
+      defender.setDifficultyResistanceIncluded(true);
+      defender.reset();
+      assertEquals(expected, combat.calculateFixedElementalRateDamage(
+          defender, true, false, CombatSystem.DAMAGE_FIRE, 25600, 0, 41, null, context).damageFixed);
+      defender.base().put(Stat.fireresist, 0);
+      defender.setDifficultyResistanceIncluded(false);
+      defender.reset();
+    }
+    assertEquals(51200, combat.calculateFixedElementalRateDamage(
+        defender, true, false, CombatSystem.DAMAGE_FIRE, 25600, 0, 41, null, 2).damageFixed);
+  }
+
+  @Test
+  public void staticFieldUsesSameTableForResistanceWithoutAmplifyingNegativeResistance() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(2, row);
+    row.ResistPenalty = 12;
+    assertEquals(12056, combat.calculateStaticFieldDamage(
+        defender, true, false, CombatSystem.DAMAGE_LIGHTNING, 13700, null, context).damageFixed);
+    row.ResistPenalty = -37;
+    assertEquals(13700, combat.calculateStaticFieldDamage(
+        defender, true, false, CombatSystem.DAMAGE_LIGHTNING, 13700, null, context).damageFixed);
+    defender.base().put(Stat.lightresist, -37);
+    defender.setDifficultyResistanceIncluded(true);
+    defender.reset();
+    row.ResistPenalty = 12;
+    assertEquals(13700, combat.calculateStaticFieldDamage(
+        defender, true, false, CombatSystem.DAMAGE_LIGHTNING, 13700, null, context).damageFixed);
+  }
+
+  @Test
   public void fixedFireRateDoesNotBreakMonsterImmunityWithPierce() {
     Attributes defender = attrs(100, 1, 0, 1, 1, 1);
     defender.base().put(Stat.fireresist, 100);

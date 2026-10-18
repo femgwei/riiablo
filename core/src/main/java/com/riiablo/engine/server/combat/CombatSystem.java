@@ -884,6 +884,15 @@ public class CombatSystem {
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamageFixed, int piercePercent, int damageRate,
       StateList defenderStates, int difficulty) {
+    return calculateFixedElementalRateDamage(defender, defenderPlayer, attackerPlayer,
+        damageType, rawDamageFixed, piercePercent, damageRate, defenderStates,
+        NativeCombatContext.ofDifficulty(difficulty));
+  }
+
+  public FixedElementalDamageResult calculateFixedElementalRateDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int damageType, int rawDamageFixed, int piercePercent, int damageRate,
+      StateList defenderStates, NativeCombatContext context) {
     FixedElementalDamageResult result = new FixedElementalDamageResult();
     if (defender == null || damageType <= DAMAGE_PHYSICAL
         || damageType >= DAMAGE_TYPE_COUNT || rawDamageFixed <= 0) return result;
@@ -905,7 +914,7 @@ public class CombatSystem {
           stateResistanceTypes[damageType]);
     }
     if (defenderPlayer && damageType != DAMAGE_MAGIC) {
-      resistance += NativeDifficultyRules.remainingResistancePenalty(defender, difficulty);
+      resistance += NativeDifficultyRules.remainingResistancePenalty(defender, context);
     }
     if (!defenderPlayer && resistance >= 100) {
       result.immune = true;
@@ -957,6 +966,13 @@ public class CombatSystem {
   public StaticFieldDamageResult calculateStaticFieldDamage(
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamageFixed, StateList defenderStates, int difficulty) {
+    return calculateStaticFieldDamage(defender, defenderPlayer, attackerPlayer,
+        damageType, rawDamageFixed, defenderStates, NativeCombatContext.ofDifficulty(difficulty));
+  }
+
+  public StaticFieldDamageResult calculateStaticFieldDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int damageType, int rawDamageFixed, StateList defenderStates, NativeCombatContext context) {
     StaticFieldDamageResult result = new StaticFieldDamageResult();
     if (defender == null || damageType <= DAMAGE_PHYSICAL
         || damageType >= DAMAGE_TYPE_COUNT || rawDamageFixed <= 0) return result;
@@ -978,7 +994,7 @@ public class CombatSystem {
           stateResistanceTypes[damageType]);
     }
     if (defenderPlayer && damageType != DAMAGE_MAGIC) {
-      resistance += NativeDifficultyRules.remainingResistancePenalty(defender, difficulty);
+      resistance += NativeDifficultyRules.remainingResistancePenalty(defender, context);
     }
     if (!defenderPlayer && resistance >= 100) {
       result.immune = true;
