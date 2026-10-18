@@ -157,3 +157,39 @@ architectureRegression 3项通过，服务端与桌面端编译通过。
 其中音效3项仅验证距离/区域衰减，不能据此声称MonSeq SOUND已全链播放验收。
 未运行整个core测试集，未完成全部怪物COF/DCC资源与方向、音效生产链核对，
 也未进行自然地图、GL目视或跨电脑验收。第二阶段的剩余事项继续保留。
+
+## 第四阶段：固定基线、自然地图观察与 GL 采集（2026-10-19）
+
+本轮完成验收入口与本机取证，第四阶段仍未整体验收完成。
+
+- 新增 tools/run-ai-dependency-acceptance.ps1，从指定已提交版本导出独立源码快照，
+  记录源码包与 MPQ 的 SHA256、机器/JDK、TCP 和 GL 各自种子。即使自然地图失败，
+  仍尝试 GL 并保存诊断；任一阶段失败时最终清单记 FAILED，成功采集也仅为 PARTIAL。
+- 支持另一电脑使用 CompareWith 比较输入指纹；同主机、资源或参数不符不会被认作
+  跨电脑验证。输入一致仍需复核运行结果，不能自动宣布跨电脑通过。
+- offscreenCamp 增加可选854×480截图，默认1×1兼容。记录GL驱动、实际地图种子，
+  完整截图等待角色有GPU图层、资源队列清空并连续三帧稳定，避免只截到地形就退出。
+
+真实结果（不能合并为总PASS）：
+
+1. 提交60c73f6d9的完整脚本运行：TCP seed=1、25Hz、地图1/2，4次局部步行、
+   1次真实接缝过渡、无detached jump，200 tick入口观察完成。巡图报告visited=2，
+   但AI严格检查失败：fallen1仅有24条thinkSamples，没有移动/施法/攻击记录，
+   因No native combatant behavior observed退出1。warnings/errors/fallbackRecords均0，
+   不表示怪物行为已通过。证据 build/ai-phase4-acceptance-60c73f6d9/natural/。
+2. 同一脚本的初始GL截图虽生成854×480图片，但第6帧角色尚不可见。未把该图作为
+   视觉通过；据此补齐截图就绪门槛。
+3. 最终OffscreenCampScreen在上述源码快照中单独复验：第89帧、稳定3帧、角色9个
+   可绘制图层、地图种子286247501（0x110FCA4D），Intel HD Graphics 630 / OpenGL4.6。
+   人工查看截图已见角色、自然怪物与HUD；这是单一时刻的本机场景，不是全部动作或
+   与原版对照验收。最终截图 build/ai-phase4-gl-ready-final/rogue-encampment-smoke.png，
+   清单同目录 rogue-encampment-manifest.txt，日志 build/ai-phase4-gl-ready-final.log。
+   最终GL运行BUILD SUCCESSFUL，核心/服务端/桌面编译完成；快照中的截图源码与提交
+   文件SHA256一致：75658A5C5C8DF63694D9FDF9015E127A158AF75592BC3BD90EF4365BA69BC14D。
+4. 最终脚本语法检查通过；既有AI审计有效样本及11项拒绝反例、地图/城镇往返/全部
+   原生接缝证据审计脚本均通过。完整入口运行基线为60c73f6d9，最终就绪门槛另外
+   做了真实GL复验；没有声称最终脚本所有路径已端到端重跑。
+
+复跑说明：docs/ai-dependency-acceptance.md。没有第二台电脑的运行证据，没有完整自然
+地图出生→接敌→门/通道/接缝→全部动作→死亡/复活覆盖，也未做规模性能或原版逐帧
+对照。第二、三阶段未完成项继续保留，不能因为已进行四次处理就宣称四项全部关闭。

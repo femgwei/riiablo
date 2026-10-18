@@ -28,7 +28,7 @@ $mpqs = @(Get-ChildItem -LiteralPath $homePath -File -Filter '*.mpq' |
 if ($mpqs.Count -eq 0) { throw 'No MPQ files found' }
 $manifest = [ordered]@{
   contract = 1; revision = "$commit"; sourceSha256 = (Get-FileHash $archive).Hash
-  profile = '1.10f'; seed = $Seed; rate = 25; levels = '1,2'; observeMillis = 8000
+  profile = '1.10f'; seed = $Seed; glSeed = 0x110FCA4D; rate = 25; levels = '1,2'; observeMillis = 8000
   machine = [Environment]::MachineName; os = [Environment]::OSVersion.ToString()
   java = ((& java -version 2>&1 | ForEach-Object { "$_" }) -join "`n")
   resources = $mpqs; startedUtc = [DateTime]::UtcNow.ToString('o')
@@ -46,6 +46,7 @@ if ($CompareWith) {
       -and $other.sourceSha256 -eq $manifest.sourceSha256 -and $other.profile -eq $manifest.profile `
       -and $other.seed -eq $Seed -and $other.rate -eq 25 -and $other.levels -eq '1,2' `
       -and $other.observeMillis -eq 8000
+  $same = $same -and $other.glSeed -eq $manifest.glSeed
   $expected = @($other.resources | ForEach-Object { "$($_.name):$($_.bytes):$($_.sha256)" })
   $actual = @($mpqs | ForEach-Object { "$($_.name):$($_.bytes):$($_.sha256)" })
   $same = $same -and (($expected -join '|') -eq ($actual -join '|'))
@@ -86,6 +87,7 @@ try {
     if ($exitCode -ne 0) { throw "Gradle exited $exitCode" }
     $report = Get-Content (Join-Path $gl 'rogue-encampment-manifest.txt')
     if ('window=854x480' -notin $report -or 'result=PASS' -notin $report `
+        -or -not ($report -match '^playerDrawableLayers=[1-9]\d*$') `
         -or -not (Test-Path (Join-Path $gl 'rogue-encampment-smoke.png'))) {
       throw 'Missing production-size GL evidence'
     }
@@ -94,11 +96,14 @@ try {
 } finally {
   Pop-Location
   $manifest.completedUtc = [DateTime]::UtcNow.ToString('o')
+  if ($manifest.natural -like 'FAILED:*' -or $manifest.gl -like 'FAILED:*') {
+    $manifest.result = 'FAILED'
+  }
   Save-Manifest
 }
 Write-Output "Evidence: $manifestPath"
 Write-Output "Natural: $($manifest.natural); GL: $($manifest.gl)"
-Write-Output 'Overall PARTIAL: no original-game oracle, complete route/skill coverage or cross-computer visual acceptance.'
+Write-Output "Overall $($manifest.result): no original-game oracle, complete route/skill coverage or cross-computer visual acceptance."
 if ($manifest.natural -like 'FAILED:*' -or $manifest.gl -like 'FAILED:*') {
   throw 'Acceptance diagnostics found failures; evidence was preserved'
 }

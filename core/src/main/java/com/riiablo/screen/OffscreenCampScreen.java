@@ -48,6 +48,8 @@ public final class OffscreenCampScreen extends GameScreen {
   private final boolean validateObjectAudit;
   private String objectAuditSummary = "";
   private int renderedFrames;
+  private int settledCaptureFrames;
+  private int playerDrawableLayers;
   private boolean completed;
   private Runnable completion = () -> Gdx.app.exit();
 
@@ -201,6 +203,19 @@ public final class OffscreenCampScreen extends GameScreen {
     }
     int minimumFrames = validateWarpCollision ? 12 : (targetApplied ? 6 : 3);
     if (renderedFrames < minimumFrames) return;
+    // A full-size capture is visual evidence: terrain alone is insufficient.
+    // The initial fixed frame budget can expire before the player's DCCs bind.
+    if (Gdx.graphics.getBackBufferWidth() > 1) {
+      com.riiablo.engine.client.component.AnimationWrapper wrapper = engine.getMapper(
+          com.riiablo.engine.client.component.AnimationWrapper.class).get(player);
+      playerDrawableLayers = wrapper == null || wrapper.animation == null ? 0
+          : wrapper.animation.getDrawableLayerCount();
+      boolean ready = playerDrawableLayers > 0 && Riiablo.assets.getQueuedAssets() == 0
+          && !engine.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class).has(player)
+          && !engine.getMapper(com.riiablo.engine.client.component.CofLoadingComponents.class).has(player);
+      settledCaptureFrames = ready ? settledCaptureFrames + 1 : 0;
+      if (settledCaptureFrames < 3) return;
+    }
     if (validateWarpGraph) validateAct1WarpGraph();
     if (validateContinuity) validateAct1Continuity();
     if (validateWarpCollision && dynamicCollisionFailures > 0) {
@@ -231,6 +246,9 @@ public final class OffscreenCampScreen extends GameScreen {
         + "glRenderer=" + Gdx.gl.glGetString(GL20.GL_RENDERER) + "\n"
         + "glVersion=" + Gdx.gl.glGetString(GL20.GL_VERSION) + "\n"
         + "renderedFrames=" + renderedFrames + "\n"
+        + "settledCaptureFrames=" + settledCaptureFrames + "\n"
+        + "playerDrawableLayers=" + playerDrawableLayers + "\n"
+        + "mapSeed=" + map.seed() + "\n"
         + "act=" + (map.getAct() + 1) + "\n"
         + "targetLevel=" + targetLevelId + "\n"
         + "targetNativeCells=" + targetNativeCells + "\n"
