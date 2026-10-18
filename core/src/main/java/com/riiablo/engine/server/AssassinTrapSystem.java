@@ -537,14 +537,8 @@ public class AssassinTrapSystem extends IteratingSystem {
 
   /** Restores elemental absorb life for corpse-explosion targets. */
   private static float applyAbsorb(Attributes target, int absorbedLife) {
-    if (target == null || absorbedLife <= 0) return 0f;
-    StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
-    StatRef max = target.get(Stat.maxhp, StatRef.obtain());
-    if (hp == null || max == null) return 0f;
-    float before = hp.asFixed();
-    float healed = Math.max(0f, Math.min((float) absorbedLife, max.asFixed() - before));
-    if (healed > 0f) hp.add(healed);
-    return healed;
+    return com.riiablo.engine.server.combat.CombatResourceWriter.restore(
+        target, Stat.hitpoints, Stat.maxhp, absorbedLife);
   }
 
   private void spawnCorpseExplosionVisual(int sentryId, Vector2 origin, Skills.Entry skill) {

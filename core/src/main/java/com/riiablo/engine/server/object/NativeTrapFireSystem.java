@@ -152,12 +152,7 @@ public class NativeTrapFireSystem extends BaseSystem {
   }
 
   private static float applyAbsorb(Attributes attrs, int absorbedLife) {
-    if (attrs == null || absorbedLife <= 0) return 0f;
-    StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
-    StatRef max = attrs.get(Stat.maxhp, StatRef.obtain());
-    if (hp == null || max == null) return 0f;
-    float healed = Math.max(0f, Math.min((float) absorbedLife, max.asFixed() - hp.asFixed()));
-    if (healed > 0f) hp.add(healed);
-    return healed;
+    return com.riiablo.engine.server.combat.CombatResourceWriter.restore(
+        attrs, Stat.hitpoints, Stat.maxhp, absorbedLife);
   }
 }

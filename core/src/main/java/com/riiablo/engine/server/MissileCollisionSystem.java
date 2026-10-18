@@ -2579,7 +2579,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     StatRef maximum = attrs.get(Stat.maxhp, StatRef.obtain());
     float maxLife = maximum != null ? Math.max(0f, maximum.asFixed()) : Float.MAX_VALUE;
     float requested = combat.absorbedLifeHp() * Math.max(0.01f, missile.damageMultiplier);
-    float healed = Math.max(0f, Math.min(requested, maxLife - hitpoints.asFixed()));
+    float healed = com.riiablo.engine.server.combat.NativeResourceMath.cappedRestore(
+        hitpoints.asFixed(), maxLife, requested);
     if (healed <= 0f) return;
     hitpoints.add(healed);
     log.info("[MISSILE_ABSORB] missileId={} target={} absorbed={} healed={} hp={}/{}",

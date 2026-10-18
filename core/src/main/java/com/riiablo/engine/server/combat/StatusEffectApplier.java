@@ -34,6 +34,9 @@ public class StatusEffectApplier {
   }
 
   /** Runtime sink supplied by the ECS StateUpdater. */
+  // Application boundary: duration/rate arithmetic belongs to server-domain;
+  // target eligibility, replacement, expiry and ECS mutation remain in this
+  // world's sink. Callers retain their distinct cold/freeze/poison packet gates.
   public interface StateSink {
     void applyState(int targetEntityId, int stateId, int duration, int level,
         int sourceEntityId, int damagePerFrame, int damageType);

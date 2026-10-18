@@ -5578,10 +5578,11 @@ public class Actioneer extends PassiveSystem {
     StatRef maximum = attrs.get(maximumStat, StatRef.obtain());
     if (current == null || maximum == null) return 0f;
     float before = current.asFixed();
-    float after = Math.min(maximum.asFixed(), before + amount);
-    if (after <= before) return 0f;
-    current.add(after - before);
-    return after - before;
+    float restored = com.riiablo.engine.server.combat.NativeResourceMath.restoreAfterAddition(
+        before, maximum.asFixed(), amount);
+    if (restored <= 0f) return 0f;
+    current.add(restored);
+    return restored;
   }
 
   /** Applies elemental absorb reported by CombatSystem to the target's life.
