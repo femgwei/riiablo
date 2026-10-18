@@ -111,6 +111,7 @@ public class ServerSkillSystem extends PassiveSystem {
 
   private static final class FireDeathEvent {
     int source;
+    boolean cold;
     double due;
     com.riiablo.engine.server.component.NativePathIdentity.Token identity;
   }
@@ -132,6 +133,43 @@ public class ServerSkillSystem extends PassiveSystem {
     pending.identity = identity.token();
     pending.due = nativeElapsedFrames + 4;
     fireDeaths.add(pending);
+  }
+
+  @Subscribe
+  public void onColdEnchantedDeath(DeathEvent event) {
+    if (!mMonster.has(event.victim) || !mPosition.has(event.victim)) return;
+    Monster monster = mMonster.get(event.victim);
+    if (monster.coldDeathNovaScheduled || !MonsterRank.isUnique(monster.rank)
+        || !com.riiablo.engine.server.monster.MonsterAffix.hasAffix(monster.affixes,
+            com.riiablo.engine.server.monster.MonsterAffix.COLD_ENCHANTED)) return;
+    com.riiablo.engine.server.component.NativePathIdentity identity = world.getMapper(
+        com.riiablo.engine.server.component.NativePathIdentity.class).get(event.victim);
+    if (identity == null || identity.token() == null) return;
+    monster.coldDeathNovaScheduled = true;
+    FireDeathEvent pending = new FireDeathEvent();
+    pending.source = event.victim;
+    pending.identity = identity.token();
+    pending.due = nativeElapsedFrames + 4;
+    pending.cold = true;
+    fireDeaths.add(pending);
+  }
+
+  /** MonUMod 18 uses missile-table damage, not the Sorceress Frost Nova skill. */
+  protected void resolveColdEnchantedDeath(int source) {
+    if (!mMonster.has(source) || !mPosition.has(source) || !mAttributesWrapper.has(source)) return;
+    Missiles.Entry row = files().Missiles.get("coldunique");
+    Missiles.Entry frost = files().Missiles.get("frostnova");
+    if (row == null || frost == null) return;
+    int level = Math.max(1, (int) mAttributesWrapper.get(source).attrs.getValue(Stat.level, 1) / 2);
+    Vector2 origin = new Vector2(mPosition.get(source).position);
+    IntSet shared = new IntSet();
+    for (int i = 0; i < 64; i++) {
+      Vector2 direction = new Vector2(NATIVE_NOVA_X[i], NATIVE_NOVA_Y[i]).nor();
+      int id = createMissile(row, direction, origin, source, shared, level);
+      if (id >= 0 && mVelocity.has(id)) {
+        mVelocity.get(id).velocity.set(direction).setLength(frost.Vel);
+      }
+    }
   }
 
   static int fireDeathMaximum(int baseHp, int percentage) {
@@ -381,7 +419,10 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     // Death explosions may enqueue more deaths; resolve outside the queue iterator.
     for (FireDeathEvent pending : ready) {
-      if (pending.identity.isCurrent(world, pending.source)) resolveFireEnchantedDeath(pending.source);
+      if (pending.identity.isCurrent(world, pending.source)) {
+        if (pending.cold) resolveColdEnchantedDeath(pending.source);
+        else resolveFireEnchantedDeath(pending.source);
+      }
     }
     int elapsed = Math.max(1, Math.round(world.delta * 25f));
     IntIntMap.Entries entries = poisonJavelinDelayFrames.entries();

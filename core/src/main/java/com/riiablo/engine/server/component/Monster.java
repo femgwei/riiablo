@@ -22,6 +22,7 @@ public class Monster extends Component {
   /** Simulation time until the next struck charged-bolt burst. */
   public float chargedBoltsCooldown;
   public boolean fireDeathExplosionScheduled;
+  public boolean coldDeathNovaScheduled;
   public int uniqueId;
 
   /**
@@ -104,6 +105,7 @@ public class Monster extends Component {
     uniqueId = -1;
     chargedBoltsCooldown = 0f;
     fireDeathExplosionScheduled = false;
+    coldDeathNovaScheduled = false;
     baalWaveIndex = -1;
     baalWaveSuperUniqueId = -1;
     baalWaveRoomId = -1;
