@@ -8,7 +8,8 @@ public final class NativeObjectOperateTable {
   /** Ordinary doors alter shared collision and must be operated by the server. */
   public static boolean isNetworkDoor(com.riiablo.codec.excel.Objects.Entry base) {
     Lifecycle lifecycle = resolve(base, null);
-    return lifecycle == Lifecycle.TOGGLE_DOOR || lifecycle == Lifecycle.ONE_WAY_DOOR;
+    return lifecycle == Lifecycle.TOGGLE_DOOR || lifecycle == Lifecycle.ONE_WAY_DOOR
+        || lifecycle == Lifecycle.TRAP_DOOR;
   }
 
   /** Shared one-shot state, loot and trap effects must be committed on D2GS. */
@@ -29,7 +30,8 @@ public final class NativeObjectOperateTable {
     STAFF_ORIFICE,
     TORCH,
     TOGGLE_DOOR,
-    ONE_WAY_DOOR
+    ONE_WAY_DOOR,
+    TRAP_DOOR
   }
 
   private NativeObjectOperateTable() {}
@@ -87,6 +89,8 @@ public final class NativeObjectOperateTable {
       // Secret doors clear targetability and never return to NU.
       case 18:
         return Lifecycle.ONE_WAY_DOOR;
+      case 16:
+        return Lifecycle.TRAP_DOOR;
       case 22:
         return Lifecycle.WELL;
       case 8: case 29: case 61: // ObjMode.cpp: Harrogath main gate toggles NU/OP/ON.

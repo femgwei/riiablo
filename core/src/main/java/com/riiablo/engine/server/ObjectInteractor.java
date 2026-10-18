@@ -210,6 +210,21 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       return InteractionResult.HANDLED_UNCHANGED;
     }
 
+    if (lifecycle == Lifecycle.TRAP_DOOR) {
+      // ObjMode.cpp OBJECTS_OperateFunction16_TrapDoor: NU -> ON,
+      // then use the room's UNIT_TILE on subsequent operations.
+      if (cof.mode == Engine.Object.MODE_NU) {
+        if (state != null) {
+          state.persistOpened(true);
+          state.persistMode(Engine.Object.MODE_ON);
+        }
+        cofs.setMode(entityId, Engine.Object.MODE_ON);
+        return InteractionResult.HANDLED_CHANGED;
+      }
+      if (cof.mode == Engine.Object.MODE_ON) interactTrapDoorWarp(src, entityId);
+      return InteractionResult.HANDLED_UNCHANGED;
+    }
+
     if (lifecycle == Lifecycle.QUEST_OBJECT) {
       NativeQuestObjectResolver.Type type = NativeQuestObjectResolver.resolve(base);
       if (state != null && state.activated && type.oneShot) {
@@ -445,6 +460,37 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       if (x >= minX && x <= maxX && y >= minY && y <= maxY) return true;
     }
     return false;
+  }
+
+  /** Resolve OperateFunction16's UNIT_TILE within the object's native room. */
+  private void interactTrapDoorWarp(int playerId, int objectId) {
+    if (warpInteractor == null || warps == null || !mPosition.has(objectId)) return;
+    MapWrapper wrapper = mMapWrapper.get(objectId);
+    if (wrapper == null || wrapper.zone == null) return;
+    Map.Zone zone = wrapper.zone;
+    com.badlogic.gdx.math.Vector2 position = mPosition.get(objectId).position;
+    Map.RoomEx room = zone.findRoomEx(position.x, position.y);
+    int nearest = Engine.INVALID_ENTITY;
+    float nearestDistance = Float.POSITIVE_INFINITY;
+    IntBag entities = warps.getEntities();
+    for (int i = 0; i < entities.size(); i++) {
+      int candidate = entities.getData()[i];
+      MapWrapper candidateWrapper = mMapWrapper.get(candidate);
+      Warp warp = mWarp.get(candidate);
+      if (candidateWrapper == null || candidateWrapper.zone != zone
+          || warp == null || QuestWarp.isQuestWarp(warp.index)) continue;
+      com.badlogic.gdx.math.Vector2 target = mPosition.get(candidate).position;
+      if (room != null && zone.findRoomEx(target.x, target.y) != room) continue;
+      float distance = position.dst2(target);
+      // Without native rooms, restrict compatibility lookup to the hatch.
+      if (room == null && distance > 100f) continue;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = candidate;
+      }
+    }
+    if (nearest != Engine.INVALID_ENTITY) warpInteractor.interact(playerId, nearest);
+    else Gdx.app.error(TAG, "Trap door has no room Warp: entity=" + objectId);
   }
 
   /** Exact mode branches from D2MOO's OperateFunction11/13. */
