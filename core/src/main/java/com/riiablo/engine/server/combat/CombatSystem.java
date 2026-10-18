@@ -773,13 +773,19 @@ public class CombatSystem {
   /** Resolves a cold/freeze length through the native cold resistance row. */
   public int resolveColdLengthBeforeState(Attributes defender, boolean defenderPlayer,
       int baseDuration, int piercePercent, StateList defenderStates, int difficulty) {
+    return resolveColdLengthBeforeState(defender, defenderPlayer, baseDuration,
+        piercePercent, defenderStates, NativeCombatContext.ofDifficulty(difficulty));
+  }
+
+  public int resolveColdLengthBeforeState(Attributes defender, boolean defenderPlayer,
+      int baseDuration, int piercePercent, StateList defenderStates, NativeCombatContext context) {
     if (defender == null || baseDuration <= 0) return 0;
     if (statInt(defender, Stat.item_cannotbefrozen, 0) != 0) return 0;
     // SUNITDMG_CalculateTotalDamage halves the packet before its Flen row.
     if (statInt(defender, Stat.item_halffreezeduration, 0) != 0) baseDuration /= 2;
     int resistance = statInt(defender, Stat.coldresist, 0);
     int maximum = 75 + statInt(defender, Stat.maxcoldresist, 0);
-    if (defenderPlayer) resistance += NativeDifficultyRules.remainingResistancePenalty(defender, difficulty);
+    if (defenderPlayer) resistance += NativeDifficultyRules.remainingResistancePenalty(defender, context);
     if (defenderStates != null) {
       resistance += defenderStates.getTotalResistModifier(1);
       maximum += defenderStates.getTotalStatContribution(Stat.maxcoldresist);

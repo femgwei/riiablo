@@ -687,6 +687,23 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void coldLengthConsumesCustomDifficultyTableWithoutDoublePenalty() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    row.ResistPenalty = -37;
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(2, row);
+    assertEquals(137, combat.resolveColdLengthBeforeState(defender, true, 100, 0, null, context));
+    row.ResistPenalty = 12;
+    assertEquals(88, combat.resolveColdLengthBeforeState(defender, true, 100, 0, null, context));
+    assertEquals(100, combat.resolveColdLengthBeforeState(defender, false, 100, 0, null, context));
+    defender.base().put(Stat.coldresist, -37);
+    defender.setDifficultyResistanceIncluded(true);
+    defender.reset();
+    assertEquals(137, combat.resolveColdLengthBeforeState(defender, true, 100, 0, null, context));
+  }
+
+  @Test
   public void elementalAbsorbAppliesPercentThenFlatAndRecordsLife() {
     Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
     Attributes defender = attrs(50, 1, 0, 1, 1, 1);

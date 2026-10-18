@@ -375,7 +375,7 @@ public class ServerSkillSystem extends PassiveSystem {
         if (events != null) events.dispatch(DeathEvent.obtain(source, target));
       } else if (coldLength >= 2) {
         int duration = combatSystemResolver.resolveColdLengthBeforeState(defender,
-            player, coldLength, 0, states, difficulty);
+            player, coldLength, 0, states, nativeDifficultyContext(difficulty));
         if (duration > 0) com.riiablo.engine.server.combat.StatusEffectApplier.forWorld(world)
             .applyCold(target, duration, source);
       }
@@ -2470,7 +2470,8 @@ public class ServerSkillSystem extends PassiveSystem {
         targetStates, difficulty);
     int baseLength = NativeDiabCold.freezeLength(skill, level);
     int length = combatSystemResolver.resolveColdLengthBeforeState(defender, player,
-        baseLength, elementalPierce(attacker, sourceStates, CombatSystem.DAMAGE_COLD), targetStates, difficulty);
+        baseLength, elementalPierce(attacker, sourceStates, CombatSystem.DAMAGE_COLD),
+        targetStates, nativeDifficultyContext(difficulty));
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     StatRef maximum = defender.get(Stat.maxhp, StatRef.obtain());
     if (hp == null) return;
@@ -5323,6 +5324,13 @@ public class ServerSkillSystem extends PassiveSystem {
     if (value <= 0 || numerator <= 0 || denominator <= 0) return 0;
     long result = (long) value * numerator / denominator;
     return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
+  }
+
+  private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext(int difficulty) {
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        files() != null && files().DifficultyLevels != null
+            ? files().DifficultyLevels.get(difficulty) : null;
+    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty, row);
   }
 
   private int combatDifficulty(int source, int target) {

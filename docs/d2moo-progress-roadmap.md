@@ -5000,6 +5000,14 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 冰冷/冻结长度表行传递：ServerSkillSystem 两个 `resolveColdLengthBeforeState`
+  生产调用注入当前 World 的难度表；CombatSystem 新增上下文重载，未折入惩罚的属性
+  优先读取 `ResistPenalty`，已折入属性继续跳过补扣。旧整数入口和缺表夹具保留原值 fallback。
+  依据 D2MOO `SUnitDmg.cpp` 的 Clen/Flen 冷抗行及非怪物难度惩罚路径，
+  增加自定义负/正表值、怪物不扣、已折入不重扣回归。其他伤害入口仍待逐步传递表行，
+  本次未改变 Classic 模式判定或毒素长度规则。
+  `CombatSystemTest` 与 `NativeCombatContextTest` 定向测试通过（59 项），模块边界检查通过。
+
 - 抗性重复惩罚修复：确认 `CharData.getStats()` 直接交给玩家实体，基础四元素抗性
   已包含难度表惩罚。Attributes 增加运行时标记（聚合重建保留，清空/池重置清除），
   CombatSystem 的普通攻击、固定伤害/持续伤害和冰冷长度入口仅补尚未包含的惩罚，

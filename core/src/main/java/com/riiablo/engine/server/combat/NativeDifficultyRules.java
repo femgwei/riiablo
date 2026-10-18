@@ -7,7 +7,15 @@ public final class NativeDifficultyRules {
   /** Synthetic callers supply raw stats; CharData already includes this adjustment. */
   public static int remainingResistancePenalty(
       com.riiablo.attributes.Attributes defender, int difficulty) {
-    return defender.difficultyResistanceIncluded() ? 0 : playerResistancePenalty(difficulty);
+    return remainingResistancePenalty(defender, NativeCombatContext.ofDifficulty(difficulty));
+  }
+
+  /** Prefer the current game's table; integer-only compatibility callers use stock values. */
+  public static int remainingResistancePenalty(
+      com.riiablo.attributes.Attributes defender, NativeCombatContext context) {
+    if (defender.difficultyResistanceIncluded()) return 0;
+    return context.difficultyRow() == null ? playerResistancePenalty(context.difficulty())
+        : tableResistancePenalty(context);
   }
 
   /** Table-backed resistance adjustment; retain custom values without clamping. */
