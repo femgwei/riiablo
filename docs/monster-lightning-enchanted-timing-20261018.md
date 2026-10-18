@@ -42,3 +42,18 @@ path initialization and missile damage/collision remain unverified in this batch
 Scarab still has its earlier damage-event adapter and needs separate repair.
 This does not establish complete lightning-enchanted equivalence or live-client
 GH animation acceptance.
+
+## Missile table flag follow-up
+
+MissMode.cpp:4690-4698 gives GetHit precedence over SoftHit and suppresses
+both for STATE_UNINTERRUPTABLE. Successful surviving ordinary missile hits now
+read those flags before requesting a reaction. SoftHit preserves the current
+mode, sets monster AI state 19, and dispatches the immediate callback; neither
+flag requests no reaction. Death modes are excluded.
+
+LightningEnchantedTimingTest exercises the production missile reaction method
+through EventSystem into the LE consumer, including neither-flag and death
+exclusion and action preservation. This is a reaction-path test, not a complete
+missile collision scenario. Block/dodge flag rewriting in MissMode.cpp:4707,
+GETHIT recovery thresholds/RNG in sub_6FCC1870, and melee classification remain
+pending. The previous active-action approximation still applies to GetHit.

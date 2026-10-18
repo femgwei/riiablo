@@ -11,6 +11,43 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
 class LightningEnchantedTimingTest {
+  @Test void missileTableSoftHitReachesLightningCallbackWithoutChangingAction() {
+    ServerSkillSystem system = spy(new ServerSkillSystem());
+    doNothing().when(system).emitLightningEnchantedBolts(anyInt());
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    EntityFactory factory = mock(EntityFactory.class);
+    World world = new World(new WorldConfigurationBuilder().with(new EventSystem(),
+        system, collisions, factory).build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(1, 0)));
+    try {
+      world.setDelta(1f / 25f);
+      int id = world.create();
+      Monster monster = world.getMapper(Monster.class).create(id);
+      monster.rank = MonsterRank.UNIQUE;
+      monster.affixes = MonsterAffix.LIGHTNING_ENCHANTED;
+      CofReference cof = world.getMapper(CofReference.class).create(id);
+      cof.mode = Engine.Monster.MODE_A1;
+      world.getMapper(NativePathIdentity.class).create(id).allocated(world, id);
+      for (int i = 0; i < 10; i++) world.process();
+      Missile missile = new Missile();
+      missile.missile = new com.riiablo.codec.excel.Missiles.Entry();
+      collisions.queueMissileHitReaction(id, missile);
+      verify(system, never()).emitLightningEnchantedBolts(anyInt());
+      missile.missile.SoftHit = true;
+      collisions.queueMissileHitReaction(id, missile);
+      world.process();
+      verify(system).emitLightningEnchantedBolts(id);
+      org.junit.jupiter.api.Assertions.assertEquals(Engine.Monster.MODE_A1, cof.mode);
+      org.junit.jupiter.api.Assertions.assertEquals(19,
+          world.getMapper(NativeAiState.class).get(id).previousMode);
+      for (int i = 0; i < 10; i++) world.process();
+      cof.mode = Engine.Monster.MODE_DT;
+      collisions.queueMissileHitReaction(id, missile);
+      world.process();
+      verify(system, times(1)).emitLightningEnchantedBolts(id);
+    } finally { world.dispose(); }
+  }
+
   @Test void softHitReleasesImmediatelySharesCooldownAndDoesNotDuplicateGh() {
     ServerSkillSystem system = spy(new ServerSkillSystem());
     doNothing().when(system).emitLightningEnchantedBolts(anyInt());

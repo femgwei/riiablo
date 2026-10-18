@@ -1873,7 +1873,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             hitpoints.set(0);
             hpAfter = 0;
           }
-          if (hpAfter > 0f) queueHitReaction(targetId, false);
+          if (hpAfter > 0f) queueMissileHitReaction(targetId, missile);
           if (mercenaryDamage) mercenaryLastDamageAfter = hpAfter;
           log.info("[MISSILE_HIT] phase=impact missileId={} owner={} target={} "
                   + "damageBefore={} damageAfter={} appliedDamage={} total={} "
@@ -2392,11 +2392,26 @@ public class MissileCollisionSystem extends IteratingSystem {
     return mastery;
   }
 
+  /** Missiles.txt requests recovery and soft-hit independently of the current action. */
+  void queueMissileHitReaction(int victimId, Missile missile) {
+    if (missile == null || missile.missile == null) return;
+    StateList states = stateList(victimId);
+    if (states != null && states.hasState(StateId.UNINTERRUPTABLE)) return;
+    if (missile.missile.GetHit) {
+      queueHitReaction(victimId, false);
+    } else if (missile.missile.SoftHit && mMonster.has(victimId)
+        && mCofReference.has(victimId)) {
+      byte mode = mCofReference.get(victimId).mode;
+      if (mode == Engine.Monster.MODE_DT || mode == Engine.Monster.MODE_DD) return;
+      world.getMapper(com.riiablo.engine.server.component.NativeAiState.class)
+          .create(victimId).previousMode = 19;
+      events.dispatch(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(victimId));
+    }
+  }
+
   /**
    * Compatibility fix: Dodge/Avoid/Evade only reject the server-side damage
-   * packet.  Do not enter a dedicated DODGE/AVOID mode or interrupt the
-   * client's current skill presentation.  This intentionally does not mirror
-   * D2MOO's dedicated passive-defense animation transition.
+   * packet. Do not interrupt the client's current skill presentation.
    */
   private void queueHitReaction(int victimId, CombatSystem.CombatResult combat) {
     if (combat != null && combat.blocked && !combat.blockAnimationAllowed) return;
