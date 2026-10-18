@@ -163,10 +163,9 @@ public final class ClientSimulationAssembly {
         // Apply state-driven transforms after COF/layer systems have finished
         // their frame. Otherwise a late layer refresh can overwrite cblu.
         .with(new com.riiablo.engine.client.StateOverlaySystem());
-    if (!mode.isAuthoritative()) {
-      // FIXME: crash when changing acts in multiplayer
-      builder.with(new Box2DDisposer());
-    }
+    // Local portal replacement/consumption deletes entities too. Retire their
+    // physics bodies in every client mode so invisible obstacles cannot remain.
+    builder.with(new Box2DDisposer());
     if (mode.isAuthoritative()) builder.with(new com.riiablo.engine.server.VelocityAdder(true));
     builder
         .with(new Box2DSynchronizerPre())

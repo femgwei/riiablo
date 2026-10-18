@@ -229,7 +229,7 @@ class GameScreenAssemblyTest {
         + "CofUnloader CofResolver CofLoader CofLayerUnloader CofLayerLoader CofLayerCacher "
         + "CofAlphaHandler CofTransformHandler ItemLoader MissileLoader AnimationStepper "
         + "ObjectCollisionUpdater BoneWallCollisionSystem StateOverlaySystem "
-        + (local ? "" : "Box2DDisposer ")
+        + "Box2DDisposer "
         + "Box2DSynchronizerPre Box2DPhysics Box2DSynchronizerPost VelocityModeChanger "
         + "DruidShapeShiftResolver ExperienceManager PlayerCorpseRetrievalSystem ZoneChangeTracker "
         + "ZoneMovementModesChanger NpcVendorSessionSystem ZoneEntryDisplayer SoundEnvironmentSystem "
