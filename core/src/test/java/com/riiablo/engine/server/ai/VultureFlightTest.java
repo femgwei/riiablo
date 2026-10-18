@@ -105,4 +105,63 @@ class VultureFlightTest extends RiiabloTest {
     }
   }
 
+  @Test void obstructedLandingUsesNearbyFreeGroundInsteadOfRepeatingFlight() {
+    try (Fixture f = new Fixture("vulture1", 0, 20)) {
+      Vulture ai = (Vulture) f.ai;
+      com.riiablo.map.Map map = mock(com.riiablo.map.Map.class);
+      when(map.isBlockedForPath(any(), anyInt(), anyInt(), anyInt(), anyInt(), anyBoolean()))
+          .thenAnswer(call -> (int) call.getArgument(1) == 10 && (int) call.getArgument(2) == 10);
+      f.world.getMapper(MapWrapper.class).get(f.actor).map = map;
+      ai.aiParam0 = 1;
+      ai.monster.vultureAirborne = true;
+      ai.update(.04f);
+      assertFalse(ai.monster.vultureAirborne);
+      assertEquals(-1, ai.aiParam0);
+      assertFalse(f.world.getMapper(Position.class).get(f.actor).position.epsilonEquals(10, 10, .01f));
+      assertNotNull(f.sequence());
+    }
+  }
+
+  @Test void distantTargetInOtherRoomApproachesOnGroundBeforeTakeoff() {
+    try (Fixture f = new Fixture("vulture1", 0, 20)) {
+      Vulture ai = (Vulture) f.ai;
+      com.riiablo.map.Map.Zone zone = mock(com.riiablo.map.Map.Zone.class);
+      com.riiablo.map.Map.RoomEx ownRoom = mock(com.riiablo.map.Map.RoomEx.class);
+      com.riiablo.map.Map.RoomEx targetRoom = mock(com.riiablo.map.Map.RoomEx.class);
+      when(zone.hasNativeRoomTopology()).thenReturn(true);
+      when(zone.areRoomsAdjacent(anyFloat(), anyFloat(), anyFloat(), anyFloat())).thenReturn(true);
+      when(zone.findRoomEx(anyFloat(), anyFloat()))
+          .thenAnswer(call -> (float) call.getArgument(0) < 20 ? ownRoom : targetRoom);
+      MapWrapper own = f.world.getMapper(MapWrapper.class).get(f.actor);
+      own.zone = zone;
+      f.world.getMapper(MapWrapper.class).create(f.target).set(own.map, zone);
+      f.seedFirstRoll(60, true);
+      ai.update(.04f);
+      assertFalse(ai.monster.vultureAirborne);
+      assertEquals(0, ai.aiParam0);
+      verify(f.paths).findPath(eq(f.actor), any(com.badlogic.gdx.math.Vector2.class), eq(false), eq(Engine.INVALID_ENTITY));
+    }
+  }
+
+  @Test void realTerrainLandingSearchStaysInsideCurrentNativeRoom() {
+    try (Fixture f = new Fixture("vulture1", 0, 20)) {
+      Vulture ai = (Vulture) f.ai;
+      com.riiablo.map.Map map = new com.riiablo.map.Map(1, 0);
+      com.riiablo.map.Map.Zone zone = map.createSyntheticArena(1, 4, 4);
+      com.riiablo.map.Map.RoomEx room = zone.addRoomEx(0, 0, 20, 20);
+      zone.or(10, 10, com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK);
+      f.world.getMapper(MapWrapper.class).get(f.actor).set(map, zone);
+      ai.aiParam0 = 1;
+      ai.monster.vultureAirborne = true;
+      ai.think(f.target, 20, false);
+      com.badlogic.gdx.math.Vector2 p = f.world.getMapper(Position.class).get(f.actor).position;
+      assertFalse(ai.monster.vultureAirborne);
+      assertFalse(p.epsilonEquals(10, 10, .01f));
+      assertSame(room, zone.findRoomEx(p.x, p.y));
+      assertFalse(map.isBlockedForPath(zone, (int) p.x, (int) p.y,
+          com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK, 1, false));
+      assertNotNull(f.sequence());
+    }
+  }
+
 }

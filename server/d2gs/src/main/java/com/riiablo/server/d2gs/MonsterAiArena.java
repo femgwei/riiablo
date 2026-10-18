@@ -203,6 +203,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     if ("Tentacle".equals(monster.AI) || "BaalCrabClone".equals(monster.AI)) scenarios.add("orphan");
     if ("Tentacle".equals(monster.AI) || "TentacleHead".equals(monster.AI)) scenarios.add("submerge-cycle");
     if ("FrogDemon".equals(monster.AI)) scenarios.add("frog-emerge");
+    if ("Vulture".equals(monster.AI)) scenarios.add("vulture-flight-cycle");
     if ("FetishShaman".equals(monster.AI) || "Diablo".equals(monster.AI)
         || "FrozenHorror".equals(monster.AI) || "Megademon".equals(monster.AI)) scenarios.add("inferno-cycle");
     if ("DeathMauler".equals(monster.AI)) scenarios.add("deathmaul-cycle");
@@ -361,6 +362,15 @@ public final class MonsterAiArena extends ApplicationAdapter {
         probe.deathMaul = true;
       }
       Vector2 previous = world.getMapper(Position.class).get(subject).position.cpy();
+      boolean vultureScene = result.scenario.equals("vulture-flight-cycle");
+      boolean vultureFlew = false, vultureLanded = false;
+      int vultureDamageAtLanding = 0;
+      float vulturePlayerHpAtLanding = 0;
+      if (vultureScene) {
+        result.specialAssert = true;
+        result.special = "NOT_TRIGGERED";
+        result.coverage = "TAKEOFF_LANDING_PLAYER_DAMAGE";
+      }
       boolean frogApproachRequested = false;
       boolean wallRunSeen = false;
       boolean bloodManaCastRequested = false;
@@ -385,6 +395,13 @@ public final class MonsterAiArena extends ApplicationAdapter {
               throw new IllegalStateException("DiabWall retreat path rejected without attackable prison");
           }
         }
+        if (vultureScene && vultureFlew && !vultureLanded && tick % 12 == 0) {
+          // Keep the observer in acquisition range with ordinary player movement.
+          // No AI state, health, probabilities, or skill events are injected.
+          Vector2 bird = world.getMapper(Position.class).get(subject).position;
+          world.getSystem(Pathfinder.class).findPath(playerId,
+              new Vector2(bird).add(-3, 0), false, Engine.INVALID_ENTITY);
+        }
         simulation.tick(null, null);
         result.ticks++;
         if (!world.getEntityManager().isActive(subject)) {
@@ -393,6 +410,33 @@ public final class MonsterAiArena extends ApplicationAdapter {
         }
         Vector2 position = world.getMapper(Position.class).get(subject).position;
         probe.observeCycle();
+        if (vultureScene) {
+          Monster bird = world.getMapper(Monster.class).get(subject);
+          if (bird.vultureAirborne && !vultureFlew) {
+            vultureFlew = true;
+            capture.line("VultureCycle TAKEOFF pos=" + position);
+          }
+          Sequence landing = world.getMapper(Sequence.class).get(subject);
+          CofReference mode = world.getMapper(CofReference.class).get(subject);
+          if (vultureFlew && !vultureLanded && !bird.vultureAirborne
+              && landing != null && landing.started && landing.mode1 == Engine.Monster.MODE_S2
+              && mode.mode == Engine.Monster.MODE_S2) {
+            vultureLanded = true;
+            vultureDamageAtLanding = result.damageEvents;
+            vulturePlayerHpAtLanding = world.getMapper(AttributesWrapper.class)
+                .get(playerId).attrs.get(Stat.hitpoints).asFixed();
+            world.getSystem(Pathfinder.class).findPath(playerId, null);
+            capture.line("VultureCycle LANDING_S2 pos=" + position);
+          }
+          if (vultureLanded && result.damageEvents > vultureDamageAtLanding
+              && world.getMapper(AttributesWrapper.class).get(playerId).attrs
+                  .get(Stat.hitpoints).asFixed() < vulturePlayerHpAtLanding
+              && !bird.vultureAirborne) {
+            result.specialPassed = true;
+            capture.line("VultureCycle POST_LANDING_DAMAGE pos=" + position);
+            break;
+          }
+        }
         if (bloodManaScene && !bloodManaCastRequested) {
           com.riiablo.engine.server.component.UnitStates states = world.getMapper(
               com.riiablo.engine.server.component.UnitStates.class).get(playerId);
@@ -493,6 +537,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
               : result.scenario.equals("diab-wall") ? "DIAB_WALL_OBSERVED"
               : result.scenario.equals("diab-run") ? "DIAB_RUN_OBSERVED" : "RESURRECTION_OBSERVED") : "NOT_TRIGGERED";
       if (result.scenario.equals("diab-prison") && result.specialPassed) result.special = "DIAB_PRISON_OBSERVED";
+      if (vultureScene && result.specialPassed) result.special = "VULTURE_FLIGHT_LANDING_DAMAGE_OBSERVED";
       result.status = classify(result);
       capture.line("END status=" + result.status + " ticks=" + result.ticks + " special=" + result.special);
     } catch (Exception | LinkageError | AssertionError error) {

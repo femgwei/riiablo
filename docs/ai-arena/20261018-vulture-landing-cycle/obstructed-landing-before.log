@@ -1,0 +1,180 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+
+> Task :verifyModuleBoundaries
+Module boundaries verified: strict project DAG and zero host/presentation/global RNG access in extracted modules.
+
+> Task :D2MOO_JAVA:compileJava
+
+> Task :shared:compileJava
+ע: F:\3rd_src\riiablo\shared\src\main\java\com\riiablo\util\ClassUtils.javaʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :game-data:compileJava
+ע: F:\3rd_src\riiablo\game-data\src\main\java\com\riiablo\codec\excel\Excel.javaʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: F:\3rd_src\riiablo\game-data\src\main\java\com\riiablo\codec\excel\Excel.javaʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :server-domain:compileJava
+> Task :server-systems:compileJava
+> Task :table:core:compileJava
+> Task :table:annotations:compileJava
+
+> Task :core:compileJava
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:203: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+      regCloseKey.invoke(systemRoot, new Object[]{new Integer(ret[0])});
+                                                  ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:206: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+      regCloseKey.invoke(userRoot, new Object[]{new Integer(ret[0])});
+                                                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:299: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Integer(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:299: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Integer(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:308: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+                new Integer(handles[0]), toCstr(value)
+                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:312: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Integer(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:322: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            root, new Object[]{new Integer(hkey), toCstr(key)}
+                               ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:334: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:334: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:341: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        root, new Object[]{new Long(handles[0]), toCstr(value)}
+                           ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:343: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:354: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:354: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:360: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    int[] info = (int[]) regQueryInfoKey.invoke(root, new Object[]{new Long(handles[0])});
+                                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                    ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                                        ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:373: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:384: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:384: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:390: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    int[] info = (int[]) regQueryInfoKey.invoke(root, new Object[]{new Long(handles[0])});
+                                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                    ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                                        ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:402: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:410: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    return (int[]) regCreateKeyEx.invoke(root, new Object[]{new Long(hkey), toCstr(key)});
+                                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:420: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:420: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:424: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regSetValueEx.invoke(root, new Object[]{new Long(handles[0]), toCstr(valueName), toCstr(value)});
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:425: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+ע: ĳЩ�����ļ�ʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+30 ������
+
+> Task :core:processResources
+> Task :core:classes
+> Task :core:compileTestJava
+> Task :core:processTestResources NO-SOURCE
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes
+> Task :D2MOO_JAVA:jar
+> Task :game-data:processResources NO-SOURCE
+> Task :game-data:classes
+> Task :game-data:jar
+> Task :server-domain:processResources NO-SOURCE
+> Task :server-domain:classes
+> Task :server-domain:jar
+> Task :server-systems:processResources NO-SOURCE
+> Task :server-systems:classes
+> Task :server-systems:jar
+> Task :shared:processResources NO-SOURCE
+> Task :shared:classes
+> Task :shared:jar
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes
+> Task :table:annotations:jar
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes
+> Task :table:core:jar
+
+> Task :core:test
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+VultureFlightTest > obstructedLandingUsesNearbyFreeGroundInsteadOfRepeatingFlight() FAILED
+    org.opentest4j.AssertionFailedError: expected: <false> but was: <true>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertFalse.failNotFalse(AssertFalse.java:63)
+        at app//org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:36)
+        at app//org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:31)
+        at app//org.junit.jupiter.api.Assertions.assertFalse(Assertions.java:228)
+        at app//com.riiablo.engine.server.ai.VultureFlightTest.obstructedLandingUsesNearbyFreeGroundInsteadOfRepeatingFlight(VultureFlightTest.java:118)
+
+1 test completed, 1 failed
+
+> Task :core:test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:test'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/build/ai-bighead-check/core/reports/tests/test/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 39s
+21 actionable tasks: 20 executed, 1 up-to-date
