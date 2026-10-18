@@ -4,6 +4,18 @@ package com.riiablo.engine.server.combat;
 public final class NativeDifficultyRules {
   private NativeDifficultyRules() {}
 
+  /** Fire-enchanted death uses base monster HP, before player-count bonuses. */
+  public static int monsterCorpseExplosionMaximum(int baseHp, NativeCombatContext context) {
+    return monsterCorpseExplosionMaximumForPercent(baseHp,
+        java.util.Objects.requireNonNull(context.difficultyRow(), "difficultyRow")
+            .MonsterCEDamagePercent);
+  }
+
+  public static int monsterCorpseExplosionMaximumForPercent(int baseHp, int percentage) {
+    return (int) Math.min(Integer.MAX_VALUE,
+        Math.max(0L, (long) baseHp * percentage / 100));
+  }
+
   /** State-duration path: a missing table preserves the existing divisor of one. */
   public static int tableMonsterColdDivisor(NativeCombatContext context) {
     return context.difficultyRow() == null ? 1

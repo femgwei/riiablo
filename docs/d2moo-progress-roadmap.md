@@ -5000,6 +5000,11 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 火焰强化死亡爆炸难度迁移：生产路径向上下文注入当前难度表，统一由
+  `NativeDifficultyRules` 消费 `MonsterCEDamagePercent` 并计算基础 HP 百分比上限。
+  旧 `fireDeathMaximum` 委托相同算术；保留整数截断、饱和上限及必须有表行的约束。
+  增加表值、截断、溢出饱和和缺表测试代码；按小改要求未运行编译/测试，仅检查 diff。
+
 - 冰冷/冻结状态难度规则迁移：`StateUpdater` 通过上下文读取独立的
   `MonsterColdDivisor` / `MonsterFreezeDivisor`，规则集中于 `NativeDifficultyRules`。
   保留缺表/非正值回退 1；不合并旧 CombatSystem 的 1/2/4 兼容路径，避免改变语义。

@@ -6,6 +6,21 @@ import org.junit.jupiter.api.Test;
 
 class NativeCombatContextTest {
   @Test
+  void monsterExplosionUsesInjectedPercentageWithNativeTruncationAndSaturation() {
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    row.MonsterCEDamagePercent = 33;
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(2, row);
+    assertEquals(329, NativeDifficultyRules.monsterCorpseExplosionMaximum(999, context));
+    row.MonsterCEDamagePercent = 200;
+    assertEquals(Integer.MAX_VALUE,
+        NativeDifficultyRules.monsterCorpseExplosionMaximum(Integer.MAX_VALUE, context));
+    row.MonsterCEDamagePercent = 0;
+    assertEquals(0, NativeDifficultyRules.monsterCorpseExplosionMaximum(999, context));
+    org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class,
+        () -> NativeDifficultyRules.monsterCorpseExplosionMaximum(999, NativeCombatContext.normal()));
+  }
+  @Test
   void coldAndFreezeKeepSeparateTableDivisorsAndSafeFallbacks() {
     com.riiablo.codec.excel.DifficultyLevels.Entry row =
         new com.riiablo.codec.excel.DifficultyLevels.Entry();

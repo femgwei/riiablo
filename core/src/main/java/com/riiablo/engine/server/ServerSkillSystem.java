@@ -217,7 +217,8 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   static int fireDeathMaximum(int baseHp, int percentage) {
-    return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, (long) baseHp * percentage / 100));
+    return com.riiablo.engine.server.combat.NativeDifficultyRules
+        .monsterCorpseExplosionMaximumForPercent(baseHp, percentage);
   }
 
   protected void resolveFireEnchantedDeath(int source) {
@@ -228,7 +229,11 @@ public class ServerSkillSystem extends PassiveSystem {
     int level = (int) mAttributesWrapper.get(source).attrs.getValue(Stat.level, 1);
     if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(files(), monster.monstats.hcIdx,
         1, difficulty, level, (short) 1, base)) return;
-    int maximum = fireDeathMaximum(base.maxHP, files().DifficultyLevels.get(difficulty).MonsterCEDamagePercent);
+    com.riiablo.engine.server.combat.NativeCombatContext combatContext =
+        com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(
+            difficulty, files().DifficultyLevels.get(difficulty));
+    int maximum = com.riiablo.engine.server.combat.NativeDifficultyRules
+        .monsterCorpseExplosionMaximum(base.maxHP, combatContext);
     int minimum = (int) ((long) maximum * 60 / 100);
     NativeRng rng = new NativeRng(monster.rngState);
     int rolled = minimum + (maximum > minimum ? rng.nextInt(maximum - minimum) : 0);
