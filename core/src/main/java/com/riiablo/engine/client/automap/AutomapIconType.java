@@ -149,11 +149,6 @@ public final class AutomapIconType {
       return SHRINE;
     }
     
-    // 水井
-    if (isWell(objectId)) {
-      return WELL;
-    }
-    
     // 储藏箱
     if (isStash(objectId)) {
       return STASH;
@@ -176,15 +171,6 @@ public final class AutomapIconType {
         || objectId == 288   // Act 5
         || objectId == 323   // Act 5 (另一个)
         || objectId == 398;  // 扩展
-  }
-
-  /**
-   * 判断物体是否是水井
-   */
-  public static boolean isWell(int objectId) {
-    return objectId == 122   // 普通水井
-        || objectId == 183   // 沙漠水井
-        || objectId == 185;  // 丛林水井
   }
 
   /**

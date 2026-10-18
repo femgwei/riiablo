@@ -19,7 +19,8 @@ public final class AutomapEntityCells {
     // as camp torches; treating it as MaxiMap frame 0 draws a path fragment.
     if (object.AutoMap > 0) return object.AutoMap;
     // D2MOO object rows sometimes omit AutoMap while the object class has a
-    // well-known native cell (waypoint, shrine, well, stash).
+    // well-known native cell (waypoint, shrine, stash). Wells use AutoMap
+    // directly: object 122 is a Jerhyn placeholder, not a well.
     int fallback = AutomapIconType.getIconForObject(object.Id, object.ShrineFunction);
     return fallback > 0 ? fallback : -1;
   }
