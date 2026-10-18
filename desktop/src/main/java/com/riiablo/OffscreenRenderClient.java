@@ -20,6 +20,8 @@ public final class OffscreenRenderClient {
         .addOption(Option.builder("o").longOpt("output").hasArg().build())
         .addOption(Option.builder("m").longOpt("mode").hasArg().build())
         .addOption(Option.builder("l").longOpt("level").hasArg().build())
+        .addOption(Option.builder().longOpt("width").hasArg().build())
+        .addOption(Option.builder().longOpt("height").hasArg().build())
         .addOption(Option.builder().longOpt("warp-graph").hasArg(false).build())
         .addOption(Option.builder().longOpt("continuity").hasArg(false).build())
         .addOption(Option.builder().longOpt("warp-collision").hasArg(false).build())
@@ -127,8 +129,10 @@ public final class OffscreenRenderClient {
 
     LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
     config.title = "riiablo-offscreen";
-    config.width = 1;
-    config.height = 1;
+    config.width = Integer.parseInt(command.getOptionValue("width", "1"));
+    config.height = Integer.parseInt(command.getOptionValue("height", "1"));
+    if (config.width < 1 || config.width > 4096 || config.height < 1 || config.height > 4096)
+      throw new IllegalArgumentException("Offscreen dimensions must be between 1 and 4096");
     config.fullscreen = false;
     config.resizable = false;
     // An off-desktop 1x1 window can be reported as minimized on Windows.

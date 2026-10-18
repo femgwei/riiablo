@@ -63,6 +63,8 @@ task offscreenCamp(type: JavaExec) {
        '--level', project.findProperty('offscreenLevel') ?: '-1',
        '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
   if (project.hasProperty('offscreenCharacter')) args '--character', project.property('offscreenCharacter')
+  args '--width', project.findProperty('offscreenWidth') ?: '1',
+       '--height', project.findProperty('offscreenHeight') ?: '1'
   if (project.findProperty('warpGraph')?.toString()?.toBoolean()) args '--warp-graph'
   ignoreExitValue = false
 }

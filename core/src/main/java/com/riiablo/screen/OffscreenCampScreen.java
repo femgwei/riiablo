@@ -217,14 +217,19 @@ public final class OffscreenCampScreen extends GameScreen {
 
     com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
     output.mkdirs();
-    Pixmap pixel = Pixmap.createFromFrameBuffer(0, 0, 1, 1);
+    int captureWidth = Gdx.graphics.getBackBufferWidth();
+    int captureHeight = Gdx.graphics.getBackBufferHeight();
+    Pixmap pixel = Pixmap.createFromFrameBuffer(0, 0, captureWidth, captureHeight);
     try {
-      PixmapIO.writePNG(output.child("rogue-encampment-smoke.png"), pixel);
+      PixmapIO.writePNG(output.child("rogue-encampment-smoke.png"), pixel, -1, true);
     } finally {
       pixel.dispose();
     }
     String report = "mode=rogue-encampment\n"
-        + "window=1x1\n"
+        + "window=" + captureWidth + "x" + captureHeight + "\n"
+        + "glVendor=" + Gdx.gl.glGetString(GL20.GL_VENDOR) + "\n"
+        + "glRenderer=" + Gdx.gl.glGetString(GL20.GL_RENDERER) + "\n"
+        + "glVersion=" + Gdx.gl.glGetString(GL20.GL_VERSION) + "\n"
         + "renderedFrames=" + renderedFrames + "\n"
         + "act=" + (map.getAct() + 1) + "\n"
         + "targetLevel=" + targetLevelId + "\n"
