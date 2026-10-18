@@ -110,6 +110,17 @@ public class CofLayerCacher extends IteratingSystem {
     AssetDescriptor<? extends DC>[] descriptors = mCofComponentDescriptors.get(entityId).descriptors;
     Animation animation = mAnimationWrapper.get(entityId).animation;
 
+    // Publish a complete composite, never a new COF with a mixture of old and
+    // pending layers. In particular, multi-layer monster attacks can otherwise
+    // flash while their DCCs complete on different render frames.
+    for (int l = 0; l < cof.getNumLayers(); l++) {
+      int c = cof.getLayer(l).component;
+      if (!Dirty.isDirty(flags, c) || component[c] == CofComponents.COMPONENT_NIL) continue;
+      AssetDescriptor<? extends DC> descriptor = descriptors[c];
+      if (descriptor != null && (clientContext.assets() == null
+          || !clientContext.assets().isLoaded(descriptor))) return flags;
+    }
+
 //    if (cof == null) return;
     // FIXME: logic here needs to be looked into -- should below operations be performed when cof didn't change?
     boolean newCof = animation.setCOF(cof);
@@ -170,7 +181,11 @@ public class CofLayerCacher extends IteratingSystem {
       }
 
       AssetDescriptor<? extends DC> descriptor = descriptors[c];
-      if (clientContext.assets() != null && clientContext.assets().isLoaded(descriptor)) {
+      if (descriptor == null) {
+        flags &= ~flag;
+        alteredLayers |= flag;
+        animation.setLayer(layer, null, false);
+      } else if (clientContext.assets() != null && clientContext.assets().isLoaded(descriptor)) {
         flags &= ~flag;
         alteredLayers |= flag;
         if (DEBUG) Gdx.app.debug(TAG, "Loaded[" + Engine.getComposite(c) + "] " + descriptor.fileName);
@@ -258,6 +273,13 @@ public class CofLayerCacher extends IteratingSystem {
       }
     }
     if (DEBUG) Gdx.app.debug(TAG, "Remaining layers: " + Dirty.toString(flags));
+    if (flags == Dirty.NONE) {
+      CofComponentDescriptors owned = mCofComponentDescriptors.get(entityId);
+      for (AssetDescriptor<? extends DC> retired : owned.retired) {
+        CofLayerLoader.releaseAsset(clientContext.assets(), retired);
+      }
+      owned.retired.clear();
+    }
     return flags;
   }
 

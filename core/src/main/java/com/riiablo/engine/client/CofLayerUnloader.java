@@ -31,6 +31,10 @@ public class CofLayerUnloader extends BaseEntitySystem {
       for (int c = 0; c < descriptors.length; c++) {
         layerLoader.unload(c, descriptors);
       }
+      for (AssetDescriptor<? extends DC> retired : mCofComponentDescriptors.get(id).retired) {
+        CofLayerLoader.releaseAsset(layerLoader.clientContext.assets(), retired);
+      }
+      mCofComponentDescriptors.get(id).retired.clear();
     }
   }
 }

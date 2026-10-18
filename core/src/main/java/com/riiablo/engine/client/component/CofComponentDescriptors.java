@@ -12,11 +12,14 @@ import java.util.Arrays;
 @Transient
 @PooledWeaver
 public class CofComponentDescriptors extends PooledComponent {
+  public final com.badlogic.gdx.utils.Array<AssetDescriptor<? extends DC>> retired =
+      new com.badlogic.gdx.utils.Array<>();
   @SuppressWarnings("unchecked")
   public final AssetDescriptor<? extends DC>[] descriptors = (AssetDescriptor<DC>[]) new AssetDescriptor[COF.Component.NUM_COMPONENTS];
 
   @Override
   protected void reset() {
+    retired.clear();
     Arrays.fill(descriptors, null);
   }
 }

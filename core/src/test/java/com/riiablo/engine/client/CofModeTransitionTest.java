@@ -24,6 +24,50 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
 class CofModeTransitionTest {
+  @Test void monsterKeepsResidentCompositeUntilAttackLayersAreReady() {
+    AssetManager saved = Riiablo.assets;
+    Colors savedColors = Riiablo.colors;
+    Riiablo.colors = new Colors();
+    AssetManager assets = Riiablo.assets = mock(AssetManager.class);
+    COF idle = cof();
+    COF attack = cof();
+    AssetDescriptor<com.riiablo.codec.DCC> pending =
+        new AssetDescriptor<>("beetle-attack.dcc", com.riiablo.codec.DCC.class);
+    AssetDescriptor<com.riiablo.codec.DCC> previous =
+        new AssetDescriptor<>("beetle-idle.dcc", com.riiablo.codec.DCC.class);
+    World world = new World(new WorldConfigurationBuilder().with(
+        new EventSystem(), new CofManager(), new CofLayerCacher()).build()
+        .register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int id = createComposite(world, Class.Type.MON, "SC", Engine.Monster.MODE_A1);
+      AnimationWrapper wrapper = world.getMapper(AnimationWrapper.class).get(id);
+      wrapper.animation.setCOF(idle);
+      world.getMapper(CofWrapper.class).create(id).cof = attack;
+      int c = attack.getLayer(0).component;
+      world.getMapper(CofComponents.class).get(id).component[c] = CofComponents.COMPONENT_LIT;
+      CofComponentDescriptors descriptors = world.getMapper(CofComponentDescriptors.class).get(id);
+      descriptors.descriptors[c] = pending;
+      descriptors.retired.add(previous);
+      world.getMapper(CofLoadingComponents.class).create(id).flags = 1 << c;
+      world.process();
+      assertSame(idle, wrapper.animation.getCOF());
+      assertEquals(1, descriptors.retired.size);
+      verify(assets, never()).unload(anyString());
+      // A missing optional layer must also finish cleanly instead of keeping
+      // the old composite or a loading flag forever.
+      descriptors.descriptors[c] = null;
+      when(assets.contains(previous.fileName)).thenReturn(true);
+      world.process();
+      assertSame(attack, wrapper.animation.getCOF());
+      assertEquals(0, descriptors.retired.size);
+      verify(assets).unload(previous.fileName);
+    } finally {
+      world.dispose();
+      Riiablo.assets = saved;
+      Riiablo.colors = savedColors;
+    }
+  }
+
   @Test void missingChestCofDoesNotBlockPlayerIdleLoad() {
     missingCofDoesNotBlockPlayer(false);
   }

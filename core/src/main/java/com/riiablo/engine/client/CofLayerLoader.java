@@ -226,6 +226,12 @@ public class CofLayerLoader extends IteratingSystem {
       COF.Layer layer = cof.getLayer(l);
       int c = layer.component;
       if (!Dirty.isDirty(flags, c)) continue;
+      if (!isLocalPlayer(entityId) && descriptors[c] != null) {
+        // The current Animation still draws this DC until the replacement
+        // composite is ready. Keep its textures alive across asynchronous loads.
+        mCofComponentDescriptors.get(entityId).retired.add(descriptors[c]);
+        descriptors[c] = null;
+      }
       if (component[c] == CofComponents.COMPONENT_NIL) {
         requiresReload |= (1 << c);
         unload(c, descriptors);
@@ -241,7 +247,6 @@ public class CofLayerLoader extends IteratingSystem {
           .replace(start +  7, start + 10, type.COMP[component[c]])
           .replace(start + 12, start + 15, layer.weaponClass);
 
-      if (!isLocalPlayer(entityId)) unload(c, descriptors);
       AssetDescriptor<? extends DC> descriptor = descriptors[c];
       String path = builder.replace(start + 16, start + 19, DCC.EXT).toString();
       // Standalone summon rows such as Valkyrie ship one-frame COFs but only
