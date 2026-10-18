@@ -4,6 +4,11 @@ package com.riiablo.engine.server.combat;
 public final class NativeDifficultyRules {
   private NativeDifficultyRules() {}
 
+  /** Table-backed resistance adjustment; retain custom values without clamping. */
+  public static int tableResistancePenalty(NativeCombatContext context) {
+    return java.util.Objects.requireNonNull(context.difficultyRow(), "difficultyRow").ResistPenalty;
+  }
+
   /** Fire-enchanted death uses base monster HP, before player-count bonuses. */
   public static int monsterCorpseExplosionMaximum(int baseHp, NativeCombatContext context) {
     return monsterCorpseExplosionMaximumForPercent(baseHp,

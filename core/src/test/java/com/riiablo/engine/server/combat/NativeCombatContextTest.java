@@ -6,6 +6,18 @@ import org.junit.jupiter.api.Test;
 
 class NativeCombatContextTest {
   @Test
+  void tableResistancePenaltyPreservesInjectedSignedValues() {
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(1, row);
+    row.ResistPenalty = -37;
+    assertEquals(-37, NativeDifficultyRules.tableResistancePenalty(context));
+    row.ResistPenalty = 12;
+    assertEquals(12, NativeDifficultyRules.tableResistancePenalty(context));
+    org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class,
+        () -> NativeDifficultyRules.tableResistancePenalty(NativeCombatContext.normal()));
+  }
+  @Test
   void monsterExplosionUsesInjectedPercentageWithNativeTruncationAndSaturation() {
     com.riiablo.codec.excel.DifficultyLevels.Entry row =
         new com.riiablo.codec.excel.DifficultyLevels.Entry();

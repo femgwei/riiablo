@@ -5000,6 +5000,12 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 抗性表值初始化迁移：`CharData` 的玩家/佣兵基础四元素抗性初始化统一通过
+  `NativeDifficultyRules.tableResistancePenalty` 消费注入表行，保留有符号自定义数值
+  和必须有表行的约束。未修改 CombatSystem 旧难度附加路径；需后续追踪属性聚合，
+  核实初始化惩罚是否在实际战斗中重复计算，不能把本次抽取视为该问题已修复。
+  已补表值测试代码；本次小改仅检查 diff，未运行编译/测试。
+
 - 火焰强化死亡爆炸难度迁移：生产路径向上下文注入当前难度表，统一由
   `NativeDifficultyRules` 消费 `MonsterCEDamagePercent` 并计算基础 HP 百分比上限。
   旧 `fireDeathMaximum` 委托相同算术；保留整数截断、饱和上限及必须有表行的约束。

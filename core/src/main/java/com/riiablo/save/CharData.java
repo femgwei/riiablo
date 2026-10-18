@@ -256,6 +256,9 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     skillListeners.clear();
 
     DifficultyLevels.Entry diff = Riiablo.files.DifficultyLevels.get(this.diff);
+    int resistancePenalty = com.riiablo.engine.server.combat.NativeDifficultyRules
+        .tableResistancePenalty(com.riiablo.engine.server.combat.NativeCombatContext
+            .ofDifficulty(this.diff, diff));
     StatListRef base = statData.base();
     base.put(Stat.strength, 0);
     base.put(Stat.energy, 0);
@@ -276,10 +279,10 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     base.put(Stat.armorclass, 0);
     base.put(Stat.damageresist, 0);
     base.put(Stat.magicresist, 0);
-    base.put(Stat.fireresist, diff.ResistPenalty);
-    base.put(Stat.lightresist, diff.ResistPenalty);
-    base.put(Stat.coldresist, diff.ResistPenalty);
-    base.put(Stat.poisonresist, diff.ResistPenalty);
+    base.put(Stat.fireresist, resistancePenalty);
+    base.put(Stat.lightresist, resistancePenalty);
+    base.put(Stat.coldresist, resistancePenalty);
+    base.put(Stat.poisonresist, resistancePenalty);
     base.put(Stat.maxfireresist, 75);
     base.put(Stat.maxlightresist, 75);
     base.put(Stat.maxcoldresist, 75);
@@ -306,10 +309,10 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     base.put(Stat.armorclass, 0);
     base.put(Stat.damageresist, 0);
     base.put(Stat.magicresist, 0);
-    base.put(Stat.fireresist, diff.ResistPenalty);
-    base.put(Stat.lightresist, diff.ResistPenalty);
-    base.put(Stat.coldresist, diff.ResistPenalty);
-    base.put(Stat.poisonresist, diff.ResistPenalty);
+    base.put(Stat.fireresist, resistancePenalty);
+    base.put(Stat.lightresist, resistancePenalty);
+    base.put(Stat.coldresist, resistancePenalty);
+    base.put(Stat.poisonresist, resistancePenalty);
     base.put(Stat.maxfireresist, 75);
     base.put(Stat.maxlightresist, 75);
     base.put(Stat.maxcoldresist, 75);
