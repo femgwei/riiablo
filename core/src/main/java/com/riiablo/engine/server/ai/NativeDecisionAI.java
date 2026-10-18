@@ -189,11 +189,15 @@ abstract class NativeDecisionAI extends AI {
       x = diff * dx / sum; y = diff * dy / sum;
       while (x + y < diff) { x++; y++; }
     }
-    return walkToPoint(new com.badlogic.gdx.math.Vector2(
+    com.badlogic.gdx.math.Vector2 destination = new com.badlogic.gdx.math.Vector2(
         sx + sign * x * Integer.compare(tx, sx),
-        sy + sign * y * Integer.compare(ty, sy)),
-        bonus, Engine.INVALID_ENTITY);
+        sy + sign * y * Integer.compare(ty, sy));
+    return walkToPoint(destination, bonus, Engine.INVALID_ENTITY)
+        || recoverRadiusMovement(destination, maxStep, bonus);
   }
+
+  protected boolean recoverRadiusMovement(com.badlogic.gdx.math.Vector2 destination,
+      int budget, int bonus) { return false; }
 
   protected final boolean chargeLineClear(int targetId) {
     com.riiablo.engine.server.component.MapWrapper source = mMapWrapper.get(entityId);
