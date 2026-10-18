@@ -125,7 +125,13 @@ public class VelocityAdder extends IteratingSystem {
     Pathfind path = mPathfind.get(id);
     if (requested && (path == null || !path.hasNativeWaypoint())) return false;
     int nativeVelocity;
-    try { nativeVelocity = velocity.nativeMonsterVelocity(); }
+    try {
+      com.riiablo.codec.excel.Skills.Entry skill = cast == null ? null
+          : com.riiablo.Riiablo.files.skills.get(cast.skillId);
+      nativeVelocity = NativeMonsterCharge.supports(skill)
+          ? NativeMonsterCharge.nativeVelocity(mMonster.get(id).monstats, skill, velocity)
+          : velocity.nativeMonsterVelocity();
+    }
     catch (IllegalArgumentException unsupported) { return false; }
     velocity.nativeMovementOwned = true;
     if (!requested || velocity.stateMovementLocked) return true;

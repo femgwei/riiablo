@@ -33,6 +33,46 @@ import org.junit.jupiter.api.Test;
 
 /** Real 1.10f tables + ECS decisions. Path search is stubbed, not collision acceptance. */
 class Act1NativeAiIntegrationTest extends RiiabloTest {
+  @Test void corruptArcherWithoutBasicMissileUsesConfiguredArrowSkill() {
+    for (String row : new String[] {"cr_archer6", "cr_archer7"}) {
+      try (Fixture f = new Fixture(row, 0, 8f)) {
+        f.ai.params[1] = 100;
+        f.ai.params[3] = 0;
+        f.ai.params[4] = 100;
+        f.ai.params[5] = f.ai.params[6] = f.ai.params[7] = 0;
+        f.ai.update(.04f);
+        f.assertSkill(0);
+        long action = f.casting().actionId;
+        f.ai.update(10f);
+        assertEquals(action, f.casting().actionId, "do not overwrite an active shot");
+      }
+    }
+  }
+
+  @Test void corruptArcherRejectedArrowDoesNotCreateEmptyBasicAttack() {
+    try (Fixture f = new Fixture("cr_archer6", 0, 8f)) {
+      f.ai.params[1] = 100;
+      f.ai.params[3] = 0;
+      f.ai.params[4] = 100;
+      f.ai.params[5] = f.ai.params[6] = f.ai.params[7] = 0;
+      f.probe.reject = true;
+      f.ai.update(.04f);
+      assertNull(f.casting());
+    }
+  }
+
+  @Test void clawViperDoesNotReplaceAnActiveChargeAfterItsThinkTimerExpires() {
+    try (Fixture f = new Fixture("clawviper3", 0, 5f)) {
+      f.world.getMapper(Casting.class).create(f.actor).set(352, f.target, f.targetPosition());
+      f.world.getMapper(Sequence.class).create(f.actor)
+          .sequence(Engine.Monster.MODE_WL, Engine.Monster.MODE_NU);
+      long action = f.casting().actionId;
+      f.ai.update(10f);
+      assertEquals(action, f.casting().actionId);
+      verifyNoInteractions(f.paths);
+    }
+  }
+
   @Test
   void nativeRowsMustResolveToDedicatedAiNotFallback() {
     for (String rowId : new String[] {"andariel", "smith", "griswold", "arach3", "gargoyletrap",
@@ -676,6 +716,9 @@ class Act1NativeAiIntegrationTest extends RiiabloTest {
       assertEquals(target, casting().targetId);
       assertEquals(targetPosition(), casting().targetVec);
       int mode = Riiablo.files.MonMode.index(slot == 0 ? row.Sk1mode : row.Sk2mode);
+      com.riiablo.engine.server.NativeMonsterSequence nativeSequence =
+          com.riiablo.engine.server.NativeMonsterSequence.load(slot == 0 ? row.Sk1mode : row.Sk2mode);
+      if (nativeSequence != null) mode = nativeSequence.mode;
       if (mode < 0 && skill.monanim != null) mode = Riiablo.files.MonMode.index(skill.monanim);
       if (mode < 0) mode = Engine.Monster.MODE_S1;
       assertEquals(mode, sequence().mode1);

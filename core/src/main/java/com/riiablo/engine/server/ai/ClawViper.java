@@ -59,7 +59,7 @@ public class ClawViper extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
 
-  private static EntitySubscription enemyEntities;
+  private EntitySubscription enemyEntities;
 
   final Vector2 tmpVec2 = new Vector2();
 
@@ -107,6 +107,7 @@ public class ClawViper extends AI {
     if (stateMachine.getCurrentState() == State.DEAD) {
       return;
     }
+    if (mCasting.has(entityId) || mSequence.has(entityId)) return;
 
     nextAction -= delta;
     time -= delta;

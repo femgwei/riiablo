@@ -113,12 +113,10 @@ public class CorruptArcher extends AI {
         && MathUtils.randomBoolean(params[PARAM_RUN_CHANCE] / 100f);
   }
 
-  private void castSkillOrAttack(int skillIndex, int targetId, Vector2 targetPos) {
+  private void castConfiguredSkill(int skillIndex, int targetId, Vector2 targetPos) {
     if (useMonsterSkill(skillIndex, targetId, targetPos)) return;
-    stateMachine.changeState(State.ATTACK);
-    lookAt(targetId);
-    mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-    mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+    // A rejected configured skill must not become an unrelated empty A1.
+    stateMachine.changeState(State.IDLE);
   }
 
   @Override
@@ -127,17 +125,19 @@ public class CorruptArcher extends AI {
     if (stateMachine.getCurrentState() == State.DEAD) {
       return;
     }
+    if (mCasting.has(entityId) || mSequence.has(entityId)) return;
 
     nextAction -= delta;
     time -= delta;
 
-    // 远程怪即时反应：玩家进入射程立即攻击，不等到 time 结束
     float[] outDist = { Float.MAX_VALUE };
     int targetId = findNearestTargetWithAidist(outDist);
     float targetDistance = outDist[0];
+
+    // Only a configured basic missile can use the immediate A1 response.
     float rangedRange = missile != null && missile.Range > 0 ? missile.Range - 2f : 15f;
     if (rangedRange <= 0) rangedRange = 15f;
-    if (targetId != Engine.INVALID_ENTITY
+    if (missile != null && targetId != Engine.INVALID_ENTITY
         && stateMachine.getCurrentState() != State.ATTACK
         && stateMachine.getCurrentState() != State.CAST
         && targetDistance <= rangedRange) {
@@ -228,7 +228,7 @@ public class CorruptArcher extends AI {
       if (monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()
           && MathUtils.randomBoolean(params[PARAM_USE_SKILL_2_CHANCE] / 100f)) {
         stateMachine.changeState(State.CAST);
-        castSkillOrAttack(1, targetId, targetPos);
+        castConfiguredSkill(1, targetId, targetPos);
         time = MathUtils.random(1f, 2);
         return;
       }
@@ -236,14 +236,14 @@ public class CorruptArcher extends AI {
       if (monster.monstats.Skill3 != null && !monster.monstats.Skill3.isEmpty()
           && MathUtils.randomBoolean(params[PARAM_USE_SKILL_3_CHANCE] / 100f)) {
         stateMachine.changeState(State.CAST);
-        castSkillOrAttack(2, targetId, targetPos);
+        castConfiguredSkill(2, targetId, targetPos);
         time = MathUtils.random(1f, 2);
         return;
       }
 
       if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
         stateMachine.changeState(State.CAST);
-        castSkillOrAttack(0, targetId, targetPos);
+        castConfiguredSkill(0, targetId, targetPos);
         time = MathUtils.random(1f, 2);
         return;
       }

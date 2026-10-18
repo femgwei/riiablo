@@ -16,6 +16,27 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 import org.junit.jupiter.api.Test;
 
 class NativeMonsterSequenceIntegrationTest extends RiiabloTest {
+  @Test void chargeInitializationDoesNotExecuteItsWalkingPointAsAnAttack() {
+    Probe probe = new Probe();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, new CofManager(), new SequenceHandler()).build());
+    try {
+      int id = world.create();
+      NativeMonsterSequence data = NativeMonsterSequence.load("seq_serpentcharge");
+      assertEquals(Engine.KEYFRAME_ATK, data.actions[0]);
+      world.getMapper(com.riiablo.engine.server.component.CofReference.class).create(id)
+          .set("SD", data.mode);
+      world.getMapper(AnimData.class).create(id);
+      world.getMapper(com.riiablo.engine.server.component.Casting.class).create(id).set(
+          com.riiablo.Riiablo.files.skills.get("Charge").Id, -1,
+          new com.badlogic.gdx.math.Vector2());
+      world.getMapper(Sequence.class).create(id).sequence(data.mode, Engine.Monster.MODE_NU)
+          .nativeMonster = data;
+      world.process();
+      assertEquals(0, probe.actions, "charge impact belongs to its later attack point");
+    } finally { world.dispose(); }
+  }
+
   @Test void crossedPointsKeepOnlyLastNativeEventIncludingSoundOverwrite() {
     byte mode = Engine.Monster.MODE_A1;
     NativeMonsterSequence sequence = new NativeMonsterSequence(mode,
@@ -29,8 +50,9 @@ class NativeMonsterSequenceIntegrationTest extends RiiabloTest {
   }
 
   @Test void sequenceInitializationImmediatelyPublishesSourceFrameZeroPoint() {
+    Probe probe = new Probe();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), new CofManager(), new SequenceHandler()).build());
+        .with(new EventSystem(), probe, new CofManager(), new SequenceHandler()).build());
     try {
       int id = world.create();
       byte mode = Engine.Monster.MODE_A1;
@@ -39,11 +61,14 @@ class NativeMonsterSequenceIntegrationTest extends RiiabloTest {
       AnimData anim = world.getMapper(AnimData.class).create(id);
       Sequence sequence = world.getMapper(Sequence.class).create(id).sequence(mode, mode);
       sequence.nativeMonster = new NativeMonsterSequence(mode, new int[] {5, 6},
-          new byte[] {mode, mode}, new byte[] {0, 0});
+          new byte[] {mode, mode}, new byte[] {Engine.KEYFRAME_SKL, 0});
       world.process();
       assertTrue(sequence.started);
       assertEquals(5 << 8, anim.frame);
       assertEquals(0, sequence.nativeMonsterCursor);
+      assertEquals(1, probe.actions, "initial skill event must not be skipped");
+      world.process();
+      assertEquals(1, probe.actions, "initial event must fire only once");
     } finally { world.dispose(); }
   }
 

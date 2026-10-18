@@ -221,7 +221,8 @@ public class Pathfinder extends IteratingSystem {
       if (!ownerFollowTarget && mSummonedPet.has(entityId)) {
         ownerFollowTarget = isValkyrieOwnerTarget(mSummonedPet.get(entityId), targetId);
       }
-      if (!ownerFollowTarget && mMonster.has(entityId)) {
+      // Charge owns a melee impact even when the monster also fires missiles.
+      if (!ownerFollowTarget && !isMonsterCharge(entityId) && mMonster.has(entityId)) {
         com.riiablo.engine.server.component.Monster monster = mMonster.get(entityId);
         if ((monster.monstats.MissA1 != null && !monster.monstats.MissA1.isEmpty()) ||
             (monster.monstats.MissA2 != null && !monster.monstats.MissA2.isEmpty())) {
@@ -321,6 +322,10 @@ public class Pathfinder extends IteratingSystem {
     velocity.movementRunning = running;
     float speed = velocity.speed(running);
     com.riiablo.engine.server.component.Casting cast = mCasting.get(entityId);
+    if (isMonsterCharge(entityId)) {
+      speed = NativeMonsterCharge.requestedSpeed(mMonster.get(entityId).monstats,
+          com.riiablo.Riiablo.files.skills.get(cast.skillId), velocity);
+    }
     if (cast != null && cast.diabRun != null && cast.diabRun.moving) {
       speed = NativeDiabRun.baseSpeed(com.riiablo.Riiablo.files.skills.get(cast.skillId), 1)
           * Math.max(Velocity.MIN_SPEED_MULTIPLIER, velocity.baseSpeedMultiplier + velocity.modeSpeedBonusMultiplier);
@@ -365,6 +370,14 @@ public class Pathfinder extends IteratingSystem {
   static boolean isInMeleeApproachRange(
       Actioneer actioneer, int attackerId, int targetId) {
     return actioneer.isInMeleeRange(attackerId, targetId, 0);
+  }
+
+  private boolean isMonsterCharge(int entityId) {
+    if (!mMonster.has(entityId)) return false;
+    com.riiablo.engine.server.component.Casting cast = mCasting.get(entityId);
+    com.riiablo.codec.excel.Skills.Entry skill = cast == null ? null
+        : com.riiablo.Riiablo.files.skills.get(cast.skillId);
+    return skill != null && skill.srvdofunc == 67;
   }
 
   private boolean isInCurrentMeleeApproachRange(int attackerId, int targetId) {
@@ -563,8 +576,9 @@ public class Pathfinder extends IteratingSystem {
     // exact goal node ignores the target: every neighboring footprint can
     // still collide. Use the existing collision-checked approach search for
     // ordinary monster pursuit, retaining the unit identity for continuation.
-    // Coordinate orders and skill-owned movement keep their exact semantics.
-    if (mMonster.has(src) && !mCasting.has(src)
+    // Charge also needs a reachable melee endpoint beside its occupied target;
+    // coordinate orders and other skill movement keep their exact semantics.
+    if (mMonster.has(src) && (!mCasting.has(src) || isMonsterCharge(src))
         && targetEntityId != Engine.INVALID_ENTITY && mPosition.has(targetEntityId)
         && target.epsilonEquals(mPosition.get(targetEntityId).position, 0.01f)
         && dynamicCollision != null

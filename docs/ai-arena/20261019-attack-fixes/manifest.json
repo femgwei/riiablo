@@ -1,0 +1,21 @@
+{
+  "artifacts": {
+    "cases.csv": "254b77a548454724ac0236608dd9061c56b0fdd468852e3d83f2ebce09481b70",
+    "evidence.zip": "41c5bad7cb2a64bdb4c4db5049b44b2506b91f1a754d02f971791e948b5e3bdd",
+    "findings.md": "07de9c5af4f7436c84e36ccf365814aef379b1a90e8cb64f03e0440f64664e85",
+    "isolated.init.gradle": "30da8beaa9955a2d27affa331b1f9bac6f8da0e033da3520df70164eaf385df2",
+    "seed1-results.jsonl.gz": "c313023e65c6c8f0c8c42140ec7616ffc46259cdd657d3fe53cf62fcfebeb69e",
+    "seed2-results.jsonl.gz": "615768ca44c0e544dce74afc8e9fe870a4fe054d488e97d98cdd313d9ceb4673",
+    "seed3-results.jsonl.gz": "561cf11879dfda9952e5f48c764d9ded3f50c64c0e7d56d637d043120f2b93a3",
+    "summary.json": "dd503cfacbc551a1684d3f4cc08e70004d2de109967a1f39ae42eb28b5741e2c"
+  },
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/engine/server/NativeMonsterCharge.java": "14df7894b2b3a0f58dcbbe496ecfe1ccae99fbcf06a5b9ccc85515d4a8a9b886",
+    "core/src/main/java/com/riiablo/engine/server/Pathfinder.java": "888baacd25ce9b2239271957c26fe67c3d1fde3dd0215fe7341d3943106a9c39",
+    "core/src/main/java/com/riiablo/engine/server/SequenceHandler.java": "9ee5565e3c93f63fe42cbad3be882582e52d8d5bee10013099d9f11fb9c4ba99",
+    "core/src/main/java/com/riiablo/engine/server/VelocityAdder.java": "d805b6b579ea5aa2e44b505b9c2fd317c72a3e07e231d10c03dfe9f5bec6382f",
+    "core/src/main/java/com/riiablo/engine/server/ai/ClawViper.java": "f528627dddaf54ebf459d8ea91c135a42cc700cc85a6ff519f80084b826ef220",
+    "core/src/main/java/com/riiablo/engine/server/ai/CorruptArcher.java": "fcb60d1c3cb26fa5d2191eb75d75bd9e50b4dd0edb7ef870c564b5d15c88b4b0"
+  },
+  "source_hash_format": "Git staged blob bytes; excludes concurrent NativePathRuntime work from another chat"
+}

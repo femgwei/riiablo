@@ -1,0 +1,14 @@
+allprojects { p ->
+  p.buildDir = new File(rootDir, 'build/attack-final-check/' + (p.path == ':' ? 'root' : p.path.substring(1).replace(':', '_')))
+  p.afterEvaluate {
+    if (p.plugins.hasPlugin('java')) {
+      p.sourceSets.each { s ->
+        def classes = p.file("$p.buildDir/classes/java/$s.name")
+        s.java.destinationDirectory.set(classes)
+        s.output.classesDirs.setFrom(classes)
+        p.tasks.named(s.compileJavaTaskName, JavaCompile) { destinationDirectory.set(classes) }
+      }
+      if (p.path == ':core') p.sourceSets.test.java.setIncludes(['com/riiablo/engine/server/ai/VultureApproachBoundaryTest.java', 'com/riiablo/engine/server/ai/VultureFlightTest.java', 'com/riiablo/engine/server/ai/ScarabLeaderCommandTest.java', 'com/riiablo/engine/server/ai/ScarabCommandTest.java', 'com/riiablo/engine/server/ai/BaboonEscapeCoordinatesTest.java', 'com/riiablo/engine/server/ai/BaboonChaseFallbackTest.java', 'com/riiablo/engine/server/ai/BaboonChaseTest.java', 'com/riiablo/engine/server/ai/BaboonDecisionTimingTest.java', 'com/riiablo/engine/server/ai/ScarabPursuitFallbackTest.java', 'com/riiablo/engine/server/ai/ScarabPursuitPhaseTest.java', 'com/riiablo/engine/server/ai/ScarabInitialOrbitTest.java', 'com/riiablo/engine/server/ai/ScarabAttackChoiceTest.java', 'com/riiablo/engine/server/ai/BaboonSpecialOrbitTest.java', 'com/riiablo/engine/server/ai/BaboonMeleeDecisionTest.java', 'com/riiablo/engine/server/ai/BaboonEscapeFallbackTest.java', 'com/riiablo/engine/server/ai/BaboonRegenerationRecoveryTest.java', 'com/riiablo/engine/server/ai/BaboonRegenerationDecisionTest.java', 'com/riiablo/engine/server/ai/ScarabDecisionBranchTest.java', 'com/riiablo/engine/server/ai/ScarabBaboonPursuitTest.java', 'com/riiablo/engine/server/ai/Act1NativeAiIntegrationTest.java', 'com/riiablo/engine/server/NativeMonsterSequenceIntegrationTest.java', 'com/riiablo/engine/server/NativeMonsterChargeTest.java', 'com/riiablo/RiiabloTest.java'])
+    }
+  }
+}
