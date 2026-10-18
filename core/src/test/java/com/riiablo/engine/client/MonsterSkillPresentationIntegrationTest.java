@@ -23,6 +23,38 @@ import org.junit.jupiter.api.Test;
 /** Headless verification of monster skill start sound and overlay requests. */
 class MonsterSkillPresentationIntegrationTest extends RiiabloTest {
   @Test
+  void leapStartPresentationPreservesAuthoritativeAirborneProgress() {
+    Skills.Entry leapSkill = Riiablo.files.skills.get("Leap");
+    assertEquals(29, leapSkill.cltstfunc);
+    NoopFactory factory = new NoopFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new SkillCastHandler(), new RecordingOverlayManager(),
+            new com.riiablo.engine.server.LeapSystem(), factory)
+        .build().register("factory", factory)
+        .register("clientContext", ClientGameplayContext.fromGlobals())
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int id = world.create();
+      world.getMapper(Monster.class).create(id);
+      com.riiablo.engine.server.component.Position position = world.getMapper(
+          com.riiablo.engine.server.component.Position.class).create(id);
+      com.riiablo.engine.server.component.Leap leap = world.getMapper(
+          com.riiablo.engine.server.component.Leap.class).create(id)
+          .set(new Vector2(2, 3), new Vector2(8, 3), .6f, -1);
+      world.setDelta(.1f);
+      world.process();
+      float elapsed = leap.elapsed, x = position.position.x;
+      dispatch(world, id, leapSkill);
+      assertEquals(elapsed, leap.elapsed);
+      assertEquals(x, position.position.x);
+      for (int i = 0; i < 6; i++) world.process();
+      assertEquals(8f, position.position.x, .001f);
+      org.junit.jupiter.api.Assertions.assertFalse(world.getMapper(
+          com.riiablo.engine.server.component.Leap.class).has(id));
+    } finally { world.dispose(); }
+  }
+
+  @Test
   void nativeResurrectSkillsRequestConfiguredSoundAndHealingOverlay() {
     Skills.Entry resurrect = Riiablo.files.skills.get("Resurrect");
     Skills.Entry resurrect2 = Riiablo.files.skills.get("Resurrect2");
@@ -38,6 +70,7 @@ class MonsterSkillPresentationIntegrationTest extends RiiabloTest {
         .with(new EventSystem(), new SkillCastHandler(), overlays, factory)
         .build()
         .register("factory", factory)
+        .register("clientContext", ClientGameplayContext.fromGlobals())
         .register("map", new com.riiablo.map.Map(0, 0)));
     try {
       int shamanId = world.create();

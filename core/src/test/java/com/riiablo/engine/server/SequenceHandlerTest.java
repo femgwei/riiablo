@@ -17,6 +17,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SequenceHandlerTest {
   @Test
+  void monsterMonSeqJabFinishesWithoutEnteringPlayerFollowupMode() {
+    SequenceHandler handler = new SequenceHandler();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), handler).build());
+    try {
+      int id = world.create();
+      CofReference cof = world.getMapper(CofReference.class).create(id)
+          .set("SC", Engine.Monster.MODE_A2);
+      AnimData anim = world.getMapper(AnimData.class).create(id);
+      anim.speed = 256;
+      com.riiablo.engine.server.component.Casting casting = world.getMapper(
+          com.riiablo.engine.server.component.Casting.class).create(id);
+      casting.jabRemainingStrikes = 1;
+      casting.jabStrikeProcessed = true;
+      Sequence sequence = world.getMapper(Sequence.class).create(id)
+          .sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
+      sequence.started = true;
+      sequence.nativeMonster = new NativeMonsterSequence(Engine.Monster.MODE_A2,
+          new int[] {0, 1}, new byte[] {Engine.Monster.MODE_A2, Engine.Monster.MODE_A2},
+          new byte[] {0, Engine.KEYFRAME_ATK});
+      world.process();
+      assertEquals(-1, anim.override, "MonSeq must not use the player's 3x Jab COF speed");
+      handler.onAnimDataFinished(
+          com.riiablo.engine.server.event.AnimDataFinishedEvent.obtain(id));
+      assertEquals(Engine.Monster.MODE_NU, cof.mode);
+      org.junit.jupiter.api.Assertions.assertFalse(world.getMapper(Sequence.class).has(id));
+    } finally { world.dispose(); }
+  }
+
+  @Test
   void repeatedModeRestartsAnimationBeforeItCanSkipTheKeyframe() {
     AnimationResetProbe probe = new AnimationResetProbe();
     World world = new World(new WorldConfigurationBuilder()

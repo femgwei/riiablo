@@ -1002,7 +1002,7 @@ public class Actioneer extends PassiveSystem {
           event.entityId, completedTargetId);
       return;
     }
-    if (casting.jabRemainingStrikes > 0
+    if (mPlayer.has(event.entityId) && casting.jabRemainingStrikes > 0
         && (casting.jabStrikeProcessed
             || targetDead && casting.jabRemainingStrikes < AmazonSkills.getJabHitCount())) {
       log.info("[AMAZON_JAB] phase=continue entity={} target={} remaining={}",

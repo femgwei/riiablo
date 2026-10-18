@@ -51,7 +51,7 @@ class NativeMonsterSequenceIntegrationTest extends RiiabloTest {
     for (String name : new String[] {"seq_ancientwhirlwind", "seq_ancientleap", "seq_genericspawner",
         "seq_mosquitoskill", "seq_vileres", "seq_undeadbestow", "seq_fethisraise",
         "seq_reanimatedcharge", "seq_siegebeastcharge", "seq_nihlathakarctic",
-        "seq_serpentcharge", "seq_impinferno"}) {
+        "seq_serpentcharge", "seq_impinferno", "seq_scarabjab", "seq_leaperleap"}) {
       NativeMonsterSequence data = NativeMonsterSequence.load(name);
       for (int speed : new int[] {128, 256, 512}) {
         Probe probe = new Probe();

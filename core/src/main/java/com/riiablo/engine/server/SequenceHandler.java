@@ -86,7 +86,7 @@ public class SequenceHandler extends IteratingSystem {
           event.entityId, (int) nextMode);
       return;
     }
-    if (casting != null && casting.jabRemainingStrikes > 0
+    if (sequence.nativeMonster == null && casting != null && casting.jabRemainingStrikes > 0
         && casting.jabStrikeProcessed) {
       casting.jabStrikeProcessed = false;
       restartAmazonStrikeAnimation(event.entityId, casting,
@@ -217,7 +217,7 @@ public class SequenceHandler extends IteratingSystem {
       }
       return;
     }
-    if (casting != null && (casting.jabRemainingStrikes > 0
+    if (sequence.nativeMonster == null && casting != null && (casting.jabRemainingStrikes > 0
         || casting.jabStrikeProcessed)) {
       // D2's hard-coded Jab sequence selects roughly one third of each A1/A2
       // animation. Advancing the complete COFs at 3x preserves its native
