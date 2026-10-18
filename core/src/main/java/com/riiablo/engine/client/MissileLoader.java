@@ -85,7 +85,7 @@ public class MissileLoader extends IteratingSystem {
       default: blendMode = BlendMode.ID; break;
     }
     // IceArrowExplode.dcc is a fully-coloured impact sprite, but its native
-    // Trans=1 row still uses the same soft-additive missile compositing as
+    // Trans=1 row still uses the same additive missile compositing as
     // FreezeExplodeCenter/Ejecta. Keep the explicit branch as documentation
     // because this one-shot layer was previously forced through a different
     // indexed-alpha fallback while diagnosing the missing animation.

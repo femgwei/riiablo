@@ -23,7 +23,7 @@ public interface BlendMode {
   int SCREEN           = 12;
   /** Keep indexed palette RGB and derive opacity from the source index. */
   int SOURCE_INDEX_ALPHA = 13;
-  /** Native missile Trans=1 soft-additive blend. */
+  /** Native missile Trans=1 source-plus-destination additive blend. */
   int ADDITIVE           = 14;
   /** Brightened indexed sprite with luminance-derived transparency. */
   int BRIGHTEN_LUMINOSITY = 15;

@@ -135,6 +135,9 @@ void main() {
   // supplies the destination-preserving additive equation.
   } else if (blendMode == 14) {
     color.a = sourceIndex > 0.0 ? tint.a : 0.0;
+    // ONE + ONE does not apply alpha: mask index zero and preserve caller
+    // fades in the source RGB before adding it to the destination.
+    color.rgb *= color.a;
 
   // Set alpha based on luminance and color to tint
   } else if (blendMode == 3) {
