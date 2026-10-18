@@ -53,6 +53,13 @@ public class SkillCastHandler extends PassiveSystem {
   private final Vector2 tmpVec = new Vector2();
 
   @Subscribe
+  public void onLeapLand(com.riiablo.engine.server.event.LeapLandEvent event) {
+    // 1.10f D2Client cltdo43 -> 6FAC1E40, landing branch at 6FAC1FD7:
+    // overlay 0x50 (Overlay.txt dust / BAJumpLandPuff01), once on arrival.
+    if (mPosition.has(event.entityId)) overlays.set(event.entityId, "dust");
+  }
+
+  @Subscribe
   public void onSkillCast(SkillCastEvent event) {
   }
 

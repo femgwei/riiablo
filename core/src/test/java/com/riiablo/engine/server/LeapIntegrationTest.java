@@ -46,6 +46,13 @@ class LeapIntegrationTest extends RiiabloTest {
     assertEquals(40, skill.srvstfunc);
     assertEquals(77, skill.srvdofunc);
     assertEquals(43, skill.cltdofunc);
+    NativeMonsterSequence sequence = NativeMonsterSequence.load(row.Sk1mode);
+    assertEquals(8, sequence.frames[8]);
+    assertEquals(12, sequence.frames[12]);
+    com.riiablo.codec.excel.Overlay.Entry overlay = Riiablo.files.Overlay.get(80);
+    assertEquals("dust", overlay.overlay);
+    assertEquals("BAJumpLandPuff01", overlay.Filename);
+    assertTrue(Riiablo.mpqs.resolve("data/global/overlays/" + overlay.Filename + ".dcc").exists());
     System.out.println("[LEAP_AUDIT] monster=" + row.Id + " skill=" + skill.skill
         + " srvstfunc=" + skill.srvstfunc + " srvdofunc=" + skill.srvdofunc
         + " cltdofunc=" + skill.cltdofunc + " status=PASS");

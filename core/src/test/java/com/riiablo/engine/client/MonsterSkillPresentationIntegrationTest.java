@@ -23,6 +23,26 @@ import org.junit.jupiter.api.Test;
 /** Headless verification of monster skill start sound and overlay requests. */
 class MonsterSkillPresentationIntegrationTest extends RiiabloTest {
   @Test
+  void landingRequestsNativeDustInsteadOfReplayingLeapStart() {
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    NoopFactory factory = new NoopFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new SkillCastHandler(), overlays, factory)
+        .build().register("factory", factory)
+        .register("clientContext", ClientGameplayContext.fromGlobals())
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int id = world.create();
+      world.getMapper(com.riiablo.engine.server.component.Position.class).create(id).position.set(14, 10);
+      world.getSystem(EventSystem.class).dispatch(
+          com.riiablo.engine.server.event.LeapLandEvent.obtain(id));
+      assertEquals(1, overlays.requests);
+      assertEquals(id, overlays.lastEntity);
+      assertEquals("dust", overlays.lastOverlay);
+    } finally { world.dispose(); }
+  }
+
+  @Test
   void leapStartPresentationPreservesAuthoritativeAirborneProgress() {
     Skills.Entry leapSkill = Riiablo.files.skills.get("Leap");
     assertEquals(29, leapSkill.cltstfunc);

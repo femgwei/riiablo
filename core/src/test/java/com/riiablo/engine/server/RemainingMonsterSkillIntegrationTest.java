@@ -24,6 +24,62 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 import org.junit.jupiter.api.Test;
 
 class RemainingMonsterSkillIntegrationTest extends RiiabloTest {
+  @Test void sandLeaperHasOneFlightThenLandingTailInsteadOfMirroringBack() {
+    RecordingFactory factory = new RecordingFactory();
+    Actioneer actions = new Actioneer();
+    LandingProbe probe = new LandingProbe();
+    World world = new World(new WorldConfigurationBuilder().with(new EventSystem(),
+        actions, new Pathfinder(), new LeapSystem(), new CofManager(), new AnimStepper(),
+        probe, factory).build().register("factory", factory).register("map", mock(Map.class)));
+    try {
+      int source = world.create();
+      world.getMapper(com.riiablo.engine.server.component.Class.class).create(source).type =
+          com.riiablo.engine.server.component.Class.Type.MON;
+      MonStats.Entry row = Riiablo.files.monstats.get("sandleaper1");
+      world.getMapper(Monster.class).create(source).set(row, Riiablo.files.monstats2.get(row.MonStatsEx));
+      Position position = world.getMapper(Position.class).create(source);
+      position.position.set(10, 10);
+      world.getMapper(Angle.class).create(source);
+      world.getMapper(MovementModes.class).create(source).set(
+          Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
+      world.getMapper(AttributesWrapper.class).create(source).attrs = attrs();
+      int target = player(world, 12);
+      Skills.Entry skill = Riiablo.files.skills.get(row.Skill1);
+      actions.cast(source, skill.Id, target, new Vector2(12, 10));
+      Sequence sequence = world.getMapper(Sequence.class).get(source);
+      sequence.nativeMonster = NativeMonsterSequence.load(row.Sk1mode);
+      sequence.started = true;
+      AnimData animation = world.getMapper(AnimData.class).create(source);
+      animation.numFrames = 20 << 8;
+      world.setDelta(com.riiablo.engine.SimulationClock.STEP_SECONDS);
+      boolean airborne = false;
+      int flights = 0;
+      for (int tick = 0; tick < 65; tick++) {
+        world.process();
+        boolean flying = world.getMapper(Leap.class).has(source);
+        if (flying && !airborne) flights++;
+        if (flying && airborne) assertEquals(8 << 8, animation.frame);
+        if (probe.landings > 0) assertTrue(position.position.x >= 14f - .001f);
+        airborne = flying;
+      }
+      assertEquals(1, flights);
+      assertEquals(1, probe.landings);
+      assertEquals(new Vector2(14, 10), position.position);
+      assertFalse(world.getMapper(Casting.class).has(source));
+      // Late native callbacks for the same cast cannot start a return flight.
+      Casting cast = world.getMapper(Casting.class).create(source).set(skill.Id, target, new Vector2(12, 10));
+      cast.monsterLeapStarted = true;
+      world.getSystem(EventSystem.class).dispatch(
+          com.riiablo.engine.server.event.AnimDataKeyframeEvent.obtain(source, Engine.KEYFRAME_ATK));
+      assertFalse(world.getMapper(Leap.class).has(source));
+    } finally { world.dispose(); }
+  }
+
+  public static class LandingProbe extends net.mostlyoriginal.api.system.core.PassiveSystem {
+    int landings;
+    @Subscribe public void land(com.riiablo.engine.server.event.LeapLandEvent event) { landings++; }
+  }
+
   @Test void siegeStompUsesOneSharedDirectPacketAndNeverCreatesAnAttackMissile() {
     RecordingFactory factory = new RecordingFactory();
     Probe probe = new Probe();

@@ -147,8 +147,25 @@ public class AnimStepper extends IntervalIteratingSystem {
     }
     if (sequence != null && sequence.nativeMonster != null) {
       if (!sequence.started) return;
-      // Leap Attack suspends its sequence while the server owns airborne travel.
-      if (world.getMapper(com.riiablo.engine.server.component.Leap.class).has(entityId)) return;
+      Monster monster = mMonster.get(entityId);
+      boolean sandLeap = casting != null && casting.monsterLeapStarted
+          && monster != null && monster.monstats != null
+          && "sandleaper1".equals(monster.monstats.BaseId)
+          && files().skills.get(casting.skillId) != null
+          && files().skills.get(casting.skillId).srvdofunc == 77;
+      // SKILLS_Leap holds leapers at frame 8 while their path is active.
+      // Resume at 12 after landing, skipping the flight callbacks at 9/11.
+      if (world.getMapper(com.riiablo.engine.server.component.Leap.class).has(entityId)) {
+        if (sandLeap) animData.frame = 8 << 8;
+        return;
+      }
+      if (sandLeap && !casting.monsterLeapHit) {
+        casting.monsterLeapHit = true;
+        sequence.nativeMonsterCursor = 12 << 8;
+        animData.frame = 12 << 8;
+        events.dispatch(com.riiablo.engine.server.event.LeapLandEvent.obtain(entityId));
+        return;
+      }
       NativeMonsterSequence data = sequence.nativeMonster;
       int delta = 256;
       if (states != null && states.stateList != null)

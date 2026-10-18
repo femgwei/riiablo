@@ -1,5 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-19 跳跃者返航与落地表现
+
+- 修正同一 Casting 的 SrvDo077 被多个 MonSeq 动作点重复触发后重新镜像落点的问题；
+  一次技能只允许一次成功起跳。
+- 对照 D2MOO `SKILLS_Leap`，跳跃者飞行保持第 8 帧，落地进入第 12 帧与后续尾段。
+  落地事件仅发布一次，客户端播放原版 `dust / BAJumpLandPuff01`；资源与调用依据由
+  本机 1.10f MPQ 和 D2Client.dll 的 cltdofunc43 分支确认。
+- 移除近距离绕过思考计时的即时跳跃分支，活动 Casting/Sequence/Leap 期间不重掷概率，
+  恢复已有 aidel 间隔并使用每单位原生 AI RNG。
+- 定向回归与验证结果见 [sand-leaper-landing-2026-10-19.md](sand-leaper-landing-2026-10-19.md)。
+  原版落地后的地面 knockback 路径仍未在本次补齐；实际烟尘画面及手感待另一台电脑复测。
+
 ## 2026-10-19 神殿与 Fallen 本体不可见排查
 
 - 用户日志中耐力神殿 1247 的 overlay 已加载；Fallen 1248 复活后仍移动和攻击。

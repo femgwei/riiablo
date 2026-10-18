@@ -2561,7 +2561,14 @@ public class Actioneer extends PassiveSystem {
         break;
       }
       case 77: { // native Leap: mirrored landing point and collision-free airborne travel
-        startLeap(entityId, targetId, targetVec);
+        Casting leapCast = mCasting.get(entityId);
+        // SrvDo077 is called by several MonSeq action points. Its native
+        // flags transition from takeoff to flight to landing; later callbacks
+        // must not mirror the destination again from the new position.
+        if (leapCast != null && !leapCast.monsterLeapStarted) {
+          startLeap(entityId, targetId, targetVec);
+          leapCast.monsterLeapStarted = mLeap.has(entityId);
+        }
         break;
       }
       case 78: { // Leap Attack: takeoff, airborne hold, then one landing attack.

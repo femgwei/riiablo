@@ -95,31 +95,18 @@ public class SandLeaper extends AI {
       // airborne component. Resume ordinary AI only after both lifecycles end.
       if (mCasting.has(entityId) || mLeap.has(entityId)) return;
       stateMachine.changeState(State.IDLE);
+      time = SLEEP;
     }
+    // AITHINK runs after the current action, not once per rendered/simulation
+    // frame during its animation. Never overwrite an unfinished cast.
+    if (mCasting.has(entityId) || mSequence.has(entityId) || mLeap.has(entityId)) return;
 
     nextAction -= delta;
     time -= delta;
 
-    // 远程怪即时反应：玩家进入跳跃/近战范围（<5 或近战）立即攻击，不等到 time 结束
     float[] outDist = { Float.MAX_VALUE };
     int targetId = findNearestTargetWithAidist(outDist);
     float targetDistance = outDist[0];
-    boolean inRange = targetId != Engine.INVALID_ENTITY && (targetDistance < 5f || isInCombat(targetId));
-    if (inRange
-        && stateMachine.getCurrentState() != State.ATTACK
-        && stateMachine.getCurrentState() != State.LEAP) {
-      pathfinder.findPath(entityId, null);
-      lookAt(targetId);
-      Vector2 targetPos = mPosition.get(targetId).position;
-      if (tryLeap(targetId, targetDistance, targetPos)) return;
-      stateMachine.changeState(State.ATTACK);
-      mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
-      mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
-      time = MathUtils.random(1f, 2f);
-      return;
-    }
-
     if (time > 0) {
       return;
     }
@@ -159,14 +146,14 @@ public class SandLeaper extends AI {
 
     // D2MOD: If in combat
     if (bCombat) {
-      if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
+      if (params.length > 1 && rollAiChance(params[1])) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
-        time = MathUtils.random(1f, 2);
+        time = SLEEP;
         return;
       }
     } else {
@@ -180,14 +167,14 @@ public class SandLeaper extends AI {
         return;
       }
 
-      if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+      if (params.length > 2 && rollAiChance(params[2])) {
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;
       }
 
-      if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+      if (params.length > 3 && rollAiChance(params[3])) {
         // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
         // Circle around target
         pathfinder.findPath(entityId, targetPos, false, targetId);
@@ -204,13 +191,13 @@ public class SandLeaper extends AI {
   private boolean tryLeap(int targetId, float targetDistance, Vector2 targetPos) {
     if (targetDistance >= 5f || monster.monstats.Skill1 == null
         || monster.monstats.Skill1.isEmpty() || params.length == 0
-        || !MathUtils.randomBoolean(params[0] / 100f)) {
+        || !rollAiChance(params[0])) {
       return false;
     }
     lookAt(targetId);
     if (!useMonsterSkill(0, targetId, targetPos)) return false;
     stateMachine.changeState(State.LEAP);
-    time = MathUtils.random(1f, 2f);
+    time = SLEEP;
     return true;
   }
 
