@@ -311,6 +311,33 @@ flatbuffers {
   flatBuffersVersion = flatbuffersVersion
 }
 
+// Repeatable monster behavior gate: decisions plus observable ECS effects.
+task monsterBehaviorTest(type: Test) {
+  group = 'verification'
+  description = 'Verify monster pursuit, attacks, spawning, resurrection and special damage.'
+  dependsOn testClasses
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform { excludeTags 'visual' }
+  filter {
+    includeTestsMatching 'com.riiablo.engine.server.ai.*'
+    includeTestsMatching 'com.riiablo.engine.server.FallenShamanAutoCombatIntegrationTest'
+    includeTestsMatching 'com.riiablo.engine.server.Act1MonsterEcsScenarioTest'
+    includeTestsMatching 'com.riiablo.engine.server.RemainingMonsterSkillIntegrationTest'
+    includeTestsMatching 'com.riiablo.engine.server.NativeExplosionLifecycleTest'
+    includeTestsMatching 'com.riiablo.engine.server.MonsterAttackProfileIntegrationTest'
+    includeTestsMatching 'com.riiablo.engine.server.NativeMonsterChargeTest'
+    includeTestsMatching 'com.riiablo.engine.server.PathfinderRecoveryTargetTest.continuouslyMovingTargetDoesNotStarvePursuitVelocity'
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
+
 task createFlatBuffers(type: FlatBuffers) {
   doFirst {
     if (OperatingSystem.current() != OperatingSystem.WINDOWS) {

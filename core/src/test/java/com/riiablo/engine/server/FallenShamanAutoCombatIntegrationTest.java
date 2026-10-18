@@ -85,6 +85,7 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
       world.getMapper(MovementModes.class).create(fallen).set(
           Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
       world.getMapper(CofReference.class).create(fallen).set("FA", Engine.Monster.MODE_NU);
+      world.process(); // publish created units to the native target subscriptions
 
       // Enter through the same native AI decision used by the live server,
       // rather than calling Actioneer directly.  This catches target/range
@@ -150,6 +151,7 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
       world.getMapper(Size.class).get(fallen).size = Size.MEDIUM;
       world.getMapper(CofReference.class).create(fallen)
           .set(fallenRow.Code, Engine.Monster.MODE_NU);
+      world.process();
 
       Fallen ai = new Fallen(fallen);
       world.getInjector().inject(ai);
@@ -199,6 +201,8 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
       int player = createPlayer(world);
       int fallen = createMonster(world, fallenRow, fallenStats2, 12, 10, 24);
       int shaman = createMonster(world, shamanRow, shamanStats2, 10, 10, 100);
+      world.getMapper(Monster.class).get(fallen).setMinionOwner(shaman);
+      world.process();
 
       // Run the same pure authoritative hit resolver used by ECS attacks until
       // the Fallen reaches zero HP.  A high attack rating makes this bounded

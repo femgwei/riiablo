@@ -500,6 +500,13 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       return id;
     }
     @Override public int createWarp(int index, float x, float y) { return -1; }
+    @Override public int createMonsterChild(int source, int type, int mode, float x, float y,
+        int radius, boolean replace, int flags) {
+      int id = createMonster(type, x, y);
+      world.getMapper(Monster.class).get(id).minionOwnerId = source;
+      applyNativeUnitFlags(id, flags);
+      return id;
+    }
     @Override public boolean selfResurrectMonster(int monsterId) {
       selfResurrections++;
       lastSelfResurrected = monsterId;
