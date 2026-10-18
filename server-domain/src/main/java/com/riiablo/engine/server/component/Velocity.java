@@ -139,9 +139,9 @@ public class Velocity extends PooledComponent {
           baseSpeedMultiplier + modeSpeedBonusMultiplier + nativeMonsterVelocityBonus / 100f);
       return effectivePercent / requestedPercent * Math.max(0f, stateSpeedMultiplier);
     }
-    if (nativePlayerSpeed && movementRunning && runSpeed > 0f) {
-      return Math.max(0.25f * walkSpeed / runSpeed,
-          1f + nativePlayerVelocityBonus / 100f * walkSpeed / runSpeed);
+    if (nativePlayerSpeed) {
+      return com.riiablo.engine.server.NativePlayerMovement.movementMultiplier(
+          walkSpeed, runSpeed, movementRunning, nativePlayerVelocityBonus);
     }
     return Math.max(0f, stateSpeedMultiplier);
   }

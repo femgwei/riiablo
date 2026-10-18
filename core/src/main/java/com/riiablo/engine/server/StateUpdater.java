@@ -1580,9 +1580,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   static long playerMovementBonus(int equipmentFrw, int velocityBonus) {
     // UNITS_GetAnimStatBasePercentage uses integer division and a 150 base.
     // Shipped equipment has nonnegative FRW; clamp malformed negatives to zero.
-    long frw = Math.max(0, equipmentFrw);
-    long effectiveFrw = frw * 150L / (frw + 150L);
-    return effectiveFrw + velocityBonus;
+    return NativePlayerMovement.bonus(equipmentFrw, velocityBonus);
   }
 
   /**

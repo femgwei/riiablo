@@ -162,12 +162,12 @@ public class VelocityModeChanger extends IteratingSystem {
     } else {
       if (isEffectivelyRunning(entityId)) {
         setMovementMode(entityId, mMovementModes.get(entityId).RN, currentVelocity);
-        mAnimData.get(entityId).override = scaleAnimationSpeed(
-            PLAYER_RUN_ANIM_SPEED, currentVelocity.len(), velocity.runSpeed);
+        mAnimData.get(entityId).override = NativePlayerMovement.animationRate(
+            velocity.walkSpeed, velocity.runSpeed, true, velocity.nativePlayerVelocityBonus);
       } else {
         setMovementMode(entityId, mMovementModes.get(entityId).WL, currentVelocity);
-        mAnimData.get(entityId).override = scaleAnimationSpeed(
-            PLAYER_WALK_ANIM_SPEED, currentVelocity.len(), velocity.walkSpeed);
+        mAnimData.get(entityId).override = NativePlayerMovement.animationRate(
+            velocity.walkSpeed, velocity.runSpeed, false, velocity.nativePlayerVelocityBonus);
       }
     }
   }
