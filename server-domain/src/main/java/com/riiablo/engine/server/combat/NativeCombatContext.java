@@ -39,7 +39,7 @@ public final class NativeCombatContext {
   private NativeCombatContext(int difficulty, DifficultyLevels.Entry difficultyRow,
       boolean attackerPlayer, boolean defenderPlayer, boolean defenderDemon,
       boolean defenderUndead, int playerCount, boolean expansion, boolean stateDurationsDeferred) {
-    this.difficulty = NativeDifficultyRules.clamp(difficulty);
+    this.difficulty = NativeDifficultyPolicy.clamp(difficulty);
     this.difficultyRow = difficultyRow;
     this.attackerPlayer = attackerPlayer;
     this.defenderPlayer = defenderPlayer;

@@ -11,12 +11,12 @@ public class NativeDamagePacket {
   public boolean hit;
   public boolean blocked;
   public boolean blockAnimationAllowed;
-  public int defenseType = DefenseCalculator.DEFENSE_NONE;
+  public int defenseType = NativeCombatConstants.DEFENSE_NONE;
   public boolean critical;
   public boolean deadlyStrike;
   public boolean crushingBlow;
   public int physicalDamage;
-  public int[] elementalDamage = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+  public int[] elementalDamage = new int[NativeCombatConstants.DAMAGE_TYPE_COUNT];
   public int totalDamage;
   public int elementalScale = 1;
   public int lifeStolen;
@@ -44,8 +44,8 @@ public class NativeDamagePacket {
   public float totalDamageHp() {
     if (elementalScale == 1) return totalDamage;
     float total = physicalDamage;
-    for (int i = 1; i < CombatSystem.DAMAGE_TYPE_COUNT; i++) {
-      if (i != CombatSystem.DAMAGE_POISON || poisonDuration <= 0) {
+    for (int i = 1; i < NativeCombatConstants.DAMAGE_TYPE_COUNT; i++) {
+      if (i != NativeCombatConstants.DAMAGE_POISON || poisonDuration <= 0) {
         total += elementalDamageHp(i);
       }
     }
@@ -53,21 +53,21 @@ public class NativeDamagePacket {
   }
 
   public boolean isAmazonPassiveDefense() {
-    return defenseType == DefenseCalculator.DEFENSE_DODGE
-        || defenseType == DefenseCalculator.DEFENSE_AVOID
-        || defenseType == DefenseCalculator.DEFENSE_EVADE;
+    return defenseType == NativeCombatConstants.DEFENSE_DODGE
+        || defenseType == NativeCombatConstants.DEFENSE_AVOID
+        || defenseType == NativeCombatConstants.DEFENSE_EVADE;
   }
 
   public void reset() {
     hit = false;
     blocked = false;
     blockAnimationAllowed = false;
-    defenseType = DefenseCalculator.DEFENSE_NONE;
+    defenseType = NativeCombatConstants.DEFENSE_NONE;
     critical = false;
     deadlyStrike = false;
     crushingBlow = false;
     physicalDamage = 0;
-    for (int i = 0; i < CombatSystem.DAMAGE_TYPE_COUNT; i++) elementalDamage[i] = 0;
+    for (int i = 0; i < NativeCombatConstants.DAMAGE_TYPE_COUNT; i++) elementalDamage[i] = 0;
     totalDamage = 0;
     elementalScale = 1;
     lifeStolen = 0;

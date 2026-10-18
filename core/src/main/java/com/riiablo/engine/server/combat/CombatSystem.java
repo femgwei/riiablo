@@ -41,25 +41,25 @@ public class CombatSystem {
   //==========================================================================
 
   /** 物理伤害 */
-  public static final int DAMAGE_PHYSICAL = 0;
+  public static final int DAMAGE_PHYSICAL = NativeCombatConstants.DAMAGE_PHYSICAL;
   
   /** 火焰伤害 */
-  public static final int DAMAGE_FIRE = 1;
+  public static final int DAMAGE_FIRE = NativeCombatConstants.DAMAGE_FIRE;
   
   /** 闪电伤害 */
-  public static final int DAMAGE_LIGHTNING = 2;
+  public static final int DAMAGE_LIGHTNING = NativeCombatConstants.DAMAGE_LIGHTNING;
   
   /** 冰冷伤害 */
-  public static final int DAMAGE_COLD = 3;
+  public static final int DAMAGE_COLD = NativeCombatConstants.DAMAGE_COLD;
   
   /** 毒素伤害 */
-  public static final int DAMAGE_POISON = 4;
+  public static final int DAMAGE_POISON = NativeCombatConstants.DAMAGE_POISON;
   
   /** 魔法伤害 */
-  public static final int DAMAGE_MAGIC = 5;
+  public static final int DAMAGE_MAGIC = NativeCombatConstants.DAMAGE_MAGIC;
 
   /** 伤害类型数量 */
-  public static final int DAMAGE_TYPE_COUNT = 6;
+  public static final int DAMAGE_TYPE_COUNT = NativeCombatConstants.DAMAGE_TYPE_COUNT;
 
   //==========================================================================
   // 常量 - 命中公式参数

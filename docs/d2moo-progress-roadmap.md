@@ -5000,6 +5000,22 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 物理分层后续集中批次：NativeCombatContext、NativeDamagePacket 移入现有
+  `:server-domain`（包名/类型名不变）；纯难度规则提取为 NativeDifficultyPolicy，
+  `:core` 的 NativeDifficultyRules 保留完整旧签名作为委托门面，仅 Attributes 的
+  difficultyResistanceIncluded 适配仍由宿主处理，未新增 domain→core 反向依赖。
+  NativeCombatConstants 集中伤害通道与防御编码，CombatSystem/DefenseCalculator
+  保留常量别名；原生包不再依赖宿主计算器，未改通道顺序、公式或包重置语义。
+  新增独立 domain 测试，直接验证三难度/游戏模式、上下文派生、表规则、固定点/毒素
+  包语义及全部公开字段重置；运行时断言 core 宿主类不在 domain 测试 classpath。
+  显式 1.10f 数据下 72 类/233 项战斗定向回归通过。架构门禁发现上轮兼容工厂
+  重复全局表读取超预算；统一 legacyFiles 读取后保留原空表 fallback，未放宽基线。
+  最终上下文/兼容回归 15 项、架构约束 3 项、domain 23 项、server-systems 2 项、
+  game-data 2 项全部通过，失败/错误/跳过均为 0；上述任务范围有重叠，不累加作全量数。
+  core/各领域模块编译与模块边界检查通过；未执行全仓全量或客户端实机验证。
+  本批不等于整个 CombatSystem、属性编解码和状态应用都已移出 core；后续物理迁移
+  应沿纯计算输入/输出边界推进，不能让领域模块依赖宿主 Attributes/ECS 应用。
+
 - 本阶段集中收尾：Actioneer 所有剩余攻击调用（28 处）迁移到显式 WithContext
   接口，覆盖预计算近战、元素/转化、Lightning Strike、普通怪物技能和 Vengeance；
   StateUpdater Blade Shield、AssassinTrapSystem 尸爆同步接入。旧签名保留委托，

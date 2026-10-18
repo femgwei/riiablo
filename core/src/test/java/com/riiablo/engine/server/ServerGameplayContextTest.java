@@ -12,6 +12,25 @@ import org.junit.jupiter.api.Test;
 
 class ServerGameplayContextTest {
   @Test
+  void legacyFactoriesShareTheCurrentBindingAndKeepMissingTableFallback() {
+    Files previousFiles = Riiablo.files;
+    CharData previousCharacter = Riiablo.charData;
+    try {
+      Riiablo.files = null;
+      Riiablo.charData = null;
+      assertEquals(null, ServerGameplayContext.legacyCombatContext(2).difficultyRow());
+      assertEquals(true, ServerGameplayContext.legacyCombatContext(2).expansion());
+      Files replacement = mock(Files.class);
+      Riiablo.files = replacement;
+      assertSame(replacement, ServerGameplayContext.fromGlobals().files());
+      assertEquals(null, ServerGameplayContext.legacyCombatContext(1).difficultyRow());
+    } finally {
+      Riiablo.files = previousFiles;
+      Riiablo.charData = previousCharacter;
+    }
+  }
+
+  @Test
   void combatModeBelongsToWorldAndDedicatedDefaultsToExpansion() {
     Files files = mock(Files.class);
     CharData character = mock(CharData.class);

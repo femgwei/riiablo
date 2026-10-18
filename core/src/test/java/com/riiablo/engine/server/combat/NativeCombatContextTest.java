@@ -6,6 +6,30 @@ import org.junit.jupiter.api.Test;
 
 class NativeCombatContextTest {
   @Test
+  void legacyConstantsAndDifficultyFacadeKeepDomainEncodings() {
+    assertEquals(NativeCombatConstants.DAMAGE_PHYSICAL, CombatSystem.DAMAGE_PHYSICAL);
+    assertEquals(NativeCombatConstants.DAMAGE_FIRE, CombatSystem.DAMAGE_FIRE);
+    assertEquals(NativeCombatConstants.DAMAGE_LIGHTNING, CombatSystem.DAMAGE_LIGHTNING);
+    assertEquals(NativeCombatConstants.DAMAGE_COLD, CombatSystem.DAMAGE_COLD);
+    assertEquals(NativeCombatConstants.DAMAGE_POISON, CombatSystem.DAMAGE_POISON);
+    assertEquals(NativeCombatConstants.DAMAGE_MAGIC, CombatSystem.DAMAGE_MAGIC);
+    assertEquals(NativeCombatConstants.DAMAGE_TYPE_COUNT, CombatSystem.DAMAGE_TYPE_COUNT);
+    assertEquals(NativeCombatConstants.DEFENSE_NONE, DefenseCalculator.DEFENSE_NONE);
+    assertEquals(NativeCombatConstants.DEFENSE_BLOCK, DefenseCalculator.DEFENSE_BLOCK);
+    assertEquals(NativeCombatConstants.DEFENSE_DODGE, DefenseCalculator.DEFENSE_DODGE);
+    assertEquals(NativeCombatConstants.DEFENSE_AVOID, DefenseCalculator.DEFENSE_AVOID);
+    assertEquals(NativeCombatConstants.DEFENSE_EVADE, DefenseCalculator.DEFENSE_EVADE);
+    assertEquals(NativeCombatConstants.DEFENSE_WEAPON_BLOCK, DefenseCalculator.DEFENSE_WEAPON_BLOCK);
+    for (int difficulty = -1; difficulty <= 3; difficulty++) {
+      assertEquals(NativeDifficultyPolicy.clamp(difficulty), NativeDifficultyRules.clamp(difficulty));
+      assertEquals(NativeDifficultyPolicy.playerResistancePenalty(difficulty),
+          NativeDifficultyRules.playerResistancePenalty(difficulty));
+      assertEquals(NativeDifficultyPolicy.scaleMonsterColdDuration(81, difficulty),
+          NativeDifficultyRules.scaleMonsterColdDuration(81, difficulty));
+    }
+  }
+
+  @Test
   void classicPenaltiesIgnoreExpansionTableAndDerivedContextsKeepMode() {
     com.riiablo.codec.excel.DifficultyLevels.Entry row =
         new com.riiablo.codec.excel.DifficultyLevels.Entry();

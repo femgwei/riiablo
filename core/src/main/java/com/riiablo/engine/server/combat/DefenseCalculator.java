@@ -70,17 +70,17 @@ public class DefenseCalculator {
   //==========================================================================
 
   /** 防御结果：无防御 */
-  public static final int DEFENSE_NONE = 0;
+  public static final int DEFENSE_NONE = NativeCombatConstants.DEFENSE_NONE;
   /** 防御结果：格挡 */
-  public static final int DEFENSE_BLOCK = 1;
+  public static final int DEFENSE_BLOCK = NativeCombatConstants.DEFENSE_BLOCK;
   /** 防御结果：闪避（近战时站立） */
-  public static final int DEFENSE_DODGE = 2;
+  public static final int DEFENSE_DODGE = NativeCombatConstants.DEFENSE_DODGE;
   /** 防御结果：躲避（远程攻击） */
-  public static final int DEFENSE_AVOID = 3;
+  public static final int DEFENSE_AVOID = NativeCombatConstants.DEFENSE_AVOID;
   /** 防御结果：闪避（移动时） */
-  public static final int DEFENSE_EVADE = 4;
+  public static final int DEFENSE_EVADE = NativeCombatConstants.DEFENSE_EVADE;
   /** 防御结果：武器格挡（刺客） */
-  public static final int DEFENSE_WEAPON_BLOCK = 5;
+  public static final int DEFENSE_WEAPON_BLOCK = NativeCombatConstants.DEFENSE_WEAPON_BLOCK;
 
   //==========================================================================
   // 核心计算方法

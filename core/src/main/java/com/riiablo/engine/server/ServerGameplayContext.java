@@ -64,11 +64,15 @@ public final class ServerGameplayContext {
 
   /** Compatibility only: production server hosts register their own context. */
   public static com.riiablo.engine.server.combat.NativeCombatContext legacyCombatContext(int difficulty) {
+    Files files = legacyFiles();
     return com.riiablo.engine.server.combat.NativeCombatContext.forGameplay(difficulty,
-        Riiablo.files != null && Riiablo.files.DifficultyLevels != null
-            ? Riiablo.files.DifficultyLevels.get(difficulty) : null,
+        files != null && files.DifficultyLevels != null
+            ? files.DifficultyLevels.get(difficulty) : null,
         Riiablo.charData == null || Riiablo.charData.isExpansion());
   }
+
+  /** Shared legacy table binding; read once per factory invocation. */
+  private static Files legacyFiles() { return Riiablo.files; }
 
   public int gameSeed() {
     return gameSeed;
@@ -91,7 +95,7 @@ public final class ServerGameplayContext {
 
   /** Compatibility bridge for old tests and tools that have no server host. */
   public static ServerGameplayContext fromGlobals() {
-    return new ServerGameplayContext(Riiablo.files, Riiablo.gameSeed, Riiablo.charData, Riiablo.anim,
+    return new ServerGameplayContext(legacyFiles(), Riiablo.gameSeed, Riiablo.charData, Riiablo.anim,
         Riiablo.mpqs,
         ServerGameplayContext::persistLegacyCharacter);
   }

@@ -5,9 +5,14 @@
  * 
  * <h2>核心类</h2>
  * <ul>
- *   <li>{@link com.riiablo.engine.server.combat.DamageCalculator} - 伤害计算器（单例）</li>
+ *   <li>{@link com.riiablo.engine.server.combat.DamageCalculator} - 可实例化伤害计算器</li>
  *   <li>{@link com.riiablo.engine.server.combat.DamageResult} - 伤害计算结果</li>
  * </ul>
+ *
+ * <p>编译边界：{@code :server-domain} 持有 NativeCombatContext、NativeDamagePacket、
+ * NativeCombatConstants 和 NativeDifficultyPolicy；这些领域模型/规则不依赖本模块。
+ * {@code :core} 保留属性适配、CombatSystem/DefenseCalculator、状态与 ECS 应用，
+ * NativeDifficultyRules 作为旧接口兼容门面，仅属性防重复难度扣减适配留在宿主层。
  * 
  * <h2>伤害类型</h2>
  * <ul>
