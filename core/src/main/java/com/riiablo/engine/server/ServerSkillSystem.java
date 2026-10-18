@@ -107,6 +107,48 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private double nativeElapsedFrames;
+
+  @Subscribe
+  public void onMonsterMeleeHit(com.riiablo.engine.server.event.MeleeAttackEvent event) {
+    if (event.hit && !event.blocked) onCursedMonsterHit(event.attacker);
+  }
+
+  /** MonsterUnique.cpp 0x6FC6C4F0, called after a successful monster hit,
+   * including a hit whose resolved damage is zero. */
+  public void onCursedMonsterHit(int source) {
+    if (!mMonster.has(source) || !mPosition.has(source)
+        || !mAttributesWrapper.has(source)) return;
+    Monster monster = mMonster.get(source);
+    if (!MonsterRank.isUnique(monster.rank)
+        || !com.riiablo.engine.server.monster.MonsterAffix.hasAffix(monster.affixes,
+            com.riiablo.engine.server.monster.MonsterAffix.CURSED)) return;
+    NativeRng rng = new NativeRng(monster.rngState);
+    int roll = rng.nextInt();
+    monster.rngState = rng.state();
+    if (!cursedHitRollSucceeds(roll)) return;
+    Skills.Entry skill = files().skills.get(SkillId.AMPLIFY_DAMAGE);
+    if (skill == null) return;
+    int level = Math.max(1, (int) mAttributesWrapper.get(source).attrs.getValue(Stat.level, 1) / 5 + 1);
+    int range = Math.max(1, Math.min(40,
+        SkillFormula.evaluate(skill.aurarangecalc, skill, level)));
+    Vector2 center = mPosition.get(source).position;
+    IntBag entities = world.getAspectSubscriptionManager().get(Aspect.all(Position.class)).getEntities();
+    int[] candidates = java.util.Arrays.copyOf(entities.getData(), entities.size());
+    for (int target : candidates) {
+      if (center.dst2(mPosition.get(target).position) > range * range
+          || !isNecromancerCurseTarget(source, target, 3, false)) continue;
+      UnitStates states = mUnitStates.has(target) ? mUnitStates.get(target)
+          : mUnitStates.create(target).init(world, target);
+      if (states.stateList == null) states.init(world, target);
+      // Unique-mod callback uses AuraLen directly; player curse difficulty
+      // scaling is not applied here.
+      NecromancerSkills.applyCurse(states.stateList, files().States, skill, level,
+          source, null, mAttributesWrapper.has(target) ? mAttributesWrapper.get(target).attrs : null,
+          mPlayer.has(target) || mMercenary.has(target));
+    }
+  }
+
+  static boolean cursedHitRollSucceeds(int roll) { return (roll & 3) != 0; }
   /** MonsterUnique suicide modifier: one direct packet, visual missile only. */
   public void resolveSuicideExplosion(int source, int coldLength, int radius, long seedRoll) {
     if (!mMonster.has(source) || !mAttributesWrapper.has(source) || !mPosition.has(source)) return;
@@ -166,7 +208,7 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   /** Native MONSTERUNIQUE_CastBugLightningMissile: eight charged-bolt missiles
-   * emitted from a scarab carrying MonUMod 16 after a real damaging hit. */
+   * emitted from a scarab carrying MonUMod 20 after a real damaging hit. */
   public void emitScarabChargedBolts(int source) {
     if (!mMonster.has(source) || !mPosition.has(source) || factory == null) return;
     Missiles.Entry row = files() == null || files().Missiles == null

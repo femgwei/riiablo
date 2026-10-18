@@ -13,7 +13,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import org.junit.jupiter.api.Test;
 
-/** Golden check for the damage snapshot on a Scarab MonUMod 16 bolt. */
+/** Integer snapshot check for a Scarab MonUMod 20 bolt; not a fixed-point or collision audit. */
 class ScarabChargedBoltDamageTest extends RiiabloTest {
   @Test
   void bugLightningUsesNativeFixedOnePointPerTwoLevels() {
