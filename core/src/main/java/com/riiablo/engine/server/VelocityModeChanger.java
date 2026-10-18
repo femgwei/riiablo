@@ -240,6 +240,9 @@ public class VelocityModeChanger extends IteratingSystem {
     if (base == null) base = current;
 
     CofReference cof = mCofReference.get(entityId);
+    if (monster.vultureAirborne) {
+      return lookupBaseAnimationSpeed(base, Engine.Monster.MODE_S1, cof, animData.speed);
+    }
     int rawBaseSpeed;
     if (running && current.hcIdx < 410) {
       // Classic monsters derive RN speed from half of the base WL rate.

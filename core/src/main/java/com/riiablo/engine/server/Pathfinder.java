@@ -526,6 +526,17 @@ public class Pathfinder extends IteratingSystem {
     }
 
     Vector2 position = mPosition.get(src).position;
+    // Fn023 changes the dynamic path to a straight coordinate flight with
+    // collision mask NONE. Ground A* may reject these distant air waypoints.
+    if (mMonster.has(src) && mMonster.get(src).vultureAirborne) {
+      if (!isMonsterTargetDestinationAllowed(src, target)
+          || !isNativeMonsterRoomPathAllowed(src, position, target)) return false;
+      GraphPath flight = Pools.obtain(GraphPath.class);
+      flight.add(new com.riiablo.map.pfa.Point2((int) position.x, (int) position.y));
+      flight.add(new com.riiablo.map.pfa.Point2((int) target.x, (int) target.y));
+      mPathfind.create(src).set(flight);
+      return true;
+    }
     int flags = groundPathFlags(src);
     int size = mSize.get(src).size;
     GraphPath path = Pools.obtain(GraphPath.class);
@@ -886,6 +897,7 @@ public class Pathfinder extends IteratingSystem {
   /** Mirrors PATH_AllocDynamicPath's non-flying open-door branch. */
   private int groundPathFlags(int entityId) {
     Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
+    if (monster != null && monster.vultureAirborne) return 0;
     return NativeGroundPathProfile.forUnit(mPlayer.has(entityId),
         monster == null ? null : monster.monstats).terrainFlags;
   }

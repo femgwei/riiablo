@@ -478,7 +478,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (type != Class.Type.MON && type != Class.Type.PLR) return false;
     if (type == Class.Type.MON && mMonster.has(entityId)) {
       Monster monster = mMonster.get(entityId);
-      if (monster.frogNoPresence) return false;
+      if (monster.frogNoPresence || monster.vultureAirborne) return false;
       if (!monster.nativeRestoredCollisionPattern && !isDynamicObstacle(monster)) return false;
       MonStats.Entry stats = monster.monstats;
       if (stats != null) {
@@ -512,6 +512,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
    * paths contain PET but not ordinary MONSTER footprints.
    */
   private UnitCollisionGrid.UnitBlocker blockerFor(int moverId) {
+    if (mMonster.has(moverId) && mMonster.get(moverId).vultureAirborne) return other -> false;
     // D2Common's COLLIDE_MASK_MONSTER_PATH contains COLLIDE_PET, but not
     // COLLIDE_MONSTER or COLLIDE_PLAYER.  Normal presence patterns still put
     // COLLIDE_NO_PATH at their center, so they remain blockers; pet-presence

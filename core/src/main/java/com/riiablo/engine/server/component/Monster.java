@@ -75,6 +75,8 @@ public class Monster extends Component {
   public boolean shatteredAtDeath;
   /** Fn052 changes collision independently of targetability or skill start 51. */
   public boolean frogNoPresence;
+  /** Fn023 airborne collision and movement mode. */
+  public boolean vultureAirborne;
   /** Server PATH_SetUnitDeadCollision boundary, independent of DD/Corpse usability. */
   public boolean nativeCorpseCollision;
   /** SKILLS_ResurrectUnit explicitly rebuilt the pattern from runtime size. */
@@ -136,6 +138,7 @@ public class Monster extends Component {
     playerRevive = false;
     shatteredAtDeath = false;
     frogNoPresence = false;
+    vultureAirborne = false;
     nativeCorpseCollision = false;
     nativeRestoredCollisionPattern = false;
     frogSmallPresence = false;

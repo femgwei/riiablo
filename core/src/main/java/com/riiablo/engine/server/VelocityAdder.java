@@ -211,6 +211,7 @@ public class VelocityAdder extends IteratingSystem {
       return dynamicMove(entityId, to);
     }
     Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
+    if (monster != null && monster.vultureAirborne) return dynamicMove(entityId, to);
     int flags = NativeGroundPathProfile.forUnit(mPlayer.has(entityId),
         monster == null ? null : monster.monstats).terrainFlags;
     // Keep the authoritative movement ray consistent with Pathfinder: native
