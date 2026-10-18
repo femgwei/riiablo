@@ -1392,7 +1392,9 @@ public class CombatSystem {
     a.isMissile = missile;
     a.fixedPointElements = fixedPointElements;
     a.alwaysHit = alwaysHit;
-    NativeCombatContext combatContext = NativeCombatContext.ofDifficulty(difficulty);
+    NativeCombatContext combatContext = NativeCombatContext.ofDifficulty(difficulty)
+        .withCombatants(attackerPlayer, defenderPlayer)
+        .withTargetType(defenderDemon, defenderUndead);
     a.difficulty = combatContext.difficulty();
     a.level = Math.max(1, statInt(attacker, Stat.level, 1));
     a.strength = statInt(attacker, Stat.strength, 0);

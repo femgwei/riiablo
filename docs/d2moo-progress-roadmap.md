@@ -5000,6 +5000,11 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 上下文扩展：支持显式注入 `DifficultyLevels.Entry`（借用只读），以及玩家双方、PvP、
+  恶魔/亡灵目标和 1..8 玩家数量；旧攻击入口开始构造双方和种族信息。
+  本步只建立数据契约，尚未将所有难度表消费者迁移到上下文；不改变伤害公式。
+  定向验证入口：`NativeCombatContextTest`，覆盖派生上下文、表行保留和边界。
+
 - [x] 新增 `NativeCombatContext` 和 `NativeDifficultyRules`，把 Normal/Nightmare/Hell
   的边界、玩家抗性惩罚和怪物冷冻时长规则集中到独立的原生规则层。
 - [x] `CombatSystem` 和 `MonsterUtil` 统一使用该规则层；保留旧的整数难度入口，避免

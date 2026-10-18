@@ -25,4 +25,33 @@ class NativeCombatContextTest {
     assertEquals(40, NativeDifficultyRules.scaleMonsterColdDuration(80, 1));
     assertEquals(20, NativeDifficultyRules.scaleMonsterColdDuration(80, 2));
   }
+
+  @Test
+  void carriesCombatTargetAndPlayerCountContextWithoutChangingDifficulty() {
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(2)
+        .withCombatants(true, true)
+        .withTargetType(true, false)
+        .withPlayerCount(99);
+    assertEquals(2, context.difficulty());
+    assertEquals(true, context.attackerPlayer());
+    assertEquals(true, context.defenderPlayer());
+    assertEquals(true, context.isPvp());
+    assertEquals(true, context.defenderDemon());
+    assertEquals(false, context.defenderUndead());
+    assertEquals(8, context.playerCount());
+  }
+
+  @Test
+  void derivedContextsPreserveTheInjectedTableAndLeaveOriginalUnchanged() {
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    row.StaticFieldMin = 33;
+    NativeCombatContext original = NativeCombatContext.ofDifficulty(1, row);
+    NativeCombatContext derived = original.withCombatants(true, true).withPlayerCount(0);
+    assertEquals(row, derived.difficultyRow());
+    assertEquals(33, derived.difficultyRow().StaticFieldMin);
+    assertEquals(false, original.isPvp());
+    assertEquals(true, derived.isPvp());
+    assertEquals(1, derived.playerCount());
+  }
 }
