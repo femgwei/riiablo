@@ -18,6 +18,47 @@ import org.junit.jupiter.api.Test;
 
 /** Real A* and dynamic occupancy on an empty mocked terrain layer. */
 class PathfinderLargeTargetApproachTest {
+  @Test void loggedScarabContactAllowsPlayerToStartMovingAwayAndRecoverPath() {
+    Map map = mock(Map.class);
+    MapGraph graph = new MapGraph(map);
+    AStarPathFinder search = new AStarPathFinder(graph);
+    when(map.findPartialPath(nullable(Map.Zone.class), any(Vector2.class), any(Vector2.class),
+        anyInt(), anyInt(), any(GraphPath.class), nullable(MapGraph.Obstacle.class), anyBoolean()))
+        .thenAnswer(call -> graph.searchPartialNodePath(search, call.getArgument(1),
+            call.getArgument(2), call.getArgument(3), call.getArgument(4),
+            call.getArgument(5), call.getArgument(6), false));
+    Pathfinder paths = new Pathfinder();
+    DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder().with(collision, paths)
+        .build().register("map", map));
+    try {
+      int player = world.create(), scarab = world.create();
+      for (int id : new int[] {player, scarab}) {
+        world.getMapper(Position.class).create(id).position.set(82, id == player ? -117 : -115);
+        world.getMapper(Velocity.class).create(id).setMonster(6);
+        world.getMapper(Size.class).create(id).size = id == player ? 2 : 3;
+        world.getMapper(com.riiablo.engine.server.component.Class.class).create(id).type = id == player
+            ? com.riiablo.engine.server.component.Class.Type.PLR
+            : com.riiablo.engine.server.component.Class.Type.MON;
+        world.getMapper(Angle.class).create(id).set(Vector2.X);
+      }
+      world.getMapper(Player.class).create(player);
+      world.process();
+      assertFalse(collision.isFreeForPath(player, Engine.INVALID_ENTITY, 82, -117, 2));
+      Vector2 goal = new Vector2(82, -125);
+      assertTrue(paths.findPath(player, goal, false));
+      // Contact can invalidate the old route; recovery must not reject the
+      // initial sample merely because it still rounds to the source cell.
+      world.getMapper(Pathfind.class).get(player).recordMovement(true, 0f, 0.04f, true);
+      paths.process(player);
+      assertTrue(world.getMapper(Pathfind.class).has(player));
+      assertEquals(goal, world.getMapper(Pathfind.class).get(player).destination);
+      assertTrue(collision.tryMove(player, 82f, -117.2f));
+      assertTrue(collision.tryMove(player, 82f, -117.6f));
+      assertFalse(collision.tryMove(player, 82f, -116f));
+    } finally { world.dispose(); }
+  }
+
   @Test void sizeThreePursuitFindsAFreeApproachWithoutIgnoringThePlayerFootprint() {
     Map map = mock(Map.class);
     MapGraph graph = new MapGraph(map);

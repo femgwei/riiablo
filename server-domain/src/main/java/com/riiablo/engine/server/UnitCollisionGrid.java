@@ -96,6 +96,13 @@ public final class UnitCollisionGrid {
       int oldX = previous.x;
       int oldY = previous.y;
       int oldSize = previous.size;
+      // Native Step.cpp tests collision when the integer cell changes.
+      // BIG's presence cross can touch SMALL's test cross after a legal
+      // approach; re-testing that occupied source cell traps subcell escape.
+      // Keep full centre overlaps (e.g. after Whirlwind ends) subject to
+      // ordinary blocking; the escape exception is for touching test fringes.
+      if (oldX == x && oldY == y && oldSize == pathPatternSize(size)
+          && !hasOtherUnit(x, y, entityId, ignoredEntityId, blocker)) return true;
       remove(entityId);
       if (isFree(entityId, ignoredEntityId, x, y, size, blocker)) {
         put(entityId, x, y, size);

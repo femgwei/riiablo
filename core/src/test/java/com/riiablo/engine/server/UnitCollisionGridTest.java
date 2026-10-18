@@ -7,6 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 class UnitCollisionGridTest {
+  @Test void largeScarabApproachAllowsSubcellEscapeButStillBlocksMovementIntoIt() {
+    UnitCollisionGrid grid = new UnitCollisionGrid();
+    grid.put(137, 82, -117, 2);
+    assertTrue(grid.move(155, -1, 82, -115, 3));
+    assertFalse(grid.isFree(137, -1, 82, -117, 2));
+    assertTrue(grid.move(137, -1, 82, -117, 2), "subcell escape retains the source marker");
+    assertFalse(grid.move(137, -1, 82, -116, 2), "moving into the scarab remains blocked");
+    assertTrue(grid.move(137, -1, 82, -118, 2), "moving away enters a free cell");
+  }
   @Test
   void invalidPresenceSizesUseSmallPatternForWritesQueriesAndDiagnostics() {
     for (int size : new int[] {Integer.MIN_VALUE, -1, 4, Integer.MAX_VALUE}) {

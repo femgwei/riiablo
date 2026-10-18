@@ -901,12 +901,16 @@ public class Pathfinder extends IteratingSystem {
 
     float dx = end.x - start.x;
     float dy = end.y - start.y;
+    int sourceX = Map.round(start.x);
+    int sourceY = Map.round(start.y);
     int samples = Math.max(1,
         (int) Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) * 2f));
     for (int i = 1; i <= samples; i++) {
       float fraction = i / (float) samples;
       int x = com.riiablo.map.Map.round(start.x + dx * fraction);
       int y = com.riiablo.map.Map.round(start.y + dy * fraction);
+      // Test newly entered cells, not the mover's already occupied cell.
+      if (x == sourceX && y == sourceY) continue;
       if (!dynamicCollision.isFreeForPath(moverId, targetId, x, y, size)) {
         return false;
       }

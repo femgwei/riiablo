@@ -1,5 +1,13 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-18 圣甲虫贴身后源格碰撞锁住玩家（日志复现）
+
+- 日志坐标：玩家 `(82,-117)`、Size=2；圣甲虫 `(81.75971,-115.07768)`、Size=3。BIG 的 3x3 检测允许靠近，但写入的十字 marker 会与 SMALL 玩家的源格检测十字相交。这不代表原生尺寸应缩小。
+- 对照 D2MOO `D2Common/src/Path/Step.cpp`：只有整数格改变后才执行移动碰撞检查。修正 `UnitCollisionGrid.move`，已有单位在同格、尺寸不变且中心未被其他 marker 占据时保留占位并允许格内移动，进入其他格仍执行完整检测；尺寸改变、旋风结束后中心完全重叠仍需校验。
+- `Pathfinder` 动态线段检查同步跳过源格，避免路径平滑或受阻恢复把合法离开路径判为不可用。
+- 新增真实日志坐标的占位回归和真实 A*/动态占位 ECS 回归，覆盖玩家初次建立离开路径、受阻重算、格内起步、进入空格和向怪物内部移动被拒绝。实际客户端手感待用户复测。
+- 验证通过：`:core:test` 定向运行 `UnitCollisionGridTest`、`DynamicUnitCollisionSystemTest`、`PathfinderLargeTargetApproachTest`、`PathfinderRecoveryTargetTest`、`PathfinderTest`，71 项通过。
+
 ## 2026-10-18 玩家贴身受阻后的起步寻路
 
 - 玩家坐标移动被动态单位实际阻挡后，下一逻辑帧重新规划路径，保留目的地、跑步和速度倍率；单击移动也能恢复，不再依赖按住鼠标的 0.25 秒刷新。怪物原有重寻路节奏保留。
