@@ -177,3 +177,25 @@ Charge/击退的现有宿主调用、旋风的浮点构造射线、跳跃落点�
 原生tick7项、共享碰撞14项及旋风/跳跃/Charge/MonSeq等既有回归），失败/错误/跳过均0；
 architectureRegression 3项通过，服务端与桌面端编译通过。
 最终日志 build/ai-native-path-phase2-verified.log。未跑整个 core 测试集，没有自然地图或GL验收。
+## 第三阶段：动作切换保护与 MonSeq 全表回归（2026-10-19）
+
+第三阶段本轮完成以下增量，尚不能标记“动作表现全覆盖”整体验收完成。
+
+- AnimationStepper 将 COF/图层就绪保护从特殊序列扩展至所有动画：存在 dirty、
+  pending DCC loading 或所选 COF 与 resident COF 不一致时，不推进旧动画，也不把
+  新动作速率写给旧图层。资源发布后恢复普通播放或权威 source-frame 映射。
+- 新增普通动作切换回归，检查 COF 不一致、dirty、loading 三个等待阶段与加载完成
+  后的恢复。保留对象速率、冻结、特殊序列倒放/保持等已有行为。
+- NativeMonsterSequenceIntegrationTest 从固定14个名称扩展到当前1.10F资源
+  monseq.txt 内全部 seq_ 条目，在128/256/512三种COF速率下逐点检查源帧、模式、
+  非音效事件和结束时机。该测试不含 Casting，验证通用解释器，不能替代每个技能的
+  生产调用链、Charge/跳跃特殊调度或每种怪物的DCC资源验收。
+- 原版依据复核：SequenceTbls.cpp::DATATBLS_ComputeSequenceAnimation 返回源帧、
+  模式和最后非零事件；Units.cpp::UNITS_InitializeSequence / UNITS_StopSequence
+  读取返回的方向局部变量，但没有在这两处写回朝向。本轮没有凭表字段猜测转向规则。
+
+最终验证日志 build/ai-action-phase3-verified.log：动作相关32项测试全部通过，
+失败/错误/跳过均0；architectureRegression 3项通过；服务端与桌面编译通过。
+其中音效3项仅验证距离/区域衰减，不能据此声称MonSeq SOUND已全链播放验收。
+未运行整个core测试集，未完成全部怪物COF/DCC资源与方向、音效生产链核对，
+也未进行自然地图、GL目视或跨电脑验收。第二阶段的剩余事项继续保留。

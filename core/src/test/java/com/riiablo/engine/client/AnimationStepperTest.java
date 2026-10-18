@@ -14,6 +14,40 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationStepperTest extends RiiabloTest {
+  @Test void ordinaryActionWaitsForCofAndPendingLayersBeforeAdvancing() {
+    Riiablo.colors = new com.riiablo.Colors();
+    World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());
+    try {
+      int id = world.create();
+      Animation animation = world.getMapper(AnimationWrapper.class).create(id).animation;
+      COF oldCof = COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/DI/COF/DIRNHTH.cof"));
+      COF nextCof = COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/DI/COF/DIA2HTH.cof"));
+      animation.setCOF(oldCof);
+      animation.setFrame(1);
+      animation.setFrameDelta(256);
+      world.getMapper(AnimData.class).create(id).speed = 512;
+      com.riiablo.engine.client.component.CofWrapper cof = world.getMapper(
+          com.riiablo.engine.client.component.CofWrapper.class).create(id);
+      cof.cof = nextCof;
+      world.setDelta(SimulationClock.STEP_SECONDS);
+      world.process();
+      assertEquals(1, animation.getFrame());
+      assertEquals(256, animation.getFrameDelta(), "new action rate must not affect old layers");
+      animation.setCOF(nextCof);
+      world.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class).create(id);
+      world.process();
+      assertEquals(0, animation.getFrame());
+      world.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class).remove(id);
+      world.getMapper(com.riiablo.engine.client.component.CofLoadingComponents.class).create(id);
+      world.process();
+      assertEquals(0, animation.getFrame(), "pending DCCs must not consume animation time");
+      world.getMapper(com.riiablo.engine.client.component.CofLoadingComponents.class).remove(id);
+      world.process();
+      assertEquals(2, animation.getFrame());
+      assertEquals(512, animation.getFrameDelta());
+    } finally { world.dispose(); }
+  }
+
   @Test void authoritativeFrameWaitsUntilSelectedCofAndLayersAgree() {
     Riiablo.colors = new com.riiablo.Colors();
     World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());

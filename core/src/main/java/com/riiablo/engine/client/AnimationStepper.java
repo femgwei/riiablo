@@ -21,6 +21,7 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
   protected ComponentMapper<com.riiablo.engine.client.component.CofWrapper> mCofWrapper;
   protected ComponentMapper<com.riiablo.engine.shared.component.CofDirtyComponents> mCofDirty;
+  protected ComponentMapper<com.riiablo.engine.client.component.CofLoadingComponents> mCofLoading;
 
   public AnimationStepper() {
     super(null, SimulationClock.STEP_SECONDS);
@@ -30,6 +31,13 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected void process(int entityId) {
     AnimationWrapper wrapper = mAnimationWrapper.get(entityId);
     if (wrapper == null || wrapper.animation == null) return;
+
+    // Mode resolution and DCC publication are asynchronous. Keep every action
+    // on its resident frame until the selected composite is ready; otherwise
+    // an attack's rate advances the previous walk/idle layers while loading.
+    com.riiablo.engine.client.component.CofWrapper cof = mCofWrapper.get(entityId);
+    if (mCofDirty.has(entityId) || mCofLoading.has(entityId)
+        || cof != null && cof.cof != wrapper.animation.getCOF()) return;
 
     UnitStates states = mUnitStates.get(entityId);
     if (states != null && states.stateList != null
@@ -51,8 +59,6 @@ public class AnimationStepper extends IntervalIteratingSystem {
       // SQ presentation follows the authoritative source-frame mapping.
       // In particular Submerge reverses S1 and holds at zero; looping the
       // resident emergence COF forward would show the opposite action.
-      com.riiablo.engine.client.component.CofWrapper cof = mCofWrapper.get(entityId);
-      if (mCofDirty.has(entityId) || cof != null && cof.cof != wrapper.animation.getCOF()) return;
       int frameCount = wrapper.animation.getNumFramesPerDir();
       if (frameCount > 0) {
         int frame = Math.max(0, Math.min(frameCount - 1, animData.frame >>> 8));

@@ -73,17 +73,27 @@ class NativeMonsterSequenceIntegrationTest extends RiiabloTest {
   }
 
   @Test void realMonSeqActionsRunAtTheirOwnPointsRegardlessOfCofMarkersAndSpeed() {
-    for (String name : new String[] {"seq_ancientwhirlwind", "seq_ancientleap", "seq_genericspawner",
-        "seq_mosquitoskill", "seq_vileres", "seq_undeadbestow", "seq_fethisraise",
-        "seq_reanimatedcharge", "seq_siegebeastcharge", "seq_nihlathakarctic",
-        "seq_serpentcharge", "seq_impinferno", "seq_scarabjab", "seq_leaperleap"}) {
+    // Exercise the installed retail table rather than a hand-picked subset:
+    // every sequence must preserve its source frames, mode changes and events.
+    java.util.Set<String> names = new java.util.LinkedHashSet<>();
+    String text = com.riiablo.Riiablo.mpqs.resolve("data/global/excel/monseq.txt")
+        .readString("windows-1252");
+    for (String line : text.split("\\r?\\n")) {
+      String name = line.split("\\t", -1)[0];
+      if (name.startsWith("seq_")) names.add(name);
+    }
+    assertTrue(names.size() >= 14, "retail MonSeq table must be available");
+    for (String name : names) {
       NativeMonsterSequence data = NativeMonsterSequence.load(name);
+      assertNotNull(data, name);
       for (int speed : new int[] {128, 256, 512}) {
         Probe probe = new Probe();
         World world = new World(new WorldConfigurationBuilder()
             .with(new EventSystem(), probe, new CofManager(), new AnimStepper()).build());
         try {
           int id = world.create();
+          com.riiablo.engine.server.component.CofReference reference = world.getMapper(
+              com.riiablo.engine.server.component.CofReference.class).create(id).set("DI", data.mode);
           AnimData anim = world.getMapper(AnimData.class).create(id);
           anim.speed = speed; anim.numFrames = 50 << 8;
           anim.keyframes = new byte[] {Engine.KEYFRAME_MIS, Engine.KEYFRAME_MIS};
@@ -97,6 +107,9 @@ class NativeMonsterSequenceIntegrationTest extends RiiabloTest {
                 && data.actions[tick] != Engine.KEYFRAME_SND) expectedActions++;
             world.process();
             assertEquals(expectedActions, probe.actions, name + " tick=" + tick);
+            int point = Math.min(data.frames.length - 1, tick);
+            assertEquals(data.frames[point] << 8, anim.frame, name + " source frame tick=" + tick);
+            assertEquals(data.modes[point], reference.mode, name + " mode tick=" + tick);
             assertEquals(tick == data.frames.length ? 1 : 0, probe.finished);
           }
           sequence.sequence(Engine.Monster.MODE_NU, Engine.Monster.MODE_NU);
