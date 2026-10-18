@@ -28,6 +28,7 @@ public class DefenseCalculator {
 
 
   private final java.util.function.IntUnaryOperator random;
+  private final NativeCombatRolls rolls;
 
   /** Compatibility entry point for callers without an explicit RNG. */
   public DefenseCalculator() {
@@ -36,6 +37,7 @@ public class DefenseCalculator {
 
   public DefenseCalculator(java.util.function.IntUnaryOperator random) {
     this.random = java.util.Objects.requireNonNull(random, "random");
+    this.rolls = new NativeCombatRolls(random);
   }
 
   //==========================================================================
@@ -166,34 +168,8 @@ public class DefenseCalculator {
    */
   public int checkPassiveDefense(int attackType, boolean isMoving,
       int dodgeChance, int avoidChance, int evadeChance, int weaponBlockChance) {
-    // D2MOO's SUNITDMG_ApplyDodge returns from the moving branch before it
-    // evaluates weapon block. Evade therefore has priority while walking or
-    // running, even when another stat-list contributes weapon block.
-    if (isMoving) {
-      if (evadeChance > 0 && rollPassive(evadeChance)) {
-        log.debug("Evade successful: {}%", evadeChance);
-        return DEFENSE_EVADE;
-      }
-      return DEFENSE_NONE;
-    }
-    if (weaponBlockChance > 0 && rollPassive(weaponBlockChance)) {
-      log.debug("Weapon block successful: {}%", weaponBlockChance);
-      return DEFENSE_WEAPON_BLOCK;
-    }
-    if (attackType == ATTACK_MELEE && dodgeChance > 0 && rollPassive(dodgeChance)) {
-      log.debug("Dodge successful: {}%", dodgeChance);
-      return DEFENSE_DODGE;
-    }
-    if (attackType == ATTACK_RANGED && avoidChance > 0 && rollPassive(avoidChance)) {
-      log.debug("Avoid successful: {}%", avoidChance);
-      return DEFENSE_AVOID;
-    }
-    return DEFENSE_NONE;
-  }
-
-  private boolean rollPassive(int chance) {
-    if (chance >= 100) return true;
-    return random.applyAsInt(100) < Math.min(Math.max(chance, 0), MAX_DODGE_CHANCE);
+    return rolls.passiveDefense(attackType, isMoving,
+        dodgeChance, avoidChance, evadeChance, weaponBlockChance);
   }
 
   /**

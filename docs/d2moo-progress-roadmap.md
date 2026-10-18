@@ -5006,6 +5006,19 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 随机/被动防御边界集中迁移：新增 `:server-domain` NativeCombatRolls，显式注入
+  共享 IntUnaryOperator；主攻击命中掷骰、近战闭区间/飞弹半开区间、盾挡、暴击、
+  致命与压碎判定，以及生产快照被动防御优先级迁入领域层。保留 alwaysHit 的命中
+  掷骰、近战常量范围仍掷骰/飞弹常量范围不掷骰、暴击成功后跳过致命判定；
+  Attributes 旧防御 API 仍独立保留，不与生产快照入口强行统一。
+  新增脚本 RNG 边界与 4,000 组冻结 `5ed47c6` 被动防御对照，逐项检查结果、
+  随机 bound/调用次数和后续随机状态。D2MOO `SUNITDMG_ApplyDodge` 核对移动
+  Evade 提前返回顺序；现有 75% cap/保证成功不消耗 RNG 不是该原版函数的逐字行为，
+  本批保持既有实现，不借迁移修正机制。宿主仍拥有攻击编排、属性读取、状态应用、
+  格挡动画与 lastblockframe 写回，兼容静态飞弹 RNG 入口暂留 core。
+  显式 1.10f 核心定向回归 75 类/242 项、domain 47 项、架构约束 3 项全部通过，
+  失败/错误/跳过均为 0；编译与模块边界通过。未跑全仓全量或客户端实机。
+
 - 无掷骰结算集中收尾：新增 `:server-domain` NativeDirectDamageMath 与
   NativeStatusDurationMath。直接物理（native/reflected）、直接元素（native/legacy）、
   冷长度抗性行、毒长度、毒素精通快照与 BitRate/每帧转换迁入领域层；宿主保留

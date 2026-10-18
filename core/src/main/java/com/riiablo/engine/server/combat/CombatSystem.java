@@ -331,27 +331,27 @@ public class CombatSystem {
   // 构造函数
   //==========================================================================
 
-  private final java.util.function.IntUnaryOperator random;
+  private final NativeCombatRolls rolls;
 
   /** Compatibility RNG for old tools that do not bind a server world. */
   public CombatSystem() {
-    this.random = bound -> MathUtils.random(bound - 1);
+    java.util.function.IntUnaryOperator random = bound -> MathUtils.random(bound - 1);
+    this.rolls = new NativeCombatRolls(random);
     this.defenseCalculatorResolver = new DefenseCalculator(random);
   }
 
   public CombatSystem(com.riiablo.engine.server.NativeRng rng) {
-    this.random = java.util.Objects.requireNonNull(rng, "rng")::nextInt;
+    java.util.function.IntUnaryOperator random = java.util.Objects.requireNonNull(rng, "rng")::nextInt;
+    this.rolls = new NativeCombatRolls(random);
     this.defenseCalculatorResolver = new DefenseCalculator(random);
   }
 
   private int rollInclusive(int min, int max) {
-    return min + random.applyAsInt(Math.max(1, max - min + 1));
+    return rolls.inclusive(min, max);
   }
 
   private int rollMissileDamage(int minimum, int maximum) {
-    int min = Math.max(0, minimum);
-    int max = Math.max(min, maximum);
-    return max > min ? min + random.applyAsInt(max - min) : min;
+    return rolls.missileDamage(minimum, maximum);
   }
 
   /**
@@ -2091,7 +2091,7 @@ public class CombatSystem {
   }
 
   private HitResult rollHit(AttackerData attacker, DefenderData defender) {
-    return calculateHit(attacker, defender, random.applyAsInt(100));
+    return calculateHit(attacker, defender, rolls.hitRoll());
   }
 
   /**
@@ -2119,7 +2119,7 @@ public class CombatSystem {
 
   /** Test seam for the defender-owned native block roll. */
   protected boolean rollShieldBlock(int blockChance) {
-    return blockChance > 0 && random.applyAsInt(100) < blockChance;
+    return rolls.percent(blockChance);
   }
 
   //==========================================================================
@@ -2161,7 +2161,7 @@ public class CombatSystem {
    * 计算基础物理伤害
    */
   private int calculateBaseDamage(AttackerData attacker, DefenderData defender) {
-    // Keep zero-profile and inclusive/exclusive random draws in the host.
+    // Keep zero-profile adaptation here; random range semantics live in the domain.
     if (attacker.maxDamage <= 0) return attacker.isMissile && attacker.alwaysHit ? 0 : 1;
     int minimum = Math.max(0, Math.min(attacker.minDamage, attacker.maxDamage));
     int damage = attacker.isMissile
@@ -2286,32 +2286,21 @@ public class CombatSystem {
    * 判定暴击（Critical Strike - 来自技能）
    */
   private boolean rollCriticalStrike(AttackerData attacker) {
-    if (attacker.criticalStrike <= 0) {
-      return false;
-    }
-    int chance = Math.min(attacker.criticalStrike, MAX_CRIT_CHANCE);
-    return random.applyAsInt(100) < chance;
+    return rolls.percent(Math.min(attacker.criticalStrike, MAX_CRIT_CHANCE));
   }
 
   /**
    * 判定致命一击（Deadly Strike - 来自装备）
    */
   private boolean rollDeadlyStrike(AttackerData attacker) {
-    if (attacker.deadlyStrike <= 0) {
-      return false;
-    }
-    int chance = Math.min(attacker.deadlyStrike, MAX_CRIT_CHANCE);
-    return random.applyAsInt(100) < chance;
+    return rolls.percent(Math.min(attacker.deadlyStrike, MAX_CRIT_CHANCE));
   }
 
   /**
    * 判定压碎性打击
    */
   private boolean rollCrushingBlow(AttackerData attacker) {
-    if (attacker.crushingBlow <= 0) {
-      return false;
-    }
-    return random.applyAsInt(100) < attacker.crushingBlow;
+    return rolls.percent(attacker.crushingBlow);
   }
 
   //==========================================================================
