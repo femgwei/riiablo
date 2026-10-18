@@ -235,3 +235,33 @@ architectureRegression 3项通过，服务端与桌面端编译通过。
 复跑说明：docs/ai-dependency-acceptance.md。没有第二台电脑的运行证据，没有完整自然
 地图出生→接敌→门/通道/接缝→全部动作→死亡/复活覆盖，也未做规模性能或原版逐帧
 对照。第二、三阶段未完成项继续保留，不能因为已进行四次处理就宣称四项全部关闭。
+
+## 收口复核：自然接敌与完整入口复跑（2026-10-19）
+
+实现基线 1eaab9733dad726bf178949b4ce62f424b0d172f 补齐入口无动作时的自然接敌：
+从真实 TCP 快照选择同级活体敌人，通过生产共享碰撞规划、正常步行接近，最多8个候选，
+每条路线不超过128子格；不生成怪物、不传送、不发送攻击。接敌后仍严格观察200 tick，
+所有新增观察窗口均校验唯一配对、时长与零玩家攻击，未观察到实际行为仍失败。
+
+已从该提交导出全新源码快照，完整执行 run-ai-dependency-acceptance.ps1。
+证据 build/ai-closeout-1eaab9733/acceptance.json，控制台 build/ai-closeout-runner.log。
+此前“最终入口未端到端复跑”的记录是上一轮状态，本次已完成 TCP 与 GL 全入口复跑。
+
+- TCP seed=1、25Hz、地图1/2：入口 tick365→565，接敌 tick722→922，各200 tick。
+  visited=2、真实接缝1、detachedJumps=0、combatKills=0、failures=0。
+  fallen1 有3条移动、19条决策、2条近战伤害路径记录和12个移动采样；
+  warnings/errors/fallbackRecords 均0。zombie1 只有思考采样，不能算动作验收通过。
+- GL 854×480：第85帧、连续稳定3帧、角色9个GPU图层，Intel HD Graphics630。
+  截图已查看，可见角色、自然怪物、地形和HUD；GL seed=286247501，与TCP种子分开。
+  证据 gl/rogue-encampment-smoke.png 及同目录 manifest。
+- MapTourAiLogTest 10项通过；AI审计15项拒绝反例，以及地图/往返/原生接缝审计通过。
+  本轮未跑整个core测试集。
+
+清单保持 natural=OBSERVED_RUNTIME_ONLY、gl=CAPTURED_REQUIRES_VISUAL_REVIEW、
+crossComputer=NOT_RUN、result=PARTIAL，不代表原版一致性或全部技能/怪物覆盖。
+
+归档条件尚未满足，仍有非人工代码工作：NativePathRuntime 的特殊移动/施法等入口与
+目标速度信息未全接入；StatusEffectApplier.applyKnockback 仍未通过移动系统应用通用击退；
+SequenceHandler/AnimStepper 仍排除 MonSeq KEYFRAME_SND，音效生产链未接齐。
+全部自然路线、怪物资源和规模性能也尚未完成自动验收。跨电脑、原版动态对照及音效听验
+另需人工或外部证据。保留聊天，不把上述代码遗留改标为人工验收。

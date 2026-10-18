@@ -20,6 +20,11 @@
 - natural-console.log、natural/map-tour.log、natural/ai-summary.txt：seed=1、25Hz、
   地图1/2及非城镇入口200 tick的自然AI观察。审计拒绝观察窗口不足、无行为证据、
   fallback、未审查告警、死亡恢复或未完成巡图。观察成功仍为 OBSERVED_RUNTIME_ONLY。
+  如果入口窗口尚无实际怪物行为，使用正常TCP移动走近最多8个已可见的同地图活体敌人，
+  从生产共享碰撞网格规划至约6子格外，路线长度限制128子格。不传送、不生成怪物、
+  不改AI状态、不发送攻击或调用战斗清障；动态阻挡则停止并尝试下一候选。到达后再
+  观察200 tick。入口与接敌窗口都执行相同的无攻击、完整tick与唯一配对审计，
+  未遇到可达敌人或仍无实际动作时继续失败，不将“思考过”放宽为通过。
 - gl-console.log、gl/rogue-encampment-smoke.png、gl/rogue-encampment-manifest.txt：
   生产 GameScreen 在地图2的854×480截图，以及 GL vendor/renderer/version。
   GL使用专用CampSmoke角色的固定地图种子0x110FCA4D，与TCP观察的Seed参数分开记录。
