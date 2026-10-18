@@ -4,6 +4,12 @@ package com.riiablo.engine.server.combat;
 public final class NativeDifficultyRules {
   private NativeDifficultyRules() {}
 
+  /** D2MOO SKILLS_AuraCallback_StaticField: Classic has no difficulty floor. */
+  public static int staticFieldLifeFloorPercent(NativeCombatContext context, boolean expansion) {
+    if (!expansion || context.difficultyRow() == null) return 0;
+    return Math.max(0, context.difficultyRow().StaticFieldMin);
+  }
+
   public static int clamp(int difficulty) {
     return Math.max(NativeCombatContext.NORMAL,
         Math.min(NativeCombatContext.HELL, difficulty));

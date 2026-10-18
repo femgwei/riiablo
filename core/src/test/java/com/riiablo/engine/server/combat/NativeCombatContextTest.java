@@ -6,6 +6,19 @@ import org.junit.jupiter.api.Test;
 
 class NativeCombatContextTest {
   @Test
+  void staticFieldConsumesInjectedTableOnlyInExpansion() {
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    row.StaticFieldMin = 37;
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(1, row);
+    assertEquals(37, NativeDifficultyRules.staticFieldLifeFloorPercent(context, true));
+    assertEquals(0, NativeDifficultyRules.staticFieldLifeFloorPercent(context, false));
+    assertEquals(0, NativeDifficultyRules.staticFieldLifeFloorPercent(
+        NativeCombatContext.ofDifficulty(2), true));
+    row.StaticFieldMin = -1;
+    assertEquals(0, NativeDifficultyRules.staticFieldLifeFloorPercent(context, true));
+  }
+  @Test
   void clampsDifficultyAtTheCombatBoundary() {
     assertEquals(0, NativeCombatContext.ofDifficulty(-4).difficulty());
     assertEquals(1, NativeCombatContext.ofDifficulty(1).difficulty());

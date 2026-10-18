@@ -1810,8 +1810,10 @@ public class ServerSkillSystem extends PassiveSystem {
     boolean expansion = !mPlayer.has(event.entityId)
         || mPlayer.get(event.entityId).data == null
         || mPlayer.get(event.entityId).data.isExpansion();
-    int floorPercent = SorceressSkills.getStaticFieldLifeFloorPercent(
-        difficultyRow, expansion);
+    com.riiablo.engine.server.combat.NativeCombatContext combatContext =
+        com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty, difficultyRow);
+    int floorPercent = com.riiablo.engine.server.combat.NativeDifficultyRules
+        .staticFieldLifeFloorPercent(combatContext, expansion);
     int damageType = staticFieldDamageType(skill.EType);
     int auraFilter = skill.aurafilter != 0 ? skill.aurafilter : 0x8783;
     float range2 = (float) range * range;

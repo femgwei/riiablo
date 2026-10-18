@@ -456,7 +456,8 @@ public final class SorceressSkills {
   /** Expansion-only difficulty floor read from DifficultyLevels.txt. */
   public static int getStaticFieldLifeFloorPercent(
       DifficultyLevels.Entry difficulty, boolean expansion) {
-    return expansion && difficulty != null ? Math.max(0, difficulty.StaticFieldMin) : 0;
+    return com.riiablo.engine.server.combat.NativeDifficultyRules.staticFieldLifeFloorPercent(
+        com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(0, difficulty), expansion);
   }
 
   /**

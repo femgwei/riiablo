@@ -5000,6 +5000,12 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- Static Field 首个表驱动消费者迁移：生产 `ServerSkillSystem` 将当前难度表行注入
+  `NativeCombatContext`，由 `NativeDifficultyRules` 读取 `StaticFieldMin`；旧技能 helper
+  委托相同规则。保持 Classic 无下限、缺表返回 0、负表值归零的现有行为。
+  原版依据见 `skill-damage-d2moo-formula-evidence.md` 的 Static Field 小节。
+  验证入口：`NativeCombatContextTest`、`StaticFieldGoldenDamageTest`。
+
 - 上下文扩展：支持显式注入 `DifficultyLevels.Entry`（借用只读），以及玩家双方、PvP、
   恶魔/亡灵目标和 1..8 玩家数量；旧攻击入口开始构造双方和种族信息。
   本步只建立数据契约，尚未将所有难度表消费者迁移到上下文；不改变伤害公式。
