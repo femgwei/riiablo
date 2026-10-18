@@ -893,27 +893,9 @@ public class CombatSystem {
     // for monsters. Player resistance is still clamped to the raised
     // 75..95 maximum-resistance cap below.
     d.immuneElemental[damageType] = d.isMonster && d.resistances[damageType] >= 100;
-    int reduced;
-    if (nativePacket) {
-      int resistance = d.resistances[damageType] - Math.max(0, piercePercent);
-      if (d.isPlayer) resistance = Math.min(Math.min(ABSOLUTE_MAX_RESISTANCE,
-          d.maxResistances[damageType]), resistance);
-      resistance = Math.max(MIN_RESISTANCE, Math.min(100, resistance));
-      int afterReduction = Math.max(0, rawDamage - (damageType == DAMAGE_POISON ? 0 : d.magicDamageReduced));
-      reduced = d.immuneElemental[damageType] ? 0 : (int) Math.min(Integer.MAX_VALUE,
-          (long) afterReduction * (100 - resistance) / 100L);
-      d.absorbPercent[damageType] = Math.min(40, d.absorbPercent[damageType]);
-    } else {
-      reduced = applyElementalResistance(rawDamage, d, damageType, piercePercent);
-    }
-    int absorbed = absorbElementalDamage(reduced, d, damageType);
-    int finalDamage = reduced - absorbed;
-    if (attackerPlayer && defenderPlayer) finalDamage = finalDamage * PVP_DAMAGE_PERCENT / 100;
-    result.hit = true;
-    result.hitChance = 100;
-    result.elementalDamage[damageType] = Math.max(0, finalDamage);
-    result.absorbedLife = absorbed;
-    result.totalDamage = result.elementalDamage[damageType];
+    NativeDirectDamageMath.elementalDamage(result, damageType, rawDamage, piercePercent,
+        defenderPlayer, attackerPlayer, d.resistances[damageType], d.maxResistances[damageType],
+        d.magicDamageReduced, d.absorbPercent[damageType], d.absorbFlat[damageType], nativePacket);
     return result;
   }
 
@@ -940,12 +922,8 @@ public class CombatSystem {
     // SUnitDmg.cpp's Flen row has DAMAGE_REDUCTION_NONE: MDR and absorb
     // affect damage, never length. StateUpdater owns ColdDiv/FreezeDiv and
     // player/boss downgrade, so do not pre-divide monster duration here.
-    if (!defenderPlayer && resistance >= 100) return 0;
-    resistance -= Math.max(0, piercePercent);
-    resistance = Math.max(MIN_RESISTANCE, defenderPlayer
-        ? Math.min(Math.min(ABSOLUTE_MAX_RESISTANCE, maximum), resistance) : resistance);
-    int length = (int) Math.min(Integer.MAX_VALUE, (long) baseDuration * (100 - resistance) / 100L);
-    return Math.max(0, length);
+    return NativeStatusDurationMath.coldLengthBeforeState(
+        baseDuration, defenderPlayer, resistance, maximum, piercePercent);
   }
 
   /** Legacy damage callers also request the monster cold divisor here. */
@@ -1123,12 +1101,10 @@ public class CombatSystem {
     if (defender == null || rawDamage <= 0) return result;
     int resistance = statInt(defender, Stat.damageresist, 0);
     if (defenderStates != null) resistance += defenderStates.getTotalPhysicalResistModifier();
-    resistance = Math.max(MIN_RESISTANCE, Math.min(defenderPlayer ? 50 : 100, resistance));
-    int afterReduction = Math.max(0,
-        rawDamage - Math.max(0, statInt(defender, Stat.normal_damage_reduction, 0)));
     result.hit = true;
     result.hitChance = 100;
-    result.physicalDamage = saturatingInt((long) afterReduction * (100 - resistance) / 100L);
+    result.physicalDamage = NativeDirectDamageMath.nativePhysicalDamage(rawDamage, defenderPlayer,
+        resistance, statInt(defender, Stat.normal_damage_reduction, 0));
     result.totalDamage = result.physicalDamage;
     return result;
   }
@@ -1141,21 +1117,12 @@ public class CombatSystem {
     result.reset();
     if (defender == null || rawDamage <= 0) return result;
 
-    DefenderData d = new DefenderData();
-    d.isPlayer = defenderPlayer;
-    d.isMonster = !defenderPlayer;
-    d.resistances[DAMAGE_PHYSICAL] = statInt(defender, Stat.damageresist, 0);
-    if (defenderStates != null) {
-      d.resistances[DAMAGE_PHYSICAL] += defenderStates.getTotalPhysicalResistModifier();
-    }
-    d.damageReducedPercent = Math.max(MIN_RESISTANCE, d.resistances[DAMAGE_PHYSICAL]);
-    d.damageReduced = Math.max(0, statInt(defender, Stat.normal_damage_reduction, 0));
-    d.immunePhysical = d.resistances[DAMAGE_PHYSICAL] >= 100;
-    int damage = applyPhysicalDamageReduction(rawDamage, d);
-    if (attackerPlayer && defenderPlayer) damage = damage * PVP_DAMAGE_PERCENT / 100;
+    int resistance = statInt(defender, Stat.damageresist, 0);
+    if (defenderStates != null) resistance += defenderStates.getTotalPhysicalResistModifier();
     result.hit = true;
     result.hitChance = 100;
-    result.physicalDamage = Math.max(0, damage);
+    result.physicalDamage = NativeDirectDamageMath.reflectedPhysicalDamage(rawDamage,
+        defenderPlayer, attackerPlayer, resistance, statInt(defender, Stat.normal_damage_reduction, 0));
     result.totalDamage = result.physicalDamage;
     return result;
   }
@@ -1179,8 +1146,7 @@ public class CombatSystem {
       boolean attackerPlayer, int rawDamageFixed, int baseDuration,
       StateList defenderStates, NativeCombatContext context) {
     int mastery = statInt(attacker, Stat.passive_pois_mastery, 0);
-    long mastered = (long) Math.max(0, rawDamageFixed) * Math.max(0, 100 + mastery) / 100L;
-    int rawSnapshot = mastered >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) mastered;
+    int rawSnapshot = NativeStatusDurationMath.poisonMasterySnapshot(rawDamageFixed, mastery);
     int pierce = statInt(attacker, Stat.item_pierce_pois, 0)
         + statInt(attacker, Stat.passive_pois_pierce, 0);
     return calculateFixedPoisonDamageSnapshot(defender, defenderPlayer, attackerPlayer, rawSnapshot,
@@ -1217,7 +1183,7 @@ public class CombatSystem {
 
   /** Converts D2's signed 8.8 poison-rate storage to life points per frame. */
   public static float fixed8RateToPerFrame(int damageFixed) {
-    return Math.max(0, damageFixed) / 256f;
+    return NativeStatusDurationMath.fixed8RateToPerFrame(damageFixed);
   }
 
   /**
@@ -1227,14 +1193,12 @@ public class CombatSystem {
    * the rolled total into BitRate before installing STATE_POISON.
    */
   public static int totalPoisonToBitRate(int totalDamage, int durationFrames) {
-    if (totalDamage <= 0 || durationFrames <= 0) return 0;
-    long rate = (long) totalDamage * 256L / durationFrames;
-    return rate >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) rate;
+    return NativeStatusDurationMath.totalPoisonToBitRate(totalDamage, durationFrames);
   }
 
   /** Converts an item poison packet to life points per server frame. */
   public static float totalPoisonToPerFrame(int totalDamage, int durationFrames) {
-    return fixed8RateToPerFrame(totalPoisonToBitRate(totalDamage, durationFrames));
+    return NativeStatusDurationMath.totalPoisonToPerFrame(totalDamage, durationFrames);
   }
 
   static int resolvePoisonDuration(Attributes defender, boolean defenderPlayer,
@@ -1249,15 +1213,8 @@ public class CombatSystem {
     if (defenderStates != null && defenderStates.hasState(StateId.SHRINE_RESIST_POISON)) {
       return 0;
     }
-    int resistance = statInt(defender, Stat.item_poisonlengthresist, 0)
-        - Math.max(0, Math.min(100, piercePercent));
-    // CharData folds elemental resistance only, not poison length resistance.
-    if (defenderPlayer) resistance += NativeDifficultyRules.playerResistancePenalty(context);
-    resistance = defenderPlayer
-        ? Math.max(-100, Math.min(75, resistance))
-        : Math.max(-100, Math.min(100, resistance));
-    long resolved = (long) baseDuration * (100 - resistance) / 100L;
-    return resolved >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, (int) resolved);
+    return NativeStatusDurationMath.poisonDuration(baseDuration, defenderPlayer,
+        statInt(defender, Stat.item_poisonlengthresist, 0), piercePercent, context);
   }
 
   /**
