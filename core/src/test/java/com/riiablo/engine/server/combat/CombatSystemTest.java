@@ -644,6 +644,49 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void foldedDifficultyResistanceIsAppliedOnceAndMagicIsUnaffected() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    for (int difficulty = 0; difficulty < 3; difficulty++) {
+      Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+      int penalty = NativeDifficultyRules.playerResistancePenalty(difficulty);
+      defender.base().put(Stat.fireresist, penalty);
+      defender.base().put(Stat.coldresist, penalty);
+      defender.setDifficultyResistanceIncluded(true);
+      defender.reset();
+      assertTrue(defender.difficultyResistanceIncluded());
+      int[] minimum = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+      int[] maximum = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+      minimum[CombatSystem.DAMAGE_FIRE] = maximum[CombatSystem.DAMAGE_FIRE] = 100;
+      minimum[CombatSystem.DAMAGE_MAGIC] = maximum[CombatSystem.DAMAGE_MAGIC] = 100;
+      CombatSystem.CombatResult attack = combat.calculateAttackAtDifficulty(
+          attacker, defender, false, true, false, 1, 1, 1000, true,
+          minimum, maximum, 0, 0, null, null, false, null, difficulty);
+      assertEquals(100 - penalty, attack.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+      assertEquals(100, attack.elementalDamage[CombatSystem.DAMAGE_MAGIC]);
+      CombatSystem.CombatResult fixed = combat.calculateFixedElementalDamage(
+          defender, true, false, CombatSystem.DAMAGE_FIRE, 100, 0, null, difficulty);
+      assertEquals(100 - penalty, fixed.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+      assertEquals(100 - penalty, combat.resolveColdLengthBeforeState(
+          defender, true, 100, 0, null, difficulty));
+      defender.clear();
+      assertTrue(!defender.difficultyResistanceIncluded());
+    }
+  }
+
+  @Test
+  public void foldedPoisonResistanceStillAppliesDifficultyToLength() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.poisonresist, -100);
+    defender.setDifficultyResistanceIncluded(true);
+    defender.reset();
+    CombatSystem.CombatResult result = combat.calculateFixedPoisonDamage(
+        attacker, defender, true, false, 256, 100, null, 2);
+    assertEquals(2f, result.poisonDamagePerFrame, 0.0001f);
+    assertEquals(200, result.poisonDuration);
+  }
+
+  @Test
   public void elementalAbsorbAppliesPercentThenFlatAndRecordsLife() {
     Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
     Attributes defender = attrs(50, 1, 0, 1, 1, 1);

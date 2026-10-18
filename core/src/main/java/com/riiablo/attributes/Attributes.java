@@ -160,6 +160,16 @@ public final class Attributes implements Iterable<StatRef> {
   private int combatBlockFactor;
   private boolean combatRunningKnown;
   private boolean combatRunning;
+  /** CharData folds the current difficulty penalty into its base resistances. */
+  private boolean difficultyResistanceIncluded;
+
+  public void setDifficultyResistanceIncluded(boolean included) {
+    difficultyResistanceIncluded = included;
+  }
+
+  public boolean difficultyResistanceIncluded() {
+    return difficultyResistanceIncluded;
+  }
 
   public StatTable table() { return list.table(); }
 
@@ -176,6 +186,7 @@ public final class Attributes implements Iterable<StatRef> {
     combatBlockFactor = 0;
     combatRunningKnown = false;
     combatRunning = false;
+    difficultyResistanceIncluded = false;
     return this;
   }
 
@@ -273,6 +284,7 @@ public final class Attributes implements Iterable<StatRef> {
   }
 
   public void clear()  {
+    difficultyResistanceIncluded = false;
     list.forceClear();
     base.clear();
     agg.clear();

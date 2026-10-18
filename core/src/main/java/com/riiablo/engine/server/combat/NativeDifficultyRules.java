@@ -4,6 +4,12 @@ package com.riiablo.engine.server.combat;
 public final class NativeDifficultyRules {
   private NativeDifficultyRules() {}
 
+  /** Synthetic callers supply raw stats; CharData already includes this adjustment. */
+  public static int remainingResistancePenalty(
+      com.riiablo.attributes.Attributes defender, int difficulty) {
+    return defender.difficultyResistanceIncluded() ? 0 : playerResistancePenalty(difficulty);
+  }
+
   /** Table-backed resistance adjustment; retain custom values without clamping. */
   public static int tableResistancePenalty(NativeCombatContext context) {
     return java.util.Objects.requireNonNull(context.difficultyRow(), "difficultyRow").ResistPenalty;

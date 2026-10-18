@@ -705,7 +705,7 @@ public class CombatSystem {
     d.resistances[DAMAGE_COLD] = statInt(defender, Stat.coldresist, 0);
     d.resistances[DAMAGE_POISON] = statInt(defender, Stat.poisonresist, 0);
     d.resistances[DAMAGE_MAGIC] = statInt(defender, Stat.magicresist, 0);
-    int penalty = defenderPlayer ? NativeDifficultyRules.playerResistancePenalty(difficulty) : 0;
+    int penalty = defenderPlayer ? NativeDifficultyRules.remainingResistancePenalty(defender, difficulty) : 0;
     // Native difficulty penalties exclude physical and magic resistance.
     for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
       if (i != DAMAGE_MAGIC) d.resistances[i] += penalty;
@@ -779,7 +779,7 @@ public class CombatSystem {
     if (statInt(defender, Stat.item_halffreezeduration, 0) != 0) baseDuration /= 2;
     int resistance = statInt(defender, Stat.coldresist, 0);
     int maximum = 75 + statInt(defender, Stat.maxcoldresist, 0);
-    if (defenderPlayer) resistance += NativeDifficultyRules.playerResistancePenalty(difficulty);
+    if (defenderPlayer) resistance += NativeDifficultyRules.remainingResistancePenalty(defender, difficulty);
     if (defenderStates != null) {
       resistance += defenderStates.getTotalResistModifier(1);
       maximum += defenderStates.getTotalStatContribution(Stat.maxcoldresist);
@@ -804,7 +804,7 @@ public class CombatSystem {
     d.isMonster = !defenderPlayer;
     d.resistances[DAMAGE_COLD] = statInt(defender, Stat.coldresist, 0);
     if (defenderPlayer) {
-      d.resistances[DAMAGE_COLD] += NativeDifficultyRules.playerResistancePenalty(difficulty);
+      d.resistances[DAMAGE_COLD] += NativeDifficultyRules.remainingResistancePenalty(defender, difficulty);
     }
     d.maxResistances[DAMAGE_COLD] = 75 + statInt(defender, Stat.maxcoldresist, 0);
     d.cannotBeFrozen = statInt(defender, Stat.item_cannotbefrozen, 0) != 0;
@@ -880,7 +880,9 @@ public class CombatSystem {
       resistance += defenderStates.getTotalResistModifier(
           stateResistanceTypes[damageType]);
     }
-    if (defenderPlayer) resistance += NativeDifficultyRules.playerResistancePenalty(difficulty);
+    if (defenderPlayer && damageType != DAMAGE_MAGIC) {
+      resistance += NativeDifficultyRules.remainingResistancePenalty(defender, difficulty);
+    }
     if (!defenderPlayer && resistance >= 100) {
       result.immune = true;
       return result;
@@ -951,7 +953,9 @@ public class CombatSystem {
       resistance += defenderStates.getTotalResistModifier(
           stateResistanceTypes[damageType]);
     }
-    if (defenderPlayer) resistance += NativeDifficultyRules.playerResistancePenalty(difficulty);
+    if (defenderPlayer && damageType != DAMAGE_MAGIC) {
+      resistance += NativeDifficultyRules.remainingResistancePenalty(defender, difficulty);
+    }
     if (!defenderPlayer && resistance >= 100) {
       result.immune = true;
       return result;
@@ -1108,6 +1112,7 @@ public class CombatSystem {
     }
     int resistance = statInt(defender, Stat.item_poisonlengthresist, 0)
         - Math.max(0, Math.min(100, piercePercent));
+    // CharData folds elemental resistance only, not poison length resistance.
     if (defenderPlayer) resistance += NativeDifficultyRules.playerResistancePenalty(difficulty);
     resistance = defenderPlayer
         ? Math.max(-100, Math.min(75, resistance))
@@ -1614,9 +1619,9 @@ public class CombatSystem {
     d.resistances[DAMAGE_POISON] = statInt(defender, Stat.poisonresist, 0);
     d.resistances[DAMAGE_MAGIC] = statInt(defender, Stat.magicresist, 0);
     int difficultyPenalty = defenderPlayer
-        ? NativeDifficultyRules.playerResistancePenalty(difficulty) : 0;
+        ? NativeDifficultyRules.remainingResistancePenalty(defender, difficulty) : 0;
     for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
-      d.resistances[i] += difficultyPenalty;
+      if (i != DAMAGE_MAGIC) d.resistances[i] += difficultyPenalty;
     }
     d.maxResistances[DAMAGE_FIRE] = 75 + statInt(defender, Stat.maxfireresist, 0);
     d.maxResistances[DAMAGE_LIGHTNING] = 75 + statInt(defender, Stat.maxlightresist, 0);

@@ -5000,6 +5000,17 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 抗性重复惩罚修复：确认 `CharData.getStats()` 直接交给玩家实体，基础四元素抗性
+  已包含难度表惩罚。Attributes 增加运行时标记（聚合重建保留，清空/池重置清除），
+  CombatSystem 的普通攻击、固定伤害/持续伤害和冰冷长度入口仅补尚未包含的惩罚，
+  保留角色面板数值及纯属性调用兼容性。毒素长度抗性未在 CharData 折入惩罚，仍独立补扣。
+  同时修正普通攻击/固定持续伤害对魔法抗性错误追加难度惩罚。
+  依据 D2MOO `source/D2Game/src/UNIT/SUnitDmg.cpp:965`：非怪物抗性结算追加一次
+  难度惩罚，排除物理和魔法抗性。Classic 的 -20/-50 与全入口表行传播仍待后续统一。
+  新增折入惩罚、魔法豁免、冰冷长度、毒素长度和标记生命周期回归用例。
+  定向运行 `CombatSystemTest`、`NativeCombatContextTest`、`DamageApplierTest` 通过，
+  Gradle 模块边界检查同时通过；未执行全量回归或客户端实机验证。
+
 - 抗性表值初始化迁移：`CharData` 的玩家/佣兵基础四元素抗性初始化统一通过
   `NativeDifficultyRules.tableResistancePenalty` 消费注入表行，保留有符号自定义数值
   和必须有表行的约束。未修改 CombatSystem 旧难度附加路径；需后续追踪属性聚合，
