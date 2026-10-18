@@ -4917,7 +4917,7 @@ public class Actioneer extends PassiveSystem {
     if (rawDamage <= 0) return;
     CombatSystem.CombatResult elemental = combatSystemResolver.calculateFixedElementalDamage(
         defender, isPlayerEntity(targetId), isPlayerEntity(sourceId), damageType,
-        rawDamage, 0, defenderStates, combatDifficulty());
+        rawDamage, 0, defenderStates, nativeDifficultyContext());
     combat.elementalDamage[damageType] += elemental.elementalDamage[damageType];
     combat.absorbedLife += elemental.absorbedLife;
   }
@@ -4974,7 +4974,7 @@ public class Actioneer extends PassiveSystem {
               Stat.damageresist, -1), sourceId, targetId);
       CombatSystem.CombatResult fireResult = combatSystemResolver.calculateFixedElementalDamage(
           targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
-          CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), combatDifficulty());
+          CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), nativeDifficultyContext());
       int fire = fireResult.elementalDamage[CombatSystem.DAMAGE_FIRE];
       applyElementalAbsorb(targetAttrs, fireResult, 1f);
       float damage = physical + fire;
@@ -5196,7 +5196,7 @@ public class Actioneer extends PassiveSystem {
               Stat.damageresist, -1), sourceId, targetId);
       CombatSystem.CombatResult coldResult = combatSystemResolver.calculateFixedElementalDamage(
           targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
-          CombatSystem.DAMAGE_COLD, rawCold, 0, stateList(targetId), combatDifficulty());
+          CombatSystem.DAMAGE_COLD, rawCold, 0, stateList(targetId), nativeDifficultyContext());
       int cold = coldResult.elementalDamage[CombatSystem.DAMAGE_COLD];
       applyElementalAbsorb(targetAttrs, coldResult, 1f);
       float damage = physical + cold;
@@ -5417,7 +5417,7 @@ public class Actioneer extends PassiveSystem {
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
       CombatSystem.CombatResult fireResult = combatSystemResolver.calculateFixedElementalDamage(
           targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
-          CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), combatDifficulty());
+          CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), nativeDifficultyContext());
       int fire = fireResult.elementalDamage[CombatSystem.DAMAGE_FIRE];
       applyElementalAbsorb(targetAttrs, fireResult, 1f);
       if (fire <= 0 && fireResult.absorbedLife <= 0) continue;

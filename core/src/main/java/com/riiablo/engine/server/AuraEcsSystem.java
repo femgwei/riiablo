@@ -49,6 +49,15 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 @Wire(failOnNull = false)
 public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallback {
   private final CombatSystem combatSystemResolver = new CombatSystem();
+  @Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+
+  private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext() {
+    int difficulty = map != null ? map.getDifficulty() : 0;
+    com.riiablo.Files files = serverContext != null ? serverContext.files() : Riiablo.files;
+    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty,
+        files != null && files.DifficultyLevels != null ? files.DifficultyLevels.get(difficulty) : null);
+  }
   private static final Logger log = LogManager.getLogger(AuraEcsSystem.class);
 
   private final AuraManager auras = new AuraManager();
@@ -354,7 +363,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
         ? mUnitStates.get(targetId).stateList : null;
     CombatSystem.CombatResult combat = combatSystemResolver.calculateFixedElementalDamage(
         target, isPlayerAligned(targetId), isPlayerAligned(casterId),
-        damageType, raw, 0, targetStates, map != null ? map.getDifficulty() : 0);
+        damageType, raw, 0, targetStates, nativeDifficultyContext());
     restoreAbsorb(target, combat.absorbedLife);
     if (combat.totalDamage <= 0) return;
     DamageEvent event = DamageEvent.obtain(casterId, targetId, combat.totalDamage);

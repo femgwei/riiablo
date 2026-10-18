@@ -28,6 +28,14 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 @Wire(failOnNull = false)
 public class NativeTrapFireSystem extends BaseSystem {
   private final CombatSystem combatSystemResolver = new CombatSystem();
+  @Wire(name = "serverContext", failOnNull = false)
+  protected com.riiablo.engine.server.ServerGameplayContext serverContext;
+
+  private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext(int difficulty) {
+    com.riiablo.Files files = serverContext != null ? serverContext.files() : com.riiablo.Riiablo.files;
+    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(difficulty,
+        files != null && files.DifficultyLevels != null ? files.DifficultyLevels.get(difficulty) : null);
+  }
   private static final Logger log = LogManager.getLogger(NativeTrapFireSystem.class);
 
   protected ComponentMapper<NativeTrapFire> mFire;
@@ -114,7 +122,7 @@ public class NativeTrapFireSystem extends BaseSystem {
     int rawDamage = Math.max(1, Math.round(roll * fire.damagePercent / 100f));
     CombatSystem.CombatResult combat = combatSystemResolver.calculateFixedElementalDamage(
         attrs, true, false, CombatSystem.DAMAGE_FIRE, rawDamage, 0, stateList(targetId),
-        sourceDifficulty(fireId, targetId));
+        nativeDifficultyContext(sourceDifficulty(fireId, targetId)));
     if (!combat.hit || (combat.totalDamage <= 0 && combat.absorbedLife <= 0)) return;
     DamageEvent event = DamageEvent.obtain(fireId, targetId, combat.totalDamage);
     if (events != null) events.dispatch(event);

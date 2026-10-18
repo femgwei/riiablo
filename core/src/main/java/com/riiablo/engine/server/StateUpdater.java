@@ -274,7 +274,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     int pierce = armorColdPierce(victimId, ownerStates);
     CombatSystem.CombatResult result = combatSystemResolver.calculateFixedElementalDamage(
         attacker, isPlayerAligned(attackerId), isPlayerAligned(victimId),
-        CombatSystem.DAMAGE_COLD, raw, pierce, attackerStates, difficulty());
+        CombatSystem.DAMAGE_COLD, raw, pierce, attackerStates, nativeDifficultyContext());
     applyElementalAbsorb(attacker, result.absorbedLife);
     float applied = 0f;
     StatRef life = attacker != null ? attacker.get(Stat.hitpoints, StatRef.obtain()) : null;
@@ -667,7 +667,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
           ? mUnitStates.get(targetId).stateList : null;
       CombatSystem.CombatResult combat = combatSystemResolver.calculateFixedElementalDamage(
           target, isPlayerAligned(targetId), true, CombatSystem.DAMAGE_FIRE,
-          raw, 0, targetStates, difficulty());
+          raw, 0, targetStates, nativeDifficultyContext());
       applyElementalAbsorb(target, combat.absorbedLife);
       if (combat.totalDamage <= 0) continue;
       DamageEvent event = DamageEvent.obtain(entityId, targetId, combat.totalDamage);
@@ -2174,6 +2174,12 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   private int difficulty() {
     return map == null ? 0 : Math.max(0, Math.min(2, map.getDifficulty()));
+  }
+
+  private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext() {
+    int difficulty = difficulty();
+    return com.riiablo.engine.server.combat.NativeCombatContext.ofDifficulty(
+        difficulty, difficultyEntry(difficulty));
   }
 
   private int coldDivisor(int difficulty) {

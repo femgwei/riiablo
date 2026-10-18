@@ -5000,6 +5000,16 @@ riiablo 的全项目 D2MOO 对齐百分比直接比较；可借鉴的是工程�
 
 ## 2026-10-18 原生战斗/难度上下文第一阶段
 
+- 固定元素伤害生产入口收敛：Actioneer 4 处、ServerSkillSystem 6 处、StateUpdater
+  2 处及光环/原生火焰陷阱各 1 处统一传递难度表上下文。新增原生固定伤害上下文重载，
+  保留整数兼容入口；火焰强化爆炸复用已注入的上下文。光环/陷阱优先使用注入的
+  `serverContext` 数据集，无上下文旧夹具保留全局兼容入口。
+  依据 D2MOO `SUnitDmg.cpp:965` 的难度表抗性惩罚路径，未改伤害、吸收和 PvP 顺序。
+  新增固定元素各通道自定义表值、魔法豁免、怪物免扣、已折入防重扣及整数兼容测试。
+  普通攻击、固定每帧伤害与 Classic 模式规则仍待继续迁移，不能视为全部难度规则已表驱动。
+  `CombatSystemTest`、`NativeCombatContextTest`、`AuraEcsScenarioTest`、
+  `NativeTrapFireSystemTest` 共 79 项全部通过，模块边界检查通过；未执行客户端实机验证。
+
 - 固定毒素伤害/长度表行传递：CombatSystem 固定元素伤害、毒素施放和传播快照新增
   NativeCombatContext 重载，毒匕首、狂犬病及毒素导弹/传播四个生产调用传入当前难度表。
   伤害与长度共享表行，但仅元素抗性检查“已折入惩罚”标记，毒素长度抗性仍独立补扣。

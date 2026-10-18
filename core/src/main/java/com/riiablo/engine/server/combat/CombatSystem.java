@@ -698,6 +698,14 @@ public class CombatSystem {
         NativeCombatContext.ofDifficulty(difficulty), true);
   }
 
+  public CombatResult calculateNativeFixedElementalDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int damageType, int rawDamage, int piercePercent,
+      StateList defenderStates, NativeCombatContext context) {
+    return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer,
+        damageType, rawDamage, piercePercent, defenderStates, context, true);
+  }
+
   private CombatResult calculateFixedElementalDamage(
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamage, int piercePercent,

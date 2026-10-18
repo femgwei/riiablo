@@ -261,7 +261,7 @@ public class ServerSkillSystem extends PassiveSystem {
       CombatSystem.CombatResult physical = combatSystemResolver.calculateNativeFixedPhysicalDamage(
           defender, mPlayer.has(target), channel, states);
       CombatSystem.CombatResult fire = combatSystemResolver.calculateNativeFixedElementalDamage(
-          defender, mPlayer.has(target), false, CombatSystem.DAMAGE_FIRE, channel, 0, states, difficulty);
+          defender, mPlayer.has(target), false, CombatSystem.DAMAGE_FIRE, channel, 0, states, combatContext);
       applyElementalAbsorbForFireDeath(defender, fire.absorbedLife);
       DamageEvent damage = DamageEvent.obtainMissile(source, target,
           physical.totalDamage + fire.totalDamage, physical.physicalDamage, null);
@@ -361,7 +361,7 @@ public class ServerSkillSystem extends PassiveSystem {
       CombatSystem.CombatResult elemental = coldLength <= 0 ? new CombatSystem.CombatResult()
           : combatSystemResolver.calculateNativeFixedElementalDamage(defender, player, false,
               coldLength == 1 ? CombatSystem.DAMAGE_FIRE : CombatSystem.DAMAGE_COLD,
-              raw, 0, states, difficulty);
+              raw, 0, states, nativeDifficultyContext(difficulty));
       StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
       StatRef max = defender.get(Stat.maxhp, StatRef.obtain());
       if (elemental.absorbedLife > 0 && max != null)
@@ -1723,7 +1723,7 @@ public class ServerSkillSystem extends PassiveSystem {
           defender, player, physicalRaw, states);
       CombatSystem.CombatResult elemental = combatSystemResolver.calculateNativeFixedElementalDamage(
           defender, player, false, elementalDamageType(skill.EType), elementalRaw, 0,
-          states, combatDifficulty(source, target));
+          states, nativeDifficultyContext(combatDifficulty(source, target)));
       StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
       StatRef max = defender.get(Stat.maxhp, StatRef.obtain());
       if (hp == null) continue;
@@ -2467,7 +2467,7 @@ public class ServerSkillSystem extends PassiveSystem {
     boolean player = mPlayer.has(target) || mMercenary.has(target);
     CombatSystem.CombatResult result = combatSystemResolver.calculateNativeFixedElementalDamage(
         defender, player, false, type, raw, elementalPierce(attacker, sourceStates, type),
-        targetStates, difficulty);
+        targetStates, nativeDifficultyContext(difficulty));
     int baseLength = NativeDiabCold.freezeLength(skill, level);
     int length = combatSystemResolver.resolveColdLengthBeforeState(defender, player,
         baseLength, elementalPierce(attacker, sourceStates, CombatSystem.DAMAGE_COLD),
@@ -2560,7 +2560,7 @@ public class ServerSkillSystem extends PassiveSystem {
     CombatSystem.CombatResult elemental =
         combatSystemResolver.calculateFixedElementalDamage(
             target, targetPlayer, sourcePlayer, damageType, elementalRaw,
-            pierce, targetStates, combatDifficulty(sourceId, targetId));
+            pierce, targetStates, nativeDifficultyContext(combatDifficulty(sourceId, targetId)));
     StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
     StatRef maxHp = target.get(Stat.maxhp, StatRef.obtain());
     if (hp == null) return;
@@ -5235,7 +5235,7 @@ public class ServerSkillSystem extends PassiveSystem {
       CombatSystem.CombatResult fireResult =
           combatSystemResolver.calculateFixedElementalDamage(
               targetAttrs, targetPlayer, sourcePlayer, CombatSystem.DAMAGE_FIRE,
-              fireDamage, 0, targetStates, combatDifficulty(source, target));
+              fireDamage, 0, targetStates, nativeDifficultyContext(combatDifficulty(source, target)));
       int resolved = physicalResult.totalDamage + fireResult.totalDamage;
       if (resolved <= 0 && fireResult.absorbedLife <= 0) continue;
       if (fireResult.absorbedLife > 0

@@ -737,6 +737,31 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void nativeFixedElementsUseInjectedTableAndKeepLegacyCompatibility() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    com.riiablo.codec.excel.DifficultyLevels.Entry row =
+        new com.riiablo.codec.excel.DifficultyLevels.Entry();
+    row.ResistPenalty = -37;
+    NativeCombatContext context = NativeCombatContext.ofDifficulty(2, row);
+    for (int type = CombatSystem.DAMAGE_FIRE; type < CombatSystem.DAMAGE_TYPE_COUNT; type++) {
+      int expected = type == CombatSystem.DAMAGE_MAGIC ? 100 : 137;
+      assertEquals(expected, combat.calculateNativeFixedElementalDamage(
+          defender, true, false, type, 100, 0, null, context).totalDamage);
+      assertEquals(expected, combat.calculateFixedElementalDamage(
+          defender, true, false, type, 100, 0, null, context).totalDamage);
+      assertEquals(100, combat.calculateNativeFixedElementalDamage(
+          defender, false, false, type, 100, 0, null, context).totalDamage);
+    }
+    assertEquals(200, combat.calculateNativeFixedElementalDamage(
+        defender, true, false, CombatSystem.DAMAGE_FIRE, 100, 0, null, 2).totalDamage);
+    defender.base().put(Stat.fireresist, -37);
+    defender.setDifficultyResistanceIncluded(true);
+    defender.reset();
+    assertEquals(137, combat.calculateNativeFixedElementalDamage(
+        defender, true, false, CombatSystem.DAMAGE_FIRE, 100, 0, null, context).totalDamage);
+  }
+
+  @Test
   public void elementalAbsorbAppliesPercentThenFlatAndRecordsLife() {
     Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
     Attributes defender = attrs(50, 1, 0, 1, 1, 1);
