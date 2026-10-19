@@ -243,16 +243,37 @@ public class PlayerStatsManager {
 
     // 增加体力值
     float stamPerVit = charStats.StaminaPerVitality / 4f;
-    float currentStam = getFixed(stats, Stat.stamina, 0);
-    float currentMaxStam = getFixed(stats, Stat.maxstamina, 0);
-    stats.put(Stat.stamina, Math.min(currentStam + stamPerVit, currentMaxStam + stamPerVit));
-    stats.put(Stat.maxstamina, currentMaxStam + stamPerVit);
-    addFixed(aggregate, Stat.stamina, stamPerVit);
-    addFixed(aggregate, Stat.maxstamina, stamPerVit);
+    increaseStaminaForVitality(stats, aggregate, charStats.StaminaPerVitality << 6);
 
     log.debug("Spent point on Vitality: {} -> {}, +{} life, +{} stamina", 
         currentVit, currentVit + 1, lifePerVit, stamPerVit);
     return RESULT_SUCCESS;
+  }
+
+  /** PlayerStats.cpp plus ItemMode.cpp's maximum-resource change callback, in 8.8 units. */
+  static void increaseStaminaForVitality(StatListRef base, StatListRef aggregate, int gain) {
+    StatListRef live = aggregate != null ? aggregate : base;
+    int previousMaximum = encoded(live, Stat.maxstamina);
+    int nextMaximum = previousMaximum + gain;
+    int current = encoded(live, Stat.stamina);
+    // The native callback preserves zero and uses at least one whole point as
+    // its denominator. The subsequent allocation gain is not a percentage.
+    if (previousMaximum > 0 && current > 0 && nextMaximum != previousMaximum) {
+      current = Math.max(1, Math.min(nextMaximum,
+          (int) ((double) current / Math.max(256, previousMaximum) * nextMaximum)));
+    }
+    current = Math.min(nextMaximum, current + gain);
+    base.putEncoded(Stat.maxstamina, encoded(base, Stat.maxstamina) + gain);
+    base.putEncoded(Stat.stamina, current);
+    if (aggregate != null) {
+      aggregate.putEncoded(Stat.maxstamina, nextMaximum);
+      aggregate.putEncoded(Stat.stamina, current);
+    }
+  }
+
+  private static int encoded(StatListRef stats, short stat) {
+    StatRef value = stats.get(stat);
+    return value == null ? 0 : value.encodedValues();
   }
 
   //==========================================================================
