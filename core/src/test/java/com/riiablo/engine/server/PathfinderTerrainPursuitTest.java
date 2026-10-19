@@ -119,7 +119,8 @@ class PathfinderTerrainPursuitTest {
       this(wall, true);
     }
 
-    Fixture(BiPredicate<Integer, Integer> wall, boolean opensDoors) {
+    Fixture(BiPredicate<Integer, Integer> wall, boolean opensDoors,
+        com.artemis.BaseSystem... extraSystems) {
       this.wall = wall;
       this.opensDoors = opensDoors;
       when(map.isBlockedForPath(anyInt(), anyInt(), anyInt(), anyBoolean()))
@@ -150,7 +151,7 @@ class PathfinderTerrainPursuitTest {
               rays.findCollision(call.getArgument(1), call.getArgument(2), call.getArgument(3),
                   call.getArgument(4), call.getArgument(5)));
       world = new World(new WorldConfigurationBuilder().with(collision, paths, new VelocityAdder())
-          .build().register("map", map));
+          .with(extraSystems).build().register("map", map));
       paths.actioneer = new Actioneer() {
         @Override public boolean isInMeleeRange(int a, int b, int bonus) { return false; }
         @Override public int getMeleeRange(int a) { return 1; }

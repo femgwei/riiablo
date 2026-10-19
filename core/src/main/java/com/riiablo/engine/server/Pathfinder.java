@@ -233,8 +233,15 @@ public class Pathfinder extends IteratingSystem {
       // Charge owns a melee impact even when the monster also fires missiles.
       if (!ownerFollowTarget && !isMonsterCharge(entityId) && mMonster.has(entityId)) {
         com.riiablo.engine.server.component.Monster monster = mMonster.get(entityId);
-        if ((monster.monstats.MissA1 != null && !monster.monstats.MissA1.isEmpty()) ||
-            (monster.monstats.MissA2 != null && !monster.monstats.MissA2.isEmpty())) {
+        // Fn071_Regurgitator (D2Game.0x6FCDD060) walks to melee for A1.
+        // MissA2 is usable only after eating a corpse; its loaded phase fires
+        // directly or escapes, never approaches to missile range. Treating
+        // that conditional missile as a standing ranged capability cancels
+        // ordinary pursuit before even the first step when spawned nearby.
+        boolean meleePursuit = "Regurgitator".equals(monster.monstats.AI);
+        if (!meleePursuit && (
+            (monster.monstats.MissA1 != null && !monster.monstats.MissA1.isEmpty()) ||
+            (monster.monstats.MissA2 != null && !monster.monstats.MissA2.isEmpty()))) {
           String missileName = null;
           if (monster.monstats.MissA1 != null && !monster.monstats.MissA1.isEmpty()) {
             missileName = monster.monstats.MissA1;

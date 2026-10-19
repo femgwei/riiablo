@@ -1,0 +1,23 @@
+// Keep class output AND test classpaths out of concurrent core/build runs.
+gradle.projectsLoaded {
+  rootProject.allprojects { p ->
+    p.buildDir = new File(rootProject.rootDir, '.gradle/regurgitator-validation-v2/' +
+        (p.path == ':' ? 'root' : p.path.substring(1).replace(':', '_')))
+  }
+}
+gradle.projectsEvaluated {
+  rootProject.allprojects { p ->
+    if (p.plugins.hasPlugin('java')) {
+      p.sourceSets.each { s ->
+        def classes = p.file("$p.buildDir/classes/java/$s.name")
+        s.java.destinationDirectory.set(classes)
+        s.output.classesDirs.setFrom(classes)
+        p.tasks.named(s.compileJavaTaskName, JavaCompile) { destinationDirectory.set(classes) }
+      }
+      p.tasks.named('test', Test) {
+        testClassesDirs = p.sourceSets.test.output.classesDirs
+        classpath = p.sourceSets.test.runtimeClasspath
+      }
+    }
+  }
+}
