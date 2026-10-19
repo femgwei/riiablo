@@ -17,25 +17,25 @@ public class FingerMage extends NativeDecisionAI {
     }
     if (fleeing) {
       tries++;
-      if (health > params[1] || rollAiPercentage() < 25 || tries > params[5]) fleeing = false;
+      if (health > params[2] || rollAiPercentage() < 25 || tries > params[5]) fleeing = false;
       else if (distance < 14) { escape(targetId, 14, speed); return; }
       idle(15);
       return;
     }
-    if (monster.minionOwnerId < 0 && !mSummonedPet.has(entityId) && health < params[0]) {
+    if (monster.minionOwnerId < 0 && !mSummonedPet.has(entityId) && health < params[3]) {
       fleeing = true;
       tries = 0;
       escape(targetId, 9, 0);
       return;
     }
     if (combat) {
-      if (rollAiChance(params[2])) attack(targetId);
-      else if (!hasSkill(0) || !rollAiChance(params[3])) circle(targetId, 5);
+      if (rollAiChance(params[0])) attack(targetId);
+      else if (!hasSkill(0) || !rollAiChance(params[1])) circle(targetId, 5);
       else cast(0, targetId);
     } else if (distance >= params[4]) {
       if (distance >= params[6]) idle(15);
       else approach(targetId, 0);
-    } else if (hasSkill(0) && rollAiChance(params[3])) cast(0, targetId);
+    } else if (hasSkill(0) && rollAiChance(params[1])) cast(0, targetId);
     else if (mUnitStates.has(targetId) && mUnitStates.get(targetId).stateList != null
         && mUnitStates.get(targetId).stateList.hasState(
             com.riiablo.engine.server.state.StateId.FINGERMAGECURSE)) approach(targetId, 0);

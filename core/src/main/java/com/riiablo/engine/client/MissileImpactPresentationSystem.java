@@ -263,7 +263,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   /** D2Client 1.10f 0x6FB31DD0: moving head plus stationary, finite trail cells. */
   private void processFingerMageFlight(int entityId, Missile visual,
       Missiles.Entry source, Vector2 velocity, float delta) {
-    // Native children start at CurrentFrame=0 and count down to -CltParam2.
+    // Native children start at TargetX=0 and count down to -CltParam2.
     // They must neither seek a target nor recursively emit more children.
     if (visual.presentationOnly || factory == null) return;
     int previous = advanceClientFrame(visual, Math.max(1, Math.round(delta * 25f)));
@@ -420,6 +420,14 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     if (event == null || clientContext.files() == null || clientContext.files().Missiles == null) return;
     Missiles.Entry source = clientContext.files().Missiles.get(event.missileId);
     if (source == null) return;
+
+    // D2Client 1.10f CltHit10 (0x6FB366D0) attaches ProgOverlay to
+    // the struck unit, not a generic elemental explosion at the contact.
+    if (source.pCltHitFunc == 10 && event.targetEntityId >= 0
+        && source.ProgOverlay != null && !source.ProgOverlay.isEmpty()
+        && overlays != null) {
+      overlays.set(event.targetEntityId, source.ProgOverlay);
+    }
 
     String hitSound = event.impactSound != null ? event.impactSound : source.HitSound;
     if (hitSound != null && !hitSound.isEmpty() && clientContext.audio() != null) {

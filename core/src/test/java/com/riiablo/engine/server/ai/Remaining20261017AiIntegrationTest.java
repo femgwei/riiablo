@@ -200,7 +200,7 @@ class Remaining20261017AiIntegrationTest extends RiiabloTest {
       try (Fixture f = new Fixture(row(name), 0, 1)) {
         java.util.Arrays.fill(f.ai.params, 0);
         if (name.equals("AbyssKnight") || name.equals("ClawViperEx")
-            || name.equals("FingerMage") || name.equals("Mosquito")) f.ai.params[2] = 100;
+            || name.equals("Mosquito")) f.ai.params[2] = 100;
         else if (name.equals("HighPriest")) f.ai.params[0] = 100;
         else if (name.equals("Overseer")) f.ai.params[5] = 100;
         else if (name.equals("SiegeBeast")) f.ai.params[1] = 100;
@@ -226,6 +226,20 @@ class Remaining20261017AiIntegrationTest extends RiiabloTest {
       states.stateList.addState(StateId.FINGERMAGECURSE, 100, 1, f.actor);
       f.ai.update(Animation.FRAME_DURATION);
       assertEquals("APPROACH", f.ai.getState());
+    }
+  }
+
+  @Test void fingerMageUsesAttackChanceRatherThanHealthThresholdAtMeleeRange() {
+    try (Fixture f = new Fixture("fingermage2", 0, 1)) {
+      f.health(50, 100);
+      java.util.Arrays.fill(f.ai.params, 0);
+      f.ai.params[0] = 100; // Attack chance, not the flee-health threshold.
+      f.ai.params[2] = 0;   // Healthy threshold must not disable melee.
+      f.ai.params[3] = 30;  // Fifty percent life is not hurt enough to flee.
+      f.ai.update(Animation.FRAME_DURATION);
+      assertNotNull(f.casting());
+      assertEquals(SkillCodes.attack, f.casting().skillId);
+      assertEquals(f.target, f.casting().targetId);
     }
   }
 

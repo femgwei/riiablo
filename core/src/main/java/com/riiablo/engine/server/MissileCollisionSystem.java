@@ -1619,6 +1619,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (!suppressSideEffects) {
         emitImpactPresentation(missileId, missile, targetId, missilePos);
       }
+      if (!suppressSideEffects && hitFunction == 19) {
+        applyFingerMageCurse(missile, targetId);
+      }
 
       // MISSMODE_SrvHit13_GlacialSpike_HellMeteorDown applies the same
       // packet to every hostile unit in its impact radius.  The travelling
@@ -2121,6 +2124,37 @@ public class MissileCollisionSystem extends IteratingSystem {
         childRow.SubMissile != null && childRow.SubMissile.length > 0
             ? childRow.SubMissile[0] : "",
         origin.x, origin.y);
+  }
+
+  /** D2MOO MISSMODE_SrvHit19: refresh the skill's timed target-state stat list. */
+  void applyFingerMageCurse(Missile missile, int targetId) {
+    Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
+    if (skill == null || missile.ownerId < 0 || skill.auratargetstate == null) return;
+    com.riiablo.codec.excel.States.Entry row = files().States.get(skill.auratargetstate);
+    if (row == null) return;
+    int level = Math.max(1, missile.damageLevel);
+    int duration = Math.max(5, SkillFormula.evaluate(skill.auralencalc, skill, level));
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
+    UnitStates holder = mUnitStates.get(targetId);
+    if (holder.stateList == null) holder.init(world, targetId);
+    UnitState state = holder.stateList.addState(row.id, duration, level, missile.ownerId);
+    if (state == null) return;
+    state.duration = state.initialDuration = duration;
+    state.level = level;
+    state.sourceEntityId = missile.ownerId;
+    state.skillId = skill.Id;
+    state.clearModifiers();
+    int count = Math.min(skill.aurastat == null ? 0 : skill.aurastat.length,
+        skill.aurastatcalc == null ? 0 : skill.aurastatcalc.length);
+    for (int i = 0; i < count; i++) {
+      if (skill.aurastat[i] == null || skill.aurastat[i].isEmpty()) continue;
+      int stat = Stat.index(skill.aurastat[i]);
+      if (stat < 0) continue;
+      state.setStatContribution(stat, 0,
+          com.riiablo.attributes.NativeStatResolver.Operation.ADD,
+          SkillFormula.evaluate(skill.aurastatcalc[i], skill, level));
+    }
+    state.needsSync = true;
   }
 
   /** Native SrvHit16 for Vine/Plague Vines trail missiles. */
@@ -3724,6 +3758,8 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   private static boolean hasNativeElementalPresentation(Missile missile) {
     if (missile == null || missile.missile == null) return false;
+    if (missile.missile.pCltHitFunc == 10 && missile.missile.ProgOverlay != null
+        && !missile.missile.ProgOverlay.isEmpty()) return true;
     // Exploding Arrow owns the fireexplosion2 DCC impact child.  Its area
     // damage child must not add the generic weapon FireExplode overlay on top
     // of that native explosion presentation.

@@ -14,6 +14,10 @@
 
 ## 2026-10-19 扼杀者导弹追踪与拖尾
 
+- 命中补修：按原版 CltHit10（0x6FB366D0）将 ProgOverlay 的亮斑附着
+  到目标，禁止叠加通用火焰；按 SrvHit19 补上 fingermagecurse 及法力恢复惩罚。
+- 近战补修：纠正 Fn070 前四个 AI 参数索引，恢复近战/施法概率与血量门槛。
+  P3/P4 拖尾密度差异仍未完成实机验收，不人为硬限为六格。
 - 补修实际发射缺少 targetId 的接线：FingerMage 使用 Casting，不能依赖 owner 的
   Target 回退；SrvDo11 导弹现保留 SkillDoEvent 的目标。新增真实技能发射测试，
   验证没有 owner Target、施法结束后目标移动仍可连续改变导弹方向。

@@ -5,7 +5,18 @@ import com.riiablo.engine.server.component.Missile;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-class FingerMageTrailTest {
+class FingerMageTrailTest extends com.riiablo.RiiabloTest {
+  @Test void nativeHitTenAttachesSparkleToVictimNotGround() {
+    MissileImpactPresentationSystem system = new MissileImpactPresentationSystem();
+    system.overlays = org.mockito.Mockito.mock(OverlayManager.class);
+    system.onMissileImpact(com.riiablo.engine.server.event.MissileImpactEvent.obtain(
+        1, 177, 2, 3, com.badlogic.gdx.math.Vector2.Zero));
+    org.mockito.Mockito.verify(system.overlays).set(3, "fingermagespiderexplode");
+    system.onMissileImpact(com.riiablo.engine.server.event.MissileImpactEvent.obtain(
+        1, 177, 2, -1, com.badlogic.gdx.math.Vector2.Zero));
+    org.mockito.Mockito.verifyNoMoreInteractions(system.overlays);
+  }
+
   @Test void trailIsFiniteAndCannotSeekOrDealDamage() {
     Missiles.Entry row = new Missiles.Entry();
     row.pCltDoFunc = 15;
