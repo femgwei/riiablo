@@ -352,6 +352,8 @@ def monsterTestGroups = [
         'com.riiablo.engine.server.MonsterMissileElementalIntegrationTest',
         'com.riiablo.engine.server.ShamanFireballAuditTest'],
     monsterPoisonTest: [
+        'com.riiablo.engine.server.PoisonRegenIntegrationTest',
+        'com.riiablo.engine.server.PotionRecoverySystemTest',
         'com.riiablo.engine.server.MonsterMissilePoisonIntegrationTest',
         'com.riiablo.engine.server.combat.MonsterPoisonSnapshotTest',
         'com.riiablo.engine.server.combat.StatusEffectApplierTest',

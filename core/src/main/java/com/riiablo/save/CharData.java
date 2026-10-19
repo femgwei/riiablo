@@ -1102,8 +1102,26 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 
   /** Advances native HEALTHPOT/MANAPOT state by one 25 Hz game frame. */
   public void tickPotionRecovery() {
-    tickPotionRecovery(healthPotion, Stat.hitpoints, Stat.maxhp);
+    tickPotionRecovery(false);
+  }
+
+  /** The state phase may already have combined HEALTHPOT with poison this frame. */
+  public void tickPotionRecovery(boolean healthAlreadyAdvanced) {
+    if (!healthAlreadyAdvanced) tickPotionRecovery(healthPotion, Stat.hitpoints, Stat.maxhp);
     tickPotionRecovery(manaPotion, Stat.mana, Stat.maxmana);
+  }
+
+  /** Consumes exactly one HEALTHPOT frame without writing life independently. */
+  public int takeHealthPotionRecoveryTick() {
+    if (healthPotion.framesRemaining <= 0) return 0;
+    int rate = healthPotion.rateEncoded;
+    if (--healthPotion.framesRemaining == 0) healthPotion.rateEncoded = 0;
+    return rate;
+  }
+
+  /** EVENTS_HpRegen removes HEALTHPOT only when the combined rate overshoots max life. */
+  public void cancelHealthPotionRecovery() {
+    healthPotion.clear();
   }
 
   private void tickPotionRecovery(

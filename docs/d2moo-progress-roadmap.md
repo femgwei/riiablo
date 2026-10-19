@@ -11567,3 +11567,11 @@ build/ai-shared-collision-phase1-closeout.log。此前扩展轮 architectureRegr
 - 样本为 source-derived；原版进程逐击采样、双机联机和全 core 测试仍需单独验收。
 - 扩大验证 `build/missile-poison-verified.log` 返回 0（约 8 分 45 秒）：domain 默认 177 / 快速 161 / 严格审计 39；core 战斗/迁移/Golden/Vitals 192、毒素 59、弹体 126、元素 56、近战 41、特殊 26、怪物聚合 821 全过，无失败/错误/跳过；桌面/D2GS 编译与真实资源营地/退出清理 PASS。之后仅修正免疫夹具阵营并补非免疫控制，最终窄入口结果单独记录。
 - 最终收尾 `build/missile-poison-closeout.log` 返回 0（约 1 分钟）：毒素 60（新场景 31 + 适配 6 + 兼容 23）、弹体 127 全过，无失败/错误/跳过。生产代码未再变动，未重复 AI 聚合或启动检查；验证版本边界见第七阶段。
+
+## 怪物战斗数值：中毒回血合算与归属（2026-10-19）
+
+- 依据 D2MOO 的玩家/怪物 HPREGEN 与 poison/burning stat-list 更新分支，中毒时以原始 8.8 合并自然/状态回血、实际生命药水和毒速率，玩家非零净速率最低保留 1 HP；零净速率不钳生命，怪物仍可毒死。怪物 life 状态抑制基础自然回血，PREVENTHEAL 只拦非负净速率。
+- StateUpdater/PotionRecoverySystem 交接生命药水单帧推进，覆盖最后一帧到期、驱散与生命/法力同时喝药，严格净超出 max 才取消 HEALTHPOT；快照副本不推进药水。跨攻击者更强/等强的毒或燃烧覆盖保留第一位 stat-list owner，移除后再感染才建立新归属。
+- 新增 domain 快速数值 14、独立 source-derived 预期 8；状态 ECS 与真实药水 25、实际毒弹低血/零净速率及 Vitals 4 项，原有药水回归纳入 monsterPoisonTest。domain 默认 191 / 快速 175 / 独立审计 47 全过，专项毒素 94 全过；首轮旧耐力药水夹具误用 `stam`，改为实际 `vps` 行并断言 pSpell=9 后复验，无跳过。日志与详细边界见 `docs/monster-combat-parity.md` 第八阶段。
+- 最终扩大组合 `build/poison-state-verified.log` 返回 0（约 8 分 41 秒）：战斗/迁移/Golden/Vitals 192、毒素 94、弹体 131、元素 56、近战 41、特殊 26、怪物聚合 821 全过，无失败/错误/跳过；domain 三任务沿用首轮通过结果（UP-TO-DATE）。桌面/D2GS 编译及真实 1.10f 资源营地 manifest/退出清理 PASS，之后仅补文档。未跑整个 core 测试集、双机或原版进程采样。
+- 仍非完整原版毒状态迁移：无毒单位一般回血、燃烧/撕开伤口整包合算、原版事件调度/房间城镇保护、佣兵/PvP 全路径及高 HP float 精度继续待办。下一阶段优先独立处理怪物来源元素混合；原版 EXE/DLL 逐击样本与双机验收仍未获得。

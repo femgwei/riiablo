@@ -38,6 +38,8 @@ import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.combat.DamageSettlement;
+import com.riiablo.engine.server.combat.NativePoisonRegenMath;
+import com.riiablo.save.CharData;
 import com.riiablo.engine.server.event.MeleeAttackEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
@@ -1033,6 +1035,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   @Override
   protected void process(int entityId) {
     UnitStates unitStates = mUnitStates.get(entityId);
+    if (unitStates != null) unitStates.healthPotionAdvanced = false;
     if (unitStates == null || unitStates.stateList == null) {
       return;
     }
@@ -1595,10 +1598,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (stateList.hasState(StateId.POISON)) {
       UnitState poisonState = stateList.getState(StateId.POISON);
       if (poisonState.exactDamagePerFrame > 0f || poisonState.damagePerFrame > 0) {
-        applyDamageOverTime(entityId, poisonState.sourceEntityId,
-            poisonState.exactDamagePerFrame > 0f
-                ? poisonState.exactDamagePerFrame : poisonState.damagePerFrame,
-            stateList, StateId.POISON);
+        applyPoisonRegeneration(entityId, stateList, poisonState);
       }
     }
     
@@ -1623,6 +1623,58 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
             damage, stateList, StateId.OPENWOUNDS);
       }
     }
+  }
+
+  /** Poison is a negative HPREGEN rate, not an independent hit before potion healing. */
+  private void applyPoisonRegeneration(int entityId, StateList states, UnitState poison) {
+    if (!mAttributesWrapper.has(entityId) || !canApplyDamageOverTime(
+        entityId, poison.sourceEntityId, StateId.POISON)) return;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    if (attrs == null) return;
+    StatRef life = attrs.get(Stat.hitpoints, StatRef.obtain());
+    if (life == null || life.encodedValues() <= 0) return;
+    int before = life.encodedValues();
+    boolean player = mPlayer.has(entityId);
+    CharData character = player ? mPlayer.get(entityId).data : null;
+    int potionRate = 0;
+    if (character != null && character.getStats() == attrs) {
+      potionRate = character.takeHealthPotionRecoveryTick();
+      mUnitStates.get(entityId).healthPotionAdvanced = true;
+    }
+    float rate = poison.exactDamagePerFrame > 0f
+        ? poison.exactDamagePerFrame : poison.damagePerFrame;
+    int poisonRate = (int) Math.min(Integer.MAX_VALUE, (double) rate * 256.0);
+    StatRef regen = attrs.get(Stat.hpregen, StatRef.obtain());
+    StatRef baseRegen = attrs.base().get(Stat.hpregen, StatRef.obtain());
+    long netRate = NativePoisonRegenMath.netRate(
+        regen != null ? regen.encodedValues() : 0,
+        states.getTotalStatContribution(Stat.hpregen), potionRate, poisonRate,
+        baseRegen != null ? baseRegen.encodedValues() : 0,
+        !player && mMonster.has(entityId) && hasLifeState(states));
+    if (!player && states.hasState(StateId.PREVENTHEAL) && netRate >= 0) return;
+    StatRef maxLife = attrs.get(Stat.maxhp, StatRef.obtain());
+    int maximum = maxLife != null ? maxLife.encodedValues() : Integer.MAX_VALUE;
+    if (character != null && character.getStats() == attrs
+        && NativePoisonRegenMath.exceedsMaximum(before, maximum, netRate)) {
+      character.cancelHealthPotionRecovery();
+    }
+    int after = NativePoisonRegenMath.nextLife(before, maximum, netRate, player);
+    if (after > before) {
+      life.setEncoded(after);
+    } else if (after < before) {
+      // Keep host DOT notifications for net life loss, not a second poison hit.
+      applyDamageOverTime(entityId, poison.sourceEntityId, (before - after) / 256f,
+          states, StateId.POISON);
+    }
+  }
+
+  private boolean hasLifeState(StateList states) {
+    for (UnitState state : states.getStates()) {
+      States.Entry definition = files() != null && files().States != null
+          ? files().States.get(state.stateId) : null;
+      if (definition != null ? definition.life : state.stateId == StateId.POISON) return true;
+    }
+    return false;
   }
 
   /**
@@ -1822,26 +1874,21 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void applyDamageOverTime(int entityId, int sourceEntityId, float damage,
       StateList stateList, int stateId) {
     if (damage <= 0 || !mAttributesWrapper.has(entityId)) return;
-    if (isPlayerAligned(sourceEntityId) && isPlayerAligned(entityId)
-        && !PvpCombatRules.canDamage(partyManager,
-            playerAlignmentOwner(sourceEntityId), playerAlignmentOwner(entityId), true, true)) {
-      // Hostility may be removed while poison/open-wounds is active.  Native
-      // friendly checks must still prevent later DOT ticks from bypassing the
-      // current authoritative relation.
-      log.info("[PVP] phase=dot_reject source={} target={} state={} reason=not_hostile",
-          sourceEntityId, entityId, StateId.getName(stateId));
-      return;
-    }
+    if (!canApplyDamageOverTime(entityId, sourceEntityId, stateId)) return;
     Attributes attrs = mAttributesWrapper.get(entityId).attrs;
     if (attrs == null) return;
     StatRef hitpoints = attrs.get(Stat.hitpoints, StatRef.obtain());
     if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
 
-    // A DOT tick is authoritative damage, but it is not a new impact.  Keep a
-    // distinct event kind so the client does not play an impact/pain sound on
-    // every simulation frame while poison or open wounds are active.
+    // A DOT tick is authoritative damage, but it is not a new impact. Keep a
+    // distinct event kind so clients do not play pain on every poison frame.
     DamageEvent event = DamageEvent.obtainDamageOverTime(sourceEntityId, entityId, damage);
     DamageSettlement.prepare(world, event);
+    if (stateId == StateId.POISON && mPlayer.has(entityId)) {
+      // Mutable host callbacks must not turn this nonlethal regen loss into a kill.
+      event.damage = Float.isFinite(event.damage)
+          ? Math.min(Math.max(0f, event.damage), Math.max(0f, hitpoints.asFixed() - 1f)) : 0f;
+    }
     float appliedDamage = Math.max(0f, event.damage);
     DamageSettlement.commit(world, event);
     float hpAfter = hitpoints.asFixed();
@@ -1850,13 +1897,25 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       log.debug("Entity {} died from state {} (damage={})", entityId,
           StateId.getName(stateId), appliedDamage);
       DamageSettlement.finishDeath(world, event);
-      // Death subscribers apply the States.txt stay-death policy. Do not wipe
-      // the list here: hitpoints==0 already prevents duplicate DOT events and
-      // clearAll would incorrectly remove plr/mon/bossstaydeath entries.
+      // Death subscribers retain the States.txt stay-death policy.
     } else {
       log.trace("Entity {} takes {} damage from state {} (hp={})", entityId,
           appliedDamage, StateId.getName(stateId), hpAfter);
     }
+  }
+
+  private boolean canApplyDamageOverTime(int entityId, int sourceEntityId, int stateId) {
+    if (isPlayerAligned(sourceEntityId) && isPlayerAligned(entityId)
+        && !PvpCombatRules.canDamage(partyManager,
+            playerAlignmentOwner(sourceEntityId), playerAlignmentOwner(entityId), true, true)) {
+      // Hostility may be removed while poison/open-wounds is active.  Native
+      // friendly checks must still prevent later DOT ticks from bypassing the
+      // current authoritative relation.
+      log.info("[PVP] phase=dot_reject source={} target={} state={} reason=not_hostile",
+          sourceEntityId, entityId, StateId.getName(stateId));
+      return false;
+    }
+    return true;
   }
 
   /** Emits the native SpiderLay movement trail into the authoritative missile pipeline. */

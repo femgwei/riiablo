@@ -9,6 +9,7 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.UnitLifecycle;
+import com.riiablo.engine.server.component.UnitStates;
 
 /** Advances native health- and mana-potion states once per 25 Hz game frame. */
 @All({Player.class, AttributesWrapper.class})
@@ -16,9 +17,16 @@ public class PotionRecoverySystem extends IteratingSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<AttributesWrapper> mAttributes;
   protected ComponentMapper<UnitLifecycle> mUnitLifecycle;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   @Override
   protected void process(int entityId) {
+    UnitStates states = mUnitStates.get(entityId);
+    boolean healthAlreadyAdvanced = states != null && states.healthPotionAdvanced;
+    if (states != null) {
+      states.healthPotionAdvanced = false;
+      if (states.snapshotOnly) return;
+    }
     Player player = mPlayer.get(entityId);
     AttributesWrapper attributes = mAttributes.get(entityId);
     if (player == null || player.data == null || attributes == null || attributes.attrs == null) {
@@ -28,6 +36,6 @@ public class PotionRecoverySystem extends IteratingSystem {
         && mUnitLifecycle.get(entityId).isDead()) return;
     StatRef life = attributes.attrs.get(Stat.hitpoints, StatRef.obtain());
     if (life != null && life.asFixed() <= 0f) return;
-    player.data.tickPotionRecovery();
+    player.data.tickPotionRecovery(healthAlreadyAdvanced);
   }
 }

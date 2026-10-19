@@ -71,7 +71,8 @@ class PotionRecoverySystemTest extends RiiabloTest {
     fixture.attributes.base().put(Stat.stamina, 12f);
     fixture.attributes.base().put(Stat.maxstamina, 100f);
     fixture.attributes.reset();
-    beltPotion(fixture.character, "stam", 6);
+    assertEquals(9, Riiablo.files.misc.get("vps").pSpell);
+    beltPotion(fixture.character, "vps", 6);
 
     assertTrue(fixture.character.useBeltPotion(0));
     assertEquals(100f, value(fixture.attributes, Stat.stamina), 0.0001f);

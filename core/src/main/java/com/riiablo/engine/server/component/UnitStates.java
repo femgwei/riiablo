@@ -32,6 +32,9 @@ public class UnitStates extends Component {
   /** Client replicas receive state snapshots but never tick authoritative DOT. */
   public boolean snapshotOnly;
 
+  /** StateUpdater consumed this frame's health-potion rate, including a final poison tick. */
+  public boolean healthPotionAdvanced;
+
   /** 状态列表 */
   public StateList stateList;
 
@@ -63,6 +66,7 @@ public class UnitStates extends Component {
    */
   public UnitStates init(int entityId) {
     snapshotOnly = false;
+    healthPotionAdvanced = false;
     appliedMaxLifePercent = 0;
     appliedMaxManaPercent = 0;
     appliedMaxStaminaPercent = 0;
@@ -83,6 +87,7 @@ public class UnitStates extends Component {
 
   protected void reset() {
     snapshotOnly = false;
+    healthPotionAdvanced = false;
     if (stateList != null) {
       stateList.discardAll();
     }

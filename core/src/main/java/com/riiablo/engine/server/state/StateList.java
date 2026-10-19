@@ -339,7 +339,8 @@ public class StateList {
 
   /**
    * Native poison/burning replacement: an equal-or-stronger per-frame rate
-   * replaces owner, payload and expiry exactly; a weaker hit changes nothing.
+   * replaces payload and expiry, retaining the original stat-list owner;
+   * a weaker hit changes nothing (SUNITDMG_ApplyPoisonDamage/ApplyBurnDamage).
    */
   public UnitState applyDamageOverTimeState(int stateId, int duration, int level,
       int sourceEntityId, float damagePerFrame, int damageType) {
@@ -356,7 +357,6 @@ public class StateList {
     state.duration = duration;
     state.initialDuration = duration;
     state.level = Math.max(1, level);
-    state.sourceEntityId = sourceEntityId;
     state.damagePerFrame = (int) damagePerFrame;
     state.exactDamagePerFrame = damagePerFrame;
     state.damageType = damageType;

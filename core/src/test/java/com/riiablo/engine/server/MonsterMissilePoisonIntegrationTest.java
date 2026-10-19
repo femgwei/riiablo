@@ -29,6 +29,29 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 class MonsterMissilePoisonIntegrationTest extends RiiabloTest {
   @ParameterizedTest
+  @CsvSource({"512,0,256,1", "256,0,256,0", "128,0,256,0", "128,511,128,0"})
+  void actualPoisonCollisionHonorsPlayerFloorAndZeroNetRegen(
+      int life, int regen, int expected, int events) {
+    try (Fixture f = new Fixture(true)) {
+      StateList states = states(f);
+      f.target.attrs.base().put(Stat.hitpoints, life / 256f);
+      f.target.attrs.base().put(Stat.hpregen, regen);
+      f.target.attrs.reset();
+      f.spawn(row(1, 2, 4));
+      f.land();
+      assertEquals(life, hp(f), "collision installs rate but does not apply an immediate poison hit");
+      assertNotNull(states.getState(StateId.POISON));
+      for (int tick = 0; tick < 4; tick++) {
+        f.land();
+        assertEquals(expected, hp(f));
+        assertWire(f);
+      }
+      assertEquals(events, f.probe.events);
+      assertNull(states.getState(StateId.POISON));
+    }
+  }
+
+  @ParameterizedTest
   @CsvSource({"1,2,8,0,0,0,511,4", "1,2,8,50,0,0,255,4",
       "1,2,8,0,50,0,511,2", "1,2,8,50,50,25,383,3",
       "1,2,8,50,50,-25,127,1", "1,1,7,0,0,0,128,4",
