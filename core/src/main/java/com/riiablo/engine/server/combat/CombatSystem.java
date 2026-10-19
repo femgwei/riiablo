@@ -598,12 +598,34 @@ public class CombatSystem {
       boolean defenderDemon, boolean defenderUndead,
       boolean defenderIgnoreTargetDefenseAllowed, boolean fixedPointElements,
       NativeMissilePhysicalDamage missilePhysical) {
+    return calculateAttackAtDifficulty(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, mastery, context, magicTargetBonusPercent,
+        defenderDemon, defenderUndead, defenderIgnoreTargetDefenseAllowed, fixedPointElements,
+        missilePhysical, null);
+  }
+
+  /** Separate immutable physical/elemental projectile creation policies. */
+  public CombatResult calculateAttackAtDifficulty(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      NativeCombatContext context, int magicTargetBonusPercent,
+      boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed, boolean fixedPointElements,
+      NativeMissilePhysicalDamage missilePhysical, NativeMissileElementalDamage missileElemental) {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
         attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery, context,
         Math.max(0, magicTargetBonusPercent), defenderDemon, defenderUndead,
-        defenderIgnoreTargetDefenseAllowed, 0, fixedPointElements, missilePhysical);
+        defenderIgnoreTargetDefenseAllowed, 0, fixedPointElements, missilePhysical, missileElemental);
   }
 
   /** Resolves a fixed elemental packet for area effects that have no missile
@@ -1366,6 +1388,30 @@ public class CombatSystem {
       int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead,
       boolean defenderIgnoreTargetDefenseAllowed, int enhancedDamageBonus,
       boolean fixedPointElements, NativeMissilePhysicalDamage missilePhysical) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, precomputedPhysicalDamage,
+        physicalConversionPercent, physicalConversionType, mastery, context,
+        magicTargetBonusPercent, defenderDemon, defenderUndead,
+        defenderIgnoreTargetDefenseAllowed, enhancedDamageBonus, fixedPointElements, missilePhysical, null);
+  }
+
+  private CombatResult calculateAttackInternal(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, boolean precomputedPhysicalDamage,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList.WeaponMasteryBonus mastery, NativeCombatContext context,
+      int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed, int enhancedDamageBonus,
+      boolean fixedPointElements, NativeMissilePhysicalDamage missilePhysical,
+      NativeMissileElementalDamage missileElemental) {
     CombatSnapshotFactory.Request request = new CombatSnapshotFactory.Request(
         attacker, defender, attackerPlayer, defenderPlayer, context);
     request.missile = missile;
@@ -1391,6 +1437,7 @@ public class CombatSystem {
     request.enhancedDamageBonus = enhancedDamageBonus;
     request.fixedPointElements = fixedPointElements;
     request.missilePhysical = missilePhysical;
+    request.missileElemental = missileElemental;
     return resolveSnapshot(request);
   }
 

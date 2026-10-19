@@ -220,7 +220,9 @@ class MonsterMissilePhysicalIntegrationTest extends RiiabloTest {
     int events;
     float requested, physical;
     DamageAppliedEvent applied;
+    DamageEvent request;
     @Subscribe public void request(DamageEvent event) {
+      request = event;
       events++; requested = event.damage; physical = event.physicalDamage;
     }
     @Subscribe public void applied(DamageAppliedEvent event) { applied = event; }
@@ -229,14 +231,19 @@ class MonsterMissilePhysicalIntegrationTest extends RiiabloTest {
   static final class Fixture implements AutoCloseable {
     final Random previousRandom = MathUtils.random;
     final Probe probe = new Probe();
-    final World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), probe, new MissileCollisionSystem()).build()
-        .register("map", mock(Map.class)));
-    final int owner = world.create(), victim = world.create();
+    final World world;
+    final int owner, victim;
     final Attributes source = attributes();
     final AttributesWrapper target;
     final Monster monster;
-    Fixture() {
+    Fixture() { this(false); }
+    Fixture(boolean withStates) {
+      WorldConfigurationBuilder builder = new WorldConfigurationBuilder().with(new EventSystem(), probe);
+      com.riiablo.engine.EntityFactory factory = mock(com.riiablo.engine.EntityFactory.class);
+      if (withStates) builder.with(factory, new StateUpdater());
+      world = new World(builder.with(new MissileCollisionSystem()).build()
+          .register("map", mock(Map.class)).register("factory", factory));
+      owner = world.create(); victim = world.create();
       monster = world.getMapper(Monster.class).create(owner).set(Riiablo.files.monstats.get("quillrat1"),
           Riiablo.files.monstats2.get(Riiablo.files.monstats.get("quillrat1").MonStatsEx));
       source.base().put(Stat.mindamage, 10);

@@ -83,6 +83,8 @@ public class NativeAttackData {
   public boolean fixedPointPhysical;
   /** Explicit projectile policy; endpoints are already 8.8, not melee HP stats. */
   public NativeMissilePhysicalDamage missilePhysical;
+  /** Independent table-only instantaneous elemental policy; endpoints already 8.8. */
+  public NativeMissileElementalDamage missileElemental;
   public int normalDamage;
   public int minimumDamagePercent;
   public int maximumDamagePercent;

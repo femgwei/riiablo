@@ -50,6 +50,7 @@ final class CombatSnapshotFactory {
     int enhancedDamageBonus;
     boolean fixedPointElements;
     NativeMissilePhysicalDamage missilePhysical;
+    NativeMissileElementalDamage missileElemental;
 
     Request(Attributes attacker, Attributes defender, boolean attackerPlayer,
         boolean defenderPlayer, NativeCombatContext context) {
@@ -149,6 +150,7 @@ final class CombatSnapshotFactory {
     // missiles retain their separate endpoint/RNG contracts.
     a.fixedPointPhysical = !attackerPlayer && !missile && !precomputedPhysicalDamage;
     a.missilePhysical = missile ? request.missilePhysical : null;
+    a.missileElemental = missile ? request.missileElemental : null;
     a.normalDamage = statInt(attacker, Stat.item_normaldamage, 0);
     a.minimumDamagePercent = statInt(attacker, Stat.item_mindamage_percent, 0);
     a.maximumDamagePercent = statInt(attacker, Stat.item_maxdamage_percent, 0);
@@ -422,6 +424,19 @@ final class CombatSnapshotFactory {
         + (defenderStates == null ? 0
             : defenderStates.getTotalStatContribution(Stat.normal_damage_reduction)));
     d.magicDamageReduced = statInt(defender, Stat.magic_damage_reduction, 0);
+    // Preserve legacy snapshot contracts elsewhere; this audited policy reads
+    // the defender's active stat lists as well as permanent/item attributes.
+    if (a.missileElemental != null && defenderStates != null) {
+      d.magicDamageReduced += defenderStates.getTotalStatContribution(Stat.magic_damage_reduction);
+      d.absorbPercent[DAMAGE_FIRE] += defenderStates.getTotalStatContribution(Stat.item_absorbfire_percent);
+      d.absorbPercent[DAMAGE_LIGHTNING] += defenderStates.getTotalStatContribution(Stat.item_absorblight_percent);
+      d.absorbPercent[DAMAGE_COLD] += defenderStates.getTotalStatContribution(Stat.item_absorbcold_percent);
+      d.absorbPercent[DAMAGE_MAGIC] += defenderStates.getTotalStatContribution(Stat.item_absorbmagic_percent);
+      d.absorbFlat[DAMAGE_FIRE] += defenderStates.getTotalStatContribution(Stat.item_absorbfire);
+      d.absorbFlat[DAMAGE_LIGHTNING] += defenderStates.getTotalStatContribution(Stat.item_absorblight);
+      d.absorbFlat[DAMAGE_COLD] += defenderStates.getTotalStatContribution(Stat.item_absorbcold);
+      d.absorbFlat[DAMAGE_MAGIC] += defenderStates.getTotalStatContribution(Stat.item_absorbmagic);
+    }
     d.immunePhysical = d.resistances[DAMAGE_PHYSICAL] >= 100;
     for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
       d.immuneElemental[i] = d.isMonster && d.resistances[i] >= 100;

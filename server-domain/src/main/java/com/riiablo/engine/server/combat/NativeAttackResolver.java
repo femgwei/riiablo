@@ -39,7 +39,7 @@ public final class NativeAttackResolver {
         && attacker.physicalConversionType > DAMAGE_PHYSICAL
         && attacker.physicalConversionType < DAMAGE_TYPE_COUNT;
     // Keep converted physical fractions even when item elements use legacy integer rolls.
-    result.elementalScale = attacker.fixedPointElements
+    result.elementalScale = attacker.fixedPointElements || attacker.missileElemental != null
         || (result.physicalScale == 256 && convertsPhysical) ? 256 : 1;
 
     // 1. Resolve the complete hit packet once. Both the combat result and
@@ -119,7 +119,9 @@ public final class NativeAttackResolver {
     // 7. 计算元素伤害
     // D2Game runs ColdLen through the same cold-resistance/pierce row as
     // cold damage, then applies Cannot Be Frozen / Half Freeze Duration.
-    result.coldDuration = applyElementalResistance(
+    result.coldDuration = attacker.missileElemental != null
+        ? attacker.missileElemental.coldDuration(defender, attacker.elementalPierce[DAMAGE_COLD])
+        : applyElementalResistance(
         Math.max(0, attacker.coldLength), defender, DAMAGE_COLD,
         attacker.elementalPierce[DAMAGE_COLD]);
     if (defender.cannotBeFrozen) result.coldDuration = 0;
@@ -131,7 +133,7 @@ public final class NativeAttackResolver {
     result.poisonDuration = Math.max(0, attacker.poisonLength);
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       int elemDamage = calculateElementalDamage(attacker, i);
-      if (!attacker.fixedPointElements && result.elementalScale != 1) {
+      if (!attacker.fixedPointElements && attacker.missileElemental == null && result.elementalScale != 1) {
         elemDamage = (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE,
             (long) elemDamage * result.elementalScale));
       }
@@ -142,6 +144,10 @@ public final class NativeAttackResolver {
         elemDamage += elemDamage * attacker.magicTargetBonusPercent / 100;
       }
       if (elemDamage > 0) {
+        if (attacker.missileElemental != null && i == attacker.missileElemental.type) {
+          attacker.missileElemental.resolve(elemDamage, defender, attacker.elementalPierce[i], result);
+          continue;
+        }
         if (attacker.fixedPointElements && i == DAMAGE_LIGHTNING) {
           resolveNativeLightningDamage(elemDamage, attacker, defender, result);
           continue;
@@ -283,6 +289,8 @@ public final class NativeAttackResolver {
   }
 
   private int calculateElementalDamage(NativeAttackData attacker, int damageType) {
+    if (attacker.missileElemental != null) return damageType == attacker.missileElemental.type
+        ? attacker.missileElemental.roll(rolls) : 0;
     int scale = attacker.fixedPointElements ? 256 : 1;
     int minDmg = scale == 1 ? attacker.elementalMinDamage[damageType]
         : saturatingInt((long) attacker.elementalMinDamage[damageType] * scale);

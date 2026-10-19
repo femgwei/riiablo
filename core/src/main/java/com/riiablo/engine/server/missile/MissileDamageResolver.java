@@ -15,6 +15,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.combat.DamageResult;
 import com.riiablo.engine.server.combat.NativeMissilePhysicalDamage;
+import com.riiablo.engine.server.combat.NativeMissileElementalDamage;
 import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.SkillFormula;
@@ -190,7 +191,7 @@ public final class MissileDamageResolver {
 
   public static boolean initialize(com.riiablo.Files files, Missile projectile, Attributes ownerAttrs,
       Monster ownerMonster, int currentMode, int level, int difficulty, StateList ownerStates,
-      boolean nativeMonsterPhysical) {
+      boolean nativeMonsterDamage) {
     if (projectile == null || projectile.missile == null) return false;
     Missiles.Entry row = projectile.missile;
     level = Math.max(1, level);
@@ -243,9 +244,19 @@ public final class MissileDamageResolver {
     int sourceScale = Math.max(0, row.SrcDamage);
     // Ordinary weaponless monster rows only. Skill, origin-missile and formula
     // packets require their own creation policy and must not silently opt in.
-    NativeMissilePhysicalDamage nativePhysical = nativeMonsterPhysical && ownerMonster != null
+    NativeMissilePhysicalDamage nativePhysical = nativeMonsterDamage && ownerMonster != null
         && row.SrcMissDmg == 0 && !hasText(row.DmgSymPerCalc)
         ? monsterPhysical(row, level, ownerAttrs, ownerStates) : null;
+    // Do not silently reuse this policy for poison rates, mastery, special damage
+    // callbacks or owner/skill/formula damage. Each needs a separate source audit.
+    NativeMissileElementalDamage nativeElemental = nativeMonsterDamage && ownerMonster != null
+        && row.SrcDamage == 0 && row.SrcMissDmg == 0 && row.pSrvDmgFunc == 0
+        && row.DamageRate == 0 && !row.ApplyMastery && !hasText(row.DmgSymPerCalc)
+        && !hasText(row.EDmgSymPerCalc)
+        && (directType == FIRE || directType == LIGHTNING || directType == COLD || directType == MAGIC)
+        ? new NativeMissileElementalDamage(directType,
+            missileElementalDamageFixed(row, level, true),
+            missileElementalDamageFixed(row, level, false), coldLength) : null;
     int attackRating = statInt(ownerAttrs, Stat.tohit);
     if (sourceScale > 0 && ownerAttrs != null) {
       int sourceMin = statInt(ownerAttrs, Stat.item_throw_mindamage);
@@ -287,7 +298,7 @@ public final class MissileDamageResolver {
     }
     // A known native zero packet is still authoritative. Falling back to the
     // owner's generic attack here would invent damage for empty/zero endpoints.
-    if (!meaningful && nativePhysical == null) {
+    if (!meaningful && nativePhysical == null && nativeElemental == null) {
       return false;
     }
 
@@ -295,6 +306,7 @@ public final class MissileDamageResolver {
         physicalMin, physicalMax, attackRating,
         elementalMin, elementalMax, coldLength, poisonLength);
     projectile.nativePhysical = nativePhysical;
+    projectile.nativeElemental = nativeElemental;
     log.info("[MISSILE_DAMAGE_SNAPSHOT] missile={} owner={} level={} toHit={} srcDamage={} "
             + "physical={}..{} fire={}..{} lightning={}..{} cold={}..{} poison={}..{} "
             + "magic={}..{} coldLength={} poisonLength={}",
@@ -930,6 +942,7 @@ public final class MissileDamageResolver {
       int attackRating, int[] elementalMin, int[] elementalMax,
       int coldLength, int poisonLength) {
     projectile.nativePhysical = null;
+    projectile.nativeElemental = null;
     StatListRef base = projectile.damage.base();
     base.clear();
     // The level used to evaluate a Skills.txt/Missiles.txt row is not

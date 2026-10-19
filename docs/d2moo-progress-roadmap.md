@@ -11549,3 +11549,11 @@ build/ai-shared-collision-phase1-closeout.log。此前扩展轮 architectureRegr
 - 原版依据：D2Common `Units/Missile.cpp` 的创建端点/来源比例/百分比快照，D2Game `MISSILES/MissMode.cpp` 的 RollDamageValue/FillDamageParams。样本仍为逆向源码推导，不是原版进程采集。
 - 本阶段未迁移原版创建时暴击预掷、完整每弹体 RNG 调度、技能/公式弹体、SrcMissDmg 原生继承、玩家/佣兵武器系数或元素结算顺序；详见 `docs/monster-combat-parity.md` 第五阶段。
 - 验证：domain 默认 130 / 快速 114 / 独立审计 25 全过；最终收尾弹体 52（新增 19）、近战 41、特殊 26、怪物聚合 821 全过，失败/错误/跳过为 0。桌面端/D2GS 编译、真实 1.10f 资源营地 manifest 与退出清理 PASS；主回归及收尾命令均返回 0。全 core、双机和原版进程逐击采样未执行。
+
+## 怪物战斗数值：纯表格瞬时元素弹体 8.8（2026-10-19）
+
+- 火、电、冰、魔法普通表格弹体使用独立不可变 8.8 端点/冷时长快照；限定无来源伤害/来源弹体、技能公式、ApplyMastery、特殊伤害回调和 DamageRate。毒伤/来源元素/精通/特殊技能继续独立待办，玩家与佣兵创建策略未扩大。
+- 按 D2MOO `Missile.cpp`、`MissMode.cpp`、`SUnitDmg.cpp` 修正小数端点与排他抽取、MDR 先于抗性、玩家 95% 最大抗性、怪物免疫/穿透、魔法无穿透、40% 百分比吸收上限与固定吸收顺序，保留大值提前除法。冷时长不减 MDR、不吸收，实际 StateUpdater 状态应用单独检查。
+- 新增 `:core:monsterElementalTest` 窄入口；现有 `monsterMissileTest` 同时覆盖物理与新元素场景，广域 AI 聚合仍不是所有层的别名。新增源代码推导审计 8 项（总 33），不是原版进程捕获数据。详细边界与验证记录见 `docs/monster-combat-parity.md` 第六阶段。
+- 验证：domain 默认 156 / 快速 140 / 严格审计 33 全过；扩大组合战斗/Golden/Vitals 186、近战 41、特殊 26、AI 聚合 821 全过，桌面/D2GS 编译、真实资源营地与退出清理 PASS。再收紧两个创建 guard 后，最终窄入口元素 57（新增 39）、弹体 91 全过；两轮日志与版本区别见第六阶段，未重复广域或启动检查。未跑全 core、双机及原版进程采样。
+- 后续优先处理怪物来源元素和毒伤速率/时长，再调查主人属性读取时机、精通/公式/特殊回调、暴击预掷及完整随机调度。双机验证和原版逐击采样仍需单独进行。

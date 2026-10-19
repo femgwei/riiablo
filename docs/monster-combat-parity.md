@@ -11,7 +11,7 @@
 
 前者是现有算术、随机消费契约的快速回归；后者是独立原版期望审计，**第四阶段已修正原有 17 项中的全部已知差异**。没有禁用失败用例、没有改成当前实现的预期值；这是选定样本通过，不代表所有怪物、技能与原版实测全部一致。普通 `:server-domain:test` 与快速入口仍显式排除 `monster-parity-audit` 标签；审计必须单独运行，绝不能用普通测试通过代替原版对照。
 
-第五阶段另增物理弹体 8 项，当前审计合计 25 项；下文第二至第四阶段的测试数量均为各阶段历史记录。
+第五阶段另增物理弹体 8 项，第六阶段另增瞬时元素弹体 8 项，当前审计合计 33 项；下文各阶段的测试数量均为当时的历史记录。
 
 以下 core 入口均可追加 `'-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F'`：
 
@@ -20,7 +20,8 @@
 - `:core:monsterAttackTest`：普通攻击及原生动画/复活链路。
 - `:core:monsterPursuitTest`：静止/移动目标追击及重寻路回归。
 - `:core:monsterSummonTest`：产怪、孵化、生成上限及阻挡。
-- `:core:monsterMissileTest`：怪物物理弹体端点、发射快照、碰撞扣血/事件/同步，以及刺毛鼠和已有弹体生命周期。
+- `:core:monsterMissileTest`：怪物物理/瞬时元素弹体端点、发射快照、碰撞扣血/事件/同步，以及刺毛鼠和已有弹体生命周期。
+- `:core:monsterElementalTest`：瞬时元素弹体全链路与真实萨满火弹表格/行为；不代表所有元素技能、毒云或地面持续伤害。
 - `:core:monsterSpecialTest`：自爆、弹体、诅咒及已有特殊技能。
 - `:core:monsterAiTest`：已有 AI 决策回归，排除新增端到端场景类。
 - `:core:monsterBehaviorTest`：保留原有广域聚合入口；不是所有层的别名，亦不包含严格原版审计。
@@ -126,6 +127,28 @@ Actioneer 的生命/事件读取、怪物 fire-hit、吸收恢复及物理比例
 
 最终收尾 `build/missile-physical-closeout.log` 返回 0（约 5 分 35 秒，含构建和启动检查）：弹体 52（其中新增物理场景/契约 19）、近战 41、特殊 26、怪物聚合 821 全部通过，失败/错误/跳过为 0。桌面端和 D2GS 编译通过；真实 1.10f 资源营地 manifest 与退出资源清理均 PASS，见 `desktop/build/missile-physical-smoke-final/rogue-encampment-manifest.txt`。未运行整个 core 测试集、双机联机或原版进程逐击采样；营地 smoke 是 riiablo 读取原版资源，不是执行原版 EXE 的战斗测试。
 
+### 第六阶段：纯表格怪物瞬时元素弹体
+
+`NativeMissileElementalDamage` 与物理包分开，只接入非技能怪物弹体的火、电、冰、魔法通道，且要求 `SrcDamage=0`、`SrcMissDmg=0`、无 `DmgSymPerCalc`/`EDmgSymPerCalc`、`ApplyMastery=false`、`pSrvDmgFunc=0`、`DamageRate=0`。负来源比例哨兵也不 opt-in。来源元素、技能公式、精通、特殊回调、毒伤及按帧伤害均保留旧策略，不用一个精度开关将它们混同。玩家与佣兵在创建/碰撞入口继续 opt-out；防御方佣兵分类也尚未完整迁移。
+
+依据同一 D2MOO revision 的 `D2Common/Units/Missile.cpp` 中 `MISSILE_GetMinElemDamage` / `MISSILE_GetMaxElemDamage`，表格基础值与等级分段加成先相加，再按 HitShift 生成原始 8.8 端点，避免先截成整数 HP。`D2Game/MISSILES/MissMode.cpp` 的 `MISSMODE_RollDamageValue` 对元素同样要求两个端点均为正、交换反转端点、排他抽取，相同端点不扩展。不可变快照同时保存冰冷时长；重新建立伤害包和组件回收清除，继承既有快照的子弹体复制此值。
+
+依据 `SUnitDmg.cpp` 的 `sgDamageStatTable` / `SUNITDMG_ApplyResistancesAndAbsorb`：先减固定魔法减伤的 `stat<<8`，再处理抗性；玩家最大抗性最高 95%，怪物不套玩家 75% 上限，负抗性最低 -100%。火/电/冰穿透保留正负号，但不能突破怪物原始 >=100 的免疫；魔法行没有穿透属性。百分比吸收上限 40%，先百分比再固定吸收，损伤减少与回血使用同一小数尺度。抗性与百分比吸收保留 `MONSTERUNIQUE_CalculatePercentage` 大值提前除法；例 5001 HP 的原始包按 50% 抗性剩 `640100/256 HP`，不是直接长乘除的 `640128/256`。异常 Mod 数值继续使用宿主饱和保护，不模拟原版溢出；本阶段不宣称负 MDR 等异常域或负伤害内部残值完全原版化。
+
+冰冷时长使用独立冷抗性/穿透行，既不扣 MDR 也不吸收，之后保留不能冰冻、冰冻时长减半和既有难度处理。新增实际 StateUpdater→COLD 状态断言：100 帧、50% 冷抗、100 MDR 的命中即使瞬时伤害为零，仍安装 50 帧 COLD。防御状态层中的 MDR、百分比与固定吸收也接入新策略；不顺带改写旧 Nova、地面伤害或其他冻结回归的运算契约。
+
+新增快速层 26 项、独立审计 8 项；ECS 场景/创建契约 39 项覆盖四通道事件、小数 HP/Vitals 往返、零/反转端点、HitShift、等级分段、减伤/穿透、先吸收回血后扣血（满血/缺血/零伤害）、状态属性、飞行中快照、真实 shafire1..5 及延后策略的 opt-out。实际碰撞使用合成行隔离运算，再用真实资源行单独验证，不把手动扣血当生产链路。
+
+主人穿透继续保留现有宿主的发射快照契约；本阶段未迁移 D2MOO 结算时主人属性读取、完整 RNG 顺序/种子、创建时暴击、特殊旁路/PvP/佣兵，也没有获取原版 EXE/DLL 的逐击记录。原版资料依据充分覆盖本阶段选定数值子域，不等于全部怪物战斗已经完成。
+
+数值层 `build/missile-elemental-domain.log` 返回 0：domain 默认 156、快速 140、严格审计 33 全过。扩大验证 `build/missile-elemental-verified.log` 返回 0（约 8 分 41 秒）：战斗/迁移/Golden/Vitals 186、元素 55、弹体 89、近战 41、特殊 26、怪物聚合 821 全过，失败/错误/跳过为 0；桌面/D2GS 编译及真实 1.10f 资源营地 manifest、退出清理 PASS（`desktop/build/missile-elemental-smoke-final/rogue-encampment-manifest.txt`）。普通 domain 任务在扩大组合中为已通过结果的 UP-TO-DATE，并非又执行了一次。
+
+首次元素组合因冷状态夹具未安装 StateUpdater、回收测试误把 `set()` 当作 reset 而失败；之后补齐 StateUpdater 所需工厂系统装配，改为实际 ECS 删除/回收断言，单项冷状态入口通过，随后上述扩大组合全过。最初扩大启动命令有一次 PowerShell 未引用属性参数导致 `.10f` 被当作任务，修正参数引用后才得到上述成功日志。未运行整个 core 测试集、双机联机或原版进程逐击采样；营地 smoke 仍只是 riiablo 读取原版资源。
+
+扩大验证构建后，复核又收紧了负 `SrcDamage` 哨兵及物理公式的 opt-in，并增加两个创建边界用例；上述 55/89 不包含这两个新增用例。最终版本的窄入口收尾验证单独记录，不能把扩大组合冒充最终新增用例的结果。
+
+最终收尾 `build/missile-elemental-closeout.log` 返回 0（约 1 分 12 秒，含 core 增量编译）：元素 57（新增类 39）、弹体 91 全过，失败/错误/跳过为 0。最终两个 guard 未改变 API 或已覆盖普通弹体策略，未重复整个 AI/Golden 聚合、桌面/D2GS 编译或营地 smoke；这些扩大结果对应上一段明确说明的构建版本。
+
 以下差异清单保留为**修复前基线**；当前原有 17 项全部通过，基线里的“当前”指首次审计时的实现，不是第四阶段状态。
 
 `MonsterMeleeOriginalParityTest` 不调用生产公式生成期望值：
@@ -147,6 +170,6 @@ Actioneer 的生命/事件读取、怪物 fire-hit、吸收恢复及物理比例
 
 ## 下一阶段生产修复与实测
 
-已完成怪物近战以及第五阶段普通物理弹体的选定 8.8 链路。后续应补怪物元素/特殊伤害、弹体创建时暴击及随机调度、技能/公式弹体、玩家/佣兵武器力量和敏捷系数，以及防御状态和难度组合；这些不能直接打开同一开关来替代调查。源代码推导样本全绿仍不等于已获取原版逐击实测基准。
+已完成怪物近战、普通物理弹体和第六阶段纯表格瞬时元素弹体的选定 8.8 链路。下一步优先单独调查怪物来源元素/毒伤速率与持续时间，再处理特殊伤害、弹体创建时暴击及随机调度、技能/公式/精通、主人属性读取时机、玩家/佣兵武器力量和敏捷系数，以及防御状态和难度组合；这些不能直接打开同一开关来替代调查。源代码推导样本全绿仍不等于已获取原版逐击实测基准。
 
 原版实测时记录：1.10f EXE/DLL 与 MPQ 版本/哈希、Classic/LoD、难度、人数、区域、怪物 ID/等级/词缀/攻击模式、双方实际属性、运行/格挡/状态、动作帧、随机输入（若可捕获）、伤害包及命中前后原始 8.8 HP。只看屏幕整数血量无法区分 10 与 10.996 HP，少量随机攻击也无法证明命中概率。实测样本确认后新增来源为 executable-captured 的数据，与 source-derived 样本并存。
