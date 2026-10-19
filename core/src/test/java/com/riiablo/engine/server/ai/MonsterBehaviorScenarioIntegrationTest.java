@@ -42,13 +42,18 @@ import org.junit.jupiter.api.Test;
  * Bounded fixed-seed trials admit misses and idle decisions.
  */
 class MonsterBehaviorScenarioIntegrationTest extends RiiabloTest {
-  @ParameterizedTest(name = "physical resistance={0}, flat DR={1}: actual HP loss={2}")
-  @CsvSource({"50,10,45", "75,0,50", "100,0,50", "-50,10,135", "0,100,0"})
-  void monsterMeleeNativeMitigationReachesActualPlayerLife(int resistance, int flat, int expected) {
+  @ParameterizedTest(name = "resistance={0}, flat={1}, strength={2}, ED={3}: actual HP loss={4}")
+  @CsvSource({"50,10,0,0,45", "75,0,0,0,50", "100,0,0,0,50",
+      "-50,10,0,0,135", "0,100,0,0,0", "0,0,50,50,200",
+      "50,10,50,50,95", "0,0,0,-100,10", "0,0,50,-100,50"})
+  void monsterMeleeNativeMitigationReachesActualPlayerLife(int resistance, int flat,
+      int strength, int enhanced, int expected) {
     try (Scene s = new Scene("Zombie", 1)) {
       Attributes source = s.world.getMapper(AttributesWrapper.class).get(s.actor).attrs;
       source.base().put(Stat.mindamage, 100);
       source.base().put(Stat.maxdamage, 100);
+      source.base().put(Stat.strength, strength);
+      source.base().put(Stat.damagepercent, enhanced);
       source.reset();
       Attributes target = s.world.getMapper(AttributesWrapper.class).get(s.player).attrs;
       target.base().put(Stat.damageresist, resistance);

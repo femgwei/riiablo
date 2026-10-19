@@ -97,7 +97,7 @@ class CombatMathMigrationTest {
   }
 
   @Test
-  void productionPacketAndRngStateRemainStableAtTheHostBoundary() {
+  void correctedBonusPacketKeepsRngStateAtTheHostBoundary() {
     NativeRng rng = new NativeRng(17);
     NativeRng expected = new NativeRng(17);
     CombatSystem host = new CombatSystem(rng);
@@ -122,8 +122,8 @@ class CombatMathMigrationTest {
     d.absorbFlat[DAMAGE_FIRE] = 3;
     expected.nextInt(100); // Existing rollHit consumes a draw even with alwaysHit.
     int rolled = 10 + expected.nextInt(11);
-    int base = rolled * 150 / 100;
-    base = base * 125 / 100;
+    // Strength 50 + ED 25 are additive; deliberately not the frozen two-stage product.
+    int base = rolled + rolled * 75 / 100;
     // Deliberate native correction: flat DR before resistance, no minimum 1.
     int physical = Math.max(0, base - 2) * 150 / 100;
     expected.nextInt(1); // Existing inclusive fixed-range fire roll also advances the stream.

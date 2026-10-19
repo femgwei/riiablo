@@ -52,14 +52,20 @@ public final class NativeCombatMath {
     return chance;
   }
 
-  /** Receives an already-rolled base value; the host retains roll and zero-profile semantics. */
+  /**
+   * Combine applicable percentages as SUNITDMG_ApplyDamageBonuses does, with its -90 floor.
+   * Still receives an already-rolled whole-HP value: native endpoint scaling/8.8 rolling
+   * is a separate migration. Retains the host's missile strength exemption and minimum 1.
+   */
   public static int physicalDamageAfterBonuses(int damage, boolean missile, int strength,
       int enhancedPercent, int demonPercent, int undeadPercent, boolean demon, boolean undead) {
-    if (!missile) damage = damage * (100 + Math.max(0, strength)) / 100;
-    int percent = enhancedPercent;
+    int percent = enhancedPercent + (missile ? 0 : strength);
     if (demon) percent += demonPercent;
     if (undead) percent += undeadPercent;
-    if (percent > 0) damage = damage * (100 + percent) / 100;
+    percent = Math.max(-90, percent);
+    // Native adds a truncated percentage, rather than truncating the final
+    // product. These differ for negative percentages and fractional results.
+    damage += damage * percent / 100;
     return Math.max(1, damage);
   }
 

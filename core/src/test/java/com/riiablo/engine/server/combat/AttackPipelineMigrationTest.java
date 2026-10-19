@@ -18,14 +18,19 @@ class AttackPipelineMigrationTest {
     for (int i = 0; i < 4000; i++) {
       AttackerData a = attacker(inputs);
       DefenderData d = defender(inputs);
-      // Half retain a frozen full-packet oracle in the unchanged no-mitigation
-      // domain. The other half exercise corrected native mitigation, compared
-      // host-vs-domain below; independent native expectations live in
-      // NativeMonsterHitMitigationTest. Never rewrite the old resolver to pass.
+      // Half retain a frozen full-packet oracle in the unchanged no-mitigation,
+      // single nonnegative bonus domain. The other half exercise corrected
+      // bonuses/mitigation, compared host-vs-domain below; independent native
+      // expectations live in NativeMonsterHitMitigationTest/NativePhysicalBonusTest.
+      // Never rewrite the old resolver to pass.
       boolean frozenCompatible = i % 2 == 0;
       if (frozenCompatible) {
         d.damageReduced = d.damageReducedPercent = 0;
         d.immunePhysical = false;
+        a.strength = 0;
+        a.enhancedDamagePercent = Math.max(0, a.enhancedDamagePercent);
+        a.demonDamagePercent = Math.max(0, a.demonDamagePercent);
+        a.undeadDamagePercent = Math.max(0, a.undeadDamagePercent);
       }
       // Exercise complete damage packets as well as each early-return family.
       if (i % 4 == 0) {

@@ -34,10 +34,10 @@ class NativeCombatMathTest {
   }
 
   @Test
-  void physicalBonusesKeepTwoRoundingStagesAndMissileStrengthExemption() {
-    assertEquals(24, NativeCombatMath.physicalDamageAfterBonuses(11, false, 50, 25, 10, 15, true, true));
+  void physicalBonusesCombinePercentagesButRetainMissileStrengthExemption() {
+    assertEquals(22, NativeCombatMath.physicalDamageAfterBonuses(11, false, 50, 25, 10, 15, true, true));
     assertEquals(16, NativeCombatMath.physicalDamageAfterBonuses(11, true, 50, 25, 10, 15, true, true));
-    assertEquals(11, NativeCombatMath.physicalDamageAfterBonuses(11, false, -5, -100, 0, 0, false, false));
+    assertEquals(2, NativeCombatMath.physicalDamageAfterBonuses(11, false, -5, -100, 0, 0, false, false));
     assertEquals(1, NativeCombatMath.physicalDamageAfterBonuses(0, true, 0, 0, 0, 0, false, false));
   }
 
