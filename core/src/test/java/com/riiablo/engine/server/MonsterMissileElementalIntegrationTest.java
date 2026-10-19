@@ -169,12 +169,11 @@ class MonsterMissileElementalIntegrationTest extends RiiabloTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"source", "sourceSentinel", "sourceMissile", "skill", "formula", "physicalFormula", "mastery", "rate", "special", "player", "hireling"})
+  @ValueSource(strings = {"sourceSentinel", "sourceMissile", "skill", "formula", "physicalFormula", "mastery", "rate", "special", "player", "hireling"})
   void deferredPoliciesNeverSilentlyOptIn(String policy) {
     try (Fixture f = new Fixture()) {
       Missiles.Entry row = row("fire", 10, 11);
       switch (policy) {
-        case "source": row.SrcDamage = 128; break;
         case "sourceSentinel": row.SrcDamage = -1; break;
         case "sourceMissile": row.SrcMissDmg = 1; break;
         case "skill": row.Skill = "Fire Bolt"; break;

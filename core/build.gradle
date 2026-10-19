@@ -340,6 +340,7 @@ def monsterTestGroups = [
         monsterScenarioSuite + '.blockedNestPlacementCannotCreateAChild',
         monsterScenarioSuite + '.generatorsWithoutAnEnemyDoNotSpawn'],
     monsterMissileTest: [
+        'com.riiablo.engine.server.MonsterMissileSourceIntegrationTest',
         'com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest',
         'com.riiablo.engine.server.MonsterMissileElementalIntegrationTest',
         'com.riiablo.engine.server.MonsterMissilePoisonIntegrationTest',
@@ -349,9 +350,11 @@ def monsterTestGroups = [
         'com.riiablo.engine.server.MissileRoomTrackingTest',
         'com.riiablo.engine.server.SpecialMissileLifecycleTest'],
     monsterElementalTest: [
+        'com.riiablo.engine.server.MonsterMissileSourceIntegrationTest',
         'com.riiablo.engine.server.MonsterMissileElementalIntegrationTest',
         'com.riiablo.engine.server.ShamanFireballAuditTest'],
     monsterPoisonTest: [
+        'com.riiablo.engine.server.MonsterMissileSourceIntegrationTest',
         'com.riiablo.engine.server.PoisonRegenIntegrationTest',
         'com.riiablo.engine.server.PotionRecoverySystemTest',
         'com.riiablo.engine.server.MonsterMissilePoisonIntegrationTest',

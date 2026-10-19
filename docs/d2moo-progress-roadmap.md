@@ -11575,3 +11575,12 @@ build/ai-shared-collision-phase1-closeout.log。此前扩展轮 architectureRegr
 - 新增 domain 快速数值 14、独立 source-derived 预期 8；状态 ECS 与真实药水 25、实际毒弹低血/零净速率及 Vitals 4 项，原有药水回归纳入 monsterPoisonTest。domain 默认 191 / 快速 175 / 独立审计 47 全过，专项毒素 94 全过；首轮旧耐力药水夹具误用 `stam`，改为实际 `vps` 行并断言 pSpell=9 后复验，无跳过。日志与详细边界见 `docs/monster-combat-parity.md` 第八阶段。
 - 最终扩大组合 `build/poison-state-verified.log` 返回 0（约 8 分 41 秒）：战斗/迁移/Golden/Vitals 192、毒素 94、弹体 131、元素 56、近战 41、特殊 26、怪物聚合 821 全过，无失败/错误/跳过；domain 三任务沿用首轮通过结果（UP-TO-DATE）。桌面/D2GS 编译及真实 1.10f 资源营地 manifest/退出清理 PASS，之后仅补文档。未跑整个 core 测试集、双机或原版进程采样。
 - 仍非完整原版毒状态迁移：无毒单位一般回血、燃烧/撕开伤口整包合算、原版事件调度/房间城镇保护、佣兵/PvP 全路径及高 HP float 精度继续待办。下一阶段优先独立处理怪物来源元素混合；原版 EXE/DLL 逐击样本与双机验收仍未获得。
+
+## 怪物战斗数值：普通来源元素混合（2026-10-19）
+
+- 依据 D2MOO `Missile.cpp` 的 CalculateDamageData/AddStatsToDamage/CalculateFinalDamage/SetDamageStats 与 `MissMode.cpp` 的 FillDamageParams，普通非技能怪物飞弹新增五通道不可变来源快照：表内与来源元素相加后整包按 SrcDamage/128 缩放，瞬时来源先转 8.8，来源毒速率不再左移。物理保持独立来源缩放策略。
+- 冷长度相加后缩放，毒长度相加但不缩放、poison_count 缩放后仅 count>1 才平均长度；正毒长度 override 不加入来源 count。来源独立状态层只捕获一次，飞行中主人变化不改已捕获包；混合冷/毒状态、持续扣血、事件及 Vitals 原始生命贯通。原生元素通道局部取值顺序改为火→魔法→电→冰→毒，旧兼容路径不变，不代表完整 RNG 调度原版化。
+- 仅启用普通怪物 SrcDamage=1..255、空或支持的元素类型且无技能/公式/精通/SrcMissDmg/DamageRate/特殊回调的策略；旧 Venom、来源燃烧/眩晕/耐力伤害及当前模式有正概率 MonStats El1/2/3 显式 opt-out。吸血/吸蓝、主人读取时机、创建暴击和特殊伤害未在本轮迁移。此前第七/八阶段“来源混合待办”为历史状态。
+- 新增快速数值 12、独立 source-derived 预期 8、实际碰撞/状态/同步及创建边界 33 项，严格审计合计 55。81 条安装资源行通过普通合成怪物主人的创建策略检查，不等于 81 种真实 AI 端到端命中验收；无原版 EXE/DLL 捕获样本。
+- 扩大组合战斗/Golden/Vitals 192、毒素 126、弹体 162、元素 88、近战 41、特殊 26、AI 聚合 821 全过，但组合因营地 120 秒超时返回 1，不能报告整轮成功。补局部元素 RNG 顺序后最终收尾 `build/missile-source-closeout.log` 返回 0（约 5 分 22 秒）：domain 默认 203 / 快速 187 / 审计 55、毒素 126 / 弹体 162 / 元素 88 全过，失败/错误/跳过为 0；桌面/D2GS 重新编译，未改超时阈值的营地复试 manifest/退出清理 PASS。最终未重跑 AI/Golden 广域；日志及版本边界见第九阶段。
+- 下一步优先核对 MonStats 模式/概率临时元素 stat-list 的生成与发射时序，再逐项处理技能/公式/精通、特殊伤害、完整随机调度。全系统分层、全 core、双机验证和原版进程采样仍不能报告完成；详细机制边界与各轮验证记录见 `docs/monster-combat-parity.md` 第九阶段。

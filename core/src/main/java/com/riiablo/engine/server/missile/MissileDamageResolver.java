@@ -247,8 +247,8 @@ public final class MissileDamageResolver {
     NativeMissilePhysicalDamage nativePhysical = nativeMonsterDamage && ownerMonster != null
         && row.SrcMissDmg == 0 && !hasText(row.DmgSymPerCalc)
         ? monsterPhysical(row, level, ownerAttrs, ownerStates) : null;
-    // Do not silently reuse this policy for mastery, special damage
-    // callbacks or owner/skill/formula damage. Each needs a separate source audit.
+    // Pure-table policy. Ordinary source mixtures are audited separately below;
+    // mastery, special callbacks and skill/formula damage remain opted out.
     NativeMissileElementalDamage nativeElemental = nativeMonsterDamage && ownerMonster != null
         && row.SrcDamage == 0 && row.SrcMissDmg == 0 && row.pSrvDmgFunc == 0
         && row.DamageRate == 0 && !row.ApplyMastery && !hasText(row.DmgSymPerCalc)
@@ -259,6 +259,16 @@ public final class MissileDamageResolver {
             missileElementalDamageFixed(row, level, true),
             missileElementalDamageFixed(row, level, false),
             directType == POISON ? poisonLength : coldLength) : null;
+    boolean supportedSourceType = directType > PHYSICAL || !hasText(row.EType);
+    if (nativeMonsterDamage && ownerMonster != null && sourceScale > 0 && sourceScale <= 255
+        && row.SrcMissDmg == 0 && row.pSrvDmgFunc == 0 && row.DamageRate == 0
+        && !row.ApplyMastery && !hasText(row.DmgSymPerCalc) && !hasText(row.EDmgSymPerCalc)
+        && supportedSourceType
+        && (ownerStates == null || !ownerStates.hasState(StateId.VENOMCLAWS))
+        && !hasSpecialSourceElements(ownerAttrs, ownerStates)
+        && !hasApplicableMonsterElement(files, ownerMonster.monstats, row, currentMode, difficulty)) {
+      nativeElemental = monsterSourceElements(row, level, ownerAttrs, ownerStates, directType);
+    }
     int attackRating = statInt(ownerAttrs, Stat.tohit);
     if (sourceScale > 0 && ownerAttrs != null) {
       int sourceMin = statInt(ownerAttrs, Stat.item_throw_mindamage);
@@ -290,6 +300,18 @@ public final class MissileDamageResolver {
       poisonLength = duration[1];
     }
 
+    if (nativeElemental != null && sourceScale > 0) {
+      // The immutable packet is authoritative. Keep the legacy attribute view
+      // as a diagnostic/metadata projection, not as a second damage calculation.
+      for (int type = FIRE; type < DAMAGE_TYPES; type++) {
+        int scale = type == POISON ? 1 : 256;
+        elementalMin[type] = nativeElemental.minimum(type) / scale;
+        elementalMax[type] = nativeElemental.maximum(type) / scale;
+      }
+      coldLength = nativeElemental.coldLength;
+      poisonLength = nativeElemental.poisonLength;
+    }
+
     physicalMin = Math.max(0, physicalMin);
     physicalMax = Math.max(physicalMin, physicalMax);
     boolean meaningful = physicalMax > 0 || (nativePhysical != null && nativePhysical.maximum > 0);
@@ -309,6 +331,10 @@ public final class MissileDamageResolver {
         elementalMin, elementalMax, coldLength, poisonLength);
     projectile.nativePhysical = nativePhysical;
     projectile.nativeElemental = nativeElemental;
+    if (nativeElemental != null && nativeElemental.poisonCount != 0) {
+      projectile.damage.base().put(Stat.poison_count, nativeElemental.poisonCount);
+      projectile.damage.reset();
+    }
     log.info("[MISSILE_DAMAGE_SNAPSHOT] missile={} owner={} level={} toHit={} srcDamage={} "
             + "physical={}..{} fire={}..{} lightning={}..{} cold={}..{} poison={}..{} "
             + "magic={}..{} coldLength={} poisonLength={}",
@@ -1120,6 +1146,54 @@ public final class MissileDamageResolver {
       return files.MonMode.index("A2");
     }
     return files.MonMode.index("A1");
+  }
+
+  /** Mode-selected temporary monster stat lists need their own scheduling audit. */
+  private static boolean hasApplicableMonsterElement(com.riiablo.Files files, MonStats.Entry monster,
+      Missiles.Entry row, int currentMode, int difficulty) {
+    if (monster == null) return false;
+    String[] modes = {monster.El1Mode, monster.El2Mode, monster.El3Mode};
+    int[][] chances = {monster.El1Pct, monster.El2Pct, monster.El3Pct};
+    int mode = files != null ? resolveAttackMode(files, monster, row, currentMode) : -1;
+    for (int i = 0; i < modes.length; i++) {
+      if (hasText(modes[i]) && arrayValue(chances[i], difficulty) > 0
+          && (files == null || files.MonMode.index(modes[i]) == mode)) return true;
+    }
+    return false;
+  }
+
+  private static NativeMissileElementalDamage monsterSourceElements(Missiles.Entry row, int level,
+      Attributes owner, StateList states, int tableType) {
+    short[] minStats = {0, Stat.firemindam, Stat.lightmindam, Stat.coldmindam,
+        Stat.poisonmindam, Stat.magicmindam};
+    short[] maxStats = {0, Stat.firemaxdam, Stat.lightmaxdam, Stat.coldmaxdam,
+        Stat.poisonmaxdam, Stat.magicmaxdam};
+    int[] min = new int[DAMAGE_TYPES], max = new int[DAMAGE_TYPES];
+    for (int type = FIRE; type < DAMAGE_TYPES; type++) {
+      min[type] = sourceStat(owner, states, minStats[type]);
+      max[type] = sourceStat(owner, states, maxStats[type]);
+    }
+    return NativeMissileElementalDamage.mixed(tableType,
+        missileElementalDamageFixed(row, level, true), missileElementalDamageFixed(row, level, false),
+        elementalLength(row, level), row.SrcDamage, min, max,
+        sourceStat(owner, states, Stat.coldlength), sourceStat(owner, states, Stat.poisonlength),
+        sourceStat(owner, states, Stat.poison_count),
+        sourceStat(owner, states, Stat.skill_poison_override_length));
+  }
+
+  private static boolean hasSpecialSourceElements(Attributes owner, StateList states) {
+    return sourceStat(owner, states, Stat.burningmin) != 0
+        || sourceStat(owner, states, Stat.burningmax) != 0
+        || sourceStat(owner, states, Stat.firelength) != 0
+        || sourceStat(owner, states, Stat.stunlength) != 0
+        || sourceStat(owner, states, Stat.stamdrainmindam) != 0
+        || sourceStat(owner, states, Stat.stamdrainmaxdam) != 0;
+  }
+
+  private static int sourceStat(Attributes attrs, StateList states, short stat) {
+    long value = (long) statInt(attrs, stat)
+        + (states == null ? 0 : states.getTotalStatContribution(stat));
+    return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, value));
   }
 
   static int damageBonusByLevel(int level, int[] values) {

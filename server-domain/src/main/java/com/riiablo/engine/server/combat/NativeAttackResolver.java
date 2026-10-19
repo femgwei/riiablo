@@ -9,6 +9,9 @@ import static com.riiablo.engine.server.combat.NativeCombatConstants.*;
  */
 public final class NativeAttackResolver {
   private static final int MAX_CRIT_CHANCE = 100;
+  // MISSMODE_FillDamageParams rolls magic before lightning, unlike the legacy host enum.
+  private static final int[] MISSILE_ELEMENT_ORDER = {
+      DAMAGE_FIRE, DAMAGE_MAGIC, DAMAGE_LIGHTNING, DAMAGE_COLD, DAMAGE_POISON};
   private final NativeCombatRolls rolls;
 
   public NativeAttackResolver(NativeCombatRolls rolls) {
@@ -133,7 +136,8 @@ public final class NativeAttackResolver {
     result.poisonDuration = attacker.missileElemental != null
         ? attacker.missileElemental.poisonDuration(defender, attacker.elementalPierce[DAMAGE_POISON])
         : Math.max(0, attacker.poisonLength);
-    for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
+    for (int channel = 1; channel < DAMAGE_TYPE_COUNT; channel++) {
+      int i = attacker.missileElemental != null ? MISSILE_ELEMENT_ORDER[channel - 1] : channel;
       int elemDamage = calculateElementalDamage(attacker, i);
       if (!attacker.fixedPointElements && attacker.missileElemental == null && result.elementalScale != 1) {
         elemDamage = (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE,
@@ -146,8 +150,8 @@ public final class NativeAttackResolver {
         elemDamage += elemDamage * attacker.magicTargetBonusPercent / 100;
       }
       if (elemDamage > 0) {
-        if (attacker.missileElemental != null && i == attacker.missileElemental.type) {
-          attacker.missileElemental.resolve(elemDamage, defender, attacker.elementalPierce[i], result);
+        if (attacker.missileElemental != null) {
+          attacker.missileElemental.resolve(i, elemDamage, defender, attacker.elementalPierce[i], result);
           continue;
         }
         if (attacker.fixedPointElements && i == DAMAGE_LIGHTNING) {
@@ -291,8 +295,7 @@ public final class NativeAttackResolver {
   }
 
   private int calculateElementalDamage(NativeAttackData attacker, int damageType) {
-    if (attacker.missileElemental != null) return damageType == attacker.missileElemental.type
-        ? attacker.missileElemental.roll(rolls) : 0;
+    if (attacker.missileElemental != null) return attacker.missileElemental.roll(damageType, rolls);
     int scale = attacker.fixedPointElements ? 256 : 1;
     int minDmg = scale == 1 ? attacker.elementalMinDamage[damageType]
         : saturatingInt((long) attacker.elementalMinDamage[damageType] * scale);

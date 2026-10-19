@@ -396,7 +396,7 @@ final class CombatSnapshotFactory {
     d.absorbFlat[DAMAGE_MAGIC] = statInt(defender, Stat.item_absorbmagic, 0);
     d.cannotBeFrozen = statInt(defender, Stat.item_cannotbefrozen, 0) != 0;
     d.halfFreezeDuration = statInt(defender, Stat.item_halffreezeduration, 0) != 0;
-    if (a.missileElemental != null && a.missileElemental.type == DAMAGE_POISON) {
+    if (a.missileElemental != null) {
       // CharData folds elemental penalties, NOT the independent PoisLen row.
       d.poisonLengthResistance = statInt(defender, Stat.item_poisonlengthresist, 0)
           + (defenderPlayer ? NativeDifficultyRules.playerResistancePenalty(combatContext) : 0)

@@ -219,13 +219,12 @@ class MonsterMissilePoisonIntegrationTest extends RiiabloTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"source", "sourceSentinel", "sourceMissile", "skill", "formula",
+  @ValueSource(strings = {"sourceSentinel", "sourceMissile", "skill", "formula",
       "physicalFormula", "mastery", "rate", "special", "player", "hireling"})
   void sourceSkillAndSpecialPoisonPoliciesStayOptedOut(String policy) {
     try (Fixture f = new Fixture()) {
       Missiles.Entry row = row(1, 2, 4);
       switch (policy) {
-        case "source": row.SrcDamage = 128; break;
         case "sourceSentinel": row.SrcDamage = -1; break;
         case "sourceMissile": row.SrcMissDmg = 1; break;
         case "skill": row.Skill = "Poison Nova"; break;
