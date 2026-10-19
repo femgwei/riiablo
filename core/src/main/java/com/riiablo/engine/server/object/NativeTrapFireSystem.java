@@ -17,7 +17,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.DamageEvent;
-import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.combat.DamageSettlement;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -124,15 +124,15 @@ public class NativeTrapFireSystem extends BaseSystem {
         nativeDifficultyContext(sourceDifficulty(fireId, targetId)));
     if (!combat.hit || (combat.totalDamage <= 0 && combat.absorbedLife <= 0)) return;
     DamageEvent event = DamageEvent.obtain(fireId, targetId, combat.totalDamage);
-    if (events != null) events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     applyAbsorb(attrs, combat.absorbedLife);
     float applied = Math.max(0f, event.damage);
-    hp.sub(applied);
+    DamageSettlement.commit(world, event);
     if (hp.asFixed() <= 0f) {
       hp.set(0f);
       if (events != null) {
         int killerId = fire.ownerId >= 0 ? fire.ownerId : fireId;
-        events.dispatch(DeathEvent.obtain(killerId, targetId));
+        DamageSettlement.finishDeath(world, event, killerId);
       }
     }
     log.debug("[OBJECT_TRAP_FIRE] damage fire={} target={} raw={} applied={} absorbed={} hp={}",

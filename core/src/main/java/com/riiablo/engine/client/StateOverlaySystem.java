@@ -25,9 +25,9 @@ import com.riiablo.logger.Logger;
  * Reconciles synchronized server states with client-side overlays.
  *
  * <p>The server remains authoritative: this system never creates a state and
- * only renders the state ids received in {@code StateP}.  A small mapping is
- * kept here instead of in the network codec so reconnects and late entity
- * snapshots automatically restore the presentation.</p>
+ * only renders the state ids received in {@code StateP}. Native States.txt
+ * overlay rows are reconciled here so reconnects and late entity snapshots
+ * automatically restore presentation independently of damage events.</p>
  */
 @All(UnitStates.class)
 public class StateOverlaySystem extends IteratingSystem {
@@ -46,68 +46,52 @@ public class StateOverlaySystem extends IteratingSystem {
   private final IntSet venomTransformActive = new IntSet();
   private final IntMap<byte[]> venomOriginalTransforms = new IntMap<>();
   private final IntSet coldTransformActive = new IntSet();
+  private final IntMap<IntSet> overlayStates = new IntMap<>();
+
+  /** Native States.txt owns curse/buff visuals; damage is not required to display a state. */
+  private void reconcileStateOverlays(int entity, UnitStates states) {
+    IntSet previous = overlayStates.get(entity);
+    if (previous == null) { previous = new IntSet(); overlayStates.put(entity, previous); }
+    IntSet active = new IntSet();
+    for (UnitState state : states.stateList.getStates()) {
+      if (state.expired) continue;
+      int id = state.stateId;
+      active.add(id);
+      States.Entry definition = clientContext.files() == null || clientContext.files().States == null
+          ? null : clientContext.files().States.get(id);
+      boolean mapped = false;
+      if (definition != null) {
+        for (String overlay : definition.overlays) {
+          if (overlay == null || overlay.isEmpty()) continue;
+          overlays.setPersistent(entity, id, overlay);
+          mapped = true;
+        }
+        if (!previous.contains(id) && definition.castOverlay != null && !definition.castOverlay.isEmpty())
+          overlays.set(entity, definition.castOverlay);
+      }
+      if (!mapped) {
+        String fallback = resolveOverlayId(id);
+        if (fallback != null) overlays.setPersistent(entity, id, fallback);
+      }
+    }
+    for (IntSet.IntSetIterator it = previous.iterator(); it.hasNext;) {
+      int id = it.next();
+      if (active.contains(id)) continue;
+      overlays.clearPersistent(entity, id);
+      States.Entry definition = clientContext.files() == null || clientContext.files().States == null
+          ? null : clientContext.files().States.get(id);
+      if (definition != null && definition.removeOverlay != null && !definition.removeOverlay.isEmpty())
+        overlays.set(entity, definition.removeOverlay);
+    }
+    overlayStates.put(entity, active);
+  }
 
   @Override
   protected void process(int entityId) {
     UnitStates states = mUnitStates.get(entityId);
     if (states == null || states.stateList == null) return;
 
-    reconcile(entityId, StateId.DIMVISION, states.stateList.getState(StateId.DIMVISION));
-    // States.txt assigns slowmissiles overlay1=innersight.  The server state
-    // marks affected monsters; keep the native overhead marker visible for
-    // exactly the same lifetime on local and network clients.
-    reconcile(entityId, StateId.SLOWMISSILES,
-        states.stateList.getState(StateId.SLOWMISSILES));
-    reconcile(entityId, StateId.BLADESHIELD,
-        states.stateList.getState(StateId.BLADESHIELD));
-    // Barbarian states use the native States.txt overlay records.  The
-    // server remains authoritative for state lifetime; this client system
-    // only restores the corresponding visual from StateP snapshots.
-    reconcile(entityId, StateId.FRENZY, states.stateList.getState(StateId.FRENZY));
-    reconcile(entityId, StateId.BERSERK, states.stateList.getState(StateId.BERSERK));
-    reconcile(entityId, StateId.BATTLEORDERS,
-        states.stateList.getState(StateId.BATTLEORDERS));
-    reconcile(entityId, StateId.BATTLECOMMAND,
-        states.stateList.getState(StateId.BATTLECOMMAND));
-    reconcile(entityId, StateId.SHOUT, states.stateList.getState(StateId.SHOUT));
-    reconcile(entityId, StateId.BATTLECRY, states.stateList.getState(StateId.BATTLECRY));
-    reconcile(entityId, StateId.CONVERSION,
-        states.stateList.getState(StateId.CONVERSION));
-    reconcile(entityId, StateId.FROZENARMOR,
-        states.stateList.getState(StateId.FROZENARMOR));
-    reconcile(entityId, StateId.SHIVERARMOR,
-        states.stateList.getState(StateId.SHIVERARMOR));
-    reconcile(entityId, StateId.CHILLINGARMOR,
-        states.stateList.getState(StateId.CHILLINGARMOR));
-    // Valkyrie carries a native looping gold ring around her feet.  It is a
-    // synchronized summon state rather than part of the Amazon composite,
-    // so it must be restored from StateP snapshots just like the armor and
-    // aura overlays above.
-    reconcile(entityId, StateId.VALKYRIE,
-        states.stateList.getState(StateId.VALKYRIE));
-    // D2's shrine buffs are native timed states with the same overhead
-    // presentation used by the original client.  Keep these in the client
-    // reconciliation path so StateP snapshots and local games behave alike.
-    reconcile(entityId, StateId.SHRINE_ARMOR,
-        states.stateList.getState(StateId.SHRINE_ARMOR));
-    reconcile(entityId, StateId.SHRINE_COMBAT,
-        states.stateList.getState(StateId.SHRINE_COMBAT));
-    reconcile(entityId, StateId.SHRINE_RESIST_LIGHTNING,
-        states.stateList.getState(StateId.SHRINE_RESIST_LIGHTNING));
-    reconcile(entityId, StateId.SHRINE_RESIST_FIRE,
-        states.stateList.getState(StateId.SHRINE_RESIST_FIRE));
-    reconcile(entityId, StateId.SHRINE_RESIST_COLD,
-        states.stateList.getState(StateId.SHRINE_RESIST_COLD));
-    reconcile(entityId, StateId.SHRINE_RESIST_POISON,
-        states.stateList.getState(StateId.SHRINE_RESIST_POISON));
-    reconcile(entityId, StateId.SHRINE_SKILL,
-        states.stateList.getState(StateId.SHRINE_SKILL));
-    reconcile(entityId, StateId.SHRINE_MANA_REGEN,
-        states.stateList.getState(StateId.SHRINE_MANA_REGEN));
-    reconcile(entityId, StateId.SHRINE_STAMINA,
-        states.stateList.getState(StateId.SHRINE_STAMINA));
-    reconcile(entityId, StateId.SHRINE_EXPERIENCE,
-        states.stateList.getState(StateId.SHRINE_EXPERIENCE));
+    reconcileStateOverlays(entityId, states);
     reconcileVenomTransform(entityId,
         states.stateList.getState(StateId.VENOMCLAWS));
     reconcileColdTransform(entityId, elementalColorShift(states));
@@ -247,21 +231,14 @@ public class StateOverlaySystem extends IteratingSystem {
 
   @Override
   protected void removed(int entityId) {
+    IntSet previous = overlayStates.remove(entityId);
+    if (previous != null && overlays != null) {
+      for (IntSet.IntSetIterator it = previous.iterator(); it.hasNext;)
+        overlays.clearPersistent(entityId, it.next());
+    }
     venomTransformActive.remove(entityId);
     venomOriginalTransforms.remove(entityId);
     coldTransformActive.remove(entityId);
-  }
-
-  private void reconcile(int entityId, int stateId, UnitState state) {
-    String overlayId = resolveOverlayId(stateId);
-    if (overlayId == null) return;
-    if (state != null) {
-      overlays.setPersistent(entityId, stateId, overlayId);
-      log.debug("[STATE_PRESENTATION] entity={} state={} duration={} level={} overlay={}",
-          entityId, StateId.getName(stateId), state.duration, state.level, overlayId);
-    } else {
-      overlays.clearPersistent(entityId, stateId);
-    }
   }
 
   /** Resolve only overlays present in the loaded native table. */

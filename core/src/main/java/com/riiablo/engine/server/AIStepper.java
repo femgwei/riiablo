@@ -32,11 +32,11 @@ import com.riiablo.engine.server.monster.MonsterAffix;
 @All({AIWrapper.class, Position.class, Monster.class})
 public class AIStepper extends IteratingSystem {
   @net.mostlyoriginal.api.event.common.Subscribe
-  public void onNativeDamage(com.riiablo.engine.server.event.DamageEvent event) {
-    if (event.damage <= 0 || event.kind == com.riiablo.engine.server.event.DamageEvent.DAMAGE_OVER_TIME
+  public void onNativeDamage(com.riiablo.engine.server.event.DamageAppliedEvent event) {
+    if (event.lifeLost <= 0 || event.kind == com.riiablo.engine.server.event.DamageEvent.DAMAGE_OVER_TIME
         || !mAIWrapper.has(event.victim)) return;
     com.riiablo.engine.server.ai.AI ai = mAIWrapper.get(event.victim).ai;
-    if (ai != null) ai.onNativeHit(event.attacker);
+    if (ai != null) ai.onDamageCommitted(event.attacker);
     Monster monster = mMonster.get(event.victim);
     boolean chargedBolts = monster.nativeChargedBolts
         || MonsterAffix.hasAffix(monster.affixes, MonsterAffix.CHARGED_BOLTS);

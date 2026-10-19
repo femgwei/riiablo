@@ -111,10 +111,16 @@ class NecromancerPoisonNovaIntegrationTest extends RiiabloTest {
           "poison pierce applies to the independent poison-length packet");
       assertTrue(eastPoison.duration > 0);
       assertTrue(northPoison.duration > 0);
-      assertTrue(eastPoison.exactDamagePerFrame >= min / 256f - EPSILON);
-      assertTrue(eastPoison.exactDamagePerFrame <= max / 256f + EPSILON);
-      assertTrue(northPoison.exactDamagePerFrame >= min / 256f - EPSILON);
-      assertTrue(northPoison.exactDamagePerFrame <= max / 256f + EPSILON);
+      // SUNITDMG_ApplyResistancesAndAbsorb subtracts cast-time pierce from this target's
+      // zero resistance. Compare the installed state with the resolved 8.8
+      // packet, not the pre-resistance missile range (which pierce can exceed).
+      int percent = 100 + first.poisonPiercePercent;
+      float resolvedMin = (min * percent / 100) / 256f;
+      float resolvedMax = (max * percent / 100) / 256f;
+      assertTrue(eastPoison.exactDamagePerFrame >= resolvedMin - EPSILON);
+      assertTrue(eastPoison.exactDamagePerFrame <= resolvedMax + EPSILON);
+      assertTrue(northPoison.exactDamagePerFrame >= resolvedMin - EPSILON);
+      assertTrue(northPoison.exactDamagePerFrame <= resolvedMax + EPSILON);
       assertEquals(caster, eastPoison.sourceEntityId);
       assertEquals(caster, northPoison.sourceEntityId);
       assertEquals(2, first.sharedHitTargets.size,

@@ -28,7 +28,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.DamageEvent;
-import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.combat.DamageSettlement;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.CombatOwnership;
 import com.riiablo.engine.server.skill.AuraManager;
@@ -366,13 +366,13 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     restoreAbsorb(target, combat.absorbedLife);
     if (combat.totalDamage <= 0) return;
     DamageEvent event = DamageEvent.obtain(casterId, targetId, combat.totalDamage);
-    if (events != null) events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
     if (hp == null || event.damage <= 0f) return;
-    hp.sub(Math.max(0f, event.damage));
+    DamageSettlement.commit(world, event);
     if (hp.asFixed() <= 0f) {
       hp.set(0f);
-      if (events != null) events.dispatch(DeathEvent.obtain(casterId, targetId));
+      DamageSettlement.finishDeath(world, event);
     }
     log.info("[AURA_DAMAGE] caster={} target={} skill={} level={} raw={} applied={}",
         casterId, targetId, skillId, skillLevel, raw, event.damage);

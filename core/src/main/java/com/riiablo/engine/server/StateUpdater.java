@@ -37,6 +37,7 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.combat.DamageSettlement;
 import com.riiablo.engine.server.event.MeleeAttackEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
@@ -282,12 +283,12 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (life != null && before > 0f && result.totalDamage > 0) {
       DamageEvent reactive = DamageEvent.obtainReactive(
           victimId, attackerId, result.totalDamage, 0f);
-      if (events != null) events.dispatch(reactive);
+      DamageSettlement.prepare(world, reactive);
       applied = Math.max(0f, reactive.damage);
-      life.sub(applied);
+      DamageSettlement.commit(world, reactive);
       if (life.asFixed() <= 0f) {
         life.set(0f);
-        if (events != null) events.dispatch(DeathEvent.obtain(victimId, attackerId));
+        DamageSettlement.finishDeath(world, reactive);
       }
     }
     int coldLength = SorceressSkills.getArmorColdLength(
@@ -601,15 +602,15 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (reflected.totalDamage <= 0) return;
     DamageEvent reactive = DamageEvent.obtainReactive(
         event.victim, event.attacker, reflected.totalDamage, reflected.physicalDamage);
-    if (events != null) events.dispatch(reactive);
+    DamageSettlement.prepare(world, reactive);
     StatRef life = attacker.get(Stat.hitpoints, StatRef.obtain());
     if (life == null || life.asFixed() <= 0f) return;
     float before = life.asFixed();
     float applied = Math.max(0f, reactive.damage);
-    life.sub(applied);
+    DamageSettlement.commit(world, reactive, true);
     if (life.asFixed() <= 0f || (applied > 0f && life.asFixed() < 1f)) {
       life.set(0f);
-      if (events != null) events.dispatch(DeathEvent.obtain(event.victim, event.attacker));
+      DamageSettlement.finishDeath(world, reactive);
     }
     log.info("[THORNS] phase=reflect defender={} attacker={} percent={} raw={} "
             + "reflected={} hp={} -> {}",
@@ -671,13 +672,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       applyElementalAbsorb(target, combat.absorbedLife);
       if (combat.totalDamage <= 0) continue;
       DamageEvent event = DamageEvent.obtain(entityId, targetId, combat.totalDamage);
-      if (events != null) events.dispatch(event);
+      DamageSettlement.prepare(world, event);
       StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null) continue;
-      hp.sub(Math.max(0f, event.damage));
+      DamageSettlement.commit(world, event);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
-        if (events != null) events.dispatch(DeathEvent.obtain(entityId, targetId));
+        DamageSettlement.finishDeath(world, event);
       }
       hits++;
     }
@@ -878,15 +879,15 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (reflected.totalDamage <= 0) return;
     DamageEvent reflectedEvent = DamageEvent.obtainReactive(
         event.victim, event.attacker, reflected.totalDamage, reflected.physicalDamage);
-    if (events != null) events.dispatch(reflectedEvent);
+    DamageSettlement.prepare(world, reflectedEvent);
     float applied = Math.max(0f, reflectedEvent.damage);
     StatRef life = attacker != null ? attacker.get(Stat.hitpoints, StatRef.obtain()) : null;
     if (life == null || life.asFixed() <= 0f || applied <= 0f) return;
     float before = life.asFixed();
-    life.sub(applied);
+    DamageSettlement.commit(world, reflectedEvent, true);
     if (life.asFixed() < 1f) {
       life.set(0f);
-      if (events != null) events.dispatch(DeathEvent.obtain(event.victim, event.attacker));
+      DamageSettlement.finishDeath(world, reflectedEvent);
     }
     log.info("[NECRO_IRON_MAIDEN] source={} defender={} skill={} level={} physical={} "
             + "percent={} raw={} reflected={} hp={} -> {}",
@@ -1696,11 +1697,12 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null || hp.asFixed() <= 0f) continue;
       float requested = Math.max(0f, combat.totalDamage);
+      DamageEvent damage = null;
       if (requested > 0f || combat.absorbedLife > 0) {
-        DamageEvent damage = DamageEvent.obtain(entityId, targetId, requested);
-        if (events != null) events.dispatch(damage);
+        damage = DamageEvent.obtain(entityId, targetId, requested);
+        DamageSettlement.prepare(world, damage);
         applyElementalAbsorb(target, combat.absorbedLife);
-        hp.sub(Math.max(0f, damage.damage));
+        DamageSettlement.commit(world, damage);
         if (hp.asFixed() < 0f) hp.set(0f);
       }
       if (combat.poisonDuration > 0
@@ -1726,7 +1728,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       affected++;
       if (hp.asFixed() <= 0f && events != null) {
         hp.set(0f);
-        events.dispatch(DeathEvent.obtain(entityId, targetId));
+        if (damage != null) DamageSettlement.finishDeath(world, damage);
       }
     }
     log.info("[ASSASSIN_BLADE_SHIELD] phase=pulse entity={} skill={} level={} range={} "
@@ -1839,15 +1841,15 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // distinct event kind so the client does not play an impact/pain sound on
     // every simulation frame while poison or open wounds are active.
     DamageEvent event = DamageEvent.obtainDamageOverTime(sourceEntityId, entityId, damage);
-    if (events != null) events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     float appliedDamage = Math.max(0f, event.damage);
-    hitpoints.sub(appliedDamage);
+    DamageSettlement.commit(world, event);
     float hpAfter = hitpoints.asFixed();
     if (hpAfter <= 0f) {
       hitpoints.set(0f);
       log.debug("Entity {} died from state {} (damage={})", entityId,
           StateId.getName(stateId), appliedDamage);
-      if (events != null) events.dispatch(DeathEvent.obtain(sourceEntityId, entityId));
+      DamageSettlement.finishDeath(world, event);
       // Death subscribers apply the States.txt stay-death policy. Do not wipe
       // the list here: hitpoints==0 already prevents duplicate DOT events and
       // clearAll would incorrectly remove plr/mon/bossstaydeath entries.

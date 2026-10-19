@@ -80,6 +80,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.combat.DamageSettlement;
 import com.riiablo.engine.server.event.MeleeAttackEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.SkillCastEvent;
@@ -2503,10 +2504,10 @@ public class Actioneer extends PassiveSystem {
         float hpBefore = hitpoints.asFixed();
         DamageEvent event = DamageEvent.obtainMelee(
             entityId, targetId, damage, combat.physicalDamage, combat);
-        events.dispatch(event);
+        DamageSettlement.prepare(world, event);
         float appliedDamage = Math.max(0f, event.damage);
         applyElementalAbsorb(attrs, combat, 1f);
-        hitpoints.sub(appliedDamage);
+        DamageSettlement.commit(world, event);
         float hpAfter = hitpoints.asFixed();
         if (hpAfter < 0f) {
           hitpoints.set(0f);
@@ -2549,7 +2550,7 @@ public class Actioneer extends PassiveSystem {
 
         if (hitpoints.asFixed() <= 0f) {
           log.debug("{} is dead!", targetId);
-          events.dispatch(DeathEvent.obtain(entityId, targetId));
+          DamageSettlement.finishDeath(world, event);
         } else if (dragonTalonLastKick
             && shouldDragonTalonKnockback(activeSkill, activeSkillLevel, targetId)) {
           applyDragonTalonKnockback(entityId, targetId);
@@ -2966,14 +2967,14 @@ public class Actioneer extends PassiveSystem {
     float before = hp.asFixed();
     DamageEvent damageEvent = DamageEvent.obtainMelee(
         entityId, targetId, Math.max(0, combat.totalDamage), combat.physicalDamage, combat);
-    events.dispatch(damageEvent);
+    DamageSettlement.prepare(world, damageEvent);
     float applied = Math.max(0f, damageEvent.damage);
     applyElementalAbsorb(defender, combat, 1f);
-    hp.sub(applied);
+    DamageSettlement.commit(world, damageEvent);
     if (hp.asFixed() < 0f) hp.set(0f);
     applyCombatStates(entityId, targetId, combat);
     if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
-    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, damageEvent);
     log.info("[AMAZON_IMPALE] phase=keyframe source={} target={} result=hit damage={} hp={} -> {}",
         entityId, targetId, applied, before, hp.asFixed());
   }
@@ -3102,14 +3103,14 @@ public class Actioneer extends PassiveSystem {
     else if (combat.hit && hp != null && before > 0f) {
       DamageEvent damageEvent = DamageEvent.obtainMelee(
           entityId, target, Math.max(0, combat.totalDamage), combat.physicalDamage, combat);
-      events.dispatch(damageEvent);
+      DamageSettlement.prepare(world, damageEvent);
       applied = Math.max(0f, damageEvent.damage);
       applyElementalAbsorb(defender, combat, 1f);
-      hp.sub(applied);
+      DamageSettlement.commit(world, damageEvent);
       if (hp.asFixed() < 0f) hp.set(0f);
       applyCombatStates(entityId, target, combat);
       if (hp.asFixed() > 0f) queueHitReaction(target, false);
-      if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, target));
+      if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, damageEvent);
     }
     int next = Engine.INVALID_ENTITY;
     if (casting.fendRemainingStrikes > 0) next = findNextFendTarget(entityId, target);
@@ -3248,14 +3249,14 @@ public class Actioneer extends PassiveSystem {
     float before = hitpoints.asFixed();
     DamageEvent event = DamageEvent.obtainMelee(
         entityId, targetId, Math.max(0, combat.totalDamage), combat.physicalDamage, combat);
-    events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     float applied = Math.max(0f, event.damage);
     applyElementalAbsorb(defender, combat, 1f);
-    hitpoints.sub(applied);
+    DamageSettlement.commit(world, event);
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
     applyCombatStates(entityId, targetId, combat);
     if (hitpoints.asFixed() > 0f) queueHitReaction(targetId, false);
-    if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    if (hitpoints.asFixed() <= 0f) DamageSettlement.finishDeath(world, event);
     log.info("[NECRO_POISON_DAGGER] phase=keyframe source={} target={} result=hit "
             + "damage={} physical={} poisonPerFrame={} duration={} hp={} -> {}",
         entityId, targetId, applied, combat.physicalDamage,
@@ -3527,10 +3528,10 @@ public class Actioneer extends PassiveSystem {
     float before = hitpoints.asFixed();
     DamageEvent event = DamageEvent.obtainMelee(
         entityId, targetId, Math.max(0, combat.totalDamage), combat.physicalDamage, combat);
-    events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     float applied = Math.max(0f, event.damage);
     applyElementalAbsorb(defender, combat, 1f);
-    hitpoints.sub(applied);
+    DamageSettlement.commit(world, event);
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
     float lifeStolen = combat.totalDamage > 0
         ? combat.lifeStolen * applied / combat.totalDamage : 0f;
@@ -3543,7 +3544,7 @@ public class Actioneer extends PassiveSystem {
     }
     applyCombatStates(entityId, targetId, combat);
     if (hitpoints.asFixed() > 0f) queueHitReaction(targetId, false);
-    if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    if (hitpoints.asFixed() <= 0f) DamageSettlement.finishDeath(world, event);
     log.info("[DRUID_FERAL_MAUL] phase=keyframe source={} target={} skill={} "
             + "result=hit damage={} hp={} -> {} stacks={} state={} leech={} stun={}",
         entityId, targetId, skill != null ? skill.skill : "none", applied, before,
@@ -3733,12 +3734,12 @@ public class Actioneer extends PassiveSystem {
       float multiplier = (100f + damagePct) / 100f;
       DamageEvent event = DamageEvent.obtainMelee(entityId, target,
           combat.totalDamage * multiplier, combat.physicalDamage * multiplier, combat, multiplier);
-      events.dispatch(event);
+      DamageSettlement.prepare(world, event);
       applied = Math.max(0f, event.damage);
-      hp.sub(applied);
+      DamageSettlement.commit(world, event);
       if (hp.asFixed() < 0f) hp.set(0f);
       applyCombatStates(entityId, target, combat);
-      if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, target));
+      if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, event);
     }
     if (casting.zealRemainingStrikes > 0) {
       int next = findNextFrenzyTarget(entityId, target);
@@ -3815,14 +3816,14 @@ public class Actioneer extends PassiveSystem {
     } else if (combat.hit && hp != null && before > 0f) {
       DamageEvent damageEvent = DamageEvent.obtainMelee(
           entityId, current, Math.max(0, combat.totalDamage), combat.physicalDamage, combat);
-      events.dispatch(damageEvent);
+      DamageSettlement.prepare(world, damageEvent);
       applied = Math.max(0f, damageEvent.damage);
       applyElementalAbsorb(defender, combat, 1f);
-      hp.sub(applied);
+      DamageSettlement.commit(world, damageEvent);
       if (hp.asFixed() < 0f) hp.set(0f);
       applyCombatStates(entityId, current, combat);
       if (hp.asFixed() > 0f) queueHitReaction(current, false);
-      if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, current));
+      if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, damageEvent);
     }
 
     int next = Engine.INVALID_ENTITY;
@@ -3888,10 +3889,10 @@ public class Actioneer extends PassiveSystem {
     float before = hp.asFixed();
     DamageEvent event = DamageEvent.obtainMelee(entityId, targetId,
         Math.max(0, combat.totalDamage), combat.physicalDamage, combat);
-    events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     float applied = Math.max(0f, event.damage);
     applyElementalAbsorb(defender, combat, 1f);
-    hp.sub(applied);
+    DamageSettlement.commit(world, event);
     if (hp.asFixed() < 0f) hp.set(0f);
     int lifePct = DruidSkills.getHungerLifeLeech(
         skill, level, name -> baseSkillLevel(entityId, name));
@@ -3906,7 +3907,7 @@ public class Actioneer extends PassiveSystem {
     if (weapon != null) drainPlayerMeleeDurability(entityId, weapon, targetId);
     applyCombatStates(entityId, targetId, combat);
     if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
-    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, event);
     log.info("[DRUID_HUNGER] phase=result source={} target={} damage={} hp={} -> {} "
             + "lifePct={} manaPct={} lifeGain={} manaGain={}", entityId, targetId,
         applied, before, hp.asFixed(), lifePct, manaPct, life, mana);
@@ -3930,13 +3931,13 @@ public class Actioneer extends PassiveSystem {
     float before = hp.asFixed();
     DamageEvent event = DamageEvent.obtainMelee(
         sourceId, targetId, Math.max(0, combat.totalDamage), combat.physicalDamage, combat);
-    events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     applyElementalAbsorb(defender, combat, 1f);
-    hp.sub(Math.max(0f, event.damage));
+    DamageSettlement.commit(world, event);
     if (hp.asFixed() < 0f) hp.set(0f);
     applyCombatStates(sourceId, targetId, combat);
     if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
-    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(sourceId, targetId));
+    if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, event);
     log.info("[DRUID_{}] phase=keyframe source={} target={} physical={} fire={} "
             + "poison={} poisonDuration={} hp={} -> {}",
         tag, sourceId, targetId, combat.physicalDamage,
@@ -4469,10 +4470,10 @@ public class Actioneer extends PassiveSystem {
     float before = hp.asFixed();
     DamageEvent event = DamageEvent.obtainMelee(entityId, targetId,
         Math.max(0f, combat.totalDamage), combat.physicalDamage, combat);
-    events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     float applied = Math.max(0f, event.damage);
     applyElementalAbsorb(defender, combat, 1f);
-    hp.sub(applied);
+    DamageSettlement.commit(world, event);
     if (hp.asFixed() < 0f) hp.set(0f);
     if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
     applyCombatStates(entityId, targetId, combat);
@@ -4481,7 +4482,7 @@ public class Actioneer extends PassiveSystem {
         entityId, targetId, strike, whirlwindHand(entityId, hand),
         weapon != null ? weapon.code : "unarmed", applied, before, hp.asFixed(),
         combat.hitChance);
-    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, event);
   }
 
   int whirlwindAttackInterval(int entityId) {
@@ -4765,98 +4766,17 @@ public class Actioneer extends PassiveSystem {
     return mVelocity.has(entityId) && !mVelocity.get(entityId).velocity.isZero(0.0001f);
   }
 
-  /** Returns whether the native BL transition may interrupt the active skill. */
+  /** Compatibility entry used by existing skill tests. */
   static boolean blockReactionMayInterrupt(Skills.Entry skill) {
-    // Unknown rows are kept interruptible as a compatibility fallback for
-    // synthetic/headless entities; every loaded vanilla row has the flag.
-    return skill == null || skill.interrupt;
+    return HitReactionResolver.blockMayInterrupt(skill);
   }
 
-  /**
-   * Queues a normal GH/BL reaction for damage results that need one.
-   *
-   * <p>Compatibility fix: Amazon Dodge/Avoid/Evade only suppresses the
-   * server-side damage packet here.  It deliberately does not enter a
-   * dedicated dodge mode or interrupt the client's current attack/sequence
-   * presentation.  This is not fully aligned with D2MOO's DODGE/AVOID mode
-   * transition, but matches riiablo's current no-special-animation policy and
-   * avoids the original sequence interruption bug.</p>
-   */
   void queueHitReaction(int victimId, CombatSystem.CombatResult combat) {
-    if (combat != null && combat.blocked && !combat.blockAnimationAllowed) return;
-    if (combat != null && combat.isAmazonPassiveDefense()) {
-      log.debug("[HIT_REACTION] victim={} skipped=amazon_passive_defense type={}",
-          victimId, combat.defenseType);
-      return;
-    }
-    queueHitReaction(victimId, combat != null && combat.blocked
-        && combat.blockAnimationAllowed);
+    HitReactionResolver.queue(world, files(), victimId, combat, HitReactionResolver.Source.MELEE);
   }
 
-  /**
-   * Native SUNITDMG_ExecuteDamage switches the victim to GH/BL and lets the
-   * animation sequence return to NU.  The mode is serialized through
-   * CofReference, so remote clients render the same reaction without a local
-   * combat re-roll.  Entities without animation data (lightweight tests and
-   * non-rendered helpers) are intentionally ignored.
-   */
   private void queueHitReaction(int victimId, boolean blocked) {
-    CofManager cofs = world.getSystem(CofManager.class);
-    if (cofs == null || !mClass.has(victimId) || !mCofReference.has(victimId)
-        || !mAnimData.has(victimId)) return;
-    Class.Type type = mClass.get(victimId).type;
-    if (type != Class.Type.PLR && type != Class.Type.MON) return;
-    // Do not interrupt a native death.  D2MOO changes the defender to BL even
-    // while it is in another attack/skill sequence; the block reaction is the
-    // higher-priority presentation and must not be hidden by the defender's
-    // current Casting component.
-    byte current = mCofReference.get(victimId).mode;
-    if (type == Class.Type.PLR
-        && (current == Engine.Player.MODE_DT || current == Engine.Player.MODE_DD)) return;
-    if (type == Class.Type.MON
-        && (current == Engine.Monster.MODE_DT || current == Engine.Monster.MODE_DD)) return;
-    if (blocked) {
-      // D2MOO's PLRMODES_First refuses the BL transition when the active
-      // Skills.txt row has interrupt=0.  The shield roll has already
-      // succeeded, so damage remains blocked; only the reaction presentation
-      // is suppressed and the current skill/sequence continues.
-      if (mCasting.has(victimId)) {
-        Casting casting = mCasting.get(victimId);
-        Skills.Entry skill = files() != null && files().skills != null
-            ? files().skills.get(casting.skillId) : null;
-        if (!blockReactionMayInterrupt(skill)) {
-          log.debug("[HIT_REACTION] victim={} skipped=skill_not_interruptible skill={} id={}",
-              victimId, skill.skill, casting.skillId);
-          return;
-        }
-      }
-      boolean interruptedCasting = mCasting.has(victimId);
-      boolean interruptedSequence = mSequence.has(victimId);
-      if (interruptedCasting) mCasting.remove(victimId);
-      if (interruptedSequence) mSequence.remove(victimId);
-      if (interruptedCasting || interruptedSequence) {
-        log.debug("[HIT_REACTION] victim={} interruptedCasting={} interruptedSequence={}",
-            victimId, interruptedCasting, interruptedSequence);
-      }
-    } else if (mCasting.has(victimId)) {
-      if (type == Class.Type.MON) {
-        world.getMapper(com.riiablo.engine.server.component.NativeAiState.class)
-            .create(victimId).previousMode = 19;
-        events.dispatch(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(victimId));
-      }
-      // Preserve the existing soft GH behavior for a unit that is actively
-      // casting; only a real shield BL is authoritative enough to interrupt it.
-      log.debug("[HIT_REACTION] victim={} skipped=active_casting blocked={}", victimId, blocked);
-      return;
-    }
-    byte reaction = type == Class.Type.PLR
-        ? (blocked ? Engine.Player.MODE_BL : Engine.Player.MODE_GH)
-        : (blocked ? Engine.Monster.MODE_BL : Engine.Monster.MODE_GH);
-    byte neutral = type == Class.Type.PLR ? Engine.Player.MODE_NU : Engine.Monster.MODE_NU;
-    mSequence.create(victimId).sequence(reaction, neutral);
-    cofs.setMode(victimId, reaction, true);
-    log.info("[HIT_REACTION] victim={} type={} mode={} blocked={} source=server",
-        victimId, type, blocked ? "BL" : "GH", blocked);
+    HitReactionResolver.queue(world, files(), victimId, blocked, HitReactionResolver.Source.MELEE);
   }
 
   private void applyCombatStates(int attackerId, int targetId,
@@ -4991,16 +4911,16 @@ public class Actioneer extends PassiveSystem {
       float damage = physical + fire;
       if (damage <= 0f && fireResult.absorbedLife <= 0) continue;
       DamageEvent event = DamageEvent.obtain(sourceId, targetId, damage);
-      events.dispatch(event);
+      DamageSettlement.prepare(world, event);
       float applied = Math.max(0f, event.damage);
       StatRef hp = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null || applied <= 0f) continue;
-      hp.sub(applied);
+      DamageSettlement.commit(world, event);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
         // The caller owns the primary finishing target's single DeathEvent.
         if (targetId != primaryTargetId) {
-          events.dispatch(DeathEvent.obtain(sourceId, targetId));
+          DamageSettlement.finishDeath(world, event);
         }
       }
       affected++;
@@ -5213,18 +5133,18 @@ public class Actioneer extends PassiveSystem {
       float damage = physical + cold;
       if (damage <= 0f && coldResult.absorbedLife <= 0) continue;
       DamageEvent event = DamageEvent.obtain(sourceId, targetId, damage);
-      events.dispatch(event);
+      DamageSettlement.prepare(world, event);
       float applied = Math.max(0f, event.damage);
       StatRef hp = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null || applied <= 0f) continue;
-      hp.sub(applied);
+      DamageSettlement.commit(world, event);
       if (cold > 0 && release.coldLength > 0) {
         StatusEffectApplier.forWorld(world).applyCold(targetId, release.coldLength, sourceId);
       }
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
         if (targetId != primaryTargetId) {
-          events.dispatch(DeathEvent.obtain(sourceId, targetId));
+          DamageSettlement.finishDeath(world, event);
         }
       }
       affected++;
@@ -5433,16 +5353,16 @@ public class Actioneer extends PassiveSystem {
       applyElementalAbsorb(targetAttrs, fireResult, 1f);
       if (fire <= 0 && fireResult.absorbedLife <= 0) continue;
       DamageEvent event = DamageEvent.obtain(sourceId, targetId, fire);
-      events.dispatch(event);
+      DamageSettlement.prepare(world, event);
       float applied = Math.max(0f, event.damage);
       StatRef hp = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null || (applied <= 0f && fireResult.absorbedLife <= 0)) continue;
-      hp.sub(applied);
+      DamageSettlement.commit(world, event);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
         // The shared melee path emits the primary target's DeathEvent once.
         if (targetId != primaryTargetId) {
-          events.dispatch(DeathEvent.obtain(sourceId, targetId));
+          DamageSettlement.finishDeath(world, event);
         }
       }
       affected++;
@@ -5678,12 +5598,12 @@ public class Actioneer extends PassiveSystem {
     if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
     DamageEvent event = DamageEvent.obtainMelee(
         entityId, targetId, damage, combat.physicalDamage, combat);
-    events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     applyElementalAbsorb(defender, combat, 1f);
-    hitpoints.sub(Math.max(0f, event.damage));
+    DamageSettlement.commit(world, event);
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
     applyCombatStates(entityId, targetId, combat);
-    if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    if (hitpoints.asFixed() <= 0f) DamageSettlement.finishDeath(world, event);
   }
 
   /**
@@ -5795,10 +5715,10 @@ public class Actioneer extends PassiveSystem {
     float before = hitpoints.asFixed();
     DamageEvent event = DamageEvent.obtainMelee(
         entityId, targetId, Math.max(0f, combat.totalDamage), combat.physicalDamage, combat);
-    events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     float damage = Math.max(0f, event.damage);
     applyElementalAbsorb(defender, combat, 1f);
-    hitpoints.sub(damage);
+    DamageSettlement.commit(world, event);
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
 
     Skills.Entry skill = mCasting.has(entityId)
@@ -5810,7 +5730,7 @@ public class Actioneer extends PassiveSystem {
             + "chance={} stunFrames={} a2Profile={}..{} ar={}",
         entityId, targetId, damage, before, hitpoints.asFixed(), combat.hitChance,
         stunFrames, minDamage, maxDamage, attackRating);
-    if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    if (hitpoints.asFixed() <= 0f) DamageSettlement.finishDeath(world, event);
   }
 
   /** D2MOO SKILLS_SrvDo086_MaggotDown. */
@@ -6149,9 +6069,9 @@ public class Actioneer extends PassiveSystem {
     float before = hp.asFixed();
     DamageEvent damageEvent = DamageEvent.obtainMelee(entityId, resolvedTarget,
         Math.max(0, combat.totalDamage), combat.physicalDamage, combat);
-    events.dispatch(damageEvent);
+    DamageSettlement.prepare(world, damageEvent);
     float applied = Math.max(0f, damageEvent.damage);
-    hp.sub(applied);
+    DamageSettlement.commit(world, damageEvent);
     if (hp.asFixed() < 0f) hp.set(0f);
     Item weapon = activeAttackWeapon(entityId);
     if (weapon != null) drainPlayerMeleeDurability(entityId, weapon, resolvedTarget);
@@ -6167,7 +6087,7 @@ public class Actioneer extends PassiveSystem {
         combat.elementalDamage[CombatSystem.DAMAGE_LIGHTNING], applied, before, hp.asFixed(),
         casting.vengeanceElementType, combat.hitChance);
     if (hp.asFixed() > 0f) queueHitReaction(resolvedTarget, false);
-    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, resolvedTarget));
+    if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, damageEvent);
   }
 
   /** Native player branch of SKILLS_SrvDo067_Charge. */
@@ -6224,9 +6144,9 @@ public class Actioneer extends PassiveSystem {
     float physicalDamage = combat.physicalDamage * multiplier;
     DamageEvent damageEvent = DamageEvent.obtainMelee(entityId, resolvedTarget,
         totalDamage, physicalDamage, combat, multiplier);
-    events.dispatch(damageEvent);
+    DamageSettlement.prepare(world, damageEvent);
     float applied = Math.max(0f, damageEvent.damage);
-    hp.sub(applied);
+    DamageSettlement.commit(world, damageEvent);
     if (hp.asFixed() < 0f) hp.set(0f);
     applyCombatStates(entityId, resolvedTarget, combat);
     if (mVelocity.has(entityId)) mVelocity.get(entityId).clearModeSpeedBonus();
@@ -6234,7 +6154,7 @@ public class Actioneer extends PassiveSystem {
             + "damage={} hp={} -> {} bonusPct={} attackRating={}", entityId, resolvedTarget,
         combat.hitChance, applied, before, hp.asFixed(), bonus, attackRating);
     if (hp.asFixed() > 0f) queueHitReaction(resolvedTarget, false);
-    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, resolvedTarget));
+    if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, damageEvent);
   }
 
   /** D2MOO SKILLS_SrvDo067_Charge (monster branch). */
@@ -6269,13 +6189,13 @@ public class Actioneer extends PassiveSystem {
     float damageScale = combat.totalDamage > 0f ? damage / combat.totalDamage : 0f;
     DamageEvent event = DamageEvent.obtainMelee(
         entityId, targetId, damage, combat.physicalDamage * damageScale, combat, damageScale);
-    events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     applyElementalAbsorb(defender, combat, (100f + bonusPercent) / 100f);
-    hp.sub(Math.max(0f, event.damage));
+    DamageSettlement.commit(world, event);
     if (hp.asFixed() < 0f) hp.set(0f);
     log.info("[MONSTER_CHARGE] phase=hit_result source={} target={} result=hit baseDamage={} bonusPct={} damage={} hp={} -> {}",
         entityId, targetId, combat.totalDamage, bonusPercent, event.damage, before, hp.asFixed());
-    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, event);
   }
 
   /** Native player branch of SKILLS_SrvDo150_Smite. */
@@ -6322,9 +6242,9 @@ public class Actioneer extends PassiveSystem {
     float before = defender.get(Stat.hitpoints, StatRef.obtain()).asFixed();
     DamageEvent damageEvent = DamageEvent.obtainMelee(entityId, targetId,
         combat.totalDamage, combat.physicalDamage, combat);
-    events.dispatch(damageEvent);
+    DamageSettlement.prepare(world, damageEvent);
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
-    hp.sub(Math.max(0f, damageEvent.damage));
+    DamageSettlement.commit(world, damageEvent);
     if (hp.asFixed() < 0f) hp.set(0f);
     int stunFrames = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, level));
     if (stunFrames > 0) StatusEffectApplier.forWorld(world).applyStun(targetId, stunFrames);
@@ -6336,7 +6256,7 @@ public class Actioneer extends PassiveSystem {
     log.info("[PALADIN_SMITE] phase=result source={} target={} level={} shield={}..{} "
             + "damage={} hp={} -> {} stunFrames={}", entityId, targetId, level,
         min, max, damageEvent.damage, before, hp.asFixed(), stunFrames);
-    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, damageEvent);
   }
 
   private Item equippedShield(int entityId) {
@@ -6392,10 +6312,10 @@ public class Actioneer extends PassiveSystem {
     float physicalDamage = combat.physicalDamage * multiplier;
     DamageEvent damageEvent = DamageEvent.obtainMelee(
         entityId, targetId, totalDamage, physicalDamage, combat, multiplier);
-    events.dispatch(damageEvent);
+    DamageSettlement.prepare(world, damageEvent);
     StatRef targetHp = defender.get(Stat.hitpoints, StatRef.obtain());
     if (targetHp != null) {
-      targetHp.sub(Math.max(0f, damageEvent.damage));
+      DamageSettlement.commit(world, damageEvent);
       if (targetHp.asFixed() < 0f) targetHp.set(0f);
     }
     int selfPercent = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, level));
@@ -6413,7 +6333,7 @@ public class Actioneer extends PassiveSystem {
         entityId, targetId, level, bonus, damageEvent.damage, selfPercent, selfDamage,
         targetBefore, targetHp != null ? targetHp.asFixed() : -1f);
     if (targetHp != null && targetHp.asFixed() <= 0f) {
-      events.dispatch(DeathEvent.obtain(entityId, targetId));
+      DamageSettlement.finishDeath(world, damageEvent);
     }
     StatRef selfHp = attacker.get(Stat.hitpoints, StatRef.obtain());
     if (selfHp != null && selfHp.asFixed() <= 0f) {

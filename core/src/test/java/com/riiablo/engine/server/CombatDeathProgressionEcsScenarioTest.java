@@ -71,6 +71,7 @@ class CombatDeathProgressionEcsScenarioTest extends RiiabloTest {
             cofs, death, new PlayerCorpseRetrievalSystem(), factory,
             new MissileCollisionSystem())
         .build()
+        .register("clientContext", com.riiablo.engine.client.ClientGameplayContext.fromGlobals())
         .register("factory", factory)
         .register("map", new TownMap()));
     factory.world = world;

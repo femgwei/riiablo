@@ -1,5 +1,18 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-19 伤害结算、受击动作与客户端表现分层
+
+- `DamageSettlement` 接管既有 40 个伤害入口：可变防御回调、一次生命写入、不可变
+  `DamageAppliedEvent`、调用者副作用后的死亡发布；增加嵌套伤害死亡去重并兼容复活。
+- 近战/导弹共用 `HitReactionResolver` 的 GH/BL/soft-hit，保留原技能打断门槛与兼容策略；
+  AI 伤害回调移至服务端扣血之后，声音/元素闪光不再调用会改变寻路的 AI.hit。
+- 状态表现读取 States.txt 四个 overlay 槽及 cast/rem 字段；诅咒、多个增益和命中闪光
+  分别持有图层与资源，支持独立清理、前后绘制、动画及灯光。
+- 未新增网络 schema，未宣称补齐全部原版 FHR/击退/客户端 activefunc 或远端瞬时特效广播。
+  原版依据、验证范围及跨电脑验收见 [damage-hit-presentation-layers.md](damage-hit-presentation-layers.md)。
+- 验证：独立构建目录 76 类、508 项定向回归通过，失败/错误/跳过均为 0；
+  D2GS 编译、真实 1.10f 隐藏营地及退出资源清理均 PASS。实机叠层与联机观感待另一台电脑验收。
+
 ## 2026-10-19 命中零分母与攻击物理减伤修正
 
 - 对照 D2MOO `SUNITDMG_IsHitSuccessful`，AR+防御为零时因子为 100，仍经等级比与 5%–95% 限制。

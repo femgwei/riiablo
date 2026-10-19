@@ -31,7 +31,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.event.DamageEvent;
-import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.combat.DamageSettlement;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.CorpseConsumption;
@@ -523,12 +523,12 @@ public class AssassinTrapSystem extends IteratingSystem {
       if (!result.hit || result.blocked
           || (result.totalDamage <= 0 && result.absorbedLife <= 0)) continue;
       DamageEvent event = DamageEvent.obtain(sentryId, targetId, result.totalDamage);
-      if (events != null) events.dispatch(event);
+      DamageSettlement.prepare(world, event);
       applyAbsorb(targetAttrs, result.absorbedLife);
-      hp.sub(Math.max(0f, event.damage));
+      DamageSettlement.commit(world, event);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
-        if (events != null) events.dispatch(DeathEvent.obtain(sentryId, targetId));
+        DamageSettlement.finishDeath(world, event);
       }
       hit++;
     }

@@ -5,22 +5,20 @@ import com.artemis.annotations.Wire;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
-import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
-import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DamageAppliedEvent;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 public class DamageHandler extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(DamageHandler.class);
 
-  protected ComponentMapper<AIWrapper> mAIWrapper;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
@@ -29,14 +27,14 @@ public class DamageHandler extends PassiveSystem {
   protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Subscribe
-  public void onDamageEvent(DamageEvent event) {
+  public void onDamageEvent(DamageAppliedEvent event) {
     log.info("[DAMAGE_SOUND] attacker={} victim={} damage={} hitSound={} fallback={}",
         event.attacker, event.victim, event.damage,
         event.hitSound == null ? "" : event.hitSound,
         event.hitSound == null || event.hitSound.isEmpty());
     
     // 检查是否是玩家攻击怪物
-    boolean isPlayerAttacking = mPlayer.has(event.attacker);
+    boolean isPlayerAttacking = event.attacker >= 0 && mPlayer.has(event.attacker);
     boolean isMonsterVictim = mMonster.has(event.victim);
     
     if (isPlayerAttacking && isMonsterVictim) {
@@ -66,7 +64,7 @@ public class DamageHandler extends PassiveSystem {
       }
       
       // 记录日志：玩家攻击伤害和怪物血量
-      // 注意：DamageEvent在伤害应用之前发送，所以这里读取的是伤害前的血量
+      // Presentation observes committed life after all defensive callbacks.
       log.info("Player attack: damage={}, monster={}, monsterHp={}/{}, monsterId={}, statId={}", 
           event.damage, monsterName, monsterHp, monsterMaxHp, event.victim,
           mAttributesWrapper.has(event.victim) && mAttributesWrapper.get(event.victim).attrs != null 
@@ -75,7 +73,7 @@ public class DamageHandler extends PassiveSystem {
     }
 
     // 怪物攻击玩家：打印怪物伤害日志，便于排查秒杀等问题
-    boolean isMonsterAttacking = mMonster.has(event.attacker);
+    boolean isMonsterAttacking = event.attacker >= 0 && mMonster.has(event.attacker);
     boolean isPlayerVictim = mPlayer.has(event.victim);
     if (isMonsterAttacking && isPlayerVictim) {
       float playerHp = 0;
@@ -100,19 +98,17 @@ public class DamageHandler extends PassiveSystem {
     // the attacker's weapon/missile impact sound).  Play the victim's class
     // voice when the event carries actual damage.  In particular, this covers
     // local player damage events, whose entities do not have an AIWrapper.
-    if (event.damage > 0f && isPlayerVictim
+    if (event.lifeLost > 0f && isPlayerVictim
         && event.kind != DamageEvent.DAMAGE_OVER_TIME) {
       PlayerHitSound.play(clientContext, mPlayer.get(event.victim));
     }
     
-    // Trigger hit reaction for entities with AI (monsters, NPCs, etc.)
-    // Players don't have AI components, so we need to check first
-    if (event.kind != DamageEvent.DAMAGE_OVER_TIME
-        && !event.suppressMonsterHitSound && mAIWrapper.has(event.victim)) {
-      AIWrapper aiWrapper = mAIWrapper.get(event.victim);
-      if (aiWrapper != null && aiWrapper.ai != null) {
-        aiWrapper.ai.hit();
-      }
+    // Presentation never invokes AI.hit(), which also invalidates authoritative paths.
+    if (event.lifeLost > 0f && event.kind != DamageEvent.DAMAGE_OVER_TIME
+        && !event.suppressMonsterHitSound && mMonster.has(event.victim)) {
+      Monster monster = mMonster.get(event.victim);
+      if (monster.monstats != null && monster.monstats.MonSound != null)
+        com.riiablo.audio.MonsterAudio.play(event.victim, monster.monstats.MonSound + "_hit_1", true);
     }
     
     // MissileImpactPresentationSystem owns Missiles.txt HitSound playback.

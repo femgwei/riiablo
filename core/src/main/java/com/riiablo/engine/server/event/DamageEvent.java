@@ -4,7 +4,11 @@ import com.artemis.annotations.EntityId;
 import com.riiablo.engine.server.combat.CombatSystem;
 import net.mostlyoriginal.api.event.common.Event;
 
+/** Mutable pre-life-loss request for authoritative state callbacks, not a presentation event. */
 public class DamageEvent implements Event {
+  /** Settlement bookkeeping; one request may be committed/publish death only once. */
+  public boolean prepared, committed, rejected, lethal, deathPublished;
+  public float appliedDamage;
   public static final byte DIRECT = 0;
   public static final byte MELEE = 1;
   public static final byte MISSILE = 2;

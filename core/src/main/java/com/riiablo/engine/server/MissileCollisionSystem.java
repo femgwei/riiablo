@@ -54,7 +54,7 @@ import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.DamageEvent;
-import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.combat.DamageSettlement;
 import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -1863,7 +1863,7 @@ public class MissileCollisionSystem extends IteratingSystem {
               .suppressElementalPresentation(hasNativeElementalPresentation(missile))
               .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
           event.missileId = missileId;
-          events.dispatch(event);
+          DamageSettlement.prepare(world, event);
           float appliedDamage = Math.max(0f, event.damage);
           // Native elemental absorb restores the defender's life from the same
           // post-multiplier packet that produced this hit.  Apply it before
@@ -1877,7 +1877,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             mercenaryLastDamageBefore = hitpoints.asFixed();
           }
           float lifeBeforeDamage = hitpoints.asFixed();
-          hitpoints.sub(appliedDamage);
+          DamageSettlement.commit(world, event, true);
           float hpAfter = hitpoints.asFixed();
           // SUNITDMG snaps a positive-damage survivor below 256 fixed units
           // to zero. A canceled damage event must not kill a fractional-HP unit.
@@ -1907,7 +1907,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             if (actioneer != null) {
               actioneer.markLastRangedAttackTargetDied(missile.ownerId, missile.skillId);
             }
-            events.dispatch(DeathEvent.obtain(missile.ownerId, targetId));
+            DamageSettlement.finishDeath(world, event);
           }
         }
         // Poison is intentionally excluded from immediate totalDamage and is
@@ -2142,13 +2142,13 @@ public class MissileCollisionSystem extends IteratingSystem {
         .suppressMonsterHitSound(missile.persistent)
         .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
     if (missile.diabWallFire) { event.fireDamage = damage; event.missileId = missileId; }
-    events.dispatch(event);
+    DamageSettlement.prepare(world, event);
     float applied = Math.max(0f, event.damage);
     float before = life.asFixed();
-    life.sub(applied);
+    DamageSettlement.commit(world, event, true);
     if (life.asFixed() <= 0f || (applied > 0f && life.asFixed() < 1f)) {
       life.set(0f);
-      events.dispatch(DeathEvent.obtain(missile.ownerId, targetId));
+      DamageSettlement.finishDeath(world, event);
     } else if (missile.missile != null && missile.missile.pSrvDmgFunc == 3) {
       // SrvDmg03 requests hit recovery with dParam1 / 128 probability.
       int chance = missile.missile.dParam != null && missile.missile.dParam.length > 0
@@ -2412,82 +2412,17 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (states != null && states.hasState(StateId.UNINTERRUPTABLE)) return;
     if (missile.missile.GetHit) {
       queueHitReaction(victimId, false);
-    } else if (missile.missile.SoftHit && mMonster.has(victimId)
-        && mCofReference.has(victimId)) {
-      byte mode = mCofReference.get(victimId).mode;
-      if (mode == Engine.Monster.MODE_DT || mode == Engine.Monster.MODE_DD) return;
-      world.getMapper(com.riiablo.engine.server.component.NativeAiState.class)
-          .create(victimId).previousMode = 19;
-      events.dispatch(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(victimId));
+    } else if (missile.missile.SoftHit) {
+      HitReactionResolver.softHit(world, victimId);
     }
   }
 
-  /**
-   * Compatibility fix: Dodge/Avoid/Evade only reject the server-side damage
-   * packet. Do not interrupt the client's current skill presentation.
-   */
   private void queueHitReaction(int victimId, CombatSystem.CombatResult combat) {
-    if (combat != null && combat.blocked && !combat.blockAnimationAllowed) return;
-    if (combat != null && combat.isAmazonPassiveDefense()) {
-      log.debug("[HIT_REACTION] victim={} skipped=amazon_passive_defense type={} source=missile",
-          victimId, combat.defenseType);
-      return;
-    }
-    queueHitReaction(victimId, combat != null && combat.blocked
-        && combat.blockAnimationAllowed);
+    HitReactionResolver.queue(world, files(), victimId, combat, HitReactionResolver.Source.MISSILE);
   }
 
-  /** Replicate native player/monster GH and BL reactions through CofReference. */
   private void queueHitReaction(int victimId, boolean blocked) {
-    CofManager cofs = world.getSystem(CofManager.class);
-    if (cofs == null || !mClass.has(victimId) || !mCofReference.has(victimId)
-        || !mAnimData.has(victimId)) return;
-    Class.Type type = mClass.get(victimId).type;
-    if (type != Class.Type.PLR && type != Class.Type.MON) return;
-    byte current = mCofReference.get(victimId).mode;
-    if (type == Class.Type.PLR
-        && (current == Engine.Player.MODE_DT || current == Engine.Player.MODE_DD)) return;
-    if (type == Class.Type.MON
-        && (current == Engine.Monster.MODE_DT || current == Engine.Monster.MODE_DD)) return;
-    if (blocked) {
-      // D2MOO's PLRMODES_First applies Skills.txt:interrupt to missile hits
-      // too. Jab/other rows with interrupt=0 keep their active sequence; the
-      // shield roll still succeeds and suppresses damage.
-      if (mCasting.has(victimId)) {
-        Casting casting = mCasting.get(victimId);
-        Skills.Entry skill = files() != null && files().skills != null
-            ? files().skills.get(casting.skillId) : null;
-        if (!Actioneer.blockReactionMayInterrupt(skill)) {
-          log.debug("[HIT_REACTION] victim={} skipped=skill_not_interruptible skill={} id={} source=missile",
-              victimId, skill == null ? null : skill.skill, casting.skillId);
-          return;
-        }
-      }
-      // Clear the interrupted action so SequenceHandler cannot resume a
-      // multi-stage skill after the block animation finishes.
-      boolean interruptedCasting = mCasting.has(victimId);
-      boolean interruptedSequence = mSequence.has(victimId);
-      if (interruptedCasting) mCasting.remove(victimId);
-      if (interruptedSequence) mSequence.remove(victimId);
-      if (interruptedCasting || interruptedSequence) {
-        log.debug("[HIT_REACTION] victim={} interruptedCasting={} interruptedSequence={} source=missile",
-            victimId, interruptedCasting, interruptedSequence);
-      }
-    } else if (mSequence.has(victimId) && mSequence.get(victimId).started) {
-      // Preserve an in-progress native skill sequence for ordinary soft GH.
-      if (type == Class.Type.MON) {
-        events.dispatch(com.riiablo.engine.server.event.MonsterSoftHitEvent.obtain(victimId));
-      }
-      return;
-    }
-    byte reaction = type == Class.Type.PLR
-        ? (blocked ? Engine.Player.MODE_BL : Engine.Player.MODE_GH)
-        : (blocked ? Engine.Monster.MODE_BL : Engine.Monster.MODE_GH);
-    byte neutral = type == Class.Type.PLR ? Engine.Player.MODE_NU : Engine.Monster.MODE_NU;
-    mSequence.create(victimId).sequence(reaction, neutral);
-    cofs.setMode(victimId, reaction, true);
-    log.info("[HIT_REACTION] victim={} type={} mode={} blocked={} source=missile",
-        victimId, type, blocked ? "BL" : "GH", blocked);
+    HitReactionResolver.queue(world, files(), victimId, blocked, HitReactionResolver.Source.MISSILE);
   }
 
   /** Applies post-damage state carried by native missile SrvDmg functions. */

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.Array;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.codec.COF;
@@ -24,7 +25,7 @@ class StateOverlaySystemTest extends RiiabloTest {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
-        .build());
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
     try {
       int entity = world.create();
       CofTransforms transforms = world.getMapper(CofTransforms.class).create(entity);
@@ -61,7 +62,7 @@ class StateOverlaySystemTest extends RiiabloTest {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
-        .build());
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
     try {
       int entity = world.create();
       UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
@@ -111,7 +112,7 @@ class StateOverlaySystemTest extends RiiabloTest {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
-        .build());
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
     try {
       int entity = world.create();
       CofTransforms transforms = world.getMapper(CofTransforms.class).create(entity);
@@ -140,7 +141,7 @@ class StateOverlaySystemTest extends RiiabloTest {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
-        .build());
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
     try {
       int entity = world.create();
       UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
@@ -153,6 +154,7 @@ class StateOverlaySystemTest extends RiiabloTest {
       world.process();
       assertEquals("frenzy", overlays.overlayFor(StateId.FRENZY));
       assertEquals("berserkfront", overlays.overlayFor(StateId.BERSERK));
+      assertTrue(overlays.overlays.get(StateId.BERSERK).contains("berserkback", false));
       assertEquals("battleorders", overlays.overlayFor(StateId.BATTLEORDERS));
       assertEquals("battlecommand", overlays.overlayFor(StateId.BATTLECOMMAND));
       assertEquals("shout", overlays.overlayFor(StateId.SHOUT));
@@ -178,7 +180,7 @@ class StateOverlaySystemTest extends RiiabloTest {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
-        .build());
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
     try {
       int entity = world.create();
       UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
@@ -202,7 +204,7 @@ class StateOverlaySystemTest extends RiiabloTest {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
-        .build());
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
     try {
       int entity = world.create();
       UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
@@ -219,11 +221,39 @@ class StateOverlaySystemTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void allNativeCurseRowsRenderFromStatesWithoutAnyDamageEvent() {
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int entity = world.create();
+      UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
+      int[] curses = {StateId.AMPLIFYDAMAGE, StateId.DIMVISION, StateId.TERROR,
+          StateId.LIFETAP, StateId.CONFUSE, StateId.DECREPIFY, StateId.LOWERRESIST};
+      for (int id : curses) {
+        states.stateList.addState(id, 100, 1, entity);
+        world.process();
+        String nativeOverlay = Riiablo.files.States.get(id).overlays[0];
+        assertFalse(nativeOverlay.isEmpty(), "native curse must declare an overlay: " + id);
+        assertEquals(nativeOverlay, overlays.overlayFor(id));
+      }
+      states.stateList.removeState(StateId.AMPLIFYDAMAGE);
+      world.process();
+      assertFalse(overlays.overlays.containsKey(StateId.AMPLIFYDAMAGE));
+      assertTrue(overlays.overlays.containsKey(StateId.LOWERRESIST));
+      world.getMapper(UnitStates.class).remove(entity);
+      world.process();
+      assertEquals(0, overlays.overlays.size);
+    } finally { world.dispose(); }
+  }
+
   @com.artemis.annotations.All(com.riiablo.engine.client.component.Overlay.class)
   private static final class RecordingOverlayManager extends OverlayManager {
     boolean bladeShieldActive;
     String overlayId;
-    final IntMap<String> overlays = new IntMap<>();
+    final IntMap<Array<String>> overlays = new IntMap<>();
 
     @Override
     public void setPersistent(int entityId, int stateId, String overlayId) {
@@ -231,7 +261,9 @@ class StateOverlaySystemTest extends RiiabloTest {
         bladeShieldActive = true;
         this.overlayId = overlayId;
       }
-      overlays.put(stateId, overlayId);
+      Array<String> layers = overlays.get(stateId);
+      if (layers == null) { layers = new Array<>(); overlays.put(stateId, layers); }
+      if (!layers.contains(overlayId, false)) layers.add(overlayId);
     }
 
     @Override
@@ -241,7 +273,10 @@ class StateOverlaySystemTest extends RiiabloTest {
     }
 
     String overlayFor(int stateId) {
-      return overlays.get(stateId);
+      Array<String> layers = overlays.get(stateId);
+      return layers == null ? null : layers.first();
     }
+
+    @Override public void set(int entityId, String overlayId) {}
   }
 }

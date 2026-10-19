@@ -13,6 +13,8 @@ import com.riiablo.codec.DCC;
 @Transient
 @PooledWeaver
 public class Overlay extends PooledComponent {
+  /** Additional simultaneous effects; the first effect remains on this component for compatibility. */
+  public final com.badlogic.gdx.utils.Array<Overlay> layers = new com.badlogic.gdx.utils.Array<>(false, 4);
   public final Animation animation = Animation.newAnimation();
   public AssetDescriptor<? extends DC> assetDescriptor;
   public com.riiablo.codec.excel.Overlay.Entry entry;
@@ -36,6 +38,13 @@ public class Overlay extends PooledComponent {
 
   @Override
   protected void reset() {
+    for (Overlay layer : layers) layer.clearEffect();
+    layers.clear();
+    clearEffect();
+  }
+
+  /** Clears this effect without discarding other state/impact layers. */
+  public void clearEffect() {
     animation.reset();
     assetDescriptor = null;
     entry = null;

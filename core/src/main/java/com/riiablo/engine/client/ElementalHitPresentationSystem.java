@@ -4,6 +4,7 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DamageAppliedEvent;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -24,7 +25,7 @@ public class ElementalHitPresentationSystem extends PassiveSystem {
   protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   @Subscribe
-  public void onDamage(DamageEvent event) {
+  public void onDamage(DamageAppliedEvent event) {
     if (event == null || event.damage < 0f
         || (event.kind != DamageEvent.MELEE && event.kind != DamageEvent.MISSILE)) return;
     if (!mPosition.has(event.victim)) return;
@@ -42,7 +43,7 @@ public class ElementalHitPresentationSystem extends PassiveSystem {
     present(event, event.poisonDamage, HITCLASS_POISON, "impact_poison_1", "poisonhit");
   }
 
-  private void present(DamageEvent event, float damage, int hitClass,
+  private void present(DamageAppliedEvent event, float damage, int hitClass,
       String sound, String overlayId) {
     if (damage <= 0f) return;
     if (clientContext.audio() != null) clientContext.audio().play(sound, true);

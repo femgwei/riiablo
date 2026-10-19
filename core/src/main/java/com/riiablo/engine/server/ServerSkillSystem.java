@@ -40,6 +40,7 @@ import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.combat.DamageSettlement;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
@@ -265,12 +266,12 @@ public class ServerSkillSystem extends PassiveSystem {
       DamageEvent damage = DamageEvent.obtainMissile(source, target,
           physical.totalDamage + fire.totalDamage, physical.physicalDamage, null);
       damage.fireDamage = fire.totalDamage;
-      if (events != null) events.dispatch(damage);
+      DamageSettlement.prepare(world, damage);
       StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
-      hp.sub(Math.max(0f, damage.damage));
+      DamageSettlement.commit(world, damage);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
-        if (events != null) events.dispatch(DeathEvent.obtain(source, target));
+        DamageSettlement.finishDeath(world, damage);
       }
     }
   }
@@ -367,11 +368,11 @@ public class ServerSkillSystem extends PassiveSystem {
         hp.add(Math.max(0f, Math.min(elemental.absorbedLife, max.asFixed() - hp.asFixed())));
       DamageEvent damage = DamageEvent.obtainMissile(source, target,
           physical.totalDamage + elemental.totalDamage, physical.physicalDamage, null);
-      if (events != null) events.dispatch(damage);
-      hp.sub(Math.max(0f, damage.damage));
+      DamageSettlement.prepare(world, damage);
+      DamageSettlement.commit(world, damage);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
-        if (events != null) events.dispatch(DeathEvent.obtain(source, target));
+        DamageSettlement.finishDeath(world, damage);
       } else if (coldLength >= 2) {
         int duration = combatSystemResolver.resolveColdLengthBeforeState(defender,
             player, coldLength, 0, states, nativeDifficultyContext(difficulty));
@@ -1748,11 +1749,11 @@ public class ServerSkillSystem extends PassiveSystem {
         hp.add(Math.max(0f, Math.min(elemental.absorbedLife, max.asFixed() - hp.asFixed())));
       DamageEvent damage = DamageEvent.obtainMissile(source, target,
           physical.totalDamage + elemental.totalDamage, physical.physicalDamage, null, elemental);
-      if (events != null) events.dispatch(damage);
-      hp.sub(Math.max(0f, damage.damage));
+      DamageSettlement.prepare(world, damage);
+      DamageSettlement.commit(world, damage);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
-        if (events != null) events.dispatch(DeathEvent.obtain(source, target));
+        DamageSettlement.finishDeath(world, damage);
       }
     }
   }
@@ -1872,11 +1873,11 @@ public class ServerSkillSystem extends PassiveSystem {
       if (resolved.damageFixed <= 0) continue;
       DamageEvent damage = DamageEvent.obtain(
           event.entityId, targetId, resolved.damageFixed / 256f);
-      if (events != null) events.dispatch(damage);
-      hp.sub(Math.max(0f, damage.damage));
+      DamageSettlement.prepare(world, damage);
+      DamageSettlement.commit(world, damage);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
-        if (events != null) events.dispatch(DeathEvent.obtain(event.entityId, targetId));
+        DamageSettlement.finishDeath(world, damage);
       }
       hit++;
     }
@@ -2442,12 +2443,12 @@ public class ServerSkillSystem extends PassiveSystem {
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     float before = hp.asFixed();
     DamageEvent damage = DamageEvent.obtainMissile(source, target, physical.totalDamage, physical.physicalDamage, null);
-    events.dispatch(damage);
+    DamageSettlement.prepare(world, damage);
     float applied = Math.max(0f, damage.damage);
-    hp.sub(applied);
+    DamageSettlement.commit(world, damage, true);
     if (hp.asFixed() <= 0f || (applied > 0f && hp.asFixed() < 1f)) {
       hp.set(0f);
-      events.dispatch(DeathEvent.obtain(source, target));
+      DamageSettlement.finishDeath(world, damage);
     } else if (physical.totalDamage > 0) {
       world.getSystem(Actioneer.class).queueHitReaction(target, physical);
     }
@@ -2496,7 +2497,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY)))
       hp.add(Math.max(0f, Math.min(result.absorbedLife, maximum.asFixed() - hp.asFixed())));
     DamageEvent damage = DamageEvent.obtainMissile(source, target, result.totalDamage, 0f, null, result);
-    if (events != null) events.dispatch(damage);
+    DamageSettlement.prepare(world, damage);
     // Apply control even when magic damage was resisted/absorbed to zero.
     UnitStates states = mUnitStates.create(target);
     if (states.stateList == null) states.init(world, target);
@@ -2504,10 +2505,10 @@ public class ServerSkillSystem extends PassiveSystem {
     if (updater != null && length > 0)
       updater.applyState(target, StateId.FREEZE, length, level, source, 0, CombatSystem.DAMAGE_COLD);
     float applied = Math.max(0f, damage.damage);
-    hp.sub(applied);
+    DamageSettlement.commit(world, damage, true);
     if (hp.asFixed() <= 0f || (applied > 0f && hp.asFixed() < 1f)) {
       hp.set(0f);
-      if (events != null) events.dispatch(DeathEvent.obtain(source, target));
+      DamageSettlement.finishDeath(world, damage);
     }
     log.info("[DIAB_COLD] phase=hit source={} target={} skill={} level={} type={} raw={} range={}..{} "
             + "resolved={} applied={} freezeLength={} resistedLength={} hp={}->{}", source, target,
@@ -2593,12 +2594,12 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     DamageEvent damage = DamageEvent.obtainMissile(
         sourceId, targetId, resolved, physical.physicalDamage, null, elemental);
-    if (events != null) events.dispatch(damage);
+    DamageSettlement.prepare(world, damage);
     float applied = Math.max(0f, damage.damage);
-    hp.sub(applied);
+    DamageSettlement.commit(world, damage, true);
     if (hp.asFixed() <= 0f || (applied > 0f && hp.asFixed() < 1f)) {
       hp.set(0f);
-      if (events != null) events.dispatch(DeathEvent.obtain(sourceId, targetId));
+      DamageSettlement.finishDeath(world, damage);
     }
     log.info("[TELEKINESIS] phase=damage source={} target={} skill={} level={} range={} "
             + "physical={} elemental={} mastery={} pierce={} resolved={}",
@@ -5262,12 +5263,12 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       DamageEvent damage = DamageEvent.obtain(source, target, resolved);
       damage.physicalDamage = physicalResult.physicalDamage;
-      if (events != null) events.dispatch(damage);
+      DamageSettlement.prepare(world, damage);
       float applied = Math.max(0f, damage.damage);
-      hp.sub(applied);
+      DamageSettlement.commit(world, damage, true);
       if (hp.asFixed() <= 0f || (applied > 0f && hp.asFixed() < 1f)) {
         hp.set(0f);
-        if (events != null) events.dispatch(DeathEvent.obtain(source, target));
+        DamageSettlement.finishDeath(world, damage);
       }
       hit++;
     }

@@ -20,8 +20,8 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
-import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.combat.DamageSettlement;
 import com.riiablo.engine.server.event.ShrineInteractionEvent;
 import com.riiablo.engine.server.event.WellInteractionEvent;
 import com.riiablo.engine.server.monster.MonsterRank;
@@ -254,11 +254,11 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
       int rawDamage = stormDamage(hp.asFixed(), percent);
       if (rawDamage <= 0) continue;
       DamageEvent damageEvent = DamageEvent.obtain(attackerId, id, rawDamage);
-      if (events != null) events.dispatch(damageEvent);
-      hp.sub(Math.max(0f, damageEvent.damage));
+      DamageSettlement.prepare(world, damageEvent);
+      DamageSettlement.commit(world, damageEvent);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
-        if (events != null) events.dispatch(DeathEvent.obtain(attackerId, id));
+        DamageSettlement.finishDeath(world, damageEvent);
       }
       hit++;
     }

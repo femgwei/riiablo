@@ -8,6 +8,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.*;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DamageAppliedEvent;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
@@ -29,14 +30,14 @@ class ScarabNativeAbilityTest {
       world.getMapper(AIWrapper.class).create(id);
       assertTrue(monster.nativeChargedBolts);
       assertEquals(0L, monster.affixes);
-      ai.onNativeDamage(DamageEvent.obtain(123, id, 9f));
+      ai.onNativeDamage(new DamageAppliedEvent(DamageEvent.obtain(123, id, 9f), 20f, 11f));
       verify(skills).emitScarabChargedBolts(id);
-      ai.onNativeDamage(DamageEvent.obtain(123, id, 9f));
+      ai.onNativeDamage(new DamageAppliedEvent(DamageEvent.obtain(123, id, 9f), 20f, 11f));
       verify(skills, times(1)).emitScarabChargedBolts(id);
       row.BaseId = "zombie1";
       monster.set(row, null);
       assertFalse(monster.nativeChargedBolts);
-      ai.onNativeDamage(DamageEvent.obtain(123, id, 9f));
+      ai.onNativeDamage(new DamageAppliedEvent(DamageEvent.obtain(123, id, 9f), 20f, 11f));
       verify(skills, times(1)).emitScarabChargedBolts(id);
     } finally { world.dispose(); }
   }

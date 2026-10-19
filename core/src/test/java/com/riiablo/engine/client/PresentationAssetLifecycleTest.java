@@ -234,6 +234,47 @@ class PresentationAssetLifecycleTest {
     world.process(); assertFalse(assets.contains(SHRINE));
   }
 
+  @Test void cursesBuffsAndImpactsOwnIndependentLayersAndReferences() {
+    Overlay.Entry back = new Overlay.Entry();
+    back.overlay = "back"; back.Filename = "Back"; back.PreDraw = true;
+    when(Riiablo.files.Overlay.get("back")).thenReturn(back);
+    OverlayManager manager = new OverlayManager(); World world = world(manager);
+    int entity = world.create();
+    manager.setPersistent(entity, 1, "shrine_mana_regen");
+    manager.setPersistent(entity, 1, "back"); // overlay2 of the same state
+    manager.setPersistent(entity, 2, "shrine_mana_regen");
+    manager.set(entity, "shrine_mana_regen");
+    assets.finishLoading(); world.process();
+    com.riiablo.engine.client.component.Overlay root =
+        world.getMapper(com.riiablo.engine.client.component.Overlay.class).get(entity);
+    assertEquals(3, root.layers.size);
+    assertEquals(3, assets.getReferenceCount(SHRINE));
+    assertTrue(root.layers.first().entry.PreDraw);
+    manager.clearPersistent(entity, 1);
+    assertNull(root.entry, "removing the primary layer must keep its children alive");
+    assertEquals(2, root.layers.size);
+    assertEquals(2, assets.getReferenceCount(SHRINE));
+    assertFalse(assets.contains("data/global/overlays/Back.dcc"));
+    world.process(); world.process(); world.process();
+    assertEquals(1, root.layers.size, "only the transient impact expires");
+    assertEquals(1, assets.getReferenceCount(SHRINE));
+    assertEquals(2, root.layers.first().stateId);
+    manager.clearPersistent(entity, 2); world.process();
+    assertFalse(assets.contains(SHRINE));
+    assertFalse(world.getMapper(com.riiablo.engine.client.component.Overlay.class).has(entity));
+  }
+
+  @Test void deletingEntityReleasesEveryLoadedAndQueuedLayer() {
+    OverlayManager manager = new OverlayManager(); World world = world(manager);
+    int entity = world.create();
+    manager.setPersistent(entity, 1, "shrine_mana_regen");
+    assets.finishLoading(); world.process();
+    manager.setPersistent(entity, 2, "shrine_mana_regen");
+    manager.set(entity, "shrine_mana_regen");
+    world.delete(entity); world.process();
+    assertFalse(assets.contains(SHRINE));
+  }
+
   @Test void overlayUsesOriginalManagerAndDisposalErrorStillReleasesOtherEntities() {
     OverlayManager manager = new OverlayManager(); World world = world(manager);
     int first = world.create(), second = world.create();
@@ -301,7 +342,9 @@ class PresentationAssetLifecycleTest {
   }
 
   private World world(OverlayManager manager) {
-    World world = new World(new WorldConfigurationBuilder().with(manager).build()); worlds.add(world); return world;
+    World world = new World(new WorldConfigurationBuilder().with(manager).build()
+        .register("clientContext", ClientGameplayContext.fromGlobals()));
+    worlds.add(world); return world;
   }
 
   private ZoneEntryDisplayer zone() {

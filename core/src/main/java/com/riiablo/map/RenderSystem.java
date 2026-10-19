@@ -768,19 +768,23 @@ public class RenderSystem extends BaseEntitySystem {
     for (int i = 0, size = entities.size(); i < size; i++) {
       int id = entities.get(i);
       if (!mOverlay.has(id) || !mPosition.has(id) || !isInLightingZone(id, zone)) continue;
-      Overlay overlay = mOverlay.get(id);
-      com.riiablo.codec.excel.Overlay.Entry entry = overlay == null ? null : overlay.entry;
-      if (entry == null || !overlay.isLoaded) continue;
-      float radius = overlayLightRadius(
-          entry.InitRadius, entry.Radius, overlay.animation.getFrame());
-      if (radius <= 0f) continue;
-      Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
-      float radiusX = radius * Tile.SUBTILE_WIDTH;
-      float radiusY = radius * Tile.SUBTILE_HEIGHT;
-      if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
-          || light.y + radiusY < renderMinY || light.y - radiusY > renderMaxY) continue;
-      count = addNearestLocalLight(count, protectedLights, light.x, light.y, radius,
-          entry.Red / 255f, entry.Green / 255f, entry.Blue / 255f, focusX, focusY);
+      Overlay root = mOverlay.get(id);
+      if (root == null) continue;
+      for (int layerIndex = -1; layerIndex < root.layers.size; layerIndex++) {
+        Overlay overlay = layerIndex < 0 ? root : root.layers.get(layerIndex);
+        com.riiablo.codec.excel.Overlay.Entry entry = overlay.entry;
+        if (entry == null || !overlay.isLoaded) continue;
+        float radius = overlayLightRadius(
+            entry.InitRadius, entry.Radius, overlay.animation.getFrame());
+        if (radius <= 0f) continue;
+        Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
+        float radiusX = radius * Tile.SUBTILE_WIDTH;
+        float radiusY = radius * Tile.SUBTILE_HEIGHT;
+        if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
+            || light.y + radiusY < renderMinY || light.y - radiusY > renderMaxY) continue;
+        count = addNearestLocalLight(count, protectedLights, light.x, light.y, radius,
+            entry.Red / 255f, entry.Green / 255f, entry.Blue / 255f, focusX, focusY);
+      }
     }
 
     // Transient missile/overlay lights take priority over static map lights.
@@ -1287,9 +1291,7 @@ public class RenderSystem extends BaseEntitySystem {
       Vector2 tmp = iso.toScreen(tmpVec2.set(pos));
 
       Overlay overlay = mOverlay.get(entity);
-      if (overlay != null && overlay.entry.PreDraw) {
-        overlay.animation.draw(batch, tmp.x, tmp.y);
-      }
+      drawOverlayLayers(overlay, tmp.x, tmp.y, true);
 
       Animation animation = mAnimationWrapper.get(entity).animation;
       if (isIceExplosion(entity)) {
@@ -1307,9 +1309,17 @@ public class RenderSystem extends BaseEntitySystem {
       animation.draw(batch, tmp.x, tmp.y);
       diagnoseInvisibleBody(entity, animation, pos);
 
-      if (overlay != null && !overlay.entry.PreDraw) {
-        overlay.animation.draw(batch, tmp.x, tmp.y);
-      }
+      drawOverlayLayers(overlay, tmp.x, tmp.y, false);
+  }
+
+  private void drawOverlayLayers(Overlay root, float x, float y, boolean preDraw) {
+    if (root == null) return;
+    if (root.entry != null && root.isLoaded && root.entry.PreDraw == preDraw)
+      root.animation.draw(batch, x, y);
+    for (Overlay layer : root.layers) {
+      if (layer.entry != null && layer.isLoaded && layer.entry.PreDraw == preDraw)
+        layer.animation.draw(batch, x, y);
+    }
   }
 
   private boolean isPresentationMissile(int entity) {

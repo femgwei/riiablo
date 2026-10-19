@@ -464,6 +464,8 @@ public class SkillCastHandler extends PassiveSystem {
         break;
 
       case 30: // Curse visual
+        // Affected-unit overlays follow authoritative States.txt rows in
+        // StateOverlaySystem, including curses which deal no damage.
         break;
 
       case 31: // Raise Skeleton visual

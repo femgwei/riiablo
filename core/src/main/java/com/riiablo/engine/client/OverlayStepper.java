@@ -17,6 +17,8 @@ public class OverlayStepper extends IntervalIteratingSystem {
 
   @Override
   protected void process(int entityId) {
-    mOverlay.get(entityId).animation.update(SimulationClock.STEP_SECONDS);
+    Overlay root = mOverlay.get(entityId);
+    if (root.entry != null) root.animation.update(SimulationClock.STEP_SECONDS);
+    for (Overlay layer : root.layers) layer.animation.update(SimulationClock.STEP_SECONDS);
   }
 }

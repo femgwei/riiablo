@@ -498,6 +498,12 @@ public abstract class AI implements Interactable.Interactor {
     com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_hit_1", true);
   }
 
+  /** Authoritative damage reaction, independent of whether a local client plays a sound. */
+  public final void onDamageCommitted(int attackerId) {
+    invalidateNativePathCache();
+    onNativeHit(attackerId);
+  }
+
   public void kill() {}
 
   protected Angle lookAt(int target) {
