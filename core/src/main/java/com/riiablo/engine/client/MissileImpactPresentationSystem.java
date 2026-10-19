@@ -184,6 +184,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     Missiles.Entry source = visual.missile;
     if (source == null) return;
     int function = source.pCltDoFunc;
+    if (function == 15) {
+      processFingerMageFlight(entityId, visual, source, velocity, delta);
+      return;
+    }
     // Native client callback 51 is used by recycler delay missiles.  The
     // server-side SrvDo33 only holds the stationary delay missile and does
     // not create these render-only vine/explosion children.
@@ -253,7 +257,46 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   static boolean isClientFlightFunction(int function) {
     return function == 3 || function == 4 || function == 8 || function == 49
-        || function == 51;
+        || function == 51 || function == 15;
+  }
+
+  /** D2Client 1.10f 0x6FB31DD0: moving head plus stationary, finite trail cells. */
+  private void processFingerMageFlight(int entityId, Missile visual,
+      Missiles.Entry source, Vector2 velocity, float delta) {
+    // Native children start at CurrentFrame=0 and count down to -CltParam2.
+    // They must neither seek a target nor recursively emit more children.
+    if (visual.presentationOnly || factory == null) return;
+    int previous = advanceClientFrame(visual, Math.max(1, Math.round(delta * 25f)));
+    int interval = Math.max(1, cltParam(source, 0, 3));
+    String childName = first(source.CltSubMissile, 0);
+    Missiles.Entry child = clientContext.files() == null || childName == null ? null
+        : clientContext.files().Missiles.get(childName);
+    if (child == null) return;
+    for (int frame = previous; frame < visual.clientFrame; frame++) {
+      int remaining = visual.nativeLifetimeFrames - frame;
+      if (remaining <= 0 || remaining % interval != 0) continue;
+      Vector2 at = new Vector2(mPosition.get(entityId).position);
+      Vector2 facing = velocity.isZero() ? new Vector2(1f, 0f) : new Vector2(velocity).nor();
+      int id = factory instanceof ClientEntityFactory
+          ? ((ClientEntityFactory) factory).createMissilePresentation(child, facing, at)
+          : factory.createMissile(child, facing, at, -1);
+      if (id < 0 || !mMissile.has(id)) continue;
+      Missile trail = mMissile.get(id);
+      configureFingerMageTrail(trail, source);
+      mVelocity.get(id).velocity.setZero();
+    }
+  }
+
+  static void configureFingerMageTrail(Missile trail, Missiles.Entry source) {
+    trail.authoritative = false;
+    trail.presentationOnly = true;
+    trail.ownerId = -1;
+    trail.persistent = false;
+    trail.homing = false;
+    trail.targetId = -1;
+    trail.range = 0;
+    trail.nativeFrame = 0;
+    trail.nativeLifetimeFrames = Math.max(1, cltParam(source, 1, 20));
   }
 
   /** Executes the native pCltDoFunc=51 recycler-delay timeline. */

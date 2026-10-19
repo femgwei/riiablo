@@ -1,5 +1,17 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-19 扼杀者导弹追踪与拖尾
+
+- 对照 1.10f MPQ、D2MOO SrvDo11 和 D2Client 0x6FB31DD0，接入主体倒计时
+  每 5 帧、20 距离内的符号方向修正，以及客户端每 3 帧的静止拖尾；子单元
+  20 帧清理，禁止伤害和递归生成。保留原版 16 方向、5 帧 DCC 动画。
+- FingerMageFlightTest、FingerMageTrailTest 两项定向测试通过。普通测试源码编译
+  受已有 AssassinSkillSpecializationTest 缺少断言导入影响，采用临时源码过滤运行。
+- 本机 1.10f MPQ 的 desktop:offscreenCamp 与退出清理通过，manifest 为 PASS；
+  这项营地烟测不替代扼杀者专用场景的视觉验收。
+- 依据与验证细节见 [专项记录](fingermage-missile-2026-10-19.md)。下一步为另一台
+  电脑实机核对扼杀者飞行转向、拖尾和命中表现；提交及远程状态以 Git 为准。
+
 ## 2026-10-19 骑士远程分支与部件变体导弹
 
 - 修复 AbyssKnight/Fn073 和 OblivionKnight/Fn074 把 `CofComponents` 全局图形编号

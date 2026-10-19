@@ -268,6 +268,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       velocity.velocity.setZero();
     }
 
+    com.riiablo.engine.server.missile.FingerMageFlight.update(
+        world, entityId, missile, position.position, velocity.velocity, callbackFrame);
+
     // Guided Arrow/Bone Spirit tracks its native target every server tick.
     // D2MOO also reacquires a hostile unit when the cast did not carry a
     // target (or when the previous target died).  The old implementation only
