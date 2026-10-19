@@ -80,6 +80,8 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   final ItemData   itemData = new ItemData(statData, null);
   final Array<Item> corpseItems = new Array<>(Item.class);
   final byte[] corpseMetadata = new byte[12];
+  /** Items retained by the native JM corpse section across save/reload. */
+  public Array<Item> getCorpseItems() { return corpseItems; }
         Item       golemItemData;
 
   private final PotionRecovery healthPotion = new PotionRecovery();

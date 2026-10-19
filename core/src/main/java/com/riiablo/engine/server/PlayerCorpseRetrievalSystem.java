@@ -103,11 +103,8 @@ public class PlayerCorpseRetrievalSystem extends IteratingSystem {
       Item item = entry.value;
       if (bodyLoc == null || bodyLoc == BodyLoc.NONE || item == null) continue;
 
-      if (!itemData.contains(item)) {
-        log.error("[PLAYER_CORPSE_ITEM] action=missing player={} corpse={} bodyLoc={} code={}",
-            playerId, corpseEntityId, bodyLoc, item.code);
-        continue;
-      }
+      // JM corpse items are kept outside live ItemData until retrieval.
+      if (!itemData.contains(item)) itemData.add(item);
 
       boolean restored = false;
       try {

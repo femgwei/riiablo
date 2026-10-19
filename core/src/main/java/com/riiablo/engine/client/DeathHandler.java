@@ -526,6 +526,26 @@ public class DeathHandler extends PassiveSystem {
     return mPlayerCorpse.has(playerId);
   }
 
+  /** Recreates the native saved JM corpse at the current town spawn. */
+  public void restoreSavedCorpse(int playerId, com.riiablo.save.CharData data, Vector2 townLocation) {
+    if (data == null || data.getCorpseItems().size == 0 || townLocation == null
+        || !mPlayer.has(playerId) || mPlayerCorpse.has(playerId)) return;
+    PlayerCorpse marker = mPlayerCorpse.create(playerId);
+    marker.playerId = playerId;
+    marker.deathLocation.set(townLocation);
+    for (com.riiablo.item.Item item : data.getCorpseItems()) {
+      if (item != null && item.bodyLoc != null && item.bodyLoc != BodyLoc.NONE) {
+        marker.equippedItems.put(item.bodyLoc, item);
+      } else if (item != null && marker.cursorItem == null) {
+        marker.cursorItem = item;
+      }
+    }
+    createCorpseEntity(playerId, townLocation, marker, null, null, null);
+    mPlayerCorpse.remove(playerId);
+    log.info("[PLAYER_CORPSE_RESTORE] player={} items={} position=({}, {})",
+        playerId, data.getCorpseItems().size, townLocation.x, townLocation.y);
+  }
+
   /**
    * Returns whether the death animation has completed and ESC may revive the
    * player. Movement remains blocked for the whole DT/DD interval via

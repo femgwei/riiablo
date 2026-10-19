@@ -1321,6 +1321,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
     player = factory.createPlayer(charData, origin);
     engine.getSystem(EventSystem.class).dispatch(ZoneChangeEvent.obtain(player, zone));
+    if (socket == null && charData.getCorpseItems().size > 0) {
+      DeathHandler deathHandler = engine.getSystem(DeathHandler.class);
+      if (deathHandler != null) deathHandler.restoreSavedCorpse(player, charData, origin);
+    }
     if (socket == null && charData.hasMerc()) {
       NativeMercenaryRewardSystem mercenaries =
           engine.getSystem(NativeMercenaryRewardSystem.class);
