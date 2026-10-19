@@ -1,5 +1,19 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-19 日志技能委托与传送点重复放置
+
+- 对照 D2MOO SrvDo101 与原日志的实际导弹生成/碰撞，确认 FingerMageSpider
+  已由 ServerSkillSystem 执行；Actioneer 补充显式委托，消除 Unsupported 误报。
+- 客户端明确处理 Nest/MonInferno 的服务端起手委托及 Nest 的客户端执行回调，
+  继续使用权威怪物/导弹实体，不重复创建表现实体。
+- Act II 原生 RoomEx 布局跳过旧 preset-grid 传送点重复放置，兼容布局保留。
+- 真实 1.10f 定向测试 8 套、77 项通过（技能、怪物行为、A2-A5 传送点、Warp 配对）；
+  offscreenCamp manifest `result=PASS`，退出清理 PASS，`git diff --check` 通过。
+  第一轮并发构建曾出现 Skills 类加载失败，待编译完成后重跑已通过。
+- Warp UNIT_TILE 回退不删除；2/4 解析计数不能代替入口碰撞和穿越验收。
+  下一步在另一台电脑复验日志所涉 A4 怪物表现及 A2 三处传送点/双向入口。
+  分析与验证说明见 [game-log-review-2026-10-19.md](game-log-review-2026-10-19.md)。
+
 ## 2026-10-19 传送点面板默认章节
 
 - 打开传送点时按当前地图 Act 显示目的地，并同步顶部章节标签选中状态，修复始终打开第一页的问题。

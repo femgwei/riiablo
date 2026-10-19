@@ -490,8 +490,12 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
         OutdoorFeatures.placeBorders(zone, seed, 1);
         
         // 放置传送点（特定区域）
-        if (zone.level.Id == LEVEL_DRYHILLS || zone.level.Id == LEVEL_FAROASIS || 
-            zone.level.Id == LEVEL_LOSTCITY) {
+        // Native RoomEx already contains the waypoint preset. The legacy
+        // preset-grid placer cannot inspect that layout and must not place a
+        // second waypoint (or report a misleading placement failure).
+        if (!zone.hasNativeRoomTopology()
+            && (zone.level.Id == LEVEL_DRYHILLS || zone.level.Id == LEVEL_FAROASIS ||
+                zone.level.Id == LEVEL_LOSTCITY)) {
           OutdoorFeatures.placeWaypoint(zone, seed);
         }
         

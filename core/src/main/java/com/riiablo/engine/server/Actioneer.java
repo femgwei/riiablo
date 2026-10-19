@@ -2618,6 +2618,8 @@ public class Actioneer extends PassiveSystem {
         log.info("[MONSTER_VAMPIRE] phase=keyframe entity={} target={} srvdofunc={} delegated=ServerSkillSystem",
             entityId, targetId, srvdofunc);
         break;
+      case 101: // FingerMageSpider: ServerSkillSystem emits srvMissileA from SkillDoEvent.
+        break;
       case 108: { // RegurgitatorEat removes the corpse and heals from its max life.
         if (targetId < 0 || !mMonster.has(targetId) || mMercenary.has(targetId)
             || !mCofReference.has(targetId)

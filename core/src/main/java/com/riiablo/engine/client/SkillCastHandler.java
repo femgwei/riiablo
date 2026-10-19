@@ -94,6 +94,9 @@ public class SkillCastHandler extends PassiveSystem {
         break;
       case 50: // Monster Quick Strike uses the authoritative SrvDo092 missile.
         break;
+      case 49: // Nest spawn reservation is owned by Actioneer.
+      case 53: // MonInferno channel setup is owned by Actioneer.
+        break;
       case 40: // Leap landing/path setup is server-authoritative
         break;
       default:
@@ -409,6 +412,9 @@ public class SkillCastHandler extends PassiveSystem {
 
       case 18: // Defensive buff visual
         // Buff overlay handled by cltstfunc
+        break;
+
+      case 50: // Nest: the authoritative spawned monster owns its presentation.
         break;
 
       case 19: // Inferno / Arctic Blast - stream visual
