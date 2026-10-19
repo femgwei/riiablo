@@ -144,6 +144,12 @@ final class CombatSnapshotFactory {
     a.isPlayer = attackerPlayer;
     a.isMissile = missile;
     a.fixedPointElements = fixedPointElements;
+    // Migrate weaponless monster melee only. Player precomputed profiles and
+    // missiles retain their separate endpoint/RNG contracts.
+    a.fixedPointPhysical = !attackerPlayer && !missile && !precomputedPhysicalDamage;
+    a.normalDamage = statInt(attacker, Stat.item_normaldamage, 0);
+    a.minimumDamagePercent = statInt(attacker, Stat.item_mindamage_percent, 0);
+    a.maximumDamagePercent = statInt(attacker, Stat.item_maxdamage_percent, 0);
     a.alwaysHit = alwaysHit;
     NativeCombatContext combatContext = context
         .withCombatants(attackerPlayer, defenderPlayer)
@@ -195,6 +201,9 @@ final class CombatSnapshotFactory {
     a.physicalConversionType = physicalConversionType;
     if (attackerStates != null) {
       a.enhancedDamagePercent += attackerStates.getTotalDamageModifier();
+      a.normalDamage += attackerStates.getTotalStatContribution(Stat.item_normaldamage);
+      a.minimumDamagePercent += attackerStates.getTotalStatContribution(Stat.item_mindamage_percent);
+      a.maximumDamagePercent += attackerStates.getTotalStatContribution(Stat.item_maxdamage_percent);
       a.attackRatingPercent += attackerStates.getTotalAttackModifier();
       a.demonToHit += attackerStates.getTotalStatContribution(Stat.item_demon_tohit);
       a.undeadToHit += attackerStates.getTotalStatContribution(Stat.item_undead_tohit);

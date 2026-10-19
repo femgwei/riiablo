@@ -98,6 +98,7 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
       int[] values = (int[]) params.get(ai);
       values[0] = 0;
       values[2] = 100;
+      values[3] = 0; // This fixture asserts FA A1 frame 7; do not randomly select A2.
       ai.update(1f);
       assertTrue(world.getMapper(com.riiablo.engine.server.component.Casting.class).has(fallen),
           "Fallen AI cast must install authoritative Casting");

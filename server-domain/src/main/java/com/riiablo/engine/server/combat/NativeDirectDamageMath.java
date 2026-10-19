@@ -5,9 +5,16 @@ public final class NativeDirectDamageMath {
   private NativeDirectDamageMath() {}
 
   public static int nativePhysicalDamage(int raw, boolean player, int resistance, int flatReduction) {
+    return nativePhysicalDamage(raw, player, resistance, flatReduction, 1);
+  }
+
+  public static int nativePhysicalDamage(int raw, boolean player, int resistance,
+      int flatReduction, int scale) {
     resistance = Math.max(NativeCombatConstants.MIN_RESISTANCE, Math.min(player ? 50 : 100, resistance));
-    int reduced = Math.max(0, raw - Math.max(0, flatReduction));
-    long damage = (long) reduced * (100 - resistance) / 100L;
+    int reduced = (int) Math.max(0L, (long) raw - Math.max(0L, (long) flatReduction) * scale);
+    long damage = scale == 256 && resistance != 0
+        ? NativePhysicalDamageMath.percentage(reduced, 100 - resistance)
+        : (long) reduced * (100 - resistance) / 100L;
     return damage >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, (int) damage);
   }
 

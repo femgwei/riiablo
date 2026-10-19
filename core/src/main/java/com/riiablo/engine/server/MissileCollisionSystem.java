@@ -1821,7 +1821,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             missileId, missile.ownerId, targetId,
             statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
             combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll,
-            combat.physicalDamage,
+            combat.physicalDamageHp(),
             combat.elementalDamageHp(CombatSystem.DAMAGE_FIRE),
             combat.elementalDamageHp(CombatSystem.DAMAGE_LIGHTNING),
             combat.elementalDamageHp(CombatSystem.DAMAGE_COLD),
@@ -1857,7 +1857,7 @@ public class MissileCollisionSystem extends IteratingSystem {
               hitSound == null ? "" : hitSound);
           DamageEvent event = DamageEvent.obtainMissile(
               missile.ownerId, targetId, damage,
-              combat.physicalDamage * Math.max(0.01f, missile.damageMultiplier), hitSound,
+              combat.physicalDamageHp() * Math.max(0.01f, missile.damageMultiplier), hitSound,
               combat)
               .withElementalDamage(combat, Math.max(0.01f, missile.damageMultiplier))
               .suppressElementalPresentation(hasNativeElementalPresentation(missile))

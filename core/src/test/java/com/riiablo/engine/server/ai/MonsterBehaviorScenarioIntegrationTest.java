@@ -9,6 +9,7 @@ import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
@@ -20,6 +21,8 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.*;
 import com.riiablo.engine.server.component.*;
 import com.riiablo.engine.server.component.Class;
+import com.riiablo.engine.server.component.serializer.VitalsSerializer;
+import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.engine.server.event.*;
 import com.riiablo.item.Item;
 import com.riiablo.map.Map;
@@ -55,6 +58,7 @@ class MonsterBehaviorScenarioIntegrationTest extends RiiabloTest {
       source.base().put(Stat.strength, strength);
       source.base().put(Stat.damagepercent, enhanced);
       source.reset();
+      MathUtils.random = endpointRandom(false);
       Attributes target = s.world.getMapper(AttributesWrapper.class).get(s.player).attrs;
       target.base().put(Stat.damageresist, resistance);
       target.base().put(Stat.normal_damage_reduction, flat);
@@ -66,6 +70,62 @@ class MonsterBehaviorScenarioIntegrationTest extends RiiabloTest {
       assertEquals(Scene.LIFE - expected, s.life(s.player), s.diagnostic());
       assertEquals(expected == 0 ? 0 : 1, s.probe.hits);
     }
+  }
+
+  @ParameterizedTest(name = "8.8 min={0}, max={1}, strength={2}, ED={3}, upper={7}: raw loss={8}")
+  @CsvSource({
+      "10,11,0,0,0,0,0,false,2560", "10,11,0,0,0,0,0,true,2815",
+      "10,10,0,0,0,0,0,true,2815", "10,10,50,50,0,0,0,true,5631",
+      "11,11,50,25,0,0,0,false,4928", "10,10,0,-100,0,0,0,true,281",
+      "10,10,0,0,10,50,0,true,127", "10,10,0,0,1,-50,0,true,3838",
+      "10,10,0,0,0,0,100,true,5630"
+  })
+  void monsterMeleeFixedPointSurvivesLifeEventsAndVitalsSync(int min, int max,
+      int strength, int enhanced, int flat, int resistance, int critical,
+      boolean upper, int expectedFixed) {
+    try (Scene s = new Scene("Zombie", 1)) {
+      Attributes source = s.world.getMapper(AttributesWrapper.class).get(s.actor).attrs;
+      source.base().put(Stat.mindamage, min);
+      source.base().put(Stat.maxdamage, max);
+      source.base().put(Stat.strength, strength);
+      source.base().put(Stat.damagepercent, enhanced);
+      source.base().put(Stat.passive_critical_strike, critical);
+      source.reset();
+      AttributesWrapper target = s.world.getMapper(AttributesWrapper.class).get(s.player);
+      target.attrs.base().put(Stat.normal_damage_reduction, flat);
+      target.attrs.base().put(Stat.damageresist, resistance);
+      target.attrs.reset();
+      MathUtils.random = endpointRandom(upper);
+      for (int i = 0; i < 500 && s.probe.successfulMelee == 0; i++) s.tick(true);
+      assertEquals(1, s.probe.successfulMelee, s.diagnostic());
+      float expected = expectedFixed / 256f;
+      assertEquals(expected, s.probe.lastRequested);
+      assertEquals(expected, s.probe.lastPhysical);
+      assertNotNull(s.probe.applied);
+      assertEquals(expected, s.probe.applied.damage);
+      assertEquals(expected, s.probe.applied.physicalDamage);
+      assertEquals(expected, s.probe.applied.lifeLost);
+      assertEquals(Scene.LIFE, s.probe.applied.lifeBefore);
+      assertEquals(Scene.LIFE - expected, s.probe.applied.lifeAfter);
+      assertEquals((int) (Scene.LIFE * 256) - expectedFixed,
+          target.attrs.get(Stat.hitpoints).encodedValues());
+      FlatBufferBuilder buffer = new FlatBufferBuilder(64);
+      buffer.finish(new VitalsSerializer().putData(buffer, target));
+      VitalsP wire = VitalsP.getRootAsVitalsP(buffer.dataBuffer());
+      assertEquals(Scene.LIFE - expected, wire.hitpoints());
+      AttributesWrapper client = new AttributesWrapper();
+      client.attrs = Attributes.obtainLarge();
+      VitalsSerializer.apply(client, wire);
+      assertEquals(target.attrs.get(Stat.hitpoints).encodedValues(),
+          client.attrs.get(Stat.hitpoints).encodedValues());
+    }
+  }
+
+  /** Keep hit/AI percentage rolls at zero; choose the physical 8.8 interval's endpoint. */
+  private static java.util.Random endpointRandom(final boolean upper) {
+    return new java.util.Random(0) {
+      @Override public int nextInt(int bound) { return upper && bound != 100 ? bound - 1 : 0; }
+    };
   }
 
   @ParameterizedTest(name = "{0}: native animation marker delivers damage")
@@ -254,11 +314,16 @@ class MonsterBehaviorScenarioIntegrationTest extends RiiabloTest {
   static final class Probe extends BaseSystem {
     int hits, markers, lastAttacker = -1, lastVictim = -1;
     int successfulMelee;
+    float lastRequested, lastPhysical;
+    DamageAppliedEvent applied;
+    @Subscribe public void applied(DamageAppliedEvent e) { applied = e; }
     @Subscribe public void melee(MeleeAttackEvent e) { if (e.hit && !e.blocked) successfulMelee++; }
     @Subscribe public void marker(AnimDataKeyframeEvent e) {
       if (e.keyframe == Engine.KEYFRAME_ATK || e.keyframe == Engine.KEYFRAME_MIS) markers++;
     }
     @Subscribe public void hit(DamageEvent e) {
+      lastRequested = e.damage;
+      lastPhysical = e.physicalDamage;
       if (e.damage > 0) { hits++; lastAttacker = e.attacker; lastVictim = e.victim; }
     }
     @Override protected void processSystem() {}

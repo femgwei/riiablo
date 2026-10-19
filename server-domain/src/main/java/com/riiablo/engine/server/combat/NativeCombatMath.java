@@ -59,14 +59,20 @@ public final class NativeCombatMath {
    */
   public static int physicalDamageAfterBonuses(int damage, boolean missile, int strength,
       int enhancedPercent, int demonPercent, int undeadPercent, boolean demon, boolean undead) {
-    int percent = enhancedPercent + (missile ? 0 : strength);
-    if (demon) percent += demonPercent;
-    if (undead) percent += undeadPercent;
-    percent = Math.max(-90, percent);
+    int percent = physicalBonusPercent(missile, strength, enhancedPercent,
+        demonPercent, undeadPercent, demon, undead);
     // Native adds a truncated percentage, rather than truncating the final
     // product. These differ for negative percentages and fractional results.
     damage += damage * percent / 100;
     return Math.max(1, damage);
+  }
+
+  public static int physicalBonusPercent(boolean missile, int strength, int enhancedPercent,
+      int demonPercent, int undeadPercent, boolean demon, boolean undead) {
+    int percent = enhancedPercent + (missile ? 0 : strength);
+    if (demon) percent += demonPercent;
+    if (undead) percent += undeadPercent;
+    return Math.max(-90, percent);
   }
 
   public static int physicalReduction(int damage, boolean immune, int percent, int flat,

@@ -79,6 +79,7 @@ class MonsterMeleeOriginalParityTest {
 
   private static NativeAttackData monster(int min, int max) {
     NativeAttackData attacker = new NativeAttackData();
+    attacker.fixedPointPhysical = true;
     attacker.level = 10;
     attacker.attackRating = 100;
     attacker.minDamage = min;

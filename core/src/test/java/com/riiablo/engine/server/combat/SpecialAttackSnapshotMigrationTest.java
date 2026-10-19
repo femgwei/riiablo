@@ -34,7 +34,7 @@ class SpecialAttackSnapshotMigrationTest extends RiiabloTest {
   }
 
   @Test
-  void fiveEntryFamiliesMatchFrozenSnapshotsPacketsAndRngAcross3000Cases() throws Exception {
+  void fiveEntryFamiliesMatchFrozenAdaptersAndExplicitPhysicalPoliciesAcross3000Cases() throws Exception {
     Random random = new Random(0x32F72110L);
     for (int i = 0; i < 600; i++) {
       Attributes a = attributes(random, true), d = attributes(random, false);
@@ -86,9 +86,29 @@ class SpecialAttackSnapshotMigrationTest extends RiiabloTest {
         String label = "snapshot " + i + " family " + family;
         compareFields(NativeAttackData.class, old.capturedAttacker, migrated.attacker, label);
         compareFields(NativeDefenseData.class, old.capturedDefender, migrated.defender, label);
+        boolean nativePhysical = !request.attackerPlayer
+            && (family == 1 || (family == 4 && !request.missile));
+        assertEquals(nativePhysical, migrated.attacker.fixedPointPhysical, label + " physical policy");
+        if (nativePhysical) {
+          // Preserve the frozen adapter inputs, not its obsolete integer damage policy.
+          // Resolve a COPY under the explicitly enabled domain policy. Independent
+          // native numeric expectations live in NativeFixedPhysicalDamageTest and
+          // the real AI/life/event/wire scenarios, not this migration oracle.
+          AttackerData nativeAttacker = new AttackerData();
+          DefenderData nativeDefender = new DefenderData();
+          copyFields(NativeAttackData.class, old.capturedAttacker, nativeAttacker);
+          copyFields(NativeDefenseData.class, old.capturedDefender, nativeDefender);
+          nativeAttacker.fixedPointPhysical = true;
+          nativeDefender.lastBlockFrame = lastBlockFrame;
+          NativeRng nativeRng = new NativeRng(seed);
+          expected = new NativeAttackResolver(new NativeCombatRolls(nativeRng::nextInt))
+              .resolve(nativeAttacker, nativeDefender, new CombatResult(), null);
+          assertEquals(nativeRng.state(), newRng.state(), label + " native RNG");
+        } else {
+          assertEquals(oldRng.state(), newRng.state(), label + " legacy RNG");
+        }
         compareFields(NativeDamagePacket.class, expected, actual, label);
         assertEquals(expected.totalDamageHp(), actual.totalDamageHp(), label);
-        assertEquals(oldRng.state(), newRng.state(), label + " RNG");
         assertEquals(persistedFrame, d.get(Stat.lastblockframe).asInt(), label + " persisted frame");
         assertSame(d, migrated.defender.combatAttributes);
       }
@@ -150,10 +170,21 @@ class SpecialAttackSnapshotMigrationTest extends RiiabloTest {
   private static void compareFields(Class<?> type, Object expected, Object actual, String label)
       throws IllegalAccessException {
     for (Field field : type.getFields()) {
+      if (type == NativeAttackData.class && field.getName().equals("fixedPointPhysical")) continue;
       Object left = field.get(expected), right = field.get(actual);
       if (field.getType() == int[].class) assertArrayEquals((int[]) left, (int[]) right, label + " " + field.getName());
       else if (field.getType() == boolean[].class) assertArrayEquals((boolean[]) left, (boolean[]) right, label + " " + field.getName());
       else assertEquals(left, right, label + " " + field.getName());
+    }
+  }
+
+  private static void copyFields(Class<?> type, Object source, Object target)
+      throws IllegalAccessException {
+    for (Field field : type.getFields()) {
+      Object value = field.get(source);
+      if (value instanceof int[]) value = ((int[]) value).clone();
+      else if (value instanceof boolean[]) value = ((boolean[]) value).clone();
+      field.set(target, value);
     }
   }
 

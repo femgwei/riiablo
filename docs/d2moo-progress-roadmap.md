@@ -11534,3 +11534,10 @@ build/ai-shared-collision-phase1-closeout.log。此前扩展轮 architectureRegr
 其他聊天未纳入本轮提交的 Pathfinder、SequenceHandler、VelocityAdder 全局访问增长，
 不能将最新工作区架构回归报告为通过。未扩大基线或修改这些并行文件。
 最终服务端/桌面编译通过：build/ai-shared-collision-phase1-compile.log（2026-10-19）。
+
+## 怪物战斗数值：近战 8.8 物理精度（2026-10-19）
+
+- 非玩家、非弹体、非预计算近战快照已启用原版端点策略：普通加伤、合并增伤和 min/max 增伤在 8.8 上下限处理后，再抽取排他上端；相同端点先扩展一 HP。
+- 原始物理包、减伤、转换和物理吸血保留尺度，生命/事件调用读取 HP 访问器。实际 AI→近战→原始生命→两阶段事件→Vitals 序列化/客户端应用增加逐位检查，含不足一 HP 的非零命中。
+- 原有独立 D2MOO 推导审计 17 项全部通过，未改数值期望；原版 EXE/DLL 的逐击捕获样本仍缺，不能宣称所有战斗规则已与 1.10f 完全一致。
+- 玩家/佣兵武器力量与敏捷系数、预计算技能、弹体端点/RNG 和旧反伤/元素顺序不在本阶段完整迁移范围。具体政策、迁移 oracle 的分域和验证记录见 `docs/monster-combat-parity.md` 第四阶段。

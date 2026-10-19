@@ -16,7 +16,10 @@ public class NativeDamagePacket {
   public boolean deadlyStrike;
   public boolean crushingBlow;
   public int physicalDamage;
+  /** Physical damage and physical leech use this scale; consumers must use HP accessors. */
+  public int physicalScale = 1;
   public int[] elementalDamage = new int[NativeCombatConstants.DAMAGE_TYPE_COUNT];
+  /** Legacy whole-HP summary, not suitable for applying fixed-point packets to life. */
   public int totalDamage;
   public int elementalScale = 1;
   public int lifeStolen;
@@ -37,13 +40,17 @@ public class NativeDamagePacket {
     return elementalDamage[type] / (float) elementalScale;
   }
 
+  public float physicalDamageHp() { return physicalDamage / (float) physicalScale; }
+  public float lifeStolenHp() { return lifeStolen / (float) physicalScale; }
+  public float manaStolenHp() { return manaStolen / (float) physicalScale; }
+
   public float absorbedLifeHp() {
     return absorbedLife / (float) elementalScale;
   }
 
   public float totalDamageHp() {
-    if (elementalScale == 1) return totalDamage;
-    float total = physicalDamage;
+    if (elementalScale == 1 && physicalScale == 1) return totalDamage;
+    float total = physicalDamageHp();
     for (int i = 1; i < NativeCombatConstants.DAMAGE_TYPE_COUNT; i++) {
       if (i != NativeCombatConstants.DAMAGE_POISON || poisonDuration <= 0) {
         total += elementalDamageHp(i);
@@ -67,6 +74,7 @@ public class NativeDamagePacket {
     deadlyStrike = false;
     crushingBlow = false;
     physicalDamage = 0;
+    physicalScale = 1;
     for (int i = 0; i < NativeCombatConstants.DAMAGE_TYPE_COUNT; i++) elementalDamage[i] = 0;
     totalDamage = 0;
     elementalScale = 1;

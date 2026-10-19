@@ -7,7 +7,7 @@ dependencies {
 }
 
 // Compatibility regressions must not be mistaken for original-game parity.
-// The explicit audit below runs every native expectation and fails on known gaps.
+// The explicit audit below runs every native expectation and exposes any regression.
 // architecture.gradle configures the default platform after project evaluation;
 // apply the exclusion after that shared configuration, which replaces its options.
 gradle.projectsEvaluated {
@@ -29,7 +29,7 @@ task monsterCombatMathTest(type: Test) {
 
 task monsterCombatParityTest(type: Test) {
   group = 'verification'
-  description = 'Strict D2MOO-derived monster melee expectations; known gaps intentionally fail.'
+  description = 'Strict independent D2MOO-derived monster melee expectations, separate from legacy compatibility.'
   dependsOn testClasses
   testClassesDirs = sourceSets.test.output.classesDirs
   classpath = sourceSets.test.runtimeClasspath

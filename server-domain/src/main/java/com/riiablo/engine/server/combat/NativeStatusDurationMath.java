@@ -43,4 +43,11 @@ public final class NativeStatusDurationMath {
   public static float totalPoisonToPerFrame(int damage, int frames) {
     return fixed8RateToPerFrame(totalPoisonToBitRate(damage, frames));
   }
+
+  /** Total packet units -> native 8.8 rate, preserving the legacy rate truncation. */
+  public static float totalPoisonToPerFrame(int damage, int frames, int scale) {
+    if (damage <= 0 || frames <= 0 || scale <= 0) return 0f;
+    long rate = (long) damage * 256L / ((long) frames * scale);
+    return fixed8RateToPerFrame((int) Math.min(Integer.MAX_VALUE, rate));
+  }
 }

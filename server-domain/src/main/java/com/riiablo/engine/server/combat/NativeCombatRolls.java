@@ -4,7 +4,8 @@ import java.util.Objects;
 import java.util.function.IntUnaryOperator;
 
 /** Combat random decisions over an explicitly supplied, shared random stream.
- * Preserves the host's existing draw and short-circuit semantics, not a new ruleset.
+ * Legacy methods preserve existing draw/short-circuit semantics; physicalFixed
+ * is the explicit native endpoint policy.
  */
 public final class NativeCombatRolls {
   private final IntUnaryOperator random;
@@ -23,6 +24,12 @@ public final class NativeCombatRolls {
     int min = Math.max(0, minimum);
     int max = Math.max(min, maximum);
     return max > min ? min + random.applyAsInt(max - min) : min;
+  }
+
+  /** Native physical endpoints are already scaled/bonused; no draw for a collapsed interval. */
+  public int physicalFixed(int minimum, int maximum) {
+    long range = (long) maximum - minimum;
+    return range > 0 ? minimum + random.applyAsInt((int) Math.min(Integer.MAX_VALUE, range)) : minimum;
   }
 
   /** Hit resolution consumes a draw even for an always-hit attack. */

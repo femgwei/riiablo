@@ -14,7 +14,7 @@ class AttackPipelineMigrationTest {
   @Test
   void packetsMatchHostAndDomainWithFrozenCompatibilityAndNativeMitigationSnapshots() throws Exception {
     Random inputs = new Random(0x110F5399L);
-    int misses = 0, shields = 0, passives = 0, landed = 0;
+    int misses = 0, shields = 0, passives = 0, landed = 0, fixedLanded = 0;
     for (int i = 0; i < 4000; i++) {
       AttackerData a = attacker(inputs);
       DefenderData d = defender(inputs);
@@ -24,6 +24,7 @@ class AttackPipelineMigrationTest {
       // expectations live in NativeMonsterHitMitigationTest/NativePhysicalBonusTest.
       // Never rewrite the old resolver to pass.
       boolean frozenCompatible = i % 2 == 0;
+      a.fixedPointPhysical = !frozenCompatible && !a.isPlayer && !a.isMissile;
       if (frozenCompatible) {
         d.damageReduced = d.damageReducedPercent = 0;
         d.immunePhysical = false;
@@ -35,6 +36,12 @@ class AttackPipelineMigrationTest {
       // Exercise complete damage packets as well as each early-return family.
       if (i % 4 == 0) {
         a.alwaysHit = true;
+        d.canBlock = false;
+        d.passiveDodge = d.passiveAvoid = d.passiveEvade = d.passiveWeaponBlock = 0;
+      }
+      if (i % 16 == 1) {
+        a.isPlayer = a.isMissile = false;
+        a.fixedPointPhysical = a.alwaysHit = true;
         d.canBlock = false;
         d.passiveDodge = d.passiveAvoid = d.passiveEvade = d.passiveWeaponBlock = 0;
       }
@@ -52,7 +59,7 @@ class AttackPipelineMigrationTest {
       CombatResult actual = new CombatSystem(hostRng).calculateAttack(a, d);
       if (frozenCompatible) assertPacket(expected, actual, "frozen host snapshot " + i);
       assertEquals(expectedFrame, d.lastBlockFrame, "host block frame " + i);
-      assertEquals(before.state(), hostRng.state(), "host RNG " + i);
+      if (!a.fixedPointPhysical) assertEquals(before.state(), hostRng.state(), "host RNG " + i);
       d.lastBlockFrame = initialFrame;
       NativeDamagePacket standalone = new NativeAttackResolver(new NativeCombatRolls(bound -> {
         domainBounds.add(bound);
@@ -60,8 +67,11 @@ class AttackPipelineMigrationTest {
       })).resolve(a, d);
       assertPacket(actual, standalone, "host/domain snapshot " + i);
       assertEquals(expectedFrame, d.lastBlockFrame, "domain block frame " + i);
-      assertEquals(beforeBounds, domainBounds, "domain draw bounds " + i);
-      assertEquals(before.state(), domainRng.state(), "domain RNG " + i);
+      if (!a.fixedPointPhysical) assertEquals(beforeBounds, domainBounds, "domain draw bounds " + i);
+      // Native 8.8 changes bounds and may add a draw for an old zero profile.
+      // Do not compare its RNG to the frozen integer resolver's contract.
+      assertEquals(hostRng.state(), domainRng.state(), "host/domain RNG " + i);
+      if (actual.hit && !actual.blocked && a.fixedPointPhysical) fixedLanded++;
       if (!expected.hit) misses++;
       else if (!expected.blocked) landed++;
       else if (expected.defenseType == DefenseCalculator.DEFENSE_BLOCK) shields++;
@@ -69,6 +79,7 @@ class AttackPipelineMigrationTest {
     }
     assertTrue(misses > 0 && shields > 0 && passives > 0 && landed >= 1000,
         "The snapshot suite must reach every return family");
+    assertTrue(fixedLanded >= 250, "The native branch must resolve complete damage packets");
   }
 
   @Test

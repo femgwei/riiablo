@@ -984,6 +984,10 @@ public class CombatSystem {
     return NativeStatusDurationMath.totalPoisonToPerFrame(totalDamage, durationFrames);
   }
 
+  public static float totalPoisonToPerFrame(int totalDamage, int durationFrames, int scale) {
+    return NativeStatusDurationMath.totalPoisonToPerFrame(totalDamage, durationFrames, scale);
+  }
+
   static int resolvePoisonDuration(Attributes defender, boolean defenderPlayer,
       int baseDuration, int piercePercent, StateList defenderStates, int difficulty) {
     return resolvePoisonDuration(defender, defenderPlayer, baseDuration, piercePercent,
@@ -1392,7 +1396,7 @@ public class CombatSystem {
         });
     log.debug("[COMBAT_HIT] hit={} blocked={} defenseType={} ar={} defense={} chance={} roll={} physical={} total={} crit={} deadly={} crushing={}",
         result.hit, result.blocked, result.defenseType, result.attackRating, result.targetDefense,
-        result.hitChance, result.hitRoll, result.physicalDamage, result.totalDamageHp(),
+        result.hitChance, result.hitRoll, result.physicalDamageHp(), result.totalDamageHp(),
         result.critical, result.deadlyStrike, result.crushingBlow);
     return result;
   }

@@ -326,6 +326,7 @@ def monsterTestGroups = [
         'com.riiablo.engine.server.MonsterMeleeSettlementTest'],
     monsterAttackTest: [
         monsterScenarioSuite + '.monsterMeleeNativeMitigationReachesActualPlayerLife',
+        monsterScenarioSuite + '.monsterMeleeFixedPointSurvivesLifeEventsAndVitalsSync',
         monsterScenarioSuite + '.nativeAnimationMustDeliverTheAiAttack',
         monsterScenarioSuite + '.meleeAiMustActuallyHurtPlayer',
         monsterScenarioSuite + '.targetEscapingBeforeAttackMarkerTakesNoMeleeDamage',

@@ -7,6 +7,8 @@ public final class DamageAppliedEvent implements Event {
   public final int attacker, victim, missileId;
   public final byte kind;
   public final float damage, lifeLost, lifeBefore, lifeAfter;
+  /** Resolved physical channel in HP, not the packet's raw 8.8 integer. */
+  public final float physicalDamage;
   public final float fireDamage, lightningDamage, coldDamage, magicDamage, poisonDamage;
   public final String hitSound;
   public final boolean suppressElementalPresentation, suppressMonsterHitSound;
@@ -20,6 +22,7 @@ public final class DamageAppliedEvent implements Event {
     this.lifeBefore = lifeBefore;
     this.lifeAfter = lifeAfter;
     lifeLost = Math.max(0f, lifeBefore - lifeAfter);
+    physicalDamage = hit.physicalDamage;
     fireDamage = hit.fireDamage;
     lightningDamage = hit.lightningDamage;
     coldDamage = hit.coldDamage;

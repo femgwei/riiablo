@@ -79,6 +79,11 @@ public class NativeAttackData {
   public boolean isMissile;
   /** Opt-in 8.8 elemental packet; legacy callers remain in whole HP. */
   public boolean fixedPointElements;
+  /** Native monster melee endpoint scaling and exclusive 8.8 roll; explicit opt-in for snapshots. */
+  public boolean fixedPointPhysical;
+  public int normalDamage;
+  public int minimumDamagePercent;
+  public int maximumDamagePercent;
 
   /** Missiles.txt ToHit is disabled, so collision itself guarantees a hit. */
   public boolean alwaysHit;

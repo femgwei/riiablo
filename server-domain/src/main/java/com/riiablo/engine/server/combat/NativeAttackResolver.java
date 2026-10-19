@@ -34,7 +34,13 @@ public final class NativeAttackResolver {
   public <T extends NativeDamagePacket> T resolve(NativeAttackData attacker,
       NativeDefenseData defender, T result, Gates gates) {
     result.reset();
-    result.elementalScale = attacker.fixedPointElements ? 256 : 1;
+    result.physicalScale = attacker.fixedPointPhysical ? 256 : 1;
+    boolean convertsPhysical = attacker.physicalConversionPercent > 0
+        && attacker.physicalConversionType > DAMAGE_PHYSICAL
+        && attacker.physicalConversionType < DAMAGE_TYPE_COUNT;
+    // Keep converted physical fractions even when item elements use legacy integer rolls.
+    result.elementalScale = attacker.fixedPointElements
+        || (attacker.fixedPointPhysical && convertsPhysical) ? 256 : 1;
 
     // 1. Resolve the complete hit packet once. Both the combat result and
     // the structured missile audit consume this same AR/defense/chance/roll
@@ -95,20 +101,18 @@ public final class NativeAttackResolver {
     result.crushingBlow = rollCrushingBlow(attacker);
     if (result.crushingBlow) {
       int crushDamage = calculateCrushingBlowDamage(defender);
-      baseDamage += crushDamage;
+      baseDamage += crushDamage * result.physicalScale;
     }
 
     // 6. Skill conversion occurs before either resistance branch. Frenzy's
     // calc4 converts physical damage to magic without losing item elements.
     int convertedDamage = 0;
-    if (attacker.physicalConversionPercent > 0
-        && attacker.physicalConversionType > DAMAGE_PHYSICAL
-        && attacker.physicalConversionType < DAMAGE_TYPE_COUNT) {
+    if (convertsPhysical) {
       convertedDamage = baseDamage * attacker.physicalConversionPercent / 100;
       baseDamage -= convertedDamage;
     }
     result.physicalDamage = applyPhysicalDamageReduction(baseDamage, defender,
-        defender.isUndead && attacker.bypassUndeadPhysicalResistance);
+        defender.isUndead && attacker.bypassUndeadPhysicalResistance, result.physicalScale);
 
     // 7. 计算元素伤害
     // D2Game runs ColdLen through the same cold-resistance/pierce row as
@@ -125,7 +129,13 @@ public final class NativeAttackResolver {
     result.poisonDuration = Math.max(0, attacker.poisonLength);
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       int elemDamage = calculateElementalDamage(attacker, i);
-      if (i == attacker.physicalConversionType) elemDamage += convertedDamage * result.elementalScale;
+      if (!attacker.fixedPointElements && result.elementalScale != 1) {
+        elemDamage = (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE,
+            (long) elemDamage * result.elementalScale));
+      }
+      if (i == attacker.physicalConversionType) {
+        elemDamage += (int) ((long) convertedDamage * result.elementalScale / result.physicalScale);
+      }
       if (i == DAMAGE_MAGIC && attacker.magicTargetBonusPercent > 0) {
         elemDamage += elemDamage * attacker.magicTargetBonusPercent / 100;
       }
@@ -154,7 +164,7 @@ public final class NativeAttackResolver {
     }
 
     // 8. 计算总伤害
-    result.totalDamage = result.physicalDamage;
+    result.totalDamage = result.physicalDamage / result.physicalScale;
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       // Poison damage is applied by StateUpdater over its duration. Do not
       // also apply it as an immediate hit when a duration is present.
@@ -255,6 +265,7 @@ public final class NativeAttackResolver {
   }
 
   private int calculateBaseDamage(NativeAttackData attacker, NativeDefenseData defender) {
+    if (attacker.fixedPointPhysical) return NativePhysicalDamageMath.roll(attacker, defender, rolls);
     // Preserve zero-profile behavior before applying physical bonuses.
     if (attacker.maxDamage <= 0) return attacker.isMissile && attacker.alwaysHit ? 0 : 1;
     int minimum = Math.max(0, Math.min(attacker.minDamage, attacker.maxDamage));
@@ -288,7 +299,7 @@ public final class NativeAttackResolver {
   }
 
   private int applyPhysicalDamageReduction(
-      int damage, NativeDefenseData defender, boolean bypassResistance) {
+      int damage, NativeDefenseData defender, boolean bypassResistance, int scale) {
     // SUNITDMG_ApplyResistancesAndAbsorb: flat DR precedes resistance, players
     // cap at 50%, and fully reduced hits deal zero (not a minimum of one).
     // Sanctuary removes only positive undead resistance, not a curse's
@@ -297,7 +308,7 @@ public final class NativeAttackResolver {
     if (defender.immunePhysical && !defender.isPlayer) resistance = Math.max(100, resistance);
     if (bypassResistance && resistance > 0) resistance = 0;
     return NativeDirectDamageMath.nativePhysicalDamage(
-        damage, defender.isPlayer, resistance, defender.damageReduced);
+        damage, defender.isPlayer, resistance, defender.damageReduced, scale);
   }
 
   private void resolveNativeLightningDamage(int rawDamage, NativeAttackData attacker,
