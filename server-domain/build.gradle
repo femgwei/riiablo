@@ -5,3 +5,34 @@ dependencies {
   api "net.onedaybeard.artemis:artemis-odb:$artemisOdbVersion"
   api "net.mostlyoriginal.artemis-odb:contrib-eventbus:$artemisContribVersion"
 }
+
+// Compatibility regressions must not be mistaken for original-game parity.
+// The explicit audit below runs every native expectation and fails on known gaps.
+// architecture.gradle configures the default platform after project evaluation;
+// apply the exclusion after that shared configuration, which replaces its options.
+gradle.projectsEvaluated {
+  tasks.named('test') {
+    useJUnitPlatform { excludeTags 'monster-parity-audit' }
+  }
+}
+
+task monsterCombatMathTest(type: Test) {
+  group = 'verification'
+  description = 'Fast combat arithmetic/roll regressions; no MPQs, core host or ECS.'
+  dependsOn testClasses
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform { excludeTags 'monster-parity-audit' }
+  filter { includeTestsMatching 'com.riiablo.engine.server.combat.*' }
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
+
+task monsterCombatParityTest(type: Test) {
+  group = 'verification'
+  description = 'Strict D2MOO-derived monster melee expectations; known gaps intentionally fail.'
+  dependsOn testClasses
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform { includeTags 'monster-parity-audit' }
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

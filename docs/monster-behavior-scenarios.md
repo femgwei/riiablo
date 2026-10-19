@@ -9,6 +9,9 @@
 报告：`core/build/reports/tests/monsterBehaviorTest/index.html`。
 单独迭代新增场景可追加 `--tests '*MonsterBehaviorScenarioIntegrationTest'`。
 
+需要更快的分组执行或核对原版命中/伤害时，见 [分层入口与原版对照](monster-combat-parity.md)。
+行为场景通过不等于数值与原版一致；严格原版审计是独立任务，当前保留已知差异的失败断言。
+
 ## 结果断言，而非仅检查 AI 状态
 
 - Zombie、Skeleton、Fallen、CorruptRogue、Goatman、Brute：相邻攻击必须产生正伤害事件并降低玩家生命；原生动画场景不注入命中事件，必须由动画动作点完成攻击。

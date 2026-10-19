@@ -312,6 +312,62 @@ flatbuffers {
 }
 
 // Repeatable monster behavior gate: decisions plus observable ECS effects.
+// Separate Gradle filters let day-to-day edits avoid the entire AI regression suite.
+// The original monsterBehaviorTest remains the broad, backwards-compatible gate.
+def monsterScenarioSuite = 'com.riiablo.engine.server.ai.MonsterBehaviorScenarioIntegrationTest'
+def monsterTestGroups = [
+    monsterDataTest: [
+        'com.riiablo.engine.server.MonsterStatsCalculatorNativeTest',
+        'com.riiablo.engine.server.MonsterAttackProfileIntegrationTest',
+        'com.riiablo.engine.server.MonsterMeleeDataReferenceTest'],
+    monsterCombatTest: [
+        'com.riiablo.engine.server.combat.CombatSystemTest',
+        'com.riiablo.engine.server.combat.CombatEcsEventScenarioTest',
+        'com.riiablo.engine.server.MonsterMeleeSettlementTest'],
+    monsterAttackTest: [
+        monsterScenarioSuite + '.nativeAnimationMustDeliverTheAiAttack',
+        monsterScenarioSuite + '.meleeAiMustActuallyHurtPlayer',
+        monsterScenarioSuite + '.targetEscapingBeforeAttackMarkerTakesNoMeleeDamage',
+        'com.riiablo.engine.server.FallenShamanAutoCombatIntegrationTest'],
+    monsterPursuitTest: [
+        monsterScenarioSuite + '.pursuingAiMustMakeProgressAndFollowMovingTarget',
+        'com.riiablo.engine.server.PathfinderRecoveryTargetTest.continuouslyMovingTargetDoesNotStarvePursuitVelocity'],
+    monsterSummonTest: [
+        monsterScenarioSuite + '.spawningAiCreatesConfiguredLivingChildren',
+        monsterScenarioSuite + '.exhaustedNestCannotProduceUnlimitedChildren',
+        monsterScenarioSuite + '.blockedNestPlacementCannotCreateAChild',
+        monsterScenarioSuite + '.generatorsWithoutAnEnemyDoNotSpawn'],
+    monsterSpecialTest: [
+        monsterScenarioSuite + '.suicideAiDamagesNearbyPlayerOnlyAfterNativeFourFrameDelay',
+        monsterScenarioSuite + '.shamanRangedAiMissileMustReachAndDamagePlayer',
+        monsterScenarioSuite + '.succubusCurseMustInstallStateOnPlayer',
+        'com.riiablo.engine.server.RemainingMonsterSkillIntegrationTest',
+        'com.riiablo.engine.server.NativeExplosionLifecycleTest',
+        'com.riiablo.engine.server.NativeMonsterChargeTest'],
+    monsterAiTest: ['com.riiablo.engine.server.ai.*']
+]
+monsterTestGroups.each { suiteName, patterns ->
+  tasks.register(suiteName, Test) {
+    group = 'verification'
+    description = "Focused monster regressions: ${suiteName}; see docs/monster-combat-parity.md."
+    dependsOn testClasses
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { excludeTags 'visual' }
+    filter { patterns.each { includeTestsMatching it } }
+    if (suiteName == 'monsterAiTest') {
+      filter { excludeTestsMatching monsterScenarioSuite }
+    }
+    def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+    inputs.property 'd2Home', selectedD2Home
+    if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+    maxHeapSize = test.maxHeapSize
+    systemProperty 'java.awt.headless', 'true'
+    systemProperty 'gdx.test.headless', 'true'
+    testLogging { events 'failed'; exceptionFormat 'full' }
+  }
+}
+
 task monsterBehaviorTest(type: Test) {
   group = 'verification'
   description = 'Verify monster pursuit, attacks, spawning, resurrection and special damage.'
