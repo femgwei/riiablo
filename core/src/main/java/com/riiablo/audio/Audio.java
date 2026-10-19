@@ -1,12 +1,15 @@
 package com.riiablo.audio;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectMap;
+import com.badlogic.gdx.utils.ObjectSet;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.Pools;
 import com.riiablo.Cvars;
@@ -26,6 +29,7 @@ public class Audio {
 
   private final AssetManager assets;
   private final ObjectMap<Sounds.Entry, AssetDescriptor<?>> descriptors = new ObjectMap<>();
+  private final ObjectSet<String> missingFiles = new ObjectSet<>();
   private final Array<Instance> deferred = new Array<>();
   private final Array<Instance> active = new Array<>();
   private final float[] channelVolumes = new float[Channel.values().length];
@@ -182,6 +186,7 @@ public class Audio {
       AssetDescriptor<Music> descriptor = (AssetDescriptor<Music>) descriptors.get(sound);
       if (descriptor == null) {
         descriptor = new AssetDescriptor<>((global ? GLOBAL : LOCAL) + sound.FileName, Music.class);
+        if (!isAvailable(descriptor)) return null;
         descriptors.put(sound, descriptor);
         assets.load(descriptor);
         assets.finishLoadingAsset(descriptor);
@@ -198,6 +203,7 @@ public class Audio {
       AssetDescriptor<Sound> descriptor = (AssetDescriptor<Sound>) descriptors.get(sound);
       if (descriptor == null) {
         descriptor = new AssetDescriptor<>((global ? GLOBAL : LOCAL) + sound.FileName, Sound.class);
+        if (!isAvailable(descriptor)) return null;
         descriptors.put(sound, descriptor);
         assets.load(descriptor);
       }
@@ -213,6 +219,20 @@ public class Audio {
         return instance;
       }
     }
+  }
+
+  private boolean isAvailable(AssetDescriptor<?> descriptor) {
+    if (missingFiles.contains(descriptor.fileName)) return false;
+    // Use the selected audio loader's resolver: on desktop it reads MPQs,
+    // whereas the AssetManager's default resolver reads internal files.
+    FileHandle file = assets.getLoader(descriptor.type, descriptor.fileName)
+        .resolve(descriptor.fileName);
+    if (file != null && file.exists()) return true;
+    missingFiles.add(descriptor.fileName);
+    if (Gdx.app != null) {
+      Gdx.app.log("Audio", "[MISSING_AUDIO] Skipping unavailable audio: " + descriptor.fileName);
+    }
+    return false;
   }
 
   public Instance play(int id, boolean global) {

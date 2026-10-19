@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyFloat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -16,8 +18,11 @@ import static org.mockito.Mockito.when;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.assets.loaders.MusicLoader;
+import com.badlogic.gdx.assets.loaders.SoundLoader;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Pools;
 import com.riiablo.codec.excel.Sounds;
 import org.junit.jupiter.api.Test;
@@ -164,7 +169,7 @@ class AudioInstanceTest {
 
   @Test
   void backgroundCancelsDeferredOneShotBeforeItCanLoad() {
-    AssetManager assets = mock(AssetManager.class);
+    AssetManager assets = availableAssets();
     Sound sound = mock(Sound.class);
     doReturn(sound).when(assets).get(any(AssetDescriptor.class));
     when(assets.isLoaded(any(AssetDescriptor.class))).thenReturn(false, false, true);
@@ -181,8 +186,17 @@ class AudioInstanceTest {
   }
 
   private static AssetManager loadedAssets() {
-    AssetManager assets = mock(AssetManager.class);
+    AssetManager assets = availableAssets();
     when(assets.isLoaded(any(AssetDescriptor.class))).thenReturn(true);
+    return assets;
+  }
+
+  private static AssetManager availableAssets() {
+    AssetManager assets = mock(AssetManager.class);
+    FileHandle file = mock(FileHandle.class);
+    when(file.exists()).thenReturn(true);
+    doReturn(new SoundLoader(path -> file)).when(assets).getLoader(eq(Sound.class), anyString());
+    doReturn(new MusicLoader(path -> file)).when(assets).getLoader(eq(Music.class), anyString());
     return assets;
   }
 

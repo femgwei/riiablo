@@ -1,5 +1,21 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-19 Act IV 怪物缺失音效崩溃
+
+- 用户 `game.log` 的实际退出点是 `regurgitator/neutral1.wav` 未解析到文件，
+  `VolumeControlledSoundLoader` 将 null 交给 OpenAL，异常在后续 AssetManager.update 中终止客户端。
+  日志末尾的 `BUILD SUCCESSFUL` 不能作为游戏运行成功的依据。
+- 本机原版 1.10f MPQ 验证该 neutral 文件缺失、`regurgitator/attack1.wav` 存在。
+  Audio 在首次入队前使用实际 Sound/Music loader 的 resolver 检查 null/不存在文件；
+  缺失路径仅记录一次 `[MISSING_AUDIO]` 并返回空实例，不加入加载/延迟播放队列。
+- 回归覆盖真实 AssetManager 异步更新、重复缺失请求、正常音效继续播放、本地缺失文件、
+  缺失/正常流式音频及原版 MPQ。音频实例、怪物声音和空间衰减专项一并验证。
+- 验证命令：`:core:test --tests com.riiablo.audio.AudioMissingAssetTest
+  --tests com.riiablo.audio.AudioInstanceTest --tests com.riiablo.engine.client.MonsterSoundEmitterTest
+  --tests com.riiablo.engine.client.SoundEmitterHandlerTest -Pd2Home=<1.10f目录>`。
+  4 类共 18 项通过，失败/错误/跳过均为 0；`git diff --check` 通过，未运行全 core。
+  另一台电脑待复验 Act IV 与 regurgitator 遭遇，不把测试通过当作该实机场景已验收。
+
 ## 2026-10-19 怪物基础属性 domain 快照
 
 - 新增 `NativeMonsterStatsCalculator` 和不可变 `MonsterStatsSnapshot`，迁移既有表格比例、
