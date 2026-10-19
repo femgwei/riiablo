@@ -9,6 +9,14 @@ public class DamageEvent implements Event {
   /** Settlement bookkeeping; one request may be committed/publish death only once. */
   public boolean prepared, committed, rejected, lethal, deathPublished;
   public float appliedDamage;
+  /** Skill percentages join item/state leech before native truncation and difficulty scaling. */
+  public int extraLifeLeechPercent, extraManaLeechPercent;
+  public float lifeLeeched, manaLeeched;
+  /** Physical spell missiles must not inherit equipment leech. */
+  public boolean suppressLeech;
+  public String leechOverlay;
+  /** Missile creation snapshot; -1 means use the melee attacker's live stats. */
+  public int snapshotLifeLeechPercent = -1, snapshotManaLeechPercent = -1;
   public static final byte DIRECT = 0;
   public static final byte MELEE = 1;
   public static final byte MISSILE = 2;
@@ -89,6 +97,10 @@ public class DamageEvent implements Event {
       int attacker, int victim, float damage, float physicalDamage, String hitSound) {
     DamageEvent event = obtain(attacker, victim, damage, hitSound);
     event.kind = MISSILE;
+    // Only a creation snapshot may opt a missile into equipment leech.
+    // Server-side physical spells also use MISSILE for defensive callbacks.
+    event.snapshotLifeLeechPercent = 0;
+    event.snapshotManaLeechPercent = 0;
     event.physicalDamage = Math.max(0f, physicalDamage);
     return event;
   }

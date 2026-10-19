@@ -28,6 +28,10 @@ public class ElementalHitPresentationSystem extends PassiveSystem {
   public void onDamage(DamageAppliedEvent event) {
     if (event == null || event.damage < 0f
         || (event.kind != DamageEvent.MELEE && event.kind != DamageEvent.MISSILE)) return;
+    if (event.leechOverlay != null && event.attacker >= 0
+        && mPosition.has(event.attacker) && overlays != null) {
+      overlays.set(event.attacker, event.leechOverlay);
+    }
     if (!mPosition.has(event.victim)) return;
     // Skill missiles already run Missiles.txt pCltHitFunc/CltHitSubMissile.
     // Ordinary arrows have no elemental hit class and remain eligible here.

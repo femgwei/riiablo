@@ -334,6 +334,7 @@ public final class MissileDamageResolver {
     writeSnapshot(files, projectile, ownerAttrs, sourceScale > 0, level,
         physicalMin, physicalMax, attackRating,
         elementalMin, elementalMax, coldLength, poisonLength);
+    snapshotLeech(projectile, ownerAttrs, ownerStates, sourceScale);
     projectile.nativePhysical = nativePhysical;
     projectile.nativeElemental = nativeElemental;
     if (nativeElemental != null && nativeElemental.poisonCount != 0) {
@@ -459,8 +460,10 @@ public final class MissileDamageResolver {
             ownerStates.getTotalStatContribution(masteryStat));
       }
     }
-    return initializeSkill(files, projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
+    boolean initialized = initializeSkill(files, projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
         baseSkillLevel == null ? name -> 0 : baseSkillLevel, additionalMastery);
+    if (initialized) snapshotLeech(projectile, ownerAttrs, ownerStates, Math.max(0, skill.SrcDam));
+    return initialized;
   }
 
   /** Builds the elemental-only snapshot inherited by an explosion sub-missile. */
@@ -887,6 +890,7 @@ public final class MissileDamageResolver {
     projectile.damageLevel = level;
     writeSnapshot(files, projectile, ownerAttrs, includeSource, level, physicalMin, physicalMax,
         statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, poisonLength);
+    snapshotLeech(projectile, ownerAttrs, null, sourceScale);
     // D2MOO SKILLS_SrvDo012_Strafe installs SKILLS_AddDamagePercentBonus on
     // every strafearrow/strafebolt before MISSILE_CalculateDamageData runs.
     // Keep that per-arrow Calc2 bonus in the launch snapshot; it is not an
@@ -968,6 +972,17 @@ public final class MissileDamageResolver {
       base.put(Stat.tohit, projectile.attackRating);
       projectile.damage.reset();
     }
+  }
+
+  /** D2Common MISSILE_AddStatsToDamage / MISSILE_CalculateFinalDamage. */
+  private static void snapshotLeech(Missile projectile, Attributes owner, StateList states, int scale) {
+    int life = statInt(owner, Stat.lifedrainmindam);
+    if (states != null) life += states.getTotalLifeLeechModifier();
+    projectile.damage.base().put(Stat.lifedrainmindam,
+        (int) ((long) Math.max(0, life) * scale / 128));
+    projectile.damage.base().put(Stat.manadrainmindam,
+        (int) ((long) Math.max(0, statInt(owner, Stat.manadrainmindam)) * scale / 128));
+    projectile.damage.reset();
   }
 
   private static void writeSnapshot(com.riiablo.Files files, Missile projectile, Attributes ownerAttrs,

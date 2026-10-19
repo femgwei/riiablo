@@ -867,6 +867,8 @@ class AssassinMartialArtsTest extends RiiabloTest {
       assassinAttrs.reset();
       int assassin = createPlayer(world, 0, 0, assassinAttrs);
       int target = createMonster(world, 1, 0, attributes(10000, 0, 0, 0));
+      // Cobra Strike now obeys MonStats.Drain; a missing row is not leechable.
+      world.getMapper(Monster.class).get(target).monstats = Riiablo.files.monstats.get("fallen1");
       StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
       Skills.Entry tiger = Riiablo.files.skills.get("Tiger Strike");
       Skills.Entry cobra = Riiablo.files.skills.get("Cobra Strike");

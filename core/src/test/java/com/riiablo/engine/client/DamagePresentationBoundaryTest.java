@@ -17,6 +17,25 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class DamagePresentationBoundaryTest extends RiiabloTest {
+  @Test void leechCueTargetsAttackerAndIsIndependentOfMissileElementalSuppression() {
+    Audio audio = mock(Audio.class);
+    RecordingOverlays overlays = new RecordingOverlays();
+    World world = world(audio, overlays);
+    try {
+      int attacker = unit(world), victim = unit(world);
+      DamageEvent hit = DamageEvent.obtainMissile(attacker, victim, 2, 2, null);
+      hit.suppressElementalPresentation = true;
+      hit.leechOverlay = "steallife";
+      DamageSettlement.prepare(world, hit);
+      assertEquals(0, overlays.shown.size);
+      DamageSettlement.commit(world, hit);
+      assertEquals(1, overlays.shown.size);
+      assertEquals("steallife", overlays.shown.first());
+      assertEquals(attacker, overlays.lastEntity);
+      DamageSettlement.commit(world, hit);
+      assertEquals(1, overlays.shown.size);
+    } finally { world.dispose(); }
+  }
   @Test void mutableRequestCannotPlayEffectsBeforeLifeIsCommitted() {
     Audio audio = mock(Audio.class);
     RecordingOverlays overlays = new RecordingOverlays();
@@ -77,6 +96,7 @@ class DamagePresentationBoundaryTest extends RiiabloTest {
   @com.artemis.annotations.All(com.riiablo.engine.client.component.Overlay.class)
   private static final class RecordingOverlays extends OverlayManager {
     final Array<String> shown = new Array<>();
-    @Override public void set(int entity, String overlay) { shown.add(overlay); }
+    int lastEntity;
+    @Override public void set(int entity, String overlay) { shown.add(overlay); lastEntity = entity; }
   }
 }

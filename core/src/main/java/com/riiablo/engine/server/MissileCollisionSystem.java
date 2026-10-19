@@ -1881,6 +1881,11 @@ public class MissileCollisionSystem extends IteratingSystem {
               .suppressElementalPresentation(hasNativeElementalPresentation(missile))
               .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
           event.missileId = missileId;
+          event.suppressLeech = !missile.damageSnapshot;
+          event.snapshotLifeLeechPercent = Math.max(0,
+              missile.damage.getValue(Stat.lifedrainmindam, 0));
+          event.snapshotManaLeechPercent = Math.max(0,
+              missile.damage.getValue(Stat.manadrainmindam, 0));
           DamageSettlement.prepare(world, event);
           float appliedDamage = Math.max(0f, event.damage);
           // Native elemental absorb restores the defender's life from the same

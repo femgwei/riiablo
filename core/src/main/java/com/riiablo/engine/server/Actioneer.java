@@ -2522,6 +2522,10 @@ public class Actioneer extends PassiveSystem {
         float hpBefore = hitpoints.asFixed();
         DamageEvent event = DamageEvent.obtainMelee(
             entityId, targetId, damage, combat.physicalDamageHp(), combat);
+        if (progressiveRelease != null) {
+          event.extraLifeLeechPercent = Math.max(0, progressiveRelease.lifeLeechPercent);
+          event.extraManaLeechPercent = Math.max(0, progressiveRelease.manaLeechPercent);
+        }
         DamageSettlement.prepare(world, event);
         float appliedDamage = Math.max(0f, event.damage);
         applyElementalAbsorb(attrs, combat, 1f);
@@ -2544,7 +2548,6 @@ public class Actioneer extends PassiveSystem {
         if (hpAfter > 0f) queueHitReaction(targetId, false);
 
         if (progressiveRelease != null && progressiveRelease.hasEffects()) {
-          applyAssassinProgressiveLeech(entityId, progressiveRelease, combat, appliedDamage);
           applyAssassinProgressiveStageEffects(
               entityId, targetId, progressiveRelease, attackerAttrs);
         }
@@ -3534,12 +3537,6 @@ public class Actioneer extends PassiveSystem {
     if (states.stateList == null) states.init(world, entityId);
     Skills.Entry skill = files().skills.get(casting.skillId);
     int level = Math.max(1, skillLevel(entityId, casting.skillId));
-    UnitState feralState = DruidSkills.applyFeralMaulState(
-        states.stateList, skill, level, entityId);
-    if (feralState == null) {
-      log.warn("[DRUID_FERAL_MAUL] phase=state_reject source={} skill={} reason=invalid_shape_or_formula",
-          entityId, skill != null ? skill.skill : "none");
-    }
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
     StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
@@ -3551,11 +3548,14 @@ public class Actioneer extends PassiveSystem {
     applyElementalAbsorb(defender, combat, 1f);
     DamageSettlement.commit(world, event);
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
-    float lifeStolen = combat.totalDamageHp() > 0
-        ? combat.lifeStolenHp() * applied / combat.totalDamageHp() : 0f;
-    if (lifeStolen > 0 && mAttributesWrapper.has(entityId)) {
-      restoreUpToMaximum(mAttributesWrapper.get(entityId).attrs, Stat.hitpoints,
-          Stat.maxhp, lifeStolen);
+    float lifeStolen = event.lifeLeeched;
+    // SrvDo120 settles the current hit before installing the next charge's
+    // aura stats. The newly gained Feral Rage leech starts with the next hit.
+    UnitState feralState = DruidSkills.applyFeralMaulState(
+        states.stateList, skill, level, entityId);
+    if (feralState == null) {
+      log.warn("[DRUID_FERAL_MAUL] phase=state_reject source={} skill={} reason=invalid_shape_or_formula",
+          entityId, skill != null ? skill.skill : "none");
     }
     if (stunFrames > 0) {
       StatusEffectApplier.forWorld(world).applyStun(targetId, stunFrames);
@@ -3907,21 +3907,19 @@ public class Actioneer extends PassiveSystem {
     float before = hp.asFixed();
     DamageEvent event = DamageEvent.obtainMelee(entityId, targetId,
         Math.max(0, combat.totalDamageHp()), combat.physicalDamageHp(), combat);
+    int lifePct = DruidSkills.getHungerLifeLeech(
+        skill, level, name -> baseSkillLevel(entityId, name));
+    int manaPct = DruidSkills.getHungerManaLeech(
+        skill, level, name -> baseSkillLevel(entityId, name));
+    event.extraLifeLeechPercent = Math.max(0, lifePct);
+    event.extraManaLeechPercent = Math.max(0, manaPct);
     DamageSettlement.prepare(world, event);
     float applied = Math.max(0f, event.damage);
     applyElementalAbsorb(defender, combat, 1f);
     DamageSettlement.commit(world, event);
     if (hp.asFixed() < 0f) hp.set(0f);
-    int lifePct = DruidSkills.getHungerLifeLeech(
-        skill, level, name -> baseSkillLevel(entityId, name));
-    int manaPct = DruidSkills.getHungerManaLeech(
-        skill, level, name -> baseSkillLevel(entityId, name));
-    float physical = combat.totalDamageHp() > 0
-        ? applied * combat.physicalDamageHp() / combat.totalDamageHp() : 0f;
-    float life = restoreUpToMaximum(attacker, Stat.hitpoints, Stat.maxhp,
-        physical * lifePct / 100f);
-    float mana = restoreUpToMaximum(attacker, Stat.mana, Stat.maxmana,
-        physical * manaPct / 100f);
+    float life = event.lifeLeeched;
+    float mana = event.manaLeeched;
     if (weapon != null) drainPlayerMeleeDurability(entityId, weapon, targetId);
     applyCombatStates(entityId, targetId, combat);
     if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
@@ -5499,27 +5497,6 @@ public class Actioneer extends PassiveSystem {
 
   private int combatDifficulty() {
     return map == null ? 0 : map.getDifficulty();
-  }
-
-  /** Applies Cobra Strike steal after DamageEvent has finalized actual damage. */
-  private void applyAssassinProgressiveLeech(int entityId,
-      AssassinSkills.ProgressiveRelease release, CombatSystem.CombatResult combat,
-      float appliedDamage) {
-    if (!mAttributesWrapper.has(entityId) || combat.totalDamageHp() <= 0 || appliedDamage <= 0f) {
-      return;
-    }
-    float physicalApplied = appliedDamage * combat.physicalDamageHp() / combat.totalDamageHp();
-    float life = physicalApplied * Math.max(0, release.lifeLeechPercent) / 100f;
-    float mana = physicalApplied * Math.max(0, release.manaLeechPercent) / 100f;
-    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
-    float lifeAdded = restoreUpToMaximum(attrs, Stat.hitpoints, Stat.maxhp, life);
-    float manaAdded = restoreUpToMaximum(attrs, Stat.mana, Stat.maxmana, mana);
-    if (lifeAdded > 0f || manaAdded > 0f) {
-      log.info("[ASSASSIN_FINISHER] phase=leech source={} physicalApplied={} "
-              + "lifePct={} manaPct={} lifeAdded={} manaAdded={}",
-          entityId, physicalApplied, release.lifeLeechPercent,
-          release.manaLeechPercent, lifeAdded, manaAdded);
-    }
   }
 
   private static float restoreUpToMaximum(

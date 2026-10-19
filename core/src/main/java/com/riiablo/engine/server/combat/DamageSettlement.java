@@ -63,6 +63,7 @@ public final class DamageSettlement {
     float before = life.asFixed();
     float damage = Float.isFinite(hit.damage) ? Math.max(0f, hit.damage) : 0f;
     hit.damage = damage;
+    LeechSettlement.apply(world, hit, before);
     if (damage > 0f) life.sub(damage);
     if (life.asFixed() < 0f || (snapBelowOne && damage > 0f && life.asFixed() < 1f)) {
       life.set(0f);

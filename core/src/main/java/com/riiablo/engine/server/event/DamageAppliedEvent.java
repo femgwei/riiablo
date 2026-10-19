@@ -11,6 +11,9 @@ public final class DamageAppliedEvent implements Event {
   public final float physicalDamage;
   public final float fireDamage, lightningDamage, coldDamage, magicDamage, poisonDamage;
   public final String hitSound;
+  /** Chosen by authority, never rerolled by presentation. */
+  public final String leechOverlay;
+  public final float lifeLeeched, manaLeeched;
   public final boolean suppressElementalPresentation, suppressMonsterHitSound;
 
   public DamageAppliedEvent(DamageEvent hit, float lifeBefore, float lifeAfter) {
@@ -29,6 +32,9 @@ public final class DamageAppliedEvent implements Event {
     magicDamage = hit.magicDamage;
     poisonDamage = hit.poisonDamage;
     hitSound = hit.hitSound;
+    leechOverlay = hit.leechOverlay;
+    lifeLeeched = hit.lifeLeeched;
+    manaLeeched = hit.manaLeeched;
     suppressElementalPresentation = hit.suppressElementalPresentation;
     suppressMonsterHitSound = hit.suppressMonsterHitSound;
   }
