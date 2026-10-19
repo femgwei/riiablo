@@ -13,6 +13,9 @@ public class Monster extends Component {
   public MonStats.Entry  monstats;
   public MonStats2.Entry monstats2;
 
+  /** Native MonStats2 variant ordinals, NOT global CompCode rendering indices. */
+  public final int[] componentVariants = new int[16];
+
   /** Native monster quality captured at spawn time (normal/champion/unique…). */
   public int rank;
   /** Champion affix type, when {@link #rank} is champion. */
@@ -108,6 +111,7 @@ public class Monster extends Component {
   public Monster set(MonStats.Entry monstats, MonStats2.Entry monstats2) {
     this.monstats = monstats;
     this.monstats2 = monstats2;
+    java.util.Arrays.fill(componentVariants, 0);
     rank = 0;
     championType = -1;
     affixes = 0L;

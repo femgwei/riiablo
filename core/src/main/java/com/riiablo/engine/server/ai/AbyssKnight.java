@@ -1,10 +1,8 @@
 package com.riiablo.engine.server.ai;
 
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.States;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.UnitStates;
 
 /** D2MOO AITHINK_Fn073_AbyssKnight, 0x6FCDD850. */
@@ -27,8 +25,7 @@ public class AbyssKnight extends NativeDecisionAI {
       return;
     }
     if (distance < params[4] && recovery <= 0) recovery = params[5];
-    CofComponents parts = Riiablo.engine.getMapper(CofComponents.class).get(entityId);
-    if (hasSkill(0) && recovery == 0 && (parts == null || parts.component[10] < 4)) {
+    if (hasSkill(0) && recovery == 0 && monster.componentVariants[10] < 4) {
       cast(0, targetId);
       recovery = params[5];
       return;

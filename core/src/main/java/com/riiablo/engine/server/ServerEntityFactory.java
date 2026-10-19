@@ -88,6 +88,14 @@ public class ServerEntityFactory extends EntityFactory {
   }
 
   private static final String TAG = "ServerEntityFactory";
+
+  private void setMonsterComponentVariant(Monster monster, int[] components, int slot, int variant) {
+    monster.componentVariants[slot] = variant;
+    String[] values = StringUtils.remove(monster.monstats2.ComponentV[slot], '"').split(",");
+    if (variant < values.length && !values[variant].isEmpty()) {
+      components[slot] = files().compcode.index(values[variant]);
+    }
+  }
   private static final Logger log = LogManager.getLogger(ServerEntityFactory.class);
 
   protected ComponentMapper<Position> mPosition;
@@ -672,7 +680,18 @@ public class ServerEntityFactory extends EntityFactory {
         hasComponentValue = true;
         String[] v = StringUtils.remove(ComponentV, '"').split(",");
         int random = MathUtils.random(0, v.length - 1);
+        monster.componentVariants[i] = random;
         component[i] = files().compcode.index(v[random]);
+      }
+    }
+    // MONSTER_InitializeStatsAndSkills overrides these native class ids after
+    // MONSTER_SetComponents. Oblivion Knight's two elemental layers agree.
+    // Do not apply this override to every monster sharing the same AI/model.
+    if ("doomknight2".equals(monstats.Id) || "doomknight3".equals(monstats.Id)) {
+      int variant = (int) (NativeUnitRandom.monster(monster, gameSeed(), id).nextUnsigned() & 3);
+      setMonsterComponentVariant(monster, component, 10, variant);
+      if ("doomknight3".equals(monstats.Id)) {
+        setMonsterComponentVariant(monster, component, 11, variant);
       }
     }
     // A few native summon rows (most notably Valkyrie/Dopplezon) leave
@@ -788,6 +807,15 @@ public class ServerEntityFactory extends EntityFactory {
         .set(ownerId, nativePetType, skillId, skillLevel,
         passive, durationFrames);
     mNativeUnitFlags.get(entityId).reset().set(NativeUnitFlags.PLAYER_SUMMON);
+    if ("skeletonmage".equals(nativePetType) && "necromage".equals(summon.Id)) {
+      // SkillNec D2GAME_SetUnitComponent: the OWNER rolls one element for
+      // both S4/S5; SrvDo149 reads S4. Independent visual rolls disagree.
+      int variant = (int) (NativeUnitRandom.unit(world, gameSeed(), ownerId).nextUnsigned() & 3);
+      Monster petMonster = mMonster.get(entityId);
+      int[] components = mCofComponents.get(entityId).component;
+      setMonsterComponentVariant(petMonster, components, 11, variant);
+      setMonsterComponentVariant(petMonster, components, 12, variant);
+    }
     SummonedPetSystem petSystem = world.getSystem(SummonedPetSystem.class);
     for (int i = 0; i < conflictingGroupIds.size; i++) {
       int oldId = conflictingGroupIds.get(i);

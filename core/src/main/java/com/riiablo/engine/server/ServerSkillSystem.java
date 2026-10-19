@@ -1538,6 +1538,17 @@ public class ServerSkillSystem extends PassiveSystem {
       // SrvDo085 rejects an invalid upgraded ID; do not fall back to a basic attack missile.
       if (missileNames[0] == null) return;
     }
+    int componentSlot = event.srvdofunc == 148 || skill.srvdofunc == 148 ? 10
+        : event.srvdofunc == 149 || skill.srvdofunc == 149 ? 11 : -1;
+    if (componentSlot >= 0) {
+      // SrvDo148/149 require a unit target and add a native component ordinal
+      // to SrvMissileA. B-D/client fields are not additional projectiles.
+      if (event.targetId < 0 || !mPosition.has(event.targetId)) return;
+      String missile = resolveMonsterComponentMissile(files(), mMonster.get(event.entityId),
+          skill.srvmissilea, componentSlot);
+      if (missile == null) return;
+      missileNames = new String[] {missile};
+    }
     int configuredCount = 0;
     for (String name : missileNames) {
       if (name != null && !name.isEmpty()) configuredCount++;
@@ -4997,6 +5008,17 @@ public class ServerSkillSystem extends PassiveSystem {
    */
   static String resolveMonsterChainMissile(Monster monster, String baseMissileName) {
     return resolveMonsterChainMissile(Riiablo.files, monster, baseMissileName);
+  }
+
+  static String resolveMonsterComponentMissile(com.riiablo.Files files, Monster monster,
+      String baseMissileName, int slot) {
+    if (!hasText(baseMissileName)) return null;
+    Missiles.Entry base = files.Missiles.get(baseMissileName);
+    if (base == null) return null;
+    int variant = monster == null ? 0 : monster.componentVariants[slot];
+    if (variant < 0) return null;
+    Missiles.Entry resolved = files.Missiles.get(base.Id + variant);
+    return resolved == null ? null : resolved.Missile;
   }
 
   static String resolveMonsterChainMissile(com.riiablo.Files files, Monster monster, String baseMissileName) {

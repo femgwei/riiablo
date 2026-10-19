@@ -7,7 +7,6 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.States;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Monster;
-import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.UnitStates;
 
@@ -63,8 +62,7 @@ public class OblivionKnight extends NativeDecisionAI {
       }
       if (rollAiChance(params[4])) {
         if (hasSkill(2) && rollAiChance(params[5])) { cast(2, selected); return; }
-        CofComponents parts = Riiablo.engine.getMapper(CofComponents.class).get(entityId);
-        if (hasSkill(0) && (parts == null || parts.component[10] < 4)) {
+        if (hasSkill(0) && monster.componentVariants[10] < 4) {
           cast(0, selected); return;
         }
       }

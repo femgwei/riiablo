@@ -1,5 +1,36 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-19 骑士远程分支与部件变体导弹
+
+- 修复 AbyssKnight/Fn073 和 OblivionKnight/Fn074 把 `CofComponents` 全局图形编号
+  当作原生 `nComponent[10]` 选择序号的问题；真实 `pos/fir/col/unh` 图形编号均不满足
+  `<4`，此前带完整渲染组件的怪物无法走元素远程分支，简化 AI 测试因缺组件漏测。
+  `Monster.componentVariants` 独立保存 MonStats2 选择序号，渲染/网络仍使用 CompCode。
+- 工厂保留所有部件选择；按 `Monster.cpp / MONSTER_InitializeStatsAndSkills`，仅对
+  doomknight2/3 原生行额外抽取四变体，doomknight3 的 S3/S4 共用一次单位种子抽取。
+  不把该特殊规则扩大到共享模型/AI 的 dkmag1；普通部件仍沿用既有随机选择，
+  没有宣称完整区域部件池或出生随机消费顺序已与原版逐次一致。
+- 按 `SkillMonst.cpp / SKILLS_SrvDo148_DoomKnightMissile` 与
+  `SKILLS_SrvDo149_NecromageMissile`，分别使用 S3/S4 序号偏移 SrvMissileA，
+  要求单位目标并拒绝无效导弹；不再固定发射基础弹。真实 1.10f MPQ 核实：
+  骑士为毒/火/冰/物理，召唤骷髅法师为毒/冰/火/电。
+- 同类扩查发现召唤骷髅法师 S4/S5 被独立随机；按
+  `SkillNec.cpp / D2GAME_SetUnitComponent_6FD0C3A0` 改由主人一次抽取供两层共用。
+  原版 AI 目录中读取 nComponent 的判断仅上述两个骑士；项目 AI 目录也仅两处误用。
+  审计范围为部件编号门禁与相关选弹回调，不表示所有 AI/技能均已完成原版一致性审计。
+- 新回归包含真实工厂的序号/图形映射、两种骑士及 dkmag1 的三难度四变体、
+  AbyssKnight 近战/过近恢复限制、原生序号 4 拒绝、两个技能实际导弹创建与元素、
+  空目标拒绝、组件重置及召唤法师主人随机流/双层一致性。
+- 使用真实 1.10f 资源运行 `:core:test --tests 'com.riiablo.engine.server.ai.*'`，
+  并追加 MonsterComponentMissileIntegrationTest、RemainingMonsterSkillIntegrationTest、
+  MonsterSkillCoverageMatrixTest、MonsterStatsSnapshotIntegrationTest、
+  NecromancerSummonIntegrationTest、MonsterMissilePhysicalIntegrationTest：79 类 821 项通过，
+  其中 AI 780 项、新增 8 项；失败/错误/跳过均为 0，模块边界检查通过，未运行全 core。
+  技能覆盖清单补入 148/149 后单独复验通过，`git diff --check` 通过。
+  共享构建目录初次扩测期间 class 文件被并行任务移除，该轮结果作废；有效结果来自
+  独立 `.gradle/knight-ai-validation` 构建目录，避免输出互相覆盖。
+  待另一台电脑验证 Act IV 实际遭遇；未把自动测试视为实机验收。
+
 ## 2026-10-19 Act IV 怪物缺失音效崩溃
 
 - 用户 `game.log` 的实际退出点是 `regurgitator/neutral1.wav` 未解析到文件，
