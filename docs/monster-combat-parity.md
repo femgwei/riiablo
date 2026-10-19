@@ -37,13 +37,31 @@
 
 主要可复核依据是本地 D2MOO，revision `0c0bbd1e6bef9181a3da1c046523af622a925416`：
 
-- `source/D2Game/src/UNIT/SUnitDmg.cpp`：`SUNITDMG_IsHitSuccessful`（0x6FCC1E70），`SUNITDMG_ApplyDamageBonuses`，`SUNITDMG_ApplyResistancesAndAbsorb` / `SUNITDMG_ApplyResistanceAndAbsorb`。
+- `source/D2Game/src/UNIT/SUnitDmg.cpp`：`SUNITDMG_IsHitSuccessful`（0x6FCC1E70），`SUNITDMG_ApplyDamageBonuses`，`SUNITDMG_ApplyResistancesAndAbsorb`。
 - `source/D2Common/src/DataTbls/MonsterTbls.cpp`：`DATATBLS_CalculateMonsterStatsByLevel`（ordinal 11261）。
 - `source/D2Game/src/MONSTER/MonsterMode.cpp`：`sub_6FC627B0` 的攻击档位和 LoD 噩梦/地狱多人倍率。
 
 这些是**逆向源码推导样本**，不是已执行原版 EXE/DLL 后采集的 golden 数据；D2MOO 自身也须在歧义处用本地 1.10f DLL 校核。现有“旧实现冻结样本”只证明重构兼容性，名称带 Native/Golden 也不自动等于原版实测。
 
 ## 独立预期与当前差异
+
+### 第二阶段：已修正命中零分母与攻击物理减伤
+
+`NativeCombatMath.hitChance` 在 AR+防御为零时改用 100 的因子，再做等级比和 5%–95% 限制；保留合成夹具的最低等级 1 防除零保护，不宣称补齐负 AR/负防御等全部原版路径。
+
+`NativeAttackResolver` 的攻击物理包复用 `NativeDirectDamageMath.nativePhysicalDamage`：固定减伤先于抗性；玩家物抗上限 50%、怪物 100%、负抗性下限 -100%；抵消后允许零伤害。庇护所只消除亡灵的正物抗，负抗及固定减伤仍保留。玩家原始物抗 >=100 时也不得误走怪物免疫。该改动共用于近战与物理弹体攻击；没有修改已有反伤/legacy direct 分支或元素结算顺序。
+
+实际扣血场景发现 `CombatSnapshotFactory` 原先未把 `normal_damage_reduction` 放入攻击快照，导致装备固定减伤在实际近战/弹体攻击中被忽略。现在补齐属性和状态层贡献；这是本次新增 HP 验证揭示的接线缺口，不仅是运算顺序差异。
+
+首轮严格审计由 17 项中 9 项失败降至 3 项：力量与增强伤害合并、两个 8.8 端点仍未修。新增普通快速门禁 20 项验证命中边界和物抗/减伤/庇护所；另补 5 项实际怪物攻击到玩家 HP 的 ECS 场景。旧冻结 resolver 不随生产公式改写：无减伤子域继续逐字段比较冻结包，全部 4000 输入继续比较 host/domain 及随机消费；独立原版期望负责已修正规则。
+
+本阶段定向验证：domain 默认 83、快速层 67；core 战斗包/迁移 112、结算 62、攻击 28、特殊 26 项通过。严格审计 17 项中仍有 3 项失败，命令非零退出为已知差异，未隐藏为跳过。
+
+工作区另一批 `DamageEvent` / `DamageAppliedEvent` 事件重构在扩大验证时尚未完成，曾阻塞测试编译。使用 HEAD 干净导出加本轮专属代码文件隔离验证：战斗包/迁移与所有 `*GoldenDamageTest` 合计 174 项、攻击 28 项、特殊 26 项通过。未回退、覆盖或提交另一批事件改动。真实 1.10f 营地 smoke manifest 与客户端退出清理均为 PASS；包含未完成测试编译的组合命令整体非零，不能称组合构建成功。
+
+隔离副本完整怪物聚合 808 项通过，失败/跳过均为 0；包含完整冷编译的扩大验证组合返回 0，用时约 10 分钟，不代表日常单个分层入口耗时。
+
+以下差异清单保留为**修复前基线**；其中命中零分母与前四种减伤差异已由本阶段修正，只有加成和小数抽取仍是当前待办。
 
 `MonsterMeleeOriginalParityTest` 不调用生产公式生成期望值：
 

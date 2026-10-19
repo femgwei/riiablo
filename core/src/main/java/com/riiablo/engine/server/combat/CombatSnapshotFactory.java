@@ -405,6 +405,11 @@ final class CombatSnapshotFactory {
     // physical resistance keeps that sign so the same percentage formula
     // increases damage below zero instead of silently clamping the curse out.
     d.damageReducedPercent = Math.max(MIN_RESISTANCE, d.resistances[DAMAGE_PHYSICAL]);
+    // This must reach the attack snapshot as well as the direct-damage path.
+    // Omitting it silently ignores item/state flat DR on real melee/missile hits.
+    d.damageReduced = Math.max(0, statInt(defender, Stat.normal_damage_reduction, 0)
+        + (defenderStates == null ? 0
+            : defenderStates.getTotalStatContribution(Stat.normal_damage_reduction)));
     d.magicDamageReduced = statInt(defender, Stat.magic_damage_reduction, 0);
     d.immunePhysical = d.resistances[DAMAGE_PHYSICAL] >= 100;
     for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {

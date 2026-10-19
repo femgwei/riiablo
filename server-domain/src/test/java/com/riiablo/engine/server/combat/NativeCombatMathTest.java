@@ -15,7 +15,8 @@ class NativeCombatMathTest {
 
   @Test
   void hitChanceKeepsIntegerRoundingLevelFallbackAndBounds() {
-    assertEquals(5, NativeCombatMath.hitChance(0, 0, 10, 10));
+    assertEquals(95, NativeCombatMath.hitChance(0, 0, 10, 10));
+    assertEquals(20, NativeCombatMath.hitChance(0, 0, 10, 90));
     assertEquals(95, NativeCombatMath.hitChance(100, 0, 0, 0));
     assertEquals(33, NativeCombatMath.hitChance(100, 200, 10, 10));
     assertEquals(44, NativeCombatMath.hitChance(100, 200, 20, 10));

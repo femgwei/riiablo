@@ -4,7 +4,7 @@ import static com.riiablo.engine.server.combat.NativeCombatConstants.*;
 
 /**
  * Complete snapshot attack resolution, with no attributes, ECS or global random access.
- * Preserves the former CombatSystem ordering, including legacy/native packet differences.
+ * Uses native physical mitigation; legacy/native elemental packet differences remain explicit.
  * Does not apply life, mana or status changes to the world.
  */
 public final class NativeAttackResolver {
@@ -289,8 +289,15 @@ public final class NativeAttackResolver {
 
   private int applyPhysicalDamageReduction(
       int damage, NativeDefenseData defender, boolean bypassResistance) {
-    return NativeCombatMath.physicalReduction(damage, defender.immunePhysical,
-        defender.damageReducedPercent, defender.damageReduced, bypassResistance);
+    // SUNITDMG_ApplyResistancesAndAbsorb: flat DR precedes resistance, players
+    // cap at 50%, and fully reduced hits deal zero (not a minimum of one).
+    // Sanctuary removes only positive undead resistance, not a curse's
+    // negative resistance or the target's flat reduction.
+    int resistance = defender.damageReducedPercent;
+    if (defender.immunePhysical && !defender.isPlayer) resistance = Math.max(100, resistance);
+    if (bypassResistance && resistance > 0) resistance = 0;
+    return NativeDirectDamageMath.nativePhysicalDamage(
+        damage, defender.isPlayer, resistance, defender.damageReduced);
   }
 
   private void resolveNativeLightningDamage(int rawDamage, NativeAttackData attacker,

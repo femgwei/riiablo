@@ -4,7 +4,7 @@ package com.riiablo.engine.server.combat;
  * Scalar arithmetic extracted from the production CombatSystem.
  *
  * <p>No attribute/ECS access or random draws. Integer operation order is deliberately
- * preserved, including legacy mitigation ordering; this is not a rules correction.
+ * preserved except documented native corrections. Legacy mitigation remains explicit.
  */
 public final class NativeCombatMath {
   private NativeCombatMath() {}
@@ -25,15 +25,14 @@ public final class NativeCombatMath {
 
   /** Receives effective values after the host's Ignore Target Defense eligibility check. */
   public static int hitChance(int attackRating, int defense, int attackerLevel, int defenderLevel) {
-    int chance;
-    if (attackRating + defense == 0) {
-      chance = NativeCombatConstants.BASE_TO_HIT_CHANCE;
-    } else {
-      int attacker = Math.max(1, attackerLevel);
-      int defender = Math.max(1, defenderLevel);
-      int factor = 100 * attackRating / (attackRating + defense);
-      chance = NativeCombatConstants.PVP_HIT_FACTOR * attacker * factor / (attacker + defender);
-    }
+    // SUNITDMG_IsHitSuccessful defaults the AR factor to 100 when the divisor
+    // is zero; it still applies the level ratio before the 5..95 clamp.
+    // Keep the existing level>=1 guard for synthetic/uninitialized snapshots.
+    int attacker = Math.max(1, attackerLevel);
+    int defender = Math.max(1, defenderLevel);
+    int factor = attackRating + defense == 0 ? 100
+        : 100 * attackRating / (attackRating + defense);
+    int chance = NativeCombatConstants.PVP_HIT_FACTOR * attacker * factor / (attacker + defender);
     return Math.max(NativeCombatConstants.MIN_TO_HIT_CHANCE,
         Math.min(NativeCombatConstants.MAX_TO_HIT_CHANCE, chance));
   }

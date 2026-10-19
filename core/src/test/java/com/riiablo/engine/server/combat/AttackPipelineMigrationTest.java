@@ -12,12 +12,21 @@ import org.junit.jupiter.api.Test;
 
 class AttackPipelineMigrationTest {
   @Test
-  void completePacketsAndRandomStateMatchFrozenHostAcross4000Snapshots() throws Exception {
+  void packetsMatchHostAndDomainWithFrozenCompatibilityAndNativeMitigationSnapshots() throws Exception {
     Random inputs = new Random(0x110F5399L);
     int misses = 0, shields = 0, passives = 0, landed = 0;
     for (int i = 0; i < 4000; i++) {
       AttackerData a = attacker(inputs);
       DefenderData d = defender(inputs);
+      // Half retain a frozen full-packet oracle in the unchanged no-mitigation
+      // domain. The other half exercise corrected native mitigation, compared
+      // host-vs-domain below; independent native expectations live in
+      // NativeMonsterHitMitigationTest. Never rewrite the old resolver to pass.
+      boolean frozenCompatible = i % 2 == 0;
+      if (frozenCompatible) {
+        d.damageReduced = d.damageReducedPercent = 0;
+        d.immunePhysical = false;
+      }
       // Exercise complete damage packets as well as each early-return family.
       if (i % 4 == 0) {
         a.alwaysHit = true;
@@ -36,7 +45,7 @@ class AttackPipelineMigrationTest {
       int expectedFrame = d.lastBlockFrame;
       d.lastBlockFrame = initialFrame;
       CombatResult actual = new CombatSystem(hostRng).calculateAttack(a, d);
-      assertPacket(expected, actual, "host snapshot " + i);
+      if (frozenCompatible) assertPacket(expected, actual, "frozen host snapshot " + i);
       assertEquals(expectedFrame, d.lastBlockFrame, "host block frame " + i);
       assertEquals(before.state(), hostRng.state(), "host RNG " + i);
       d.lastBlockFrame = initialFrame;
@@ -44,7 +53,7 @@ class AttackPipelineMigrationTest {
         domainBounds.add(bound);
         return domainRng.nextInt(bound);
       })).resolve(a, d);
-      assertPacket(expected, standalone, "standalone snapshot " + i);
+      assertPacket(actual, standalone, "host/domain snapshot " + i);
       assertEquals(expectedFrame, d.lastBlockFrame, "domain block frame " + i);
       assertEquals(beforeBounds, domainBounds, "domain draw bounds " + i);
       assertEquals(before.state(), domainRng.state(), "domain RNG " + i);

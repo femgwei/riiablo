@@ -33,6 +33,7 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.Test;
 
 /** AI -> production action/movement/damage systems. Only terrain and allocation are fixtures.
@@ -41,6 +42,27 @@ import org.junit.jupiter.api.Test;
  * Bounded fixed-seed trials admit misses and idle decisions.
  */
 class MonsterBehaviorScenarioIntegrationTest extends RiiabloTest {
+  @ParameterizedTest(name = "physical resistance={0}, flat DR={1}: actual HP loss={2}")
+  @CsvSource({"50,10,45", "75,0,50", "100,0,50", "-50,10,135", "0,100,0"})
+  void monsterMeleeNativeMitigationReachesActualPlayerLife(int resistance, int flat, int expected) {
+    try (Scene s = new Scene("Zombie", 1)) {
+      Attributes source = s.world.getMapper(AttributesWrapper.class).get(s.actor).attrs;
+      source.base().put(Stat.mindamage, 100);
+      source.base().put(Stat.maxdamage, 100);
+      source.reset();
+      Attributes target = s.world.getMapper(AttributesWrapper.class).get(s.player).attrs;
+      target.base().put(Stat.damageresist, resistance);
+      target.base().put(Stat.normal_damage_reduction, flat);
+      target.reset();
+      // Stop at the first successful, unblocked melee attempt. A zero-damage
+      // result must prove it landed, not accidentally pass because AI missed.
+      for (int i = 0; i < 500 && s.probe.successfulMelee == 0; i++) s.tick(true);
+      assertEquals(1, s.probe.successfulMelee, s.diagnostic());
+      assertEquals(Scene.LIFE - expected, s.life(s.player), s.diagnostic());
+      assertEquals(expected == 0 ? 0 : 1, s.probe.hits);
+    }
+  }
+
   @ParameterizedTest(name = "{0}: native animation marker delivers damage")
   @ValueSource(strings = {"Zombie", "Skeleton", "Fallen", "CorruptRogue", "Goatman", "Brute"})
   void nativeAnimationMustDeliverTheAiAttack(String name) {
@@ -226,6 +248,8 @@ class MonsterBehaviorScenarioIntegrationTest extends RiiabloTest {
 
   static final class Probe extends BaseSystem {
     int hits, markers, lastAttacker = -1, lastVictim = -1;
+    int successfulMelee;
+    @Subscribe public void melee(MeleeAttackEvent e) { if (e.hit && !e.blocked) successfulMelee++; }
     @Subscribe public void marker(AnimDataKeyframeEvent e) {
       if (e.keyframe == Engine.KEYFRAME_ATK || e.keyframe == Engine.KEYFRAME_MIS) markers++;
     }

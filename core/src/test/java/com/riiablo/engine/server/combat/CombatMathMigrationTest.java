@@ -68,7 +68,18 @@ class CombatMathMigrationTest {
       d.maxResistances[type] = inputs.nextInt(126) - 5;
       d.absorbPercent[type] = inputs.nextInt(151) - 25;
       d.absorbFlat[type] = inputs.nextInt(100) - 25;
-      assertEquals(Previous.calculateHitChance(a, d), host.calculateHitChance(a, d), "hit snapshot " + i);
+      int rating = Previous.calculateEffectiveAttackRating(a, d);
+      int defenseValue = Previous.calculateEffectiveDefense(a, d);
+      if (a.ignoreTargetDefense && a.isPlayer && !d.isPlayer && d.ignoreTargetDefenseAllowed) defenseValue = 0;
+      if (rating + defenseValue == 0) {
+        // Intentional native correction: old 5% fallback is NOT the oracle here.
+        // Keep the frozen implementation unchanged for all other snapshots.
+        int alvl = Math.max(1, a.level), dlvl = Math.max(1, d.level);
+        assertEquals(Math.max(5, Math.min(95, 200 * alvl / (alvl + dlvl))),
+            host.calculateHitChance(a, d), "native zero divisor " + i);
+      } else {
+        assertEquals(Previous.calculateHitChance(a, d), host.calculateHitChance(a, d), "hit snapshot " + i);
+      }
       assertEquals(Previous.calculateBlockChance(d), host.calculateBlockChance(d), "block snapshot " + i);
       assertEquals(Previous.applyPhysicalDamageReduction(damage, d, false),
           NativeCombatMath.physicalReduction(damage, d.immunePhysical, d.damageReducedPercent, d.damageReduced, false));
@@ -113,7 +124,8 @@ class CombatMathMigrationTest {
     int rolled = 10 + expected.nextInt(11);
     int base = rolled * 150 / 100;
     base = base * 125 / 100;
-    int physical = Math.max(1, base * 150 / 100 - 2);
+    // Deliberate native correction: flat DR before resistance, no minimum 1.
+    int physical = Math.max(0, base - 2) * 150 / 100;
     expected.nextInt(1); // Existing inclusive fixed-range fire roll also advances the stream.
     CombatResult result = host.calculateAttack(a, d);
     assertEquals(physical, result.physicalDamage);
