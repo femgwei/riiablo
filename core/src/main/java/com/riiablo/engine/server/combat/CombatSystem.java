@@ -1488,6 +1488,27 @@ public class CombatSystem {
     return resolveSnapshot(request);
   }
 
+  /**
+   * D2MOO SrvDo067 monster branch supplies result flags 9 (hit + knockback).
+   * It bypasses GetResultFlags/AR/block/dodge, unlike the player branch;
+   * damage rolls, resistance, absorption and settlement remain unchanged.
+   */
+  public CombatResult calculateMonsterChargeWithContext(
+      Attributes attacker, Attributes defender, boolean defenderPlayer,
+      StateList attackerStates, StateList defenderStates, boolean defenderMoving,
+      NativeCombatContext context) {
+    CombatSnapshotFactory.Request request = new CombatSnapshotFactory.Request(
+        attacker, defender, false, defenderPlayer, context);
+    request.attackMinDamageOverride = statInt(attacker, Stat.mindamage, 0);
+    request.attackMaxDamageOverride = statInt(attacker, Stat.maxdamage, 0);
+    request.attackRatingOverride = statInt(attacker, Stat.tohit, 0);
+    request.preResolvedHit = true;
+    request.attackerStates = attackerStates;
+    request.defenderStates = defenderStates;
+    request.defenderMoving = defenderMoving;
+    return resolveSnapshot(request);
+  }
+
   private CombatResult resolveSnapshot(CombatSnapshotFactory.Request request) {
     if (request.attacker == null || request.defender == null) {
       CombatResult result = new CombatResult();

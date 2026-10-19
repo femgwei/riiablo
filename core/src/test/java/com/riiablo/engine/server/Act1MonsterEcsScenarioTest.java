@@ -32,6 +32,7 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.event.MeleeAttackEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.item.Item;
@@ -250,27 +251,50 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
 
   @Test
   void chargeKeyframeAppliesOneAuthoritativeMeleeHit() {
+    chargeKeyframeResolvesAttack(true);
+  }
+
+  @Test
+  void monsterChargeDoesNotUseThePlayersChanceToHitRoll() {
+    chargeKeyframeResolvesAttack(false);
+  }
+
+  private void chargeKeyframeResolvesAttack(boolean lowerRoll) {
     Skills.Entry skill = Riiablo.files.skills.get("Charge");
     assertNotNull(skill);
     MonStats.Entry row = findMonsterWithSkill(skill.skill);
     assertNotNull(row, "No monster exposes Charge in the current MonStats data");
     Scenario scenario = new Scenario(row);
+    java.util.Random previousRandom = MathUtils.random;
     try {
+      // SrvDo067 sets result flags 9 for monsters, not GetResultFlags as for
+      // players. Both RNG extremes must hit, even with extreme armor/passives.
+      MathUtils.random = new java.util.Random(0) {
+        @Override public int nextInt(int bound) { return lowerRoll ? 0 : bound - 1; }
+      };
       Attributes targetAttrs = combatAttributes(80, 80, 0, 1, 1, 1);
+      targetAttrs.base().put(Stat.armorclass, 1000000);
+      targetAttrs.base().put(Stat.toblock, 75);
+      targetAttrs.base().put(Stat.passive_dodge, 100);
+      targetAttrs.base().put(Stat.passive_weaponblock, 100);
+      targetAttrs.reset();
       scenario.attributes(scenario.source).attrs = combatAttributes(100, 100, 20, 20, 10000, 1);
       int target = scenario.target(11, 10, targetAttrs, true);
       float before = hitpoints(targetAttrs);
       scenario.actioneer.cast(scenario.source, skill.Id, target, scenario.position(11, 10));
+      assertEquals(before, hitpoints(targetAttrs), "casting must wait for the attack keyframe");
       scenario.keyframe(scenario.source);
       float after = hitpoints(targetAttrs);
-      assertTrue(after < before, "Charge must hit an adjacent target");
+      assertTrue(after < before, "native monster Charge supplies successful-hit flags");
       assertEquals(1, scenario.probe.damage, "one keyframe must produce one hit");
+      assertEquals(1, scenario.probe.meleeAttacks);
+      assertTrue(scenario.probe.meleeHit);
       assertEquals(1, scenario.probe.skillDo);
       System.out.println("[ACT1_ECS_CHAIN] skill=Charge monster=" + row.Id
           + " damageEvents=" + scenario.probe.damage + " hp=" + before + "->" + after
           + " status=PASS");
     } finally {
-      scenario.close();
+      try { scenario.close(); } finally { MathUtils.random = previousRandom; }
     }
   }
 
@@ -462,6 +486,9 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
     int skillDo;
     int damage;
     int death;
+    int meleeAttacks;
+    boolean meleeHit;
+    @Subscribe public void onMelee(MeleeAttackEvent event) { meleeAttacks++; meleeHit = event.hit; }
     @Subscribe public void onSkillDo(SkillDoEvent event) { skillDo++; }
     @Subscribe public void onDamage(DamageEvent event) { damage++; }
     @Subscribe public void onDeath(DeathEvent event) { death++; }

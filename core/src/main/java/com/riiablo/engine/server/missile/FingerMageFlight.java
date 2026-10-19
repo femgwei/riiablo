@@ -16,6 +16,9 @@ public final class FingerMageFlight {
       Vector2 position, Vector2 velocity, int elapsedFrame) {
     if (missile.missile == null || missile.missile.pSrvDoFunc != 11) return;
     int[] params = missile.missile.Param;
+    // Synthetic/partial rows have no native fixed-size parameter array. Keep
+    // their collision/lifetime processing, but do not invent homing settings.
+    if (params == null || params.length < 2) return;
     int interval = params[0] > 0 ? params[0] : 5;
     if ((missile.nativeLifetimeFrames - elapsedFrame) % interval != 0) return;
     int targetId = missile.targetId;

@@ -10,6 +10,34 @@ import org.junit.jupiter.api.Test;
 
 /** Executes complete attacks without core, ECS, MPQs or global RNG. */
 class NativeAttackResolverTest {
+  @Test void preResolvedMonsterChargeSkipsHitAndDefenseRollsButStillAppliesResistance() {
+    for (boolean nativeSchedule : new boolean[] {false, true}) {
+      List<Integer> bounds = new ArrayList<>();
+      java.util.function.IntUnaryOperator random = bound -> { bounds.add(bound); return bound - 1; };
+      NativeCombatRolls rolls = nativeSchedule
+          ? new NativeCombatRolls(random, random) : new NativeCombatRolls(random);
+      NativeAttackData a = new NativeAttackData();
+      a.preResolvedHit = true;
+      a.minDamage = a.maxDamage = 10;
+      NativeDefenseData d = new NativeDefenseData();
+      d.isPlayer = true;
+      d.defense = 1000000;
+      d.canBlock = true;
+      d.blockChance = 75;
+      d.passiveDodge = d.passiveEvade = d.passiveWeaponBlock = 100;
+      d.damageReducedPercent = 50;
+      NativeDamagePacket hit = new NativeAttackResolver(rolls).resolve(a, d);
+      assertTrue(hit.hit);
+      assertFalse(hit.blocked);
+      assertEquals(100, hit.hitChance);
+      assertEquals(-1, hit.hitRoll);
+      assertEquals(5, hit.physicalDamage);
+      assertEquals(Arrays.asList(1), bounds, "only the collapsed legacy physical damage roll");
+      assertTrue(d.canBlock, "resolving a skill must not mutate defender snapshots");
+      assertEquals(100, d.passiveDodge);
+    }
+  }
+
   @Test void collapsedDrainPreservesFractionAndNeedsNoDamageDrawOrResistance() {
     List<Integer> bounds = new ArrayList<>();
     NativeAttackData a = guaranteedAttack(0);

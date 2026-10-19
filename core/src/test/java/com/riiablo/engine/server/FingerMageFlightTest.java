@@ -10,6 +10,29 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FingerMageFlightTest {
+  @Test void partialRowsKeepTheirHeadingEvenWithALiveTarget() {
+    World world = new World(new WorldConfiguration());
+    try {
+      int target = world.create();
+      int id = world.create();
+      world.getMapper(Position.class).create(target).position.set(10, 3);
+      world.getMapper(Angle.class).create(id).set(Vector2.X);
+      world.process();
+      Missile missile = new Missile();
+      missile.targetId = target;
+      missile.nativeLifetimeFrames = 80;
+      missile.missile = new Missiles.Entry();
+      missile.missile.pSrvDoFunc = 11;
+      for (int[] params : new int[][] {null, new int[0], new int[] {5}}) {
+        missile.missile.Param = params;
+        Vector2 velocity = new Vector2(6, 0);
+        FingerMageFlight.update(world, id, missile, Vector2.Zero, velocity, 5);
+        assertEquals(new Vector2(6, 0), velocity);
+        assertEquals(Vector2.X, world.getMapper(Angle.class).get(id).angle);
+      }
+    } finally { world.dispose(); }
+  }
+
   @Test void repathsOnlyOnCountdownBoundaryAndUsesSignedCoordinates() {
     World world = new World(new WorldConfiguration());
     try {

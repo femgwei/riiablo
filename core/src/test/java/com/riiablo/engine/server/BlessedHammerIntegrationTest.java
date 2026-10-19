@@ -120,16 +120,34 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
   @Test
   void srvDmg05StacksUndeadAndDemonBonuses() {
     Missile missile = new Missile();
-    missile.missile = Riiablo.files.Missiles.get("blessedhammer");
+    missile.missile = new Missiles.Entry();
+    missile.missile.pSrvDmgFunc = 5;
+    missile.missile.dParam = new int[] {50, 30};
     Monster target = new Monster().set(new MonStats.Entry(), new MonStats2.Entry());
     assertEquals(0, MissileCollisionSystem.blessedHammerTargetBonusPercent(missile, target));
     target.monstats.lUndead = true;
     assertEquals(50, MissileCollisionSystem.blessedHammerTargetBonusPercent(missile, target));
     target.monstats.demon = true;
-    assertEquals(100, MissileCollisionSystem.blessedHammerTargetBonusPercent(missile, target));
+    assertEquals(80, MissileCollisionSystem.blessedHammerTargetBonusPercent(missile, target));
     target.monstats.lUndead = false;
     target.monstats.hUndead = true;
-    assertEquals(100, MissileCollisionSystem.blessedHammerTargetBonusPercent(missile, target));
+    assertEquals(80, MissileCollisionSystem.blessedHammerTargetBonusPercent(missile, target));
+  }
+
+  @Test
+  void nativeHammerDoesNotInventADemonBonusAbsentFromTheTable() {
+    Missile missile = new Missile();
+    missile.missile = Riiablo.files.Missiles.get("blessedhammer");
+    assertEquals(50, missile.missile.dParam[0]);
+    assertEquals(0, missile.missile.dParam[1]);
+    Monster target = new Monster().set(new MonStats.Entry(), new MonStats2.Entry());
+    target.monstats.demon = true;
+    assertEquals(0, MissileCollisionSystem.blessedHammerTargetBonusPercent(missile, target));
+    target.monstats.lUndead = true;
+    assertEquals(50, MissileCollisionSystem.blessedHammerTargetBonusPercent(missile, target));
+    target.monstats.lUndead = false;
+    target.monstats.hUndead = true;
+    assertEquals(50, MissileCollisionSystem.blessedHammerTargetBonusPercent(missile, target));
   }
 
   @Test
@@ -163,6 +181,7 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
         .with(new EventSystem(), new ServerSkillSystem(true), new SkillCastHandler(),
             new OverlayManager(), factory)
         .build().register("factory", factory)
+        .register("clientContext", com.riiablo.engine.client.ClientGameplayContext.fromGlobals())
         .register("map", new com.riiablo.map.Map(0, 0)));
     try {
       int paladin = world.create();

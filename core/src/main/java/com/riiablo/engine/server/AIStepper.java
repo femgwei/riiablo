@@ -255,7 +255,8 @@ public class AIStepper extends IteratingSystem {
       int[] data = entities.getData();
       for (int i = 0, size = entities.size(); i < size; i++) {
         MapWrapper target = mMapWrapper.get(data[i]);
-        if (target == null || target.map != source.map || target.zone == null) continue;
+        if (source.map == null || target == null || target.map != source.map
+            || target.zone == null || target.zone == source.zone) continue;
         if (source.map.areZonesAdjacent(source.zone, target.zone)) return true;
       }
       return false;

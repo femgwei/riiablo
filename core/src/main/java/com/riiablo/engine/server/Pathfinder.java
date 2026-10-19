@@ -400,8 +400,8 @@ public class Pathfinder extends IteratingSystem {
   private boolean isMonsterCharge(int entityId) {
     if (!mMonster.has(entityId)) return false;
     com.riiablo.engine.server.component.Casting cast = mCasting.get(entityId);
-    com.riiablo.codec.excel.Skills.Entry skill = cast == null ? null
-        : files().skills.get(cast.skillId);
+    if (cast == null || cast.skillId < 0) return false;
+    com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(cast.skillId);
     return skill != null && skill.srvdofunc == 67;
   }
 

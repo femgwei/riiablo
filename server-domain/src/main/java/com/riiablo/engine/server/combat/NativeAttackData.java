@@ -98,6 +98,8 @@ public class NativeAttackData {
 
   /** Missiles.txt ToHit is disabled, so collision itself guarantees a hit. */
   public boolean alwaysHit;
+  /** Native skill supplied SUCCESSFULHIT instead of calling GetResultFlags (monster Charge). */
+  public boolean preResolvedHit;
 
   /** 生命偷取百分比 */
   public int lifeLeech;

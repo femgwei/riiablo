@@ -35,6 +35,7 @@ final class CombatSnapshotFactory {
     int attackMaxDamageOverride;
     int attackRatingOverride;
     boolean alwaysHit;
+    boolean preResolvedHit;
     int[] elementalMinOverride;
     int[] elementalMaxOverride;
     int coldLengthOverride;
@@ -163,6 +164,7 @@ final class CombatSnapshotFactory {
     a.minimumDamagePercent = statInt(attacker, Stat.item_mindamage_percent, 0);
     a.maximumDamagePercent = statInt(attacker, Stat.item_maxdamage_percent, 0);
     a.alwaysHit = alwaysHit;
+    a.preResolvedHit = request.preResolvedHit;
     NativeCombatContext combatContext = context
         .withCombatants(attackerPlayer, defenderPlayer)
         .withTargetType(defenderDemon, defenderUndead);

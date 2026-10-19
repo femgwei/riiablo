@@ -37,6 +37,7 @@ class AmazonArrowPresentationTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new SkillCastHandler(), new OverlayManager(), factory)
         .build().register("factory", factory)
+        .register("clientContext", ClientGameplayContext.fromGlobals())
         .register("map", new com.riiablo.map.Map(0, 0)));
     try {
       int amazon = world.create();

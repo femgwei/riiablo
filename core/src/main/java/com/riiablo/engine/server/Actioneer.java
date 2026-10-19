@@ -6179,10 +6179,8 @@ public class Actioneer extends PassiveSystem {
     }
     Attributes attacker = mAttributesWrapper.get(entityId).attrs;
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
-    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttackWithContext(
-        attacker, defender, false, isPlayerEntity(targetId), false,
-        statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
-        statInt(attacker, Stat.tohit),
+    CombatSystem.CombatResult combat = combatSystemResolver.calculateMonsterChargeWithContext(
+        attacker, defender, isPlayerEntity(targetId),
         stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {

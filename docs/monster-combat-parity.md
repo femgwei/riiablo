@@ -23,13 +23,13 @@
 
 以下 core 入口均可追加 `'-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F'`：
 
-- `:core:monsterDataTest`：真实表格、等级、难度、A1/A2/S1、多人倍率及属性来源。
+- `:core:monsterDataTest`：真实表格、等级、难度、A1/A2/S1、多人倍率及属性来源，以及 Fallen 近战动画动作点。
 - `:core:monsterModeElementTest`：MonStats 模式规则、动作进入/清理/受击保留、原生序列第零动作点、多弹共享、近战实际扣血/状态/Vitals、双字单位随机流，以及真实工厂创建暴击与碰撞主人 Crit；不代表所有技能和事件队列的原版调度。
 - `:core:monsterCombatTest`：结算包、命中/格挡阈值、宿主适配和 ECS 事件；不等待 AI 自己攻击。
 - `:core:monsterAttackTest`：普通攻击及原生动画/复活链路。
-- `:core:monsterPursuitTest`：静止/移动目标追击及重寻路回归。
+- `:core:monsterPursuitTest`：静止/移动目标追击、全部 Pathfinder*Test，以及 RoomEx 休眠/唤醒回归。
 - `:core:monsterSummonTest`：产怪、孵化、生成上限及阻挡。
-- `:core:monsterMissileTest`：怪物物理/瞬时元素/纯表格毒素及选定来源混合弹体端点、发射快照、碰撞/状态扣血/事件/同步，以及刺毛鼠和已有弹体生命周期。
+- `:core:monsterMissileTest`：怪物物理/瞬时元素/纯表格毒素及选定来源混合弹体端点、发射快照、碰撞/状态扣血/事件/同步，以及刺毛鼠、FingerMage*Test 和已有弹体生命周期。
 - `:core:monsterElementalTest`：瞬时元素及选定来源混合弹体全链路与真实萨满火弹表格/行为；不代表所有元素技能、毒云或地面持续伤害。
 - `:core:monsterPoisonTest`：纯表格及选定来源混合毒速率/时长、实际状态逐帧扣血/到期、无毒回血/毒/燃烧/药水 HPREGEN 合算、普通怪物撕裂伤口触发/速率/刷新、难度适配，以及既有毒标枪/毒云/毒匕首/毒新星/狂犬病/淬毒兼容回归；不代表完整回血与毒伤调度已经原版化。
 - `:core:monsterSpecialTest`：自爆、弹体、诅咒、火/冷/电强化回调及已有特殊技能。

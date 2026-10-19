@@ -48,7 +48,7 @@ class MonsterMeleeAnimationRegressionTest extends RiiabloTest {
   void animStepperDispatchesFallenAttackKeyframeBeforeWrap() {
     Probe probe = new Probe();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), probe, new AnimStepper())
+        .with(new EventSystem(), probe, new CofManager(), new AnimStepper())
         .build()
         .register("map", new Map(0, 0)));
     try {
@@ -78,7 +78,7 @@ class MonsterMeleeAnimationRegressionTest extends RiiabloTest {
     Riiablo.anim = D2.loadFromFile(Riiablo.mpqs.resolve("data\\global\\eanimdata.d2"));
     Probe probe = new Probe();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), probe, new AnimDataResolver(), new AnimStepper())
+        .with(new EventSystem(), probe, new CofManager(), new AnimDataResolver(), new AnimStepper())
         .build()
         .register("map", new Map(0, 0)));
     try {

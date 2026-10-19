@@ -69,7 +69,11 @@ class PathfinderTerrainPursuitTest {
     try (Fixture f = new Fixture((x, y) -> x == 20 && y <= 14)) {
       assertTrue(f.start());
       f.advance(300);
-      assertTrue(f.maxY >= 16, "size-three footprint must clear the end of the wall");
+      // Terrain/footprints are checked at Map.round, not the raw float center.
+      assertTrue(Map.round(f.maxY) >= 16, "size-three footprint must clear the end of the wall; maxY="
+          + f.maxY + " final=" + f.position(f.actor));
+      assertTrue(f.wallCrossingMinY != Integer.MAX_VALUE, "must actually cross the wall column");
+      assertTrue(f.wallCrossingMinY >= 16, "every crossing must clear the wall with the full footprint");
       assertTrue(f.position(f.actor).x > 23);
       assertTrue(f.position(f.actor).dst(f.position(f.target)) < 7);
     }
@@ -114,6 +118,7 @@ class PathfinderTerrainPursuitTest {
     final BiPredicate<Integer, Integer> wall;
     final boolean opensDoors;
     float maxY;
+    int wallCrossingMinY = Integer.MAX_VALUE;
 
     Fixture(BiPredicate<Integer, Integer> wall) {
       this(wall, true);
@@ -191,6 +196,7 @@ class PathfinderTerrainPursuitTest {
         world.process();
         Vector2 p = position(actor);
         maxY = Math.max(maxY, p.y);
+        if (Map.round(p.x) == 20) wallCrossingMinY = Math.min(wallCrossingMinY, Map.round(p.y));
         assertFalse(map.isBlockedForPath(Map.round(p.x), Map.round(p.y), 1, 3, true),
             "authoritative movement entered terrain at " + p);
         assertTrue(collision.isFreeForPath(actor, Engine.INVALID_ENTITY, Map.round(p.x), Map.round(p.y), 3),

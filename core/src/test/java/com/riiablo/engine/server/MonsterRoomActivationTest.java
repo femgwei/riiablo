@@ -155,6 +155,40 @@ class MonsterRoomActivationTest {
   }
 
   @Test
+  void roomSleepFallbackOnlyAcceptsADifferentAdjacentZoneInTheSameMap() {
+    AIStepper stepper = new AIStepper();
+    World world = new World(new WorldConfigurationBuilder().with(stepper).build());
+    try {
+      Map map = org.mockito.Mockito.spy(new Map(0, 0));
+      Map.Zone source = nativeThreeRoomZoneAt(0, 0);
+      Map.Zone adjacent = nativeThreeRoomZoneAt(120, 0);
+      // TestZone exports bounds through accessors, not Map's private grid.
+      org.mockito.Mockito.doReturn(true).when(map).areZonesAdjacent(source, adjacent);
+      source.enterClientRoom(0);
+      int monster = world.create();
+      world.getMapper(Position.class).create(monster).position.set(90, 10);
+      MapWrapper monsterMap = world.getMapper(MapWrapper.class).create(monster).set(map, source);
+      int player = world.create();
+      world.getMapper(Player.class).create(player);
+      world.getMapper(Position.class).create(player).position.set(130, 10);
+      MapWrapper playerMap = world.getMapper(MapWrapper.class).create(player).set(map, adjacent);
+      world.process();
+
+      assertFalse(source.isRoomActiveForAI(90, 10));
+      assertTrue(stepper.isInClientRoomOrSight(monster), "retain connected-zone seam fallback");
+      playerMap.set(map, source);
+      assertFalse(stepper.isInClientRoomOrSight(monster), "same-zone players must use room sight");
+      playerMap.set(new Map(0, 0), adjacent);
+      assertFalse(stepper.isInClientRoomOrSight(monster), "another map cannot activate this zone");
+      playerMap.set(map, nativeThreeRoomZoneAt(1000, 0));
+      assertFalse(stepper.isInClientRoomOrSight(monster), "disconnected zones cannot activate AI");
+      monsterMap.map = null;
+      playerMap.set(null, adjacent);
+      assertFalse(stepper.isInClientRoomOrSight(monster), "missing maps have no geometric seam");
+    } finally { world.dispose(); }
+  }
+
+  @Test
   void nativeClientRoomChangeKeepsIndependentReferencesAndSpawnClaims() {
     Map.Zone zone = nativeThreeRoomZone();
     Map.RoomEx source = zone.getRoomsEx().get(0);

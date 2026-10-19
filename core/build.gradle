@@ -326,6 +326,7 @@ def monsterTestGroups = [
         'com.riiablo.engine.server.FireHitIntegrationTest',
         'com.riiablo.engine.server.Act1MonsterEcsScenarioTest.fireHitKeyframeAppliesDamageAndDispatchesEvents'],
     monsterDataTest: [
+        'com.riiablo.engine.server.MonsterMeleeAnimationRegressionTest',
         'com.riiablo.engine.server.MonsterStatsMigrationTest',
         'com.riiablo.engine.server.MonsterStatsSnapshotIntegrationTest',
         'com.riiablo.engine.server.MonsterModeElementProfileTest',
@@ -345,13 +346,15 @@ def monsterTestGroups = [
         'com.riiablo.engine.server.FallenShamanAutoCombatIntegrationTest'],
     monsterPursuitTest: [
         monsterScenarioSuite + '.pursuingAiMustMakeProgressAndFollowMovingTarget',
-        'com.riiablo.engine.server.PathfinderRecoveryTargetTest.continuouslyMovingTargetDoesNotStarvePursuitVelocity'],
+        'com.riiablo.engine.server.Pathfinder*Test',
+        'com.riiablo.engine.server.MonsterRoomActivationTest'],
     monsterSummonTest: [
         monsterScenarioSuite + '.spawningAiCreatesConfiguredLivingChildren',
         monsterScenarioSuite + '.exhaustedNestCannotProduceUnlimitedChildren',
         monsterScenarioSuite + '.blockedNestPlacementCannotCreateAChild',
         monsterScenarioSuite + '.generatorsWithoutAnEnemyDoNotSpawn'],
     monsterMissileTest: [
+        'com.riiablo.engine.server.FingerMage*Test',
         'com.riiablo.engine.server.MonsterMissileCreationCriticalIntegrationTest',
         'com.riiablo.engine.server.MonsterModeElementLifecycleTest',
         'com.riiablo.engine.server.MonsterModeElementProfileTest',

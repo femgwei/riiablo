@@ -65,8 +65,13 @@ public final class NativeAttackResolver {
     // their historical unconditional draw contract.
     boolean runningMelee = rolls.nativeSchedule() && !attacker.isMissile
         && defender.isPlayer && defender.isRunning;
-    int hitRoll = rolls.nativeSchedule() && (attacker.alwaysHit || runningMelee) ? -1 : rolls.hitRoll();
-    if (gates == null) copyHit(result, calculateHit(attacker, defender, hitRoll));
+    int hitRoll = attacker.preResolvedHit
+        || rolls.nativeSchedule() && (attacker.alwaysHit || runningMelee) ? -1 : rolls.hitRoll();
+    if (attacker.preResolvedHit) {
+      result.hit = true;
+      result.hitChance = 100;
+      result.hitRoll = -1;
+    } else if (gates == null) copyHit(result, calculateHit(attacker, defender, hitRoll));
     else gates.resolveHit(result, hitRoll);
     if (runningMelee) { result.hit = true; result.hitChance = 100; result.hitRoll = -1; }
 
@@ -88,7 +93,7 @@ public final class NativeAttackResolver {
     // D2MOO SUNITDMG_ApplyBlockOrDodge evaluates shield block first. Missile
     // mode requests this branch only when the packet has physical damage;
     // elemental-only spell missiles continue to Avoid/Weapon Block instead.
-    if (defender.canBlock && hasBlockablePhysicalDamage(attacker)) {
+    if (!attacker.preResolvedHit && defender.canBlock && hasBlockablePhysicalDamage(attacker)) {
       int blockChance = gates == null ? calculateBlockChance(defender) : gates.blockChance();
       result.blocked = gates == null ? rolls.defensePercent(blockChance) : gates.shieldBlock(blockChance);
 
@@ -103,7 +108,7 @@ public final class NativeAttackResolver {
 
     // Failed shield block falls through to the passive resolver, whose moving
     // branch checks Evade and returns before stationary Weapon Block/Dodge/Avoid.
-    int passiveDefense = rolls.passiveDefense(
+    int passiveDefense = attacker.preResolvedHit ? NativeCombatConstants.DEFENSE_NONE : rolls.passiveDefense(
         defender.attackType, defender.isMoving, defender.passiveDodge,
         defender.passiveAvoid, defender.passiveEvade, defender.passiveWeaponBlock);
     if (passiveDefense == NativeCombatConstants.DEFENSE_DODGE
