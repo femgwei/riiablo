@@ -1478,6 +1478,11 @@ public class RenderSystem extends BaseEntitySystem {
    * player's current floor group makes only the occluding wall group fade.
    */
   float wallAlpha(Map.Zone zone, int worldTx, int worldTy, int wallSlot) {
+    return wallAlpha(zone, worldTx, worldTy, wallSlot, false);
+  }
+
+  private float wallAlpha(Map.Zone zone, int worldTx, int worldTy, int wallSlot,
+      boolean roof) {
     if (zone == null || wallSlot < 0 || wallSlot >= TileGrid.MAX_WALL_LAYERS) return 1f;
     TileGrid grid = zone.nativeTileGrid();
     if (grid == null) return 1f;
@@ -1515,16 +1520,30 @@ public class RenderSystem extends BaseEntitySystem {
     int playerPop = nativePopIndexAt(grid, playerLocalX, playerLocalY);
     WallTransitionState transition = updateWallTransition(grid, playerGroup, playerPop);
     boolean indoor = zone.level != null && zone.level.IsInside;
-    boolean current = wallContextOccludes(grid, indoor, wallGroup, playerGroup, playerPop, x, y);
-    if (transition.startMs == 0L) return current ? WALL_OCCLUDED_ALPHA : 1f;
+    boolean current = roof
+        ? roofContextOccludes(grid, wallGroup, playerGroup, playerPop, x, y)
+        : wallContextOccludes(grid, indoor, wallGroup, playerGroup, playerPop, x, y);
+    float occludedAlpha = roof ? 0f : WALL_OCCLUDED_ALPHA;
+    if (transition.startMs == 0L) return current ? occludedAlpha : 1f;
     long elapsed = Math.max(0L, System.currentTimeMillis() - transition.startMs);
     float progress = MathUtils.clamp((float) elapsed / WALL_FADE_MILLIS, 0f, 1f);
-    if (progress >= 1f) return current ? WALL_OCCLUDED_ALPHA : 1f;
-    boolean previous = wallContextOccludes(grid, indoor, wallGroup,
-        transition.fromGroup, transition.fromPop, x, y);
-    if (previous == current) return current ? WALL_OCCLUDED_ALPHA : 1f;
-    if (current) return 1f + (WALL_OCCLUDED_ALPHA - 1f) * progress;
-    return WALL_OCCLUDED_ALPHA + (1f - WALL_OCCLUDED_ALPHA) * progress;
+    if (progress >= 1f) return current ? occludedAlpha : 1f;
+    boolean previous = roof
+        ? roofContextOccludes(grid, wallGroup, transition.fromGroup, transition.fromPop, x, y)
+        : wallContextOccludes(grid, indoor, wallGroup,
+            transition.fromGroup, transition.fromPop, x, y);
+    if (previous == current) return current ? occludedAlpha : 1f;
+    if (current) return 1f + (occludedAlpha - 1f) * progress;
+    return occludedAlpha + (1f - occludedAlpha) * progress;
+  }
+
+  static boolean roofContextOccludes(TileGrid grid, int roofGroup, int playerGroup,
+      int playerPop, int roofX, int roofY) {
+    // Towns are outdoor Levels.txt rows, but their buildings still have indoor
+    // logical regions. Only roofs use this cutaway outside; trees and facades
+    // must continue to require an explicit Pop. Zero is the unassigned group.
+    return playerGroup > 0 && roofGroup == playerGroup
+        || nativePopContainsWall(grid, playerPop, roofX, roofY);
   }
 
   private static int logicalGroupAt(TileGrid grid, int x, int y) {
@@ -1654,13 +1673,14 @@ public class RenderSystem extends BaseEntitySystem {
     if (px > renderMaxX || px + Tile.WIDTH < renderMinX) return;
     for (int i = Map.WALL_OFFSET; i < Map.WALL_OFFSET + Map.MAX_WALLS; i++) {
       Tile tile = zone.get(i, tx, ty);
-      if (tile == null || tile == null) continue;
+      if (tile == null) continue;
       if (isPoppedPopPad(popped, tile)) continue;
       if (!Orientation.isRoof(tile.orientation)) continue;
       if (py + tile.roofHeight > renderMaxY) continue;
       TextureRegion texture = tileTexture(zone, tile);
       if (texture == null || py + tile.roofHeight + texture.getRegionHeight() < renderMinY) continue;
-      float alpha = wallAlpha(zone, tx, ty, i - Map.WALL_OFFSET);
+      float alpha = wallAlpha(zone, tx, ty, i - Map.WALL_OFFSET, true);
+      if (alpha <= 0f) continue;
       if (alpha != 1f) batch.setAlpha(alpha);
       batch.draw(texture, px, py + tile.roofHeight);
       if (alpha != 1f) batch.resetColor();
