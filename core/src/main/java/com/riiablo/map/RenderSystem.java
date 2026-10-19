@@ -1489,13 +1489,16 @@ public class RenderSystem extends BaseEntitySystem {
     int x = worldTx - zone.tx;
     int y = worldTy - zone.ty;
     int wallGroup;
+    int nativeFlags = 0;
     if (grid.inBounds(x, y)) {
       wallGroup = grid.wallLogicalGroups[wallSlot][y][x];
+      nativeFlags = grid.wallNativeFlags[wallSlot][y][x];
     } else {
       wallGroup = -1;
       for (TileGrid.BoundaryWall wall : grid.boundaryWalls) {
         if (wall.layer == wallSlot && wall.x == x && wall.y == y) {
           wallGroup = wall.logicalGroupId;
+          nativeFlags = wall.nativeFlags;
           break;
         }
       }
@@ -1520,6 +1523,20 @@ public class RenderSystem extends BaseEntitySystem {
     int playerPop = nativePopIndexAt(grid, playerLocalX, playerLocalY);
     WallTransitionState transition = updateWallTransition(grid, playerGroup, playerPop);
     boolean indoor = zone.level != null && zone.level.IsInside;
+    int tileId = grid.inBounds(x, y) ? grid.wallIds[wallSlot][y][x] : -1;
+    Tile renderedTile = zone.get(Map.WALL_OFFSET + wallSlot, worldTx, worldTy);
+    int style = renderedTile != null ? renderedTile.mainIndex
+        : tileId == -1 ? -1 : Tile.Index.mainIndex(tileId);
+    boolean hasPops = !grid.nativePops.isEmpty();
+    if (hasPops) {
+      float currentAlpha = nativePopAlpha(grid, playerPop, x, y, style, nativeFlags, roof);
+      if (transition.startMs == 0L) return currentAlpha;
+      float previousAlpha = nativePopAlpha(grid, transition.fromPop, x, y, style, nativeFlags, roof);
+      float progress = MathUtils.clamp(
+          (float) Math.max(0L, System.currentTimeMillis() - transition.startMs) / WALL_FADE_MILLIS,
+          0f, 1f);
+      return previousAlpha + (currentAlpha - previousAlpha) * progress;
+    }
     boolean current = roof
         ? roofContextOccludes(grid, wallGroup, playerGroup, playerPop, x, y)
         : wallContextOccludes(grid, indoor, wallGroup, playerGroup, playerPop, x, y);
@@ -1537,13 +1554,47 @@ public class RenderSystem extends BaseEntitySystem {
     return occludedAlpha + (1f - occludedAlpha) * progress;
   }
 
+  static float nativePopAlpha(TileGrid grid, int selectedPop, int x, int y,
+      int style, int flags, boolean roof) {
+    if (nativePopOccludes(grid, selectedPop, x, y, style, flags)) return 0f;
+    // Preserve the client's foreground-wall cutaway independently of the
+    // roof style switch. Only layer-one walls around the selected indoor
+    // Pop participate, not layer-two roof trim or arbitrary exterior cells.
+    if (!roof && selectedPop >= 0 && selectedPop < grid.nativePops.size()
+        && (flags & 0x1C000) == 0x4000
+        && (flags & 0x300) == 0) {
+      int selectedIndex = grid.nativePops.get(selectedPop).logicalIndex;
+      for (int i = 0; i < grid.nativePops.size(); i++) {
+        if (grid.nativePops.get(i).logicalIndex == selectedIndex
+            && nativePopContainsWall(grid, i, x, y)) return WALL_OCCLUDED_ALPHA;
+      }
+    }
+    return 1f;
+  }
+
+  static boolean nativePopOccludes(TileGrid grid, int selectedPop, int x, int y,
+      int style, int flags) {
+    // DRLGPRESET_UpdatePops selects a logical Pop INDEX, not just the first
+    // rectangle containing the player. All rectangles with that index switch
+    // together; TogglePopsVisibility additionally filters by DT1 tile style
+    // and excludes object walls (0x100). Outside all rectangles, index 0 wins.
+    if ((flags & (0x100 | 0x200)) != 0) return false;
+    int selectedIndex = selectedPop >= 0 && selectedPop < grid.nativePops.size()
+        ? grid.nativePops.get(selectedPop).logicalIndex : 0;
+    for (int i = 0; i < grid.nativePops.size(); i++) {
+      TileGrid.NativePop pop = grid.nativePops.get(i);
+      if (pop.logicalIndex == selectedIndex && pop.subIndex == style
+          && nativePopContainsWall(grid, i, x, y)) return true;
+    }
+    return false;
+  }
+
   static boolean roofContextOccludes(TileGrid grid, int roofGroup, int playerGroup,
       int playerPop, int roofX, int roofY) {
     // Towns are outdoor Levels.txt rows, but their buildings still have indoor
     // logical regions. Only roofs use this cutaway outside; trees and facades
     // must continue to require an explicit Pop. Zero is the unassigned group.
-    return playerGroup > 0 && roofGroup == playerGroup
-        || nativePopContainsWall(grid, playerPop, roofX, roofY);
+    return grid.nativePops.isEmpty() && playerGroup > 0 && roofGroup == playerGroup;
   }
 
   private static int logicalGroupAt(TileGrid grid, int x, int y) {
