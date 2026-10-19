@@ -902,6 +902,17 @@ public class Map implements Disposable {
         .add(DT1.Tile.SUBTILE_CENTER);
   }
 
+  /** Native town player spawn (tile index 0), retained before DRLG disposal. */
+  public Vector2 townPlayerSpawn() {
+    for (Zone zone : zones) {
+      if (zone.isTown() && zone.levelAct() == getAct() + 1
+          && zone.townPlayerSpawn != null) return zone.townPlayerSpawn.cpy();
+    }
+    Vector2 spawn = find(ID.TOWN_ENTRY_1);
+    if (spawn == null) spawn = find(ID.TOWN_ENTRY_2);
+    return spawn;
+  }
+
   public int flags(Vector2 vec) {
     return flags(round(vec.x), round(vec.y));
   }
@@ -1245,6 +1256,15 @@ public class Map implements Disposable {
     }
     /** Native Act spawn coordinate used for ordinary town portals, world subtiles. */
     private Vector2 townPortalSpawn;
+    private Vector2 townPlayerSpawn;
+
+    public Vector2 townPlayerSpawn() {
+      return townPlayerSpawn == null ? null : townPlayerSpawn.cpy();
+    }
+
+    public void setTownPlayerSpawn(float x, float y) {
+      townPlayerSpawn = new Vector2(x, y);
+    }
     /** Optional native Arcane Sanctuary graph; populated only for level 74. */
     private Act2ArcaneSanctuaryTopology arcaneSanctuaryTopology;
     /** Native exported tile layers kept until Zone.generate applies them. */
@@ -1506,6 +1526,7 @@ public class Map implements Disposable {
       this.nativeWallTileTypesByCoord.clear();
       this.syntheticArena = false;
       this.townPortalSpawn = null;
+      this.townPlayerSpawn = null;
       this.type      = map.files().LvlTypes.get(level.LevelType);
       this.gridSizeX = gridSizeX;
       this.gridSizeY = gridSizeY;
@@ -1557,6 +1578,7 @@ public class Map implements Disposable {
       nativeTileGrid = null;
       nativeDt1Mask = 0;
       townPortalSpawn = null;
+      townPlayerSpawn = null;
       gridSizeX = gridSizeY = 0;
       gridsX = gridsY = 0;
       tx = ty = 0;

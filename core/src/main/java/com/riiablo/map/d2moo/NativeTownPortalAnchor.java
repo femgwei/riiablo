@@ -31,6 +31,21 @@ final class NativeTownPortalAnchor {
     }
     if (marker == null) return false;
 
+    // GAME/Clients.cpp requests index 0 for players, independently of portals (11).
+    D2DrlgTileInfoStrc playerMarker = level.getPTileInfo(0);
+    for (int i = 0; i < level.getNTileInfo(); i++) {
+      D2DrlgTileInfoStrc candidate = level.getPTileInfo(i);
+      if (candidate != null && candidate.getNTileIndex() == 0) {
+        playerMarker = candidate;
+        break;
+      }
+    }
+    if (playerMarker != null) {
+      zone.setTownPlayerSpawn(
+          zone.x() + (playerMarker.getNPosX() - level.getLevelCoords().getNPosX()) * 5 + 3,
+          zone.y() + (playerMarker.getNPosY() - level.getLevelCoords().getNPosY()) * 5 + 3);
+    }
+
     // DUNGEON_FindActSpawnLocationEx uses gameTile * 5 + 3. Native
     // markers are absolute game tiles; Zone stores translated world subtiles.
     // The registry still performs collision and portal-separation adjustment.

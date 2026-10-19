@@ -83,6 +83,8 @@ class NativeTownPortalAnchorTest {
     assertTrue(NativeTownPortalAnchor.capture(level, zone));
     assertEquals(new Vector2(-500 + subtileX, 700 + subtileY), zone.townPortalSpawn());
     assertEquals(zone.townPortalSpawn(), TownPortalRegistry.preferredTownPosition(zone));
+    assertEquals(index == 11 ? new Vector2(-492, 708)
+        : new Vector2(-500 + subtileX, 700 + subtileY), zone.townPlayerSpawn());
   }
 
   private static D2DrlgLevel level(int id) {

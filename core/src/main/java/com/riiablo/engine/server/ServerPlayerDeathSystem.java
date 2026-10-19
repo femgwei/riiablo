@@ -147,10 +147,8 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
   /** Applies the authenticated respawn request while preserving the corpse entity. */
   public boolean respawnAtTown(int playerId) {
     if (!canRespawn(playerId) || map == null || !mPosition.has(playerId)) return false;
-    Vector2 town = map.find(Map.ID.TOWN_ENTRY_1);
-    if (town == null) town = map.find(Map.ID.TOWN_ENTRY_2);
-    if (town == null) town = map.find(Map.ID.TP_LOCATION);
-    if (town == null) return false;
+    Vector2 town = map.townPlayerSpawn();
+    if (town == null || map.getZone(town) == null || !map.getZone(town).isTown()) return false;
 
     Position position = mPosition.get(playerId);
     position.invalidateNativePrecision();

@@ -539,7 +539,7 @@ public class DeathHandler extends PassiveSystem {
   
   /**
    * Respawn player at town location (called when ESC is pressed after death)
-   * Reference: D2MOD - players respawn at town waypoint after death
+   * Reference: D2MOO GAME/Clients.cpp - town player spawn index 0.
    */
   public void respawnPlayerAtTown(int playerId) {
     if (map == null) {
@@ -547,16 +547,15 @@ public class DeathHandler extends PassiveSystem {
       return;
     }
     
-    // Find town entry point (similar to GameScreen spawn logic)
-    Vector2 townLocation = map.find(Map.ID.TOWN_ENTRY_1);
-    if (townLocation == null) {
-      townLocation = map.find(Map.ID.TOWN_ENTRY_2);
-    }
+    // Use the retained native player spawn, distinct from the portal marker.
+    Vector2 townLocation = map.townPlayerSpawn();
     
-    if (townLocation == null) {
-      log.warn("Could not find town entry point, respawning at origin");
-      townLocation = new Vector2(0, 0);
+    if (townLocation == null || map.getZone(townLocation) == null
+        || !map.getZone(townLocation).isTown()) {
+      log.warn("Could not find town player spawn; keeping player dead");
+      return;
     }
+    mMapWrapper.create(playerId).set(map, map.getZone(townLocation));
     
     Vector2 oldLocation = mPosition.has(playerId)
         ? new Vector2(mPosition.get(playerId).position)
