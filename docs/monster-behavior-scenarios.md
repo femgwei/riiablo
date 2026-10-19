@@ -10,7 +10,8 @@
 单独迭代新增场景可追加 `--tests '*MonsterBehaviorScenarioIntegrationTest'`。
 
 需要更快的分组执行或核对原版命中/伤害时，见 [分层入口与原版对照](monster-combat-parity.md)。
-行为场景通过不等于数值与原版一致；严格原版审计是独立任务，当前保留已知差异的失败断言。
+行为场景通过不等于数值与原版一致；严格源码预期审计是独立任务，不随生产实现改写预期。
+一次运行所有怪物分层、审计与架构门禁可用 `:core:monsterCombatAcceptance`，仍需追加资源路径。
 
 ## 结果断言，而非仅检查 AI 状态
 

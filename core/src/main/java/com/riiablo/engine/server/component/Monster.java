@@ -58,6 +58,9 @@ public class Monster extends Component {
   public int baalClonesCreated;
   /** Native per-monster seed consumed by cold/shatter rolls. */
   public int rngState;
+  /** One mode-entry selection, shared by every hit/projectile until the next
+   * non-gethit mode change. Never written back into permanent Attributes. */
+  public com.riiablo.engine.server.combat.NativeMonsterModeElements modeElements;
   /** Deferred RoomEx pack identity and leader marker used during activation. */
   public int nativePackId = -1;
   public boolean nativePackLeader;
@@ -128,6 +131,7 @@ public class Monster extends Component {
     baalLinkedOwnerId = -1;
     baalClonesCreated = 0;
     rngState = 0;
+    modeElements = null;
     nativePackId = -1;
     nativePackLeader = false;
     attack2MinDamage = 0;

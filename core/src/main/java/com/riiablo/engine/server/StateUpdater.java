@@ -1594,30 +1594,15 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
    * @param stateList 状态列表
    */
   private void processDamageOverTime(int entityId, StateList stateList) {
-    // 处理中毒
-    if (stateList.hasState(StateId.POISON)) {
-      UnitState poisonState = stateList.getState(StateId.POISON);
-      if (poisonState.exactDamagePerFrame > 0f || poisonState.damagePerFrame > 0) {
-        applyPoisonRegeneration(entityId, stateList, poisonState);
-      }
-    }
-    
-    // 处理燃烧
-    if (stateList.hasState(StateId.BURNING)) {
-      UnitState burningState = stateList.getState(StateId.BURNING);
-      if (burningState.exactDamagePerFrame > 0f || burningState.damagePerFrame > 0) {
-        applyDamageOverTime(entityId, burningState.sourceEntityId,
-            burningState.exactDamagePerFrame > 0f
-                ? burningState.exactDamagePerFrame : burningState.damagePerFrame,
-            stateList, StateId.BURNING);
-      }
-    }
+    // Poison and burning both install negative HPREGEN. Merge them with
+    // natural/stat-list/potion healing once, including ticks without poison.
+    applyLifeRegeneration(entityId, stateList);
     
     // 处理撕开伤口
     if (stateList.hasState(StateId.OPENWOUNDS)) {
       UnitState woundsState = stateList.getState(StateId.OPENWOUNDS);
       // 撕开伤口伤害基于角色等级
-      int damage = woundsState.level * 2;
+      int damage = woundsState.hasStatContribution(Stat.hpregen) ? 0 : woundsState.level * 2;
       if (damage > 0) {
         applyDamageOverTime(entityId, woundsState.sourceEntityId,
             damage, stateList, StateId.OPENWOUNDS);
@@ -1625,10 +1610,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
   }
 
-  /** Poison is a negative HPREGEN rate, not an independent hit before potion healing. */
-  private void applyPoisonRegeneration(int entityId, StateList states, UnitState poison) {
-    if (!mAttributesWrapper.has(entityId) || !canApplyDamageOverTime(
-        entityId, poison.sourceEntityId, StateId.POISON)) return;
+  /** PlrModes::EVENTS_HpRegen / MonsterMode::ApplyStatRegen scalar merge. */
+  private void applyLifeRegeneration(int entityId, StateList states) {
+    if (!mAttributesWrapper.has(entityId) || (!mPlayer.has(entityId) && !mMonster.has(entityId))) return;
     Attributes attrs = mAttributesWrapper.get(entityId).attrs;
     if (attrs == null) return;
     StatRef life = attrs.get(Stat.hitpoints, StatRef.obtain());
@@ -1641,17 +1625,35 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       potionRate = character.takeHealthPotionRecoveryTick();
       mUnitStates.get(entityId).healthPotionAdvanced = true;
     }
-    float rate = poison.exactDamagePerFrame > 0f
-        ? poison.exactDamagePerFrame : poison.damagePerFrame;
-    int poisonRate = (int) Math.min(Integer.MAX_VALUE, (double) rate * 256.0);
+    UnitState poison = states.getState(StateId.POISON);
+    UnitState burning = states.getState(StateId.BURNING);
+    UnitState wounds = states.getState(StateId.OPENWOUNDS);
+    boolean poisonAllowed = regenSourceAllowed(entityId, poison);
+    boolean burningAllowed = regenSourceAllowed(entityId, burning);
+    boolean woundsAllowed = regenSourceAllowed(entityId, wounds);
+    long damageRate = regenDamageRate(poison, poisonAllowed) + (long) regenDamageRate(burning, burningAllowed);
+    long stateRate = states.getTotalStatContribution(Stat.hpregen);
+    // Native negative stat-lists obey the same host PvP gate as legacy rates.
+    if (!poisonAllowed) stateRate -= blockedRegen(poison);
+    if (!burningAllowed) stateRate -= blockedRegen(burning);
+    if (!woundsAllowed) stateRate -= blockedRegen(wounds);
     StatRef regen = attrs.get(Stat.hpregen, StatRef.obtain());
     StatRef baseRegen = attrs.base().get(Stat.hpregen, StatRef.obtain());
     long netRate = NativePoisonRegenMath.netRate(
         regen != null ? regen.encodedValues() : 0,
-        states.getTotalStatContribution(Stat.hpregen), potionRate, poisonRate,
+        (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, stateRate)), potionRate,
+        (int) Math.min(Integer.MAX_VALUE, damageRate),
         baseRegen != null ? baseRegen.encodedValues() : 0,
         !player && mMonster.has(entityId) && hasLifeState(states));
     if (!player && states.hasState(StateId.PREVENTHEAL) && netRate >= 0) return;
+    if (!player && netRate < 0 && before < 256 && mMapWrapper.has(entityId)) {
+      MapWrapper wrapper = mMapWrapper.get(entityId);
+      Position position = mPosition.get(entityId);
+      // Native room-backed worlds protect sub-1HP monsters in town/no room.
+      // Reduced fixtures without a MapWrapper retain their explicit test scope.
+      if (wrapper.zone == null || position == null || wrapper.zone.isTown()
+          || wrapper.zone.findRoomEx(position.position.x, position.position.y) == null) return;
+    }
     StatRef maxLife = attrs.get(Stat.maxhp, StatRef.obtain());
     int maximum = maxLife != null ? maxLife.encodedValues() : Integer.MAX_VALUE;
     if (character != null && character.getStats() == attrs
@@ -1663,9 +1665,26 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       life.setEncoded(after);
     } else if (after < before) {
       // Keep host DOT notifications for net life loss, not a second poison hit.
-      applyDamageOverTime(entityId, poison.sourceEntityId, (before - after) / 256f,
-          states, StateId.POISON);
+      UnitState owner = poisonAllowed ? poison : woundsAllowed ? wounds : null;
+      if (owner == null && burningAllowed) owner = burning;
+      applyDamageOverTime(entityId, owner == null ? -1 : owner.sourceEntityId,
+          (before - after) / 256f, states,
+          owner == null ? -1 : owner.stateId, true);
     }
+  }
+
+  private boolean regenSourceAllowed(int entityId, UnitState state) {
+    return state != null && canApplyDamageOverTime(entityId, state.sourceEntityId, state.stateId);
+  }
+
+  private static int blockedRegen(UnitState state) {
+    return state == null ? 0 : Math.min(0, state.getStatContributionValue(Stat.hpregen));
+  }
+
+  private static int regenDamageRate(UnitState state, boolean allowed) {
+    if (!allowed || state.hasStatContribution(Stat.hpregen)) return 0;
+    float rate = state.exactDamagePerFrame > 0f ? state.exactDamagePerFrame : state.damagePerFrame;
+    return (int) Math.min(Integer.MAX_VALUE, Math.max(0.0, (double) rate * 256.0));
   }
 
   private boolean hasLifeState(StateList states) {
@@ -1838,7 +1857,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   }
 
   private boolean isPlayerAligned(int entityId) {
-    return mPlayer.has(entityId) || mMercenary.has(entityId) || mSummonedPet.has(entityId);
+    return entityId >= 0
+        && (mPlayer.has(entityId) || mMercenary.has(entityId) || mSummonedPet.has(entityId));
   }
 
   private boolean isHostile(int sourceId, int targetId) {
@@ -1873,6 +1893,11 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   /** Applies one server tick of DOT and emits the normal damage/death events. */
   private void applyDamageOverTime(int entityId, int sourceEntityId, float damage,
       StateList stateList, int stateId) {
+    applyDamageOverTime(entityId, sourceEntityId, damage, stateList, stateId, false);
+  }
+
+  private void applyDamageOverTime(int entityId, int sourceEntityId, float damage,
+      StateList stateList, int stateId, boolean regeneration) {
     if (damage <= 0 || !mAttributesWrapper.has(entityId)) return;
     if (!canApplyDamageOverTime(entityId, sourceEntityId, stateId)) return;
     Attributes attrs = mAttributesWrapper.get(entityId).attrs;
@@ -1884,7 +1909,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // distinct event kind so clients do not play pain on every poison frame.
     DamageEvent event = DamageEvent.obtainDamageOverTime(sourceEntityId, entityId, damage);
     DamageSettlement.prepare(world, event);
-    if (stateId == StateId.POISON && mPlayer.has(entityId)) {
+    if ((regeneration || stateId == StateId.POISON) && mPlayer.has(entityId)) {
       // Mutable host callbacks must not turn this nonlethal regen loss into a kill.
       event.damage = Float.isFinite(event.damage)
           ? Math.min(Math.max(0f, event.damage), Math.max(0f, hitpoints.asFixed() - 1f)) : 0f;

@@ -35,12 +35,15 @@ class MonsterMissilePoisonIntegrationTest extends RiiabloTest {
     try (Fixture f = new Fixture(true)) {
       StateList states = states(f);
       f.target.attrs.base().put(Stat.hitpoints, life / 256f);
-      f.target.attrs.base().put(Stat.hpregen, regen);
       f.target.attrs.reset();
       f.spawn(row(1, 2, 4));
       f.land();
       assertEquals(life, hp(f), "collision installs rate but does not apply an immediate poison hit");
       assertNotNull(states.getState(StateId.POISON));
+      // StateUpdater runs BEFORE collision in this fixture. Install the
+      // balancing rate now so this assertion isolates poisoned ticks, not
+      // the newly supported natural healing tick before infection.
+      f.target.attrs.base().put(Stat.hpregen, regen); f.target.attrs.reset();
       for (int tick = 0; tick < 4; tick++) {
         f.land();
         assertEquals(expected, hp(f));

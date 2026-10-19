@@ -3,27 +3,59 @@ package com.riiablo.engine.server.combat;
 /** Immutable weaponless monster projectile packet captured at creation.
  * D2Common MISSILE_CalculateDamageData stores 8.8 endpoints; D2Game
  * MISSMODE_FillDamageParams applies percentages AFTER the exclusive draw.
- * Weapon coefficients, critical pre-rolls and source-missile inheritance are
- * separate policies, not supplied by this packet.
+ * Weapon coefficients and source-missile inheritance remain separate policies.
  */
 public final class NativeMissilePhysicalDamage {
   public final int minimum, maximum;
   public final int damagePercent, demonPercent, undeadPercent;
   public final boolean bypassUndead;
+  public final boolean criticalCaptured, creationCritical;
+  public final boolean ownerCriticalCaptured, ownerCritical;
 
   public NativeMissilePhysicalDamage(int minimum, int maximum, int damagePercent,
       int demonPercent, int undeadPercent, boolean bypassUndead) {
+    this(minimum, maximum, damagePercent, demonPercent, undeadPercent, bypassUndead, false, false,
+        false, false);
+  }
+
+  private NativeMissilePhysicalDamage(int minimum, int maximum, int damagePercent,
+      int demonPercent, int undeadPercent, boolean bypassUndead,
+      boolean criticalCaptured, boolean creationCritical, boolean ownerCriticalCaptured, boolean ownerCritical) {
     this.minimum = minimum;
     this.maximum = maximum;
     this.damagePercent = Math.max(-90, damagePercent);
     this.demonPercent = demonPercent;
     this.undeadPercent = undeadPercent;
     this.bypassUndead = bypassUndead;
+    this.criticalCaptured = criticalCaptured;
+    this.creationCritical = creationCritical;
+    this.ownerCriticalCaptured = ownerCriticalCaptured;
+    this.ownerCritical = ownerCritical;
   }
 
   public NativeMissilePhysicalDamage withEndpoints(int minimum, int maximum) {
     return new NativeMissilePhysicalDamage(minimum, maximum, damagePercent,
-        demonPercent, undeadPercent, bypassUndead);
+        demonPercent, undeadPercent, bypassUndead, criticalCaptured, creationCritical,
+        ownerCriticalCaptured, ownerCritical);
+  }
+
+  public NativeMissilePhysicalDamage withCreationCritical(boolean critical) {
+    return new NativeMissilePhysicalDamage(minimum, maximum, damagePercent,
+        demonPercent, undeadPercent, bypassUndead, true, critical, ownerCriticalCaptured, ownerCritical);
+  }
+
+  /** Ephemeral impact view; never replace the projectile's creation snapshot. */
+  public NativeMissilePhysicalDamage withOwnerCritical(boolean critical) {
+    return new NativeMissilePhysicalDamage(minimum, maximum, damagePercent,
+        demonPercent, undeadPercent, bypassUndead, criticalCaptured, creationCritical, true, critical);
+  }
+
+  /** MISSILE_HasBonusStats(owner, null): passive ALWAYS consumes one draw,
+   * even at zero chance; deadly is drawn only after failure and when nonzero. */
+  public static boolean creationCritical(int passive, int deadly,
+      java.util.function.IntUnaryOperator random) {
+    return random.applyAsInt(100) < passive
+        || (deadly != 0 && random.applyAsInt(100) < deadly);
   }
 
   public boolean blockable() { return minimum > 0 && maximum > 0; }

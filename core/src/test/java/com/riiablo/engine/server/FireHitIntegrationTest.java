@@ -148,7 +148,7 @@ class FireHitIntegrationTest extends RiiabloTest {
     @Override protected void processSystem() {}
   }
 
-  private static final class NoopFactory extends EntityFactory {
+  static final class NoopFactory extends EntityFactory {
     @Override public int createPlayer(CharData data, Vector2 position) { return -1; }
     @Override public int createDynamicObject(int act, int preset, float x, float y) { return -1; }
     @Override public int createStaticObject(int act, int object, float x, float y) { return -1; }

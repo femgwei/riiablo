@@ -1441,6 +1441,35 @@ public class CombatSystem {
     return resolveSnapshot(request);
   }
 
+  /** Ordinary weaponless monster hit, consuming the mode-entry stat-list once.
+   * Optional overrides retain the existing spectral-hit profile contract. */
+  public CombatResult calculateMonsterMeleeAttack(
+      Attributes attacker, Attributes defender, boolean defenderPlayer,
+      int minDamage, int maxDamage, int attackRating, NativeMonsterModeElements modeElements,
+      int[] elementMin, int[] elementMax, int coldLength, int poisonLength,
+      StateList attackerStates, StateList defenderStates, boolean defenderMoving,
+      NativeCombatContext context, boolean defenderDemon, boolean defenderUndead,
+      boolean ignoreTargetDefenseAllowed, int monsterCriticalChance) {
+    CombatSnapshotFactory.Request request = new CombatSnapshotFactory.Request(
+        attacker, defender, false, defenderPlayer, context);
+    request.attackMinDamageOverride = minDamage;
+    request.attackMaxDamageOverride = maxDamage;
+    request.attackRatingOverride = attackRating;
+    request.elementalMinOverride = elementMin;
+    request.elementalMaxOverride = elementMax;
+    request.coldLengthOverride = coldLength;
+    request.poisonLengthOverride = poisonLength;
+    request.monsterModeElements = modeElements;
+    request.monsterCriticalChance = monsterCriticalChance;
+    request.attackerStates = attackerStates;
+    request.defenderStates = defenderStates;
+    request.defenderMoving = defenderMoving;
+    request.defenderDemon = defenderDemon;
+    request.defenderUndead = defenderUndead;
+    request.defenderIgnoreTargetDefenseAllowed = ignoreTargetDefenseAllowed;
+    return resolveSnapshot(request);
+  }
+
   private CombatResult resolveSnapshot(CombatSnapshotFactory.Request request) {
     if (request.attacker == null || request.defender == null) {
       CombatResult result = new CombatResult();

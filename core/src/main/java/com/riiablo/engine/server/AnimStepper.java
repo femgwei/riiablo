@@ -194,7 +194,7 @@ public class AnimStepper extends IntervalIteratingSystem {
       }
       if (sequence.mode1 != data.modes[pointIndex]) {
         sequence.mode1 = data.modes[pointIndex];
-        if (mCofReference.has(entityId)) cofs.setMode(entityId, sequence.mode1, true);
+        if (mCofReference.has(entityId)) cofs.setSequenceMode(entityId, sequence.mode1, true);
       }
       sequence.nativeMonsterCursor = next;
       animData.frame = data.frames[Math.min(data.frames.length - 1, next >>> 8)] << 8;

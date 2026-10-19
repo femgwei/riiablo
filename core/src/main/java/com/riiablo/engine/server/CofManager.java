@@ -27,6 +27,12 @@ import com.riiablo.logger.Logger;
 @All(CofReference.class)
 public class CofManager extends BaseEntitySystem {
   private static final Logger log = LogManager.getLogger(CofManager.class);
+  @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
+  protected ServerGameplayContext serverContext;
+  @com.artemis.annotations.Wire(name = "simulationSession", failOnNull = false)
+  protected com.riiablo.engine.SimulationSession simulationSession;
+  @com.artemis.annotations.Wire(name = "map", failOnNull = false)
+  protected com.riiablo.map.Map map;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
   protected ComponentMapper<CofComponents> mCofComponents;
@@ -56,6 +62,15 @@ public class CofManager extends BaseEntitySystem {
   }
 
   public void setMode(int id, byte mode, boolean force) {
+    setMode(id, mode, force, true);
+  }
+
+  /** A sequence point changes its displayed COF, not the logical SQ action. */
+  public void setSequenceMode(int id, byte mode, boolean force) {
+    setMode(id, mode, force, false);
+  }
+
+  private void setMode(int id, byte mode, boolean force, boolean refreshDamage) {
     CofReference reference = mCofReference.get(id);
     boolean restart = reference.mode == mode;
     if (restart && !force) return;
@@ -104,6 +119,11 @@ public class CofManager extends BaseEntitySystem {
           world.getMapper(com.riiablo.engine.server.component.Sequence.class).has(id));
     }
     reference.mode = mode;
+    if (refreshDamage) {
+      Sequence sequence = mSequence.get(id);
+      refreshMonsterElements(id, sequence != null && sequence.nativeMonster != null
+          && mode == sequence.mode1 ? com.riiablo.engine.Engine.Monster.MODE_XX : mode);
+    }
     // Publish the live mode before COF listeners resolve Object.mode. The
     // map-owned NativeObjectState separately retains the restorable end mode.
     com.riiablo.engine.server.component.Object object = mObject.get(id);
@@ -112,6 +132,35 @@ public class CofManager extends BaseEntitySystem {
     // animation at frame zero.  Mark it explicitly so the client can reset
     // the existing Animation without unloading/reloading every DCC layer.
     event.dispatch(ModeChangeEvent.obtain(id, mode, restart));
+  }
+
+  /** MonsterMode::sub_6FC627B0 runs before the mode callback (and point zero).
+   * Replicas must never consume the authoritative monster seed. */
+  private void refreshMonsterElements(int id, int mode) {
+    if (mode == com.riiablo.engine.Engine.Monster.MODE_GH
+        || (simulationSession != null && !simulationSession.mode().isAuthoritative())) return;
+    Monster monster = mMonster.get(id);
+    if (monster == null || monster.monstats == null) return;
+    com.riiablo.Files files = ServerGameplayContext.files(serverContext);
+    if (files == null) return;
+    com.riiablo.engine.server.component.AttributesWrapper wrapper = world.getMapper(
+        com.riiablo.engine.server.component.AttributesWrapper.class).get(id);
+    // Some construction paths publish COF before Attributes. Do not consume a
+    // level-one selection that will then be reused by the first real action.
+    if (wrapper == null || wrapper.attrs == null) { monster.modeElements = null; return; }
+    int level = wrapper.attrs.getValue(com.riiablo.attributes.Stat.level, 1);
+    int difficulty = map == null ? 0 : map.getDifficulty();
+    int players = MonsterStatsCalculator.nativePlayerCount(monster.monstats,
+        world.getAspectSubscriptionManager().get(com.artemis.Aspect.all(
+            com.riiablo.engine.server.component.Player.class)).getEntities().size());
+    NativeRng rng = monster.rngState != 0 ? new NativeRng(monster.rngState)
+        : NativeRng.forUnit(serverContext == null ? 0 : serverContext.gameSeed(), id);
+    boolean expansion = serverContext != null
+        ? serverContext.combatContext(difficulty).expansion()
+        : ServerGameplayContext.legacyCombatContext(difficulty).expansion();
+    monster.modeElements = com.riiablo.engine.server.combat.MonsterModeDamageResolver.resolveElements(
+        files, rng::nextInt, monster.monstats, level, difficulty, mode, players, expansion);
+    monster.rngState = rng.state();
   }
 
   /**
@@ -127,7 +176,7 @@ public class CofManager extends BaseEntitySystem {
     boolean restartChanged = reference.animationRestartId != animationRestartId;
     reference.animationRestartId = animationRestartId;
     if (modeChanged) {
-      setMode(id, mode);
+      setMode(id, mode, false, false);
     } else if (restartChanged) {
       event.dispatch(ModeChangeEvent.obtain(id, mode, true));
     }

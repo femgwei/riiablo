@@ -1743,7 +1743,23 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (mPlayer.has(targetId)) {
         targetAttrs.setCombatRunning(mRunning.has(targetId));
       }
-      CombatSystem.CombatResult combat = combatSystemResolver.calculateAttackAtDifficulty(
+      // Factory-audited ordinary missiles own their combat stream. Keep legacy
+      // skill/special policies on their existing schedule until audited too.
+      NativeRng impactRng = missile.nativePhysical != null && missile.nativePhysical.criticalCaptured
+          && !mPlayer.has(ownerId) && !mMercenary.has(ownerId)
+          ? new NativeRng(missile.rngState) : null;
+      CombatSystem impactCombat = impactRng == null ? combatSystemResolver : new CombatSystem(impactRng);
+      com.riiablo.engine.server.combat.NativeMissilePhysicalDamage impactPhysical = missile.nativePhysical;
+      if (impactRng != null && mMonster.has(ownerId)) {
+        Monster ownerMonster = mMonster.get(ownerId);
+        int chance = ownerMonster.monstats == null ? 0 : ownerMonster.monstats.Crit;
+        NativeRng ownerRng = ownerMonster.rngState == 0
+            ? NativeRng.forUnit(serverContext == null ? 0 : serverContext.gameSeed(), ownerId)
+            : new NativeRng(ownerMonster.rngState);
+        impactPhysical = impactPhysical.withOwnerCritical(chance > 0 && ownerRng.nextInt(100) < chance);
+        ownerMonster.rngState = ownerRng.state();
+      }
+      CombatSystem.CombatResult combat = impactCombat.calculateAttackAtDifficulty(
           attackAttrs,
           targetAttrs,
           mPlayer.has(ownerId),
@@ -1763,8 +1779,9 @@ public class MissileCollisionSystem extends IteratingSystem {
           mMonster.has(targetId) && isUndead(mMonster.get(targetId)),
           ignoreTargetDefenseAllowed,
           missile.skillId == com.riiablo.engine.server.skill.SkillId.NOVA,
-          !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? missile.nativePhysical : null,
+          !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? impactPhysical : null,
           !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? missile.nativeElemental : null);
+      if (impactRng != null) missile.rngState = impactRng.state();
       boolean damageHit = combat.hit && !combat.blocked;
       if (damageHit) {
         headlessPierceLastHitMissile = missileId;

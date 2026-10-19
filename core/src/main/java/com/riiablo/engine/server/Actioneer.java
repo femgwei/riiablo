@@ -2340,7 +2340,24 @@ public class Actioneer extends PassiveSystem {
           MonsterUniqueModifiers.ElementalAttack uniqueAttack = attackingMonster == null
               ? null : MonsterUniqueModifiers.rollSpectralHit(
                   attackingMonster, attackerAttrs, combatDifficulty());
-          if (uniqueAttack == null) {
+          if (attackingMonster != null && attackingMonster.modeElements != null
+              && !attackerPlayer && !mMercenary.has(entityId)) {
+            NativeRng meleeRng = attackingMonster.rngState == 0 ? NativeRng.forUnit(gameSeed(), entityId)
+                : new NativeRng(attackingMonster.rngState);
+            CombatSystem meleeCombat = serverContext == null ? combatSystemResolver : new CombatSystem(meleeRng);
+            combat = meleeCombat.calculateMonsterMeleeAttack(
+                attackerAttrs, attrs, targetPlayer,
+                monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId),
+                monsterAttackRating(entityId), attackingMonster.modeElements,
+                uniqueAttack == null ? null : uniqueAttack.min,
+                uniqueAttack == null ? null : uniqueAttack.max,
+                uniqueAttack == null ? 0 : uniqueAttack.coldLength,
+                uniqueAttack == null ? 0 : uniqueAttack.poisonLength,
+                stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+                nativeDifficultyContext(), isDemonTarget(targetId), isUndeadTarget(targetId),
+                ignoreTargetDefenseAllowed, attackingMonster.monstats == null ? 0 : attackingMonster.monstats.Crit);
+            if (serverContext != null) attackingMonster.rngState = meleeRng.state();
+          } else if (uniqueAttack == null) {
             combat = combatSystemResolver.calculateAttackAtDifficulty(
                 attackerAttrs, attrs, attackerPlayer, targetPlayer, false,
                 monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId),
@@ -2478,6 +2495,7 @@ public class Actioneer extends PassiveSystem {
           log.debug("{} calculated damage: {} on {}", entityId, damage, targetId);
         }
         if (damage <= 0 && combat.absorbedLife <= 0) {
+          if (combat.nativeElementalSettlement) applyCombatStates(entityId, targetId, combat);
           log.debug("{} melee hit on {} caused no damage", entityId, targetId);
           if (loggedMonsterMelee) {
             log.info("[MONSTER_MELEE] phase=damage entity={} monster={} mode={} target={} "
@@ -4798,7 +4816,8 @@ public class Actioneer extends PassiveSystem {
           combat.poisonDuration, attackerId);
     }
     if (combat.coldDuration > 0
-        && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
+        && (combat.nativeElementalSettlement
+            || combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0)) {
       StatusEffectApplier.forWorld(world).applyCold(targetId, combat.coldDuration, attackerId);
     }
   }
@@ -5550,9 +5569,13 @@ public class Actioneer extends PassiveSystem {
         monster.monstats, connectedPlayers);
     NativeRng profileRng = monster.rngState == 0 ? NativeRng.forUnit(gameSeed(), entityId)
         : new NativeRng(monster.rngState);
-    MonsterModeDamageResolver.Profile profile = MonsterModeDamageResolver.resolve(
-        files(), profileRng::nextInt, monster.monstats, level, combatDifficulty(), Engine.Monster.MODE_S1,
-        playerCount, true);
+    MonsterModeDamageResolver.Profile profile = monster.modeElements == null
+        ? MonsterModeDamageResolver.resolve(files(), profileRng::nextInt, monster.monstats,
+            level, combatDifficulty(), Engine.Monster.MODE_S1, playerCount,
+            nativeDifficultyContext().expansion())
+        : MonsterModeDamageResolver.resolveWithElements(files(), monster.monstats,
+            level, combatDifficulty(), Engine.Monster.MODE_S1, playerCount,
+            nativeDifficultyContext().expansion(), monster.modeElements);
     monster.rngState = profileRng.state();
     log.info("[MONSTER_SKILL] phase=fire_hit_profile entity={} monster={} target={} "
             + "source=monstats_s1 physical={}..{} ar={} fire={}..{} lightning={}..{} "
@@ -5571,12 +5594,22 @@ public class Actioneer extends PassiveSystem {
         profile.elementalMax[CombatSystem.DAMAGE_MAGIC],
         profile.matchedElementProfiles);
 
-    CombatSystem.CombatResult combat = combatSystemResolver.calculateAttackWithContext(
+    NativeRng hitRng = monster.rngState == 0 ? NativeRng.forUnit(gameSeed(), entityId)
+        : new NativeRng(monster.rngState);
+    CombatSystem hitCombat = serverContext == null ? combatSystemResolver : new CombatSystem(hitRng);
+    CombatSystem.CombatResult combat = monster.modeElements != null
+        ? hitCombat.calculateMonsterMeleeAttack(attacker, defender, isPlayerEntity(targetId),
+            profile.minDamage, profile.maxDamage, profile.attackRating, monster.modeElements,
+            null, null, 0, 0, stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+            nativeDifficultyContext(), isDemonTarget(targetId), isUndeadTarget(targetId),
+            isIgnoreTargetDefenseAllowed(targetId), monster.monstats.Crit)
+        : combatSystemResolver.calculateAttackWithContext(
         attacker, defender, false, isPlayerEntity(targetId), false,
         profile.minDamage, profile.maxDamage, profile.attackRating, false,
         profile.elementalMin, profile.elementalMax,
         profile.coldLength, profile.poisonLength,
         stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
+    if (serverContext != null && monster.modeElements != null) monster.rngState = hitRng.state();
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit) {
       log.info("[MONSTER_SKILL] phase=fire_hit_result entity={} target={} result=miss chance={}",
@@ -5593,7 +5626,10 @@ public class Actioneer extends PassiveSystem {
             + "physical={} fire={} total={}",
         entityId, targetId, combat.hitChance, combat.physicalDamageHp(),
         combat.elementalDamage[CombatSystem.DAMAGE_FIRE], damage);
-    if (damage <= 0 && combat.absorbedLife <= 0) return;
+    if (damage <= 0 && combat.absorbedLife <= 0) {
+      if (combat.nativeElementalSettlement) applyCombatStates(entityId, targetId, combat);
+      return;
+    }
 
     StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hitpoints == null || hitpoints.asFixed() <= 0f) return;

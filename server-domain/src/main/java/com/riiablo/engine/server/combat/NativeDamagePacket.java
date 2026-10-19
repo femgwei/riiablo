@@ -13,6 +13,7 @@ public class NativeDamagePacket {
   public boolean blockAnimationAllowed;
   public int defenseType = NativeCombatConstants.DEFENSE_NONE;
   public boolean critical;
+  public boolean monsterCritical;
   public boolean deadlyStrike;
   public boolean crushingBlow;
   public int physicalDamage;
@@ -22,6 +23,8 @@ public class NativeDamagePacket {
   /** Legacy whole-HP summary, not suitable for applying fixed-point packets to life. */
   public int totalDamage;
   public int elementalScale = 1;
+  /** Native independent rate/length settlement, including fully MDR-reduced cold hits. */
+  public boolean nativeElementalSettlement;
   public int lifeStolen;
   public int manaStolen;
   public int absorbedLife;
@@ -72,6 +75,7 @@ public class NativeDamagePacket {
     blockAnimationAllowed = false;
     defenseType = NativeCombatConstants.DEFENSE_NONE;
     critical = false;
+    monsterCritical = false;
     deadlyStrike = false;
     crushingBlow = false;
     physicalDamage = 0;
@@ -79,6 +83,7 @@ public class NativeDamagePacket {
     for (int i = 0; i < NativeCombatConstants.DAMAGE_TYPE_COUNT; i++) elementalDamage[i] = 0;
     totalDamage = 0;
     elementalScale = 1;
+    nativeElementalSettlement = false;
     lifeStolen = 0;
     manaStolen = 0;
     absorbedLife = 0;

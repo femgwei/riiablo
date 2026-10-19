@@ -31,6 +31,79 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /** Real state -> net HPREGEN -> settlement and production-order potion handoff. */
 class PoisonRegenIntegrationTest extends RiiabloTest {
+  @ParameterizedTest @CsvSource({"true,60,2620", "false,60,2620", "true,-60,2500", "false,-60,2500"})
+  void nativeRegenRunsWithoutPoison(boolean player, int rate, int expected) {
+    try (Fixture f = new Fixture(player,2560)) {
+      f.attrs.base().put(Stat.hpregen,rate); f.attrs.reset();
+      f.tick(); assertEquals(expected,f.hp());
+      assertEquals(rate < 0 ? 1 : 0,f.probe.requests);
+    }
+  }
+
+  @ParameterizedTest @CsvSource({"0,511,0,2049", "300,256,128,2476", "500,256,128,2676"})
+  void burningAndPoisonShareOneNetRegenerationWrite(int healing, int poison, int burning, int expected) {
+    try (Fixture f = new Fixture(true,2560)) {
+      f.attrs.base().put(Stat.hpregen,healing); f.attrs.reset();
+      if (poison > 0) f.poison(poison,1,f.source);
+      if (burning > 0) f.dot(StateId.BURNING,burning,1,f.otherSource());
+      f.tick(); assertEquals(expected,f.hp());
+      assertEquals(expected < 2560 ? 1 : 0,f.probe.requests);
+      if (expected < 2560) assertEquals(f.source,f.probe.attacker);
+    }
+  }
+
+  @Test void burningUsesPlayerFloorAndMergesWithRealPotionOnlyOnce() {
+    try (Fixture f = new Fixture(true,128)) {
+      f.dot(StateId.BURNING,511,2,f.source); f.tick(); assertEquals(256,f.hp());
+      assertEquals(0,f.probe.deaths);
+    }
+    try (Fixture f = new Fixture(true,2560)) {
+      f.drink("hp1");
+      // hp1 Amazon: 45 HP / 192 frames = 60 raw/frame (independent literal).
+      int rate = 60;
+      f.dot(StateId.BURNING,20,1,f.source); f.tick();
+      assertEquals(2560 + rate - 20,f.hp());
+      f.tick(); assertEquals(2560 + 2 * rate - 20,f.hp());
+    }
+  }
+
+  @Test void nativeHpRegenOpenWoundsListIsMergedWithoutLegacyLevelDamage() {
+    try (Fixture f = new Fixture(true,2560)) {
+      f.states.addState(StateId.OPENWOUNDS,2,50,f.source).setNativeModifier(Stat.hpregen,-80);
+      f.poison(20,1,f.otherSource()); f.tick(); assertEquals(2460,f.hp());
+      f.tick(); assertEquals(2380,f.hp());
+      assertEquals(2,f.probe.requests);
+    }
+  }
+
+  @Test void playerNonpoisonNegativeRegenRespectsOneHpAndZeroNetDoesNotRaiseFractionalLife() {
+    try (Fixture f = new Fixture(true,128)) {
+      f.tick(); assertEquals(128,f.hp());
+      f.attrs.base().put(Stat.hpregen,-1); f.attrs.reset();
+      f.tick(); assertEquals(256,f.hp()); assertEquals(0,f.probe.deaths);
+    }
+  }
+
+  @Test void nativeNonpoisonRegenHonorsPreventHealAndSnapshotOnly() {
+    try (Fixture f = new Fixture(false,2560)) {
+      f.attrs.base().put(Stat.hpregen,60); f.attrs.reset();
+      f.states.addState(StateId.PREVENTHEAL,2); f.tick(); assertEquals(2560,f.hp());
+      // A life-mask state removes BASE regen, including a negative base value.
+      // Use an additional negative stat-list to exercise PREVENTHEAL's gate.
+      f.attrs.base().put(Stat.hpregen,0); f.attrs.reset();
+      f.states.addState(StateId.PRAYER,2,1,f.source).setNativeModifier(Stat.hpregen,-60);
+      f.tick(); assertEquals(2500,f.hp());
+      f.component.snapshotOnly = true; f.tick(); assertEquals(2500,f.hp());
+    }
+  }
+
+  @Test void nativeRoomBackedFractionalMonsterIsProtectedWhenRoomIsAbsent() {
+    try (Fixture f = new Fixture(false,128)) {
+      f.world.getMapper(MapWrapper.class).create(f.target);
+      f.poison(256,1,f.source); f.tick(); assertEquals(128,f.hp()); assertEquals(0,f.probe.deaths);
+    }
+  }
+
   @ParameterizedTest
   @CsvSource({"512,511,256", "256,511,256", "128,1,256", "1024,1,1023"})
   void playerPoisonNeverKillsAndRetainsRawFraction(int life, int rate, int expected) {
@@ -250,6 +323,26 @@ class PoisonRegenIntegrationTest extends RiiabloTest {
       f.tick();
       assertEquals(2620, f.hp());
       assertEquals(0, f.probe.requests);
+    }
+  }
+
+  @Test void rejectedPoisonCannotSuppressIndependentMonsterBurningAndPotion() {
+    try (Fixture f = new Fixture(true,2560)) {
+      f.world.getMapper(Monster.class).remove(f.source);
+      f.world.getMapper(Player.class).create(f.source);
+      int monster = f.otherSource();
+      f.poison(999,1,f.source); f.dot(StateId.BURNING,120,1,monster); f.drink("hp1");
+      f.tick(); assertEquals(2500,f.hp()); assertEquals(monster,f.probe.attacker);
+      f.tick(); assertEquals(2560,f.hp()); assertEquals(1,f.probe.requests);
+    }
+  }
+
+  @Test void rejectedNativeNegativeStatListCannotBypassPvpGate() {
+    try (Fixture f = new Fixture(true,2560)) {
+      f.world.getMapper(Monster.class).remove(f.source);
+      f.world.getMapper(Player.class).create(f.source);
+      f.states.addState(StateId.OPENWOUNDS,1,50,f.source).setNativeModifier(Stat.hpregen,-999);
+      f.drink("hp1"); f.tick(); assertEquals(2620,f.hp()); assertEquals(0,f.probe.requests);
     }
   }
 

@@ -1511,6 +1511,14 @@ public class ServerEntityFactory extends EntityFactory {
         // Hireling/equipped-weapon coefficients retain the legacy creation policy.
         ownerId < 0 || !world.getMapper(Mercenary.class).has(ownerId));
 
+    if (ownerMonster != null && !world.getMapper(Mercenary.class).has(ownerId)) {
+      NativeRng creationRng = ownerMonster.rngState == 0 ? NativeRng.forUnit(gameSeed(), ownerId)
+          : new NativeRng(ownerMonster.rngState);
+      MissileDamageResolver.captureMonsterCreationCritical(missileComponent, ownerAttrs,
+          mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null, creationRng::nextInt);
+      ownerMonster.rngState = creationRng.state();
+    }
+
     Position missilePosition = mPosition.create(id);
     missilePosition.invalidateNativePrecision();
     missilePosition.position.set(position);

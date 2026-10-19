@@ -51,6 +51,8 @@ final class CombatSnapshotFactory {
     boolean fixedPointElements;
     NativeMissilePhysicalDamage missilePhysical;
     NativeMissileElementalDamage missileElemental;
+    NativeMonsterModeElements monsterModeElements;
+    int monsterCriticalChance;
 
     Request(Attributes attacker, Attributes defender, boolean attackerPlayer,
         boolean defenderPlayer, NativeCombatContext context) {
@@ -143,6 +145,7 @@ final class CombatSnapshotFactory {
     int enhancedDamageBonus = request.enhancedDamageBonus;
     boolean fixedPointElements = request.fixedPointElements;
     AttackerData a = new AttackerData();
+    a.monsterCriticalChance = request.monsterCriticalChance;
     a.isPlayer = attackerPlayer;
     a.isMissile = missile;
     a.fixedPointElements = fixedPointElements;
@@ -296,6 +299,32 @@ final class CombatSnapshotFactory {
       a.coldLength = Math.max(0, coldLengthOverride);
       a.poisonLength = Math.max(0, poisonLengthOverride);
     }
+    NativeMonsterModeElements modeElements = request.monsterModeElements;
+    if (!attackerPlayer && !missile && modeElements != null && !modeElements.unsupportedType
+        && (attackerStates == null || !attackerStates.hasState(StateId.VENOMCLAWS))) {
+      a.nativeMonsterMeleeElements = true;
+      for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
+        a.elementalMinDamage[i] += modeElements.minimum[i];
+        a.elementalMaxDamage[i] += modeElements.maximum[i];
+      }
+      a.coldLength += modeElements.coldLength;
+      a.poisonLength += modeElements.poisonLength;
+      if (attackerStates != null) {
+        a.coldLength += attackerStates.getTotalStatContribution(Stat.coldlength);
+        a.poisonLength += attackerStates.getTotalStatContribution(Stat.poisonlength);
+      }
+      short[] masteries = {0, Stat.passive_fire_mastery, Stat.passive_ltng_mastery,
+          Stat.passive_cold_mastery, Stat.passive_pois_mastery, Stat.passive_mag_mastery};
+      for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
+        a.elementalMastery[i] = statInt(attacker, masteries[i], 0)
+            + (attackerStates == null ? 0 : attackerStates.getTotalStatContribution(masteries[i]));
+      }
+      a.poisonCount = statInt(attacker, Stat.poison_count, 0)
+          + (attackerStates == null ? 0 : attackerStates.getTotalStatContribution(Stat.poison_count));
+      a.poisonOverrideLength = statInt(attacker, Stat.skill_poison_override_length, 0)
+          + (attackerStates == null ? 0
+              : attackerStates.getTotalStatContribution(Stat.skill_poison_override_length));
+    }
     a.ignoreTargetDefense = statInt(attacker, Stat.item_ignoretargetac, 0) > 0;
 
     DefenderData d = new DefenderData();
@@ -396,7 +425,7 @@ final class CombatSnapshotFactory {
     d.absorbFlat[DAMAGE_MAGIC] = statInt(defender, Stat.item_absorbmagic, 0);
     d.cannotBeFrozen = statInt(defender, Stat.item_cannotbefrozen, 0) != 0;
     d.halfFreezeDuration = statInt(defender, Stat.item_halffreezeduration, 0) != 0;
-    if (a.missileElemental != null) {
+    if (a.missileElemental != null || a.nativeMonsterMeleeElements) {
       // CharData folds elemental penalties, NOT the independent PoisLen row.
       d.poisonLengthResistance = statInt(defender, Stat.item_poisonlengthresist, 0)
           + (defenderPlayer ? NativeDifficultyRules.playerResistancePenalty(combatContext) : 0)
@@ -435,7 +464,7 @@ final class CombatSnapshotFactory {
     d.magicDamageReduced = statInt(defender, Stat.magic_damage_reduction, 0);
     // Preserve legacy snapshot contracts elsewhere; this audited policy reads
     // the defender's active stat lists as well as permanent/item attributes.
-    if (a.missileElemental != null && defenderStates != null) {
+    if ((a.missileElemental != null || a.nativeMonsterMeleeElements) && defenderStates != null) {
       d.magicDamageReduced += defenderStates.getTotalStatContribution(Stat.magic_damage_reduction);
       d.absorbPercent[DAMAGE_FIRE] += defenderStates.getTotalStatContribution(Stat.item_absorbfire_percent);
       d.absorbPercent[DAMAGE_LIGHTNING] += defenderStates.getTotalStatContribution(Stat.item_absorblight_percent);

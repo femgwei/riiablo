@@ -12,6 +12,8 @@ public final class NativeAttackResolver {
   // MISSMODE_FillDamageParams rolls magic before lightning, unlike the legacy host enum.
   private static final int[] MISSILE_ELEMENT_ORDER = {
       DAMAGE_FIRE, DAMAGE_MAGIC, DAMAGE_LIGHTNING, DAMAGE_COLD, DAMAGE_POISON};
+  private static final int[] MELEE_ELEMENT_ORDER = {
+      DAMAGE_FIRE, DAMAGE_LIGHTNING, DAMAGE_COLD, DAMAGE_MAGIC, DAMAGE_POISON};
   private final NativeCombatRolls rolls;
 
   public NativeAttackResolver(NativeCombatRolls rolls) {
@@ -37,12 +39,22 @@ public final class NativeAttackResolver {
   public <T extends NativeDamagePacket> T resolve(NativeAttackData attacker,
       NativeDefenseData defender, T result, Gates gates) {
     result.reset();
+    // Reuse only the scalar length/resistance/absorb policy. Melee rolls below
+    // deliberately do NOT use MISSMODE_RollDamageValue's positive-min/swap rule.
+    NativeMissileElementalDamage nativeElements = attacker.missileElemental;
+    if (attacker.nativeMonsterMeleeElements && !attacker.isMissile) {
+      nativeElements = NativeMissileElementalDamage.mixed(DAMAGE_PHYSICAL, 0, 0, 0, 128,
+          attacker.elementalMinDamage, attacker.elementalMaxDamage,
+          attacker.coldLength, attacker.poisonLength, attacker.poisonCount,
+          attacker.poisonOverrideLength);
+    }
+    result.nativeElementalSettlement = nativeElements != null;
     result.physicalScale = attacker.fixedPointPhysical || attacker.missilePhysical != null ? 256 : 1;
     boolean convertsPhysical = attacker.physicalConversionPercent > 0
         && attacker.physicalConversionType > DAMAGE_PHYSICAL
         && attacker.physicalConversionType < DAMAGE_TYPE_COUNT;
     // Keep converted physical fractions even when item elements use legacy integer rolls.
-    result.elementalScale = attacker.fixedPointElements || attacker.missileElemental != null
+    result.elementalScale = attacker.fixedPointElements || nativeElements != null
         || (result.physicalScale == 256 && convertsPhysical) ? 256 : 1;
 
     // 1. Resolve the complete hit packet once. Both the combat result and
@@ -89,11 +101,14 @@ public final class NativeAttackResolver {
     int baseDamage = calculateBaseDamage(attacker, defender);
 
     // 4. 判定暴击/致命一击
-    result.critical = rollCriticalStrike(attacker);
+    boolean capturedCritical = attacker.missilePhysical != null
+        && attacker.missilePhysical.criticalCaptured;
+    result.critical = capturedCritical ? attacker.missilePhysical.creationCritical
+        : rollCriticalStrike(attacker);
     // D2MOO only rolls Deadly Strike after the passive/mastery critical
     // branch fails. This preserves both native RNG consumption and the
     // mutually-exclusive result flags.
-    result.deadlyStrike = !result.critical && rollDeadlyStrike(attacker);
+    result.deadlyStrike = !capturedCritical && !result.critical && rollDeadlyStrike(attacker);
 
     // 暴击和致命一击不叠加，取较高者
     if (result.critical || result.deadlyStrike) {
@@ -114,6 +129,29 @@ public final class NativeAttackResolver {
       convertedDamage = baseDamage * attacker.physicalConversionPercent / 100;
       baseDamage -= convertedDamage;
     }
+    int[] rawElements = new int[DAMAGE_TYPE_COUNT];
+    for (int channel = 1; channel < DAMAGE_TYPE_COUNT; channel++) {
+      int type = attacker.missileElemental != null ? MISSILE_ELEMENT_ORDER[channel - 1]
+          : attacker.nativeMonsterMeleeElements ? MELEE_ELEMENT_ORDER[channel - 1] : channel;
+      int value = calculateElementalDamage(attacker, type);
+      if (!attacker.fixedPointElements && nativeElements == null && result.elementalScale != 1)
+        value = saturatingInt((long) value * result.elementalScale);
+      if (type == attacker.physicalConversionType)
+        value += (int) ((long) convertedDamage * result.elementalScale / result.physicalScale);
+      if (type == DAMAGE_MAGIC && attacker.magicTargetBonusPercent > 0)
+        value += value * attacker.magicTargetBonusPercent / 100;
+      rawElements[type] = value;
+    }
+    // MonsterMode::ApplyCriticalDamage is after source rolls/conversion, before
+    // resistances; doubles ALL five channels (including poison RATE), not lengths.
+    result.monsterCritical = attacker.missilePhysical != null
+        && attacker.missilePhysical.ownerCriticalCaptured ? attacker.missilePhysical.ownerCritical
+        : rolls.percent(attacker.monsterCriticalChance);
+    if (result.monsterCritical) {
+      baseDamage = saturatingInt((long) baseDamage * 2);
+      for (int type = 1; type < DAMAGE_TYPE_COUNT; type++)
+        rawElements[type] = saturatingInt((long) rawElements[type] * 2);
+    }
     result.physicalDamage = applyPhysicalDamageReduction(baseDamage, defender,
         defender.isUndead && (attacker.missilePhysical != null
             ? attacker.missilePhysical.bypassUndead : attacker.bypassUndeadPhysicalResistance),
@@ -122,8 +160,8 @@ public final class NativeAttackResolver {
     // 7. 计算元素伤害
     // D2Game runs ColdLen through the same cold-resistance/pierce row as
     // cold damage, then applies Cannot Be Frozen / Half Freeze Duration.
-    result.coldDuration = attacker.missileElemental != null
-        ? attacker.missileElemental.coldDuration(defender, attacker.elementalPierce[DAMAGE_COLD])
+    result.coldDuration = nativeElements != null
+        ? nativeElements.coldDuration(defender, attacker.elementalPierce[DAMAGE_COLD])
         : applyElementalResistance(
         Math.max(0, attacker.coldLength), defender, DAMAGE_COLD,
         attacker.elementalPierce[DAMAGE_COLD]);
@@ -133,25 +171,18 @@ public final class NativeAttackResolver {
       result.coldDuration = scaleMonsterColdDuration(
           result.coldDuration, defender.isMonster, attacker.difficulty);
     }
-    result.poisonDuration = attacker.missileElemental != null
-        ? attacker.missileElemental.poisonDuration(defender, attacker.elementalPierce[DAMAGE_POISON])
+    result.poisonDuration = nativeElements != null
+        ? nativeElements.poisonDuration(defender, attacker.elementalPierce[DAMAGE_POISON])
         : Math.max(0, attacker.poisonLength);
     for (int channel = 1; channel < DAMAGE_TYPE_COUNT; channel++) {
-      int i = attacker.missileElemental != null ? MISSILE_ELEMENT_ORDER[channel - 1] : channel;
-      int elemDamage = calculateElementalDamage(attacker, i);
-      if (!attacker.fixedPointElements && attacker.missileElemental == null && result.elementalScale != 1) {
-        elemDamage = (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE,
-            (long) elemDamage * result.elementalScale));
-      }
-      if (i == attacker.physicalConversionType) {
-        elemDamage += (int) ((long) convertedDamage * result.elementalScale / result.physicalScale);
-      }
-      if (i == DAMAGE_MAGIC && attacker.magicTargetBonusPercent > 0) {
-        elemDamage += elemDamage * attacker.magicTargetBonusPercent / 100;
-      }
+      int i = attacker.missileElemental != null ? MISSILE_ELEMENT_ORDER[channel - 1]
+          : attacker.nativeMonsterMeleeElements ? MELEE_ELEMENT_ORDER[channel - 1] : channel;
+      int elemDamage = rawElements[i];
+      if (attacker.nativeMonsterMeleeElements && i == DAMAGE_COLD && elemDamage <= 0)
+        result.coldDuration = 0;
       if (elemDamage > 0) {
-        if (attacker.missileElemental != null) {
-          attacker.missileElemental.resolve(i, elemDamage, defender, attacker.elementalPierce[i], result);
+        if (nativeElements != null) {
+          nativeElements.resolve(i, elemDamage, defender, attacker.elementalPierce[i], result);
           continue;
         }
         if (attacker.fixedPointElements && i == DAMAGE_LIGHTNING) {
@@ -296,6 +327,17 @@ public final class NativeAttackResolver {
 
   private int calculateElementalDamage(NativeAttackData attacker, int damageType) {
     if (attacker.missileElemental != null) return attacker.missileElemental.roll(damageType, rolls);
+    if (attacker.nativeMonsterMeleeElements) {
+      // SUNITDMG_FillDamageValues / RollDamageValueInRange: instant stats <<8,
+      // poison already is an 8.8 rate; equal/reversed bounds consume no draw.
+      if (attacker.elementalMaxDamage[damageType] <= 0) return 0;
+      int shift = damageType == DAMAGE_POISON ? 1 : 256;
+      long min = (long) attacker.elementalMinDamage[damageType] * shift;
+      long max = (long) attacker.elementalMaxDamage[damageType] * shift;
+      min += NativePhysicalDamageMath.percentage(min, attacker.elementalMastery[damageType]);
+      max += NativePhysicalDamageMath.percentage(max, attacker.elementalMastery[damageType]);
+      return Math.max(0, rolls.physicalFixed(saturatingInt(min), saturatingInt(max)));
+    }
     int scale = attacker.fixedPointElements ? 256 : 1;
     int minDmg = scale == 1 ? attacker.elementalMinDamage[damageType]
         : saturatingInt((long) attacker.elementalMinDamage[damageType] * scale);

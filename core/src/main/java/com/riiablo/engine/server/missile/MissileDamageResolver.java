@@ -267,8 +267,11 @@ public final class MissileDamageResolver {
         && supportedSourceType
         && (ownerStates == null || !ownerStates.hasState(StateId.VENOMCLAWS))
         && !hasSpecialSourceElements(ownerAttrs, ownerStates)
-        && !hasApplicableMonsterElement(files, ownerMonster.monstats, row, currentMode, difficulty)) {
-      nativeElemental = monsterSourceElements(row, level, ownerAttrs, ownerStates, directType);
+        && (ownerMonster.modeElements == null || !ownerMonster.modeElements.unsupportedType)
+        && (ownerMonster.modeElements != null
+            || !hasApplicableMonsterElement(files, ownerMonster.monstats, row, currentMode, difficulty))) {
+      nativeElemental = monsterSourceElements(row, level, ownerAttrs, ownerStates, directType,
+          ownerMonster.modeElements);
     }
     int attackRating = statInt(ownerAttrs, Stat.tohit);
     if (sourceScale > 0 && ownerAttrs != null) {
@@ -293,8 +296,10 @@ public final class MissileDamageResolver {
       int playerCount = Math.max(1, statInt(ownerAttrs, Stat.monster_playercount));
       com.riiablo.engine.server.NativeRng rng = new com.riiablo.engine.server.NativeRng(projectile.rngState);
       int monsterLevel = ownerAttrs == null ? level : Math.max(1, statInt(ownerAttrs, Stat.level));
-      addMonsterElemental(files, rng, ownerMonster.monstats, mode, monsterLevel, difficulty,
-          sourceScale, playerCount, elementalMin, elementalMax, duration);
+      NativeMonsterModeElements elements = ownerMonster.modeElements;
+      if (elements == null) elements = MonsterModeDamageResolver.resolveElements(
+          files, rng::nextInt, ownerMonster.monstats, monsterLevel, difficulty, mode, playerCount, true);
+      addMonsterElemental(elements, sourceScale, elementalMin, elementalMax, duration);
       projectile.rngState = rng.state();
       coldLength = duration[0];
       poisonLength = duration[1];
@@ -1101,12 +1106,9 @@ public final class MissileDamageResolver {
     addScaledPair(attrs, Stat.magicmindam, Stat.magicmaxdam, scale, min, max, MAGIC);
   }
 
-  private static void addMonsterElemental(com.riiablo.Files files, com.riiablo.engine.server.NativeRng rng, MonStats.Entry monster, int mode,
-      int level, int difficulty, int sourceScale, int playerCount,
+  private static void addMonsterElemental(NativeMonsterModeElements elements, int sourceScale,
       int[] min, int[] max,
       int[] duration) {
-    NativeMonsterModeElements elements = MonsterModeDamageResolver.resolveElements(
-        files, rng::nextInt, monster, level, difficulty, mode, playerCount, true);
     for (int type = FIRE; type < DAMAGE_TYPES; type++) {
       min[type] += scaleSource(elements.minimum[type], sourceScale);
       max[type] += scaleSource(elements.maximum[type], sourceScale);
@@ -1141,22 +1143,46 @@ public final class MissileDamageResolver {
   }
 
   private static NativeMissileElementalDamage monsterSourceElements(Missiles.Entry row, int level,
-      Attributes owner, StateList states, int tableType) {
+      Attributes owner, StateList states, int tableType, NativeMonsterModeElements elements) {
     short[] minStats = {0, Stat.firemindam, Stat.lightmindam, Stat.coldmindam,
         Stat.poisonmindam, Stat.magicmindam};
     short[] maxStats = {0, Stat.firemaxdam, Stat.lightmaxdam, Stat.coldmaxdam,
         Stat.poisonmaxdam, Stat.magicmaxdam};
     int[] min = new int[DAMAGE_TYPES], max = new int[DAMAGE_TYPES];
     for (int type = FIRE; type < DAMAGE_TYPES; type++) {
-      min[type] = sourceStat(owner, states, minStats[type]);
-      max[type] = sourceStat(owner, states, maxStats[type]);
+      min[type] = sum(sourceStat(owner, states, minStats[type]), elements == null ? 0 : elements.minimum[type]);
+      max[type] = sum(sourceStat(owner, states, maxStats[type]), elements == null ? 0 : elements.maximum[type]);
     }
     return NativeMissileElementalDamage.mixed(tableType,
         missileElementalDamageFixed(row, level, true), missileElementalDamageFixed(row, level, false),
         elementalLength(row, level), row.SrcDamage, min, max,
-        sourceStat(owner, states, Stat.coldlength), sourceStat(owner, states, Stat.poisonlength),
+        sum(sourceStat(owner, states, Stat.coldlength), elements == null ? 0 : elements.coldLength),
+        sum(sourceStat(owner, states, Stat.poisonlength), elements == null ? 0 : elements.poisonLength),
         sourceStat(owner, states, Stat.poison_count),
         sourceStat(owner, states, Stat.skill_poison_override_length));
+  }
+
+  /** Factory-only owner-seed scheduling, after endpoint capture and before emission.
+   * Skills, origin missiles, hirelings and special callbacks keep legacy policies. */
+  public static void captureMonsterCreationCritical(Missile projectile, Attributes owner,
+      StateList states, java.util.function.IntUnaryOperator random) {
+    if (projectile == null || projectile.nativePhysical == null
+        || projectile.nativePhysical.criticalCaptured) return;
+    Missiles.Entry row = projectile.missile;
+    if (row == null || row.SrcDamage < 0 || row.SrcDamage > 255 || row.SrcMissDmg != 0
+        || hasText(row.Skill) || row.MissileSkill || row.pSrvDmgFunc != 0 || row.DamageRate != 0
+        || row.ApplyMastery || hasText(row.DmgSymPerCalc) || hasText(row.EDmgSymPerCalc)) return;
+    if (row.SrcDamage > 0 && projectile.nativeElemental == null) return;
+    int type = damageType(row.EType);
+    if (hasText(row.EType) && type <= PHYSICAL) return;
+    boolean critical = row.SrcDamage > 0 && NativeMissilePhysicalDamage.creationCritical(
+        sourceStat(owner, states, Stat.passive_critical_strike),
+        sourceStat(owner, states, Stat.item_deadlystrike), random);
+    projectile.nativePhysical = projectile.nativePhysical.withCreationCritical(critical);
+  }
+
+  private static int sum(int a, int b) {
+    return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, (long) a + b));
   }
 
   private static boolean hasSpecialSourceElements(Attributes owner, StateList states) {

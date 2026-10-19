@@ -168,7 +168,7 @@ class MonsterModeElementProfileTest extends RiiabloTest {
         Engine.Monster.MODE_A1, 1, true);
   }
 
-  private static MonStats.Entry row() {
+  static MonStats.Entry row() {
     MonStats.Entry row = new MonStats.Entry(); row.hcIdx = 7777; row.Id = "mode-element-audit";
     row.El1Mode = "A1"; row.El1Type = "fire";
     row.El1Pct = row.El2Pct = row.El3Pct = new int[] {100,100,100};
@@ -180,7 +180,7 @@ class MonsterModeElementProfileTest extends RiiabloTest {
     return row;
   }
 
-  private static Files files(MonStats.Entry row) {
+  static Files files(MonStats.Entry row) {
     Files files = mock(Files.class);
     try {
       for (java.lang.reflect.Field field : Files.class.getFields()) {
@@ -195,7 +195,7 @@ class MonsterModeElementProfileTest extends RiiabloTest {
     return files;
   }
 
-  private static Missiles.Entry missile() {
+  static Missiles.Entry missile() {
     Missiles.Entry row = new Missiles.Entry(); row.Missile = "mode-element-audit";
     row.SrcDamage = 128; row.HitShift = 8; row.Range = 100;
     return row;

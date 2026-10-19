@@ -221,9 +221,14 @@ class MonsterMissilePhysicalIntegrationTest extends RiiabloTest {
     float requested, physical;
     DamageAppliedEvent applied;
     DamageEvent request;
+    final java.util.Map<Integer, Integer> impactSeeds = new java.util.HashMap<>();
     @Subscribe public void request(DamageEvent event) {
       request = event;
       events++; requested = event.damage; physical = event.physicalDamage;
+      if (event.missileId >= 0) {
+        Missile projectile = world.getMapper(Missile.class).get(event.missileId);
+        if (projectile != null) impactSeeds.put(event.missileId, projectile.rngState);
+      }
     }
     @Subscribe public void applied(DamageAppliedEvent event) { applied = event; }
   }

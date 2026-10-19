@@ -11,6 +11,7 @@ public final class NativeMonsterModeElements {
   public final int[] minimum = new int[DAMAGE_TYPE_COUNT];
   public final int[] maximum = new int[DAMAGE_TYPE_COUNT];
   public int coldLength, poisonLength, matchedRows;
+  public boolean unsupportedType;
 
   /** Verified in 1.10f D2Game 6FC62B22..6FC62B47: addition, not 0x40 << row. */
   public static short tableFlags(int row) {
@@ -49,7 +50,7 @@ public final class NativeMonsterModeElements {
         min = signedInt((long) min * 10); max = signedInt((long) max * 10);
         poisonLength = signedInt((long) length * 2);
         break;
-      default: return;
+      default: unsupportedType = true; return;
     }
     minimum[type] = min;
     maximum[type] = max;

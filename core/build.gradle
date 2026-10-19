@@ -317,6 +317,9 @@ flatbuffers {
 def monsterScenarioSuite = 'com.riiablo.engine.server.ai.MonsterBehaviorScenarioIntegrationTest'
 def monsterTestGroups = [
     monsterModeElementTest: [
+        'com.riiablo.engine.server.MonsterMissileCreationCriticalIntegrationTest',
+        'com.riiablo.engine.server.MonsterModeElementLifecycleTest',
+        'com.riiablo.engine.server.MonsterModeMeleeIntegrationTest',
         'com.riiablo.engine.server.MonsterModeElementProfileTest',
         'com.riiablo.engine.server.FireHitIntegrationTest',
         'com.riiablo.engine.server.Act1MonsterEcsScenarioTest.fireHitKeyframeAppliesDamageAndDispatchesEvents'],
@@ -345,6 +348,8 @@ def monsterTestGroups = [
         monsterScenarioSuite + '.blockedNestPlacementCannotCreateAChild',
         monsterScenarioSuite + '.generatorsWithoutAnEnemyDoNotSpawn'],
     monsterMissileTest: [
+        'com.riiablo.engine.server.MonsterMissileCreationCriticalIntegrationTest',
+        'com.riiablo.engine.server.MonsterModeElementLifecycleTest',
         'com.riiablo.engine.server.MonsterModeElementProfileTest',
         'com.riiablo.engine.server.MonsterMissileSourceIntegrationTest',
         'com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest',
@@ -356,6 +361,7 @@ def monsterTestGroups = [
         'com.riiablo.engine.server.MissileRoomTrackingTest',
         'com.riiablo.engine.server.SpecialMissileLifecycleTest'],
     monsterElementalTest: [
+        'com.riiablo.engine.server.MonsterModeMeleeIntegrationTest',
         'com.riiablo.engine.server.MonsterModeElementProfileTest',
         'com.riiablo.engine.server.MonsterMissileSourceIntegrationTest',
         'com.riiablo.engine.server.MonsterMissileElementalIntegrationTest',
@@ -431,6 +437,16 @@ task monsterBehaviorTest(type: Test) {
   systemProperty 'java.awt.headless', 'true'
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
+}
+
+// One headless acceptance command; focused layers remain independently runnable.
+tasks.register('monsterCombatAcceptance') {
+  group = 'verification'
+  description = 'Run layered monster combat, original-source audits, AI effects and architecture gates.'
+  dependsOn monsterTestGroups.keySet().findAll { it != 'monsterAiTest' }
+  dependsOn 'monsterBehaviorTest', 'architectureRegression',
+      ':server-domain:test', ':server-domain:monsterCombatMathTest',
+      ':server-domain:monsterCombatParityTest'
 }
 
 task createFlatBuffers(type: FlatBuffers) {

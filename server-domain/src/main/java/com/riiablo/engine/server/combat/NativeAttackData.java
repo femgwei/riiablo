@@ -85,6 +85,13 @@ public class NativeAttackData {
   public NativeMissilePhysicalDamage missilePhysical;
   /** Audited ordinary elements: instantaneous 8.8 damage and poison 8.8 per-frame rates. */
   public NativeMissileElementalDamage missileElemental;
+  /** Ordinary monster source-stat melee policy (not missile endpoint semantics). */
+  public boolean nativeMonsterMeleeElements;
+  public int[] elementalMastery = new int[DAMAGE_TYPE_COUNT];
+  public int poisonCount;
+  public int poisonOverrideLength;
+  /** MonStats Crit is separate from passive/weapon physical-only critical. */
+  public int monsterCriticalChance;
   public int normalDamage;
   public int minimumDamagePercent;
   public int maximumDamagePercent;

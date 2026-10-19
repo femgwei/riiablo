@@ -49,6 +49,14 @@ public final class MonsterModeDamageResolver {
 
   public static Profile resolve(com.riiablo.Files files, java.util.function.IntUnaryOperator random,
       MonStats.Entry monster, int level, int difficulty, int mode, int playerCount, boolean expansion) {
+    return resolveWithElements(files, monster, level, difficulty, mode, playerCount, expansion,
+        resolveElements(files, random, monster, level, difficulty, mode, playerCount, expansion));
+  }
+
+  /** Reads physical columns but consumes the already selected action stat-list. */
+  public static Profile resolveWithElements(com.riiablo.Files files, MonStats.Entry monster,
+      int level, int difficulty, int mode, int playerCount, boolean expansion,
+      NativeMonsterModeElements elements) {
     Profile profile = new Profile();
     if (monster == null) return profile;
 
@@ -80,8 +88,7 @@ public final class MonsterModeDamageResolver {
           MonsterStatsCalculator.scaleMonsterCombatValue(profile.maxDamage, combatMultiplier));
     }
 
-    NativeMonsterModeElements elements = resolveElements(files, random, monster,
-        level, difficulty, mode, playerCount, expansion);
+    if (elements == null) elements = new NativeMonsterModeElements();
     System.arraycopy(elements.minimum, 0, profile.elementalMin, 0, elements.minimum.length);
     System.arraycopy(elements.maximum, 0, profile.elementalMax, 0, elements.maximum.length);
     profile.coldLength = elements.coldLength;
