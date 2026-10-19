@@ -55,6 +55,8 @@ public class Missile extends PooledComponent {
    */
   public final Attributes damage = Attributes.obtainStandard();
   public boolean damageSnapshot;
+  /** Independent native physical policy; legacy/skill packets leave this null. */
+  public com.riiablo.engine.server.combat.NativeMissilePhysicalDamage nativePhysical;
   public int damageLevel;
   /** Skills.txt row used to build this projectile's authoritative snapshot. */
   public int skillId = -1;
@@ -284,6 +286,7 @@ public class Missile extends PooledComponent {
     masteryCriticalChance = 0;
     damage.clear();
     damageSnapshot = false;
+    nativePhysical = null;
     damageLevel = 0;
     skillId = -1;
     freezesTarget = false;

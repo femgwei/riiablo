@@ -81,6 +81,8 @@ public class NativeAttackData {
   public boolean fixedPointElements;
   /** Native monster melee endpoint scaling and exclusive 8.8 roll; explicit opt-in for snapshots. */
   public boolean fixedPointPhysical;
+  /** Explicit projectile policy; endpoints are already 8.8, not melee HP stats. */
+  public NativeMissilePhysicalDamage missilePhysical;
   public int normalDamage;
   public int minimumDamagePercent;
   public int maximumDamagePercent;

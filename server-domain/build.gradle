@@ -29,7 +29,7 @@ task monsterCombatMathTest(type: Test) {
 
 task monsterCombatParityTest(type: Test) {
   group = 'verification'
-  description = 'Strict independent D2MOO-derived monster melee expectations, separate from legacy compatibility.'
+  description = 'Strict independent D2MOO-derived monster melee/missile expectations, separate from legacy compatibility.'
   dependsOn testClasses
   testClassesDirs = sourceSets.test.output.classesDirs
   classpath = sourceSets.test.runtimeClasspath

@@ -44,6 +44,7 @@ import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
@@ -1505,7 +1506,10 @@ public class ServerEntityFactory extends EntityFactory {
     int ownerMode = ownerId >= 0 && mCofReference.has(ownerId)
         ? mCofReference.get(ownerId).mode : -1;
     MissileDamageResolver.initialize(files(), missileComponent, ownerAttrs, ownerMonster,
-        ownerMode, Math.max(1, damageLevel), 0);
+        ownerMode, Math.max(1, damageLevel), 0,
+        ownerId >= 0 && mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null,
+        // Hireling/equipped-weapon coefficients retain the legacy creation policy.
+        ownerId < 0 || !world.getMapper(Mercenary.class).has(ownerId));
 
     Position missilePosition = mPosition.create(id);
     missilePosition.invalidateNativePrecision();

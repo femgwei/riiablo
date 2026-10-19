@@ -34,13 +34,13 @@ public final class NativeAttackResolver {
   public <T extends NativeDamagePacket> T resolve(NativeAttackData attacker,
       NativeDefenseData defender, T result, Gates gates) {
     result.reset();
-    result.physicalScale = attacker.fixedPointPhysical ? 256 : 1;
+    result.physicalScale = attacker.fixedPointPhysical || attacker.missilePhysical != null ? 256 : 1;
     boolean convertsPhysical = attacker.physicalConversionPercent > 0
         && attacker.physicalConversionType > DAMAGE_PHYSICAL
         && attacker.physicalConversionType < DAMAGE_TYPE_COUNT;
     // Keep converted physical fractions even when item elements use legacy integer rolls.
     result.elementalScale = attacker.fixedPointElements
-        || (attacker.fixedPointPhysical && convertsPhysical) ? 256 : 1;
+        || (result.physicalScale == 256 && convertsPhysical) ? 256 : 1;
 
     // 1. Resolve the complete hit packet once. Both the combat result and
     // the structured missile audit consume this same AR/defense/chance/roll
@@ -112,7 +112,9 @@ public final class NativeAttackResolver {
       baseDamage -= convertedDamage;
     }
     result.physicalDamage = applyPhysicalDamageReduction(baseDamage, defender,
-        defender.isUndead && attacker.bypassUndeadPhysicalResistance, result.physicalScale);
+        defender.isUndead && (attacker.missilePhysical != null
+            ? attacker.missilePhysical.bypassUndead : attacker.bypassUndeadPhysicalResistance),
+        result.physicalScale);
 
     // 7. 计算元素伤害
     // D2Game runs ColdLen through the same cold-resistance/pierce row as
@@ -255,6 +257,8 @@ public final class NativeAttackResolver {
   public static boolean hasBlockablePhysicalDamage(NativeAttackData attacker) {
     if (attacker == null) return false;
     if (!attacker.isMissile) return true;
+    if (attacker.missilePhysical != null)
+      return attacker.missilePhysical.blockable() && attacker.physicalConversionPercent < 100;
     return attacker.maxDamage > 0 && attacker.physicalConversionPercent < 100;
   }
 
@@ -265,6 +269,7 @@ public final class NativeAttackResolver {
   }
 
   private int calculateBaseDamage(NativeAttackData attacker, NativeDefenseData defender) {
+    if (attacker.missilePhysical != null) return attacker.missilePhysical.roll(defender, rolls);
     if (attacker.fixedPointPhysical) return NativePhysicalDamageMath.roll(attacker, defender, rolls);
     // Preserve zero-profile behavior before applying physical bonuses.
     if (attacker.maxDamage <= 0) return attacker.isMissile && attacker.alwaysHit ? 0 : 1;

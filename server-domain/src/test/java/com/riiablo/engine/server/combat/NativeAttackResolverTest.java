@@ -15,8 +15,16 @@ class NativeAttackResolverTest {
     for (Class<?> type : new Class<?>[] {NativeAttackData.class, NativeDefenseData.class}) {
       for (java.lang.reflect.Field field : type.getFields()) {
         assertTrue(field.getType().isPrimitive() || field.getType() == int[].class
-            || field.getType() == boolean[].class, field.getName());
+            || field.getType() == boolean[].class
+            || field.getType() == NativeMissilePhysicalDamage.class, field.getName());
       }
+    }
+    // The sole nested value is immutable and scalar-only, never an Attributes,
+    // ECS, state-list or shared mutable runtime reference.
+    assertTrue(java.lang.reflect.Modifier.isFinal(NativeMissilePhysicalDamage.class.getModifiers()));
+    for (java.lang.reflect.Field field : NativeMissilePhysicalDamage.class.getDeclaredFields()) {
+      assertTrue(field.getType().isPrimitive(), field.getName());
+      assertTrue(java.lang.reflect.Modifier.isFinal(field.getModifiers()), field.getName());
     }
     NativeAttackData a = new NativeAttackData(), b = new NativeAttackData();
     assertNotSame(a.elementalMinDamage, b.elementalMinDamage);

@@ -1762,7 +1762,8 @@ public class MissileCollisionSystem extends IteratingSystem {
               && mMonster.get(targetId).monstats.demon,
           mMonster.has(targetId) && isUndead(mMonster.get(targetId)),
           ignoreTargetDefenseAllowed,
-          missile.skillId == com.riiablo.engine.server.skill.SkillId.NOVA);
+          missile.skillId == com.riiablo.engine.server.skill.SkillId.NOVA,
+          !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? missile.nativePhysical : null);
       boolean damageHit = combat.hit && !combat.blocked;
       if (damageHit) {
         headlessPierceLastHitMissile = missileId;
@@ -2803,6 +2804,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     child.attackRating = source.attackRating;
     boolean visualOnlyShamanExplosion = "shamanexp".equalsIgnoreCase(row.Missile);
     if (source.damageSnapshot && !visualOnlyShamanExplosion) {
+      child.nativePhysical = source.nativePhysical;
       for (StatRef stat : source.damage.base()) {
         child.damage.base().putEncoded(stat.id(), stat.encodedParams(), stat.encodedValues());
       }

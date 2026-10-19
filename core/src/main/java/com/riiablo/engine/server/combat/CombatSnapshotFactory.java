@@ -49,6 +49,7 @@ final class CombatSnapshotFactory {
     boolean defenderIgnoreTargetDefenseAllowed = true;
     int enhancedDamageBonus;
     boolean fixedPointElements;
+    NativeMissilePhysicalDamage missilePhysical;
 
     Request(Attributes attacker, Attributes defender, boolean attackerPlayer,
         boolean defenderPlayer, NativeCombatContext context) {
@@ -147,6 +148,7 @@ final class CombatSnapshotFactory {
     // Migrate weaponless monster melee only. Player precomputed profiles and
     // missiles retain their separate endpoint/RNG contracts.
     a.fixedPointPhysical = !attackerPlayer && !missile && !precomputedPhysicalDamage;
+    a.missilePhysical = missile ? request.missilePhysical : null;
     a.normalDamage = statInt(attacker, Stat.item_normaldamage, 0);
     a.minimumDamagePercent = statInt(attacker, Stat.item_mindamage_percent, 0);
     a.maximumDamagePercent = statInt(attacker, Stat.item_maxdamage_percent, 0);

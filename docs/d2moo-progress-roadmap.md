@@ -11541,3 +11541,11 @@ build/ai-shared-collision-phase1-closeout.log。此前扩展轮 architectureRegr
 - 原始物理包、减伤、转换和物理吸血保留尺度，生命/事件调用读取 HP 访问器。实际 AI→近战→原始生命→两阶段事件→Vitals 序列化/客户端应用增加逐位检查，含不足一 HP 的非零命中。
 - 原有独立 D2MOO 推导审计 17 项全部通过，未改数值期望；原版 EXE/DLL 的逐击捕获样本仍缺，不能宣称所有战斗规则已与 1.10f 完全一致。
 - 玩家/佣兵武器力量与敏捷系数、预计算技能、弹体端点/RNG 和旧反伤/元素顺序不在本阶段完整迁移范围。具体政策、迁移 oracle 的分域和验证记录见 `docs/monster-combat-parity.md` 第四阶段。
+
+## 怪物战斗数值：普通物理弹体 8.8（2026-10-19）
+
+- 普通非技能、无 SrcMissDmg/物理公式的怪物弹体新增独立发射快照：HitShift 与来源 SrcDamage 在 8.8 下处理，A2 同步原始端点，碰撞时先排他抽取再应用百分比。非正端点为零，相同端点不扩展，反转正端点交换；不复用近战端点策略。
+- 已捕获的物理端点/百分比不随飞行期间主人属性或增伤状态变化；实际碰撞扣血、物理事件和 Vitals 往返保留 1/256 HP。新增 `:core:monsterMissileTest` 入口与独立弹体原版期望审计。
+- 原版依据：D2Common `Units/Missile.cpp` 的创建端点/来源比例/百分比快照，D2Game `MISSILES/MissMode.cpp` 的 RollDamageValue/FillDamageParams。样本仍为逆向源码推导，不是原版进程采集。
+- 本阶段未迁移原版创建时暴击预掷、完整每弹体 RNG 调度、技能/公式弹体、SrcMissDmg 原生继承、玩家/佣兵武器系数或元素结算顺序；详见 `docs/monster-combat-parity.md` 第五阶段。
+- 验证：domain 默认 130 / 快速 114 / 独立审计 25 全过；最终收尾弹体 52（新增 19）、近战 41、特殊 26、怪物聚合 821 全过，失败/错误/跳过为 0。桌面端/D2GS 编译、真实 1.10f 资源营地 manifest 与退出清理 PASS；主回归及收尾命令均返回 0。全 core、双机和原版进程逐击采样未执行。

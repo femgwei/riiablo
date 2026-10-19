@@ -339,6 +339,12 @@ def monsterTestGroups = [
         monsterScenarioSuite + '.exhaustedNestCannotProduceUnlimitedChildren',
         monsterScenarioSuite + '.blockedNestPlacementCannotCreateAChild',
         monsterScenarioSuite + '.generatorsWithoutAnEnemyDoNotSpawn'],
+    monsterMissileTest: [
+        'com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest',
+        'com.riiablo.engine.server.QuillRatMissileTest',
+        'com.riiablo.engine.server.MissileNativePolicyTest',
+        'com.riiablo.engine.server.MissileRoomTrackingTest',
+        'com.riiablo.engine.server.SpecialMissileLifecycleTest'],
     monsterSpecialTest: [
         monsterScenarioSuite + '.suicideAiDamagesNearbyPlayerOnlyAfterNativeFourFrameDelay',
         monsterScenarioSuite + '.shamanRangedAiMissileMustReachAndDamagePlayer',
