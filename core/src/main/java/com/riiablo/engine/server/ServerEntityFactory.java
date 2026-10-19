@@ -519,43 +519,24 @@ public class ServerEntityFactory extends EntityFactory {
     int baseMonsterLevel = MonsterStatsCalculator.resolveMonsterLevel(
         monstats, zone == null ? null : zone.level, difficulty, true);
 
-    MonsterStatsCalculator.MonsterStatsInit statsInit =
-        new MonsterStatsCalculator.MonsterStatsInit();
-    MonsterStatsCalculator.MonsterStatsInit attack1Init =
-        new MonsterStatsCalculator.MonsterStatsInit();
-    MonsterStatsCalculator.MonsterStatsInit attack2Init =
-        new MonsterStatsCalculator.MonsterStatsInit();
-    boolean calculated = MonsterStatsCalculator.calculateMonsterStatsByLevel(files(),
-        monsterId, gameType, difficulty, baseMonsterLevel, (short) 7, statsInit)
-        && MonsterStatsCalculator.calculateMonsterStatsByLevel(files(),
-            monsterId, gameType, difficulty, baseMonsterLevel, (short) 8, attack1Init)
-        && MonsterStatsCalculator.calculateMonsterStatsByLevel(files(),
-            monsterId, gameType, difficulty, baseMonsterLevel, (short) 0x10, attack2Init);
-    if (!calculated) {
+    int connectedPlayers = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Player.class)).getEntities().size();
+    com.riiablo.engine.server.combat.MonsterStatsSnapshot stats =
+        MonsterStatsCalculator.spawnSnapshot(files(), monstats, gameType, difficulty,
+            baseMonsterLevel, rank, connectedPlayers);
+    if (stats == null) {
       log.error("[MONSTER_NATIVE_STATS] calculation failed: monster={} level={} difficulty={}",
           monstats.Id, baseMonsterLevel, difficulty);
       return Engine.INVALID_ENTITY;
     }
 
-    int connectedPlayers = world.getAspectSubscriptionManager()
-        .get(Aspect.all(Player.class)).getEntities().size();
-    int playerCount = MonsterStatsCalculator.nativePlayerCount(monstats, connectedPlayers);
-    int combatMultiplier = MonsterStatsCalculator.nativeCombatMultiplier(
-        monstats, difficulty, playerCount, gameType != 0);
-    MonsterStatsCalculator.applyNativeCombatMultiplier(attack1Init, combatMultiplier);
-    MonsterStatsCalculator.applyNativeCombatMultiplier(attack2Init, combatMultiplier);
-    int hpBonus = MonsterStatsCalculator.nativeHpBonus(playerCount);
-    int expBonus = MonsterStatsCalculator.nativeExperienceBonus(playerCount);
-    int minHp = Math.min(statsInit.minHP, statsInit.maxHP);
-    int maxHp = Math.max(statsInit.minHP, statsInit.maxHP);
+    int playerCount = stats.playerCount;
+    int minHp = stats.baseMinHp;
+    int maxHp = stats.baseMaxHp;
     int baseHp = minHp == maxHp ? minHp : MathUtils.random(minHp, maxHp);
-    int hitpoints = Math.min(
-        baseHp + percentage(baseHp, hpBonus, 100), (1 << 23) - 1);
-    hitpoints = MonsterStatsCalculator.nativeRankHitpoints(hitpoints, rank, difficulty);
-    int experience = statsInit.Exp + percentage(statsInit.Exp, expBonus, 100);
-    experience = MonsterStatsCalculator.nativeRankExperience(experience, rank);
-    int monsterLevel = baseMonsterLevel
-        + MonsterStatsCalculator.nativeRankLevelBonus(rank);
+    int hitpoints = stats.hitpointsForBaseRoll(baseHp);
+    int experience = stats.experience;
+    int monsterLevel = stats.level;
 
     int id = existingId == Engine.INVALID_ENTITY
         ? super.createEntity(Class.Type.MON, monstats.Id) : existingId;
@@ -590,7 +571,7 @@ public class ServerEntityFactory extends EntityFactory {
       mNativeAiPathCache.create(id).allocated();
     }
     monster.rngState = NativeRng.forUnit(gameSeed(), id).state();
-    monster.setAttack2Profile(attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
+    monster.setAttack2Profile(stats.attack2.minDamage, stats.attack2.maxDamage, stats.attack2.attackRating);
 
     Attributes attrs = existingId != Engine.INVALID_ENTITY && mAttributesWrapper.has(id)
         ? mAttributesWrapper.get(id).attrs : Attributes.obtainStandard();
@@ -611,13 +592,13 @@ public class ServerEntityFactory extends EntityFactory {
     base.put(Stat.last_sent_hp_pct, 128);
     base.put(Stat.hitpoints, (float) hitpoints);
     base.put(Stat.maxhp, (float) hitpoints);
-    base.put(Stat.armorclass, statsInit.AC);
+    base.put(Stat.armorclass, stats.defense);
     base.put(Stat.experience, experience);
     base.putEncoded(Stat.hpregen,
         (int) ((((long) hitpoints << 8) * monstats.DamageRegen) >> 12));
-    base.put(Stat.tohit, attack1Init.TH);
-    base.put(Stat.mindamage, attack1Init.A1MinD);
-    base.put(Stat.maxdamage, attack1Init.A1MaxD);
+    base.put(Stat.tohit, stats.attack1.attackRating);
+    base.put(Stat.mindamage, stats.attack1.minDamage);
+    base.put(Stat.maxdamage, stats.attack1.maxDamage);
     // Monster ToBlock is only eligible for the native shield branch when the
     // monster presentation actually carries a shield (or the native row
     // explicitly opts out of the no-shield gate).  Do not let a bare ToBlock
@@ -643,10 +624,10 @@ public class ServerEntityFactory extends EntityFactory {
             + "difficulty={} players={} hp={} baseHpRange={}..{} exp={} "
             + "a1={}..{} ar={} a2={}..{} ar={} combatMultiplier={}",
         id, monstats.Id, monsterLevel, baseMonsterLevel, difficulty, playerCount,
-        hitpoints, statsInit.minHP, statsInit.maxHP, experience,
-        attack1Init.A1MinD, attack1Init.A1MaxD, attack1Init.TH,
-        attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH,
-        combatMultiplier);
+        hitpoints, stats.baseMinHp, stats.baseMaxHp, experience,
+        stats.attack1.minDamage, stats.attack1.maxDamage, stats.attack1.attackRating,
+        stats.attack2.minDamage, stats.attack2.maxDamage, stats.attack2.attackRating,
+        stats.combatMultiplier);
 
     Position spawnPosition = mPosition.create(id);
     // Reinitialization may reuse this component at the identical float point.
@@ -941,10 +922,6 @@ public class ServerEntityFactory extends EntityFactory {
   private static int arrayValue(int[] values, int index) {
     return values != null && index >= 0 && index < values.length
         ? values[index] : 0;
-  }
-
-  private static int percentage(int value, int multiplier, int divisor) {
-    return divisor == 0 ? 0 : (int) ((long) value * multiplier / divisor);
   }
 
   private static int statInt(Attributes attrs, short stat) {

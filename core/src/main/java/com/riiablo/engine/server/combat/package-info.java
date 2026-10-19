@@ -10,7 +10,8 @@
  * </ul>
  *
  * <p>编译边界：{@code :server-domain} 持有 NativeCombatContext、NativeDamagePacket、
- * NativeCombatConstants 和 NativeDifficultyPolicy；这些领域模型/规则不依赖本模块。
+ * NativeCombatConstants、NativeDifficultyPolicy、NativeMonsterStatsCalculator 和
+ * MonsterStatsSnapshot；这些领域模型/规则不依赖本模块。
  * {@code :core} 保留属性适配、CombatSystem/DefenseCalculator、状态与 ECS 应用，
  * NativeDifficultyRules 作为旧接口兼容门面，仅属性防重复难度扣减适配留在宿主层。
  * 

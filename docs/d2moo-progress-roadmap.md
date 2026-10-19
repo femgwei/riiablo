@@ -1,5 +1,18 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-19 怪物基础属性 domain 快照
+
+- 新增 `NativeMonsterStatsCalculator` 和不可变 `MonsterStatsSnapshot`，迁移既有表格比例、
+  区域等级、人数/rank、HP/经验与 A1/A2/S1 档位，不另造近似估算公式。
+- core 保留查表/兼容 facade；生成链读取快照，随机抽血量、词缀和 ECS 写入仍由宿主管理。
+  动作档位刷新继续按当前单位等级重算，不复用出生等级快照。
+- domain 默认 286 / 严格源码审计 97、真实资源数据 42 / 模式 46、架构 3 项通过；
+  包含冻结旧实现迁移对照及真实工厂的六组难度/人数/rank 场景。追加普通攻击 41 项、
+  桌面和 D2GS 编译通过；未重跑全 core。
+- 这是兼容分层：固定 rank 整数 HP/float 倍率、长乘法百分比保留；完整 8.8 MonUMod、
+  Classic 额外缩放、任意词缀/技能和原版进程采样没有借此宣称完成。
+  依据与验证边界见 [monster-combat-parity.md](monster-combat-parity.md) 第十二阶段。
+
 ## 2026-10-19 共享双字随机流、三方调度与普通怪物 OW
 
 - AI/模式/普通近战/创建暴击和选定回调共享 D2Common low/high 种子；弹体伤害、主人命中与

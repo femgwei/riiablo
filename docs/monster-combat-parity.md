@@ -11,7 +11,7 @@
 
 前者是现有算术、随机消费契约的快速回归；后者是独立原版期望审计，**第四阶段已修正原有 17 项中的全部已知差异**。没有禁用失败用例、没有改成当前实现的预期值；这是选定样本通过，不代表所有怪物、技能与原版实测全部一致。普通 `:server-domain:test` 与快速入口仍显式排除 `monster-parity-audit` 标签；审计必须单独运行，绝不能用普通测试通过代替原版对照。
 
-第五阶段另增物理弹体 8 项，第六阶段另增瞬时元素弹体 8 项，第七阶段另增毒速率/时长 6 项，第八阶段另增毒状态 8 项，第九阶段另增来源元素混合 8 项，第十阶段 A 另增模式元素 8 项，第十阶段 B 另增普通近战元素 8 项，第十一阶段另增撕裂伤口 15 项，当前严格审计合计 86 项；下文各阶段的测试数量均为当时的历史记录。
+第五阶段另增物理弹体 8 项，第六阶段另增瞬时元素弹体 8 项，第七阶段另增毒速率/时长 6 项，第八阶段另增毒状态 8 项，第九阶段另增来源元素混合 8 项，第十阶段 A 另增模式元素 8 项，第十阶段 B 另增普通近战元素 8 项，第十一阶段另增撕裂伤口 15 项，第十二阶段另增基础属性 11 项，当前严格审计合计 97 项；下文各阶段的测试数量均为当时的历史记录。
 
 一次执行全部怪物分层、独立审计、AI 行为及架构门禁：
 
@@ -38,7 +38,7 @@
 
 每个任务有独立报告：对应模块 `build/reports/tests/<任务名>/index.html`。按修改范围选任务；跨模块或玩法阶段验收再跑广域聚合。共享的 RiiabloTest 每类重新加载资源仍然存在，本轮没有引入全局资源缓存或并行执行，以免污染可变全局状态。
 
-初始分层阶段的历史验证：无资源快速层 47 项通过；core 数据 16、结算 62、攻击 23、追击 7、召唤 10、特殊 26 项均通过，AI 决策入口 719 项通过。首轮六个 core 任务一次执行含构建约 2 分 1 秒，之后补入两项格挡阈值并复跑结算。最新结果见第十一阶段。XML 的 testcase 时间不包括类级资源初始化，不能把它当任务总耗时；首次构建与后续增量执行也不可直接比较。
+初始分层阶段的历史验证：无资源快速层 47 项通过；core 数据 16、结算 62、攻击 23、追击 7、召唤 10、特殊 26 项均通过，AI 决策入口 719 项通过。首轮六个 core 任务一次执行含构建约 2 分 1 秒，之后补入两项格挡阈值并复跑结算。最新结果见第十二阶段。XML 的 testcase 时间不包括类级资源初始化，不能把它当任务总耗时；首次构建与后续增量执行也不可直接比较。
 
 ## 样本来源与可信度
 
@@ -341,6 +341,42 @@ OW 作为负 HPREGEN 与自然回血、药水、毒/燃烧合算，玩家保留 
 `MonsterMeleeDataReferenceTest` 使用选定安装的实际 MonStats/MonLvl，六种怪物、Classic/LoD、三难度、三攻击档位、人数 1/2/8，共 324 组合，逐项核对三个属性（972 断言）。预期直接按 D2MOO 的表格运算推导，不调用生产比例/倍率辅助函数。等级显式为 5/40/85；区域生成等级选择另由已有测试覆盖。该层不是独立原版资源快照，安装版本/Mod 会改变输入。
 
 `MonsterMeleeSettlementTest` 用固定单位 RNG 与默认整数快照验证命中、未命中、格挡和零伤害边界。伤害 20 的断言仍是旧快照兼容契约；严格审计、普通定点测试与生产属性适配/ECS 场景显式验证新精度策略。不把手动扣血冒充生产 ECS 生命写入，后者由攻击场景负责。
+
+### 第十二阶段：基础属性 domain 快照
+
+`server-domain` 新增 `NativeMonsterStatsCalculator` 与不可变 `MonsterStatsSnapshot`，
+迁移既有 MonStats/MonLvl 比例、Classic/LoD 表列、noRatio、区域等级选择、人数和固定 rank
+规则，以及 A1/A2/S1 档位。没有另外引入一套近似的 `MonsterDifficultyEstimator` 公式。
+输入除 `NativeCombatContext` 和怪物行外，还需已解析的 MonLvl 行、基础等级及 rank；
+显式人数重载保留 9+ 的 Mod 分支，context 便利重载仍遵守现有 1..8 上限。
+
+`core.MonsterStatsCalculator` 保留兼容 facade，负责查表与 Attributes/词缀适配。
+`ServerEntityFactory` 使用生成快照，但仍在宿主抽基础 HP，再应用人数/rank 倍率和写入 ECS；
+不能在缩放后的 HP 端点间均匀抽取。快照区分基础等级、表格等级与 rank 调整后的等级，
+并分别保存三种攻击 AR。`MonsterModeDamageResolver` 的物理档位委托 domain，
+动作刷新继续按单位当时等级计算，不把出生快照当作永久战斗属性。
+快照不保留可变表行，也不包含随机源、全局宿主、AI、碰撞或词缀执行。
+
+原版依据继续为本地 D2MOO revision `0c0bbd1`：
+`MonsterTbls.cpp::DATATBLS_CalculateMonsterStatsByLevel`、
+`Monster.cpp::MONSTER_InitializeStatsAndSkills/MONSTER_GetHpBonus/MONSTER_GetExperienceBonus`、
+`MonsterMode.cpp::sub_6FC627B0`，以及 MonsterUnique 的比例运算分支。
+本次首先保证抽取前后的行为兼容，不顺便改玩法公式：宿主 HP/经验百分比仍用 long 乘法，
+固定 rank HP 仍用整数 HP/float 倍率；这不等于原版完整 8.8 MonUMod 链路。
+Classic 只迁移表列选择，不新增 `MONSTERS_ApplyClassicScaling` 的额外分支；
+通用元素 API 保留既有 first-selected/noRatio 输出契约，动作元素仍走既有独立适配。
+任意 MonUMod/MonProp、冠军子类型、技能加成及最终词缀后战力不属于该快照。
+
+新增 domain 普通回归 13 项、严格源码字面审计 11 项；core 冻结 `776c385cd` 旧实现，
+覆盖 2000 组表格/flag、500 组生成组合和 HP 端点/中间 roll，另有缺表失败语义。
+真实 1.10f 工厂场景覆盖六组难度/人数/rank、HP/AC/经验/AR、石肤叠加和后续模式刷新。
+冻结实现仅证明迁移兼容；11 项严格预期为源码推导，不是原版进程采样。
+
+验证：domain 默认 286、严格审计 97 项通过；真实资源 `monsterDataTest` 42、
+`monsterModeElementTest` 46、架构 3 项通过，无失败/错误/跳过。
+首轮集成夹具遗漏 Pathfinder，6 项在 AI 注入阶段失败；补齐生产依赖后同组复验通过，
+未通过修改计算预期或跳过用例消除失败。追加 `monsterAttackTest` 41 项及桌面/D2GS 编译通过；
+同组合的严格审计为已通过的 UP-TO-DATE 结果，没有声称再次执行。未重跑全 core 或原版进程采样。
 
 ## 下一阶段生产修复与实测
 

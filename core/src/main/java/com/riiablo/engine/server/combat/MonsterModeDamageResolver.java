@@ -62,30 +62,14 @@ public final class MonsterModeDamageResolver {
 
     level = Math.max(1, level);
     difficulty = MathUtils.clamp(difficulty, 0, 2);
-    int combatMultiplier = MonsterStatsCalculator.nativeCombatMultiplier(
-        monster, difficulty, playerCount, expansion);
-    short physicalFlag = physicalFlag(mode);
-    MonsterStatsCalculator.MonsterStatsInit physical =
-        new MonsterStatsCalculator.MonsterStatsInit();
-    if (MonsterStatsCalculator.calculateMonsterStatsByLevel(files,
-        monster.hcIdx, expansion ? 1 : 0, difficulty, level, physicalFlag, physical)) {
-      profile.attackRating = Math.max(0, physical.TH);
-      if (physicalFlag == 0x10) {
-        profile.minDamage = Math.max(0, physical.A2MinD);
-        profile.maxDamage = Math.max(profile.minDamage, physical.A2MaxD);
-      } else if (physicalFlag == 0x20) {
-        profile.minDamage = Math.max(0, physical.S1MinD);
-        profile.maxDamage = Math.max(profile.minDamage, physical.S1MaxD);
-      } else {
-        profile.minDamage = Math.max(0, physical.A1MinD);
-        profile.maxDamage = Math.max(profile.minDamage, physical.A1MaxD);
-      }
-      profile.attackRating = MonsterStatsCalculator.scaleMonsterCombatValue(
-          profile.attackRating, combatMultiplier);
-      profile.minDamage = MonsterStatsCalculator.scaleMonsterCombatValue(
-          profile.minDamage, combatMultiplier);
-      profile.maxDamage = Math.max(profile.minDamage,
-          MonsterStatsCalculator.scaleMonsterCombatValue(profile.maxDamage, combatMultiplier));
+    if (files != null && files.monstats != null && files.MonLvl != null && files.MonLvl.size() > 0) {
+      NativeMonsterStatsCalculator.Attack physical = NativeMonsterStatsCalculator.attackProfile(
+          NativeCombatContext.forGameplay(difficulty, null, expansion),
+          files.monstats.get(monster.hcIdx), files.MonLvl.get(Math.min(level, files.MonLvl.size() - 1)),
+          physicalFlag(mode), playerCount);
+      profile.attackRating = physical.attackRating;
+      profile.minDamage = physical.minDamage;
+      profile.maxDamage = physical.maxDamage;
     }
 
     if (elements == null) elements = new NativeMonsterModeElements();
