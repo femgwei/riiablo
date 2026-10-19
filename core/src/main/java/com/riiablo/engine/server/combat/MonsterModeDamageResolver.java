@@ -80,43 +80,47 @@ public final class MonsterModeDamageResolver {
           MonsterStatsCalculator.scaleMonsterCombatValue(profile.maxDamage, combatMultiplier));
     }
 
+    NativeMonsterModeElements elements = resolveElements(files, random, monster,
+        level, difficulty, mode, playerCount, expansion);
+    System.arraycopy(elements.minimum, 0, profile.elementalMin, 0, elements.minimum.length);
+    System.arraycopy(elements.maximum, 0, profile.elementalMax, 0, elements.maximum.length);
+    profile.coldLength = elements.coldLength;
+    profile.poisonLength = elements.poisonLength;
+    profile.matchedElementProfiles = elements.matchedRows;
+    return profile;
+  }
+
+  /** Shared table adapter only; callers still own when and how often to refresh. */
+  public static NativeMonsterModeElements resolveElements(com.riiablo.Files files,
+      java.util.function.IntUnaryOperator random, MonStats.Entry monster, int level,
+      int difficulty, int mode, int playerCount, boolean expansion) {
+    NativeMonsterModeElements result = new NativeMonsterModeElements();
+    if (monster == null || files == null) return result;
+    difficulty = MathUtils.clamp(difficulty, 0, 2);
+    int multiplier = MonsterStatsCalculator.nativeCombatMultiplier(
+        monster, difficulty, playerCount, expansion);
     String[] modes = {monster.El1Mode, monster.El2Mode, monster.El3Mode};
     String[] types = {monster.El1Type, monster.El2Type, monster.El3Type};
     int[][] chances = {monster.El1Pct, monster.El2Pct, monster.El3Pct};
     for (int i = 0; i < modes.length; i++) {
-      if (!modeMatches(files, modes[i], mode)) continue;
-      int chance = arrayValue(chances[i], difficulty);
-      if (chance <= 0 || (chance < 100 && random.applyAsInt(100) >= chance)) continue;
+      int rowMode = modes[i] == null ? -1 : files.MonMode.index(modes[i]);
+      if (!NativeMonsterModeElements.selects(rowMode, mode,
+          arrayValue(chances[i], difficulty), random)) continue;
 
       MonsterStatsCalculator.MonsterStatsInit element =
           new MonsterStatsCalculator.MonsterStatsInit();
       if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(files,
-          monster.hcIdx, expansion ? 1 : 0, difficulty, level, (short) (0x40 << i), element)) {
+          monster.hcIdx, expansion ? 1 : 0, difficulty, Math.max(1, level),
+          NativeMonsterModeElements.tableFlags(i), element)) {
         continue;
       }
-      int type = damageType(random, types[i]);
-      if (type <= CombatSystem.DAMAGE_PHYSICAL) continue;
-      int min = MonsterStatsCalculator.scaleMonsterCombatValue(
-          Math.max(0, element.ElMinD), combatMultiplier);
-      int max = Math.max(min, MonsterStatsCalculator.scaleMonsterCombatValue(
-          Math.max(min, element.ElMaxD), combatMultiplier));
-      int length = MonsterStatsCalculator.scaleMonsterCombatValue(
-          Math.max(0, element.ElDur), combatMultiplier);
-      if (type == CombatSystem.DAMAGE_POISON) {
-        // MonsterMode.cpp stores monster poison as per-frame damage and uses
-        // twice the MonStats duration when installing the attack stat list.
-        min *= 10;
-        max *= 10;
-        length *= 2;
-        profile.poisonLength = Math.max(profile.poisonLength, length);
-      } else if (type == CombatSystem.DAMAGE_COLD) {
-        profile.coldLength = Math.max(profile.coldLength, length);
-      }
-      profile.elementalMin[type] += min;
-      profile.elementalMax[type] += max;
-      profile.matchedElementProfiles++;
+      // 1.10f D2Common's noRatio branch writes S1MinD/S1MaxD, not ElMinD/ElMaxD.
+      // This caller zero-initializes the result each time; preserve the original quirk
+      // without changing the generic calculator's existing noRatio contract.
+      result.set(nativeType(types[i]), monster.noRatio ? 0 : element.ElMinD,
+          monster.noRatio ? 0 : element.ElMaxD, element.ElDur, multiplier, random);
     }
-    return profile;
+    return result;
   }
 
   private static short physicalFlag(int mode) {
@@ -126,27 +130,20 @@ public final class MonsterModeDamageResolver {
     return 0x08;
   }
 
-  private static boolean modeMatches(com.riiablo.Files files, String modeName, int mode) {
-    return modeName != null && !modeName.isEmpty()
-        && files.MonMode.index(modeName) == mode;
-  }
-
-  private static int damageType(java.util.function.IntUnaryOperator random, String type) {
-    if ("fire".equalsIgnoreCase(type)) return CombatSystem.DAMAGE_FIRE;
+  private static int nativeType(String type) {
+    if ("fire".equalsIgnoreCase(type)) return 1;
     if ("ltng".equalsIgnoreCase(type) || "lightning".equalsIgnoreCase(type)) {
-      return CombatSystem.DAMAGE_LIGHTNING;
+      return 2;
     }
-    if ("cold".equalsIgnoreCase(type) || "freeze".equalsIgnoreCase(type)) {
-      return CombatSystem.DAMAGE_COLD;
-    }
+    if ("cold".equalsIgnoreCase(type)) return 4;
     if ("pois".equalsIgnoreCase(type) || "poison".equalsIgnoreCase(type)) {
-      return CombatSystem.DAMAGE_POISON;
+      return 5;
     }
     if ("mag".equalsIgnoreCase(type) || "magic".equalsIgnoreCase(type)) {
-      return CombatSystem.DAMAGE_MAGIC;
+      return 3;
     }
-    if ("rand".equalsIgnoreCase(type)) return 1 + random.applyAsInt(5);
-    return CombatSystem.DAMAGE_PHYSICAL;
+    if ("rand".equalsIgnoreCase(type)) return 10;
+    return 0;
   }
 
   private static int arrayValue(int[] values, int index) {

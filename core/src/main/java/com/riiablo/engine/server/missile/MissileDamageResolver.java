@@ -10,7 +10,8 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Skills;
-import com.riiablo.engine.server.MonsterStatsCalculator;
+import com.riiablo.engine.server.combat.MonsterModeDamageResolver;
+import com.riiablo.engine.server.combat.NativeMonsterModeElements;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.combat.DamageResult;
@@ -290,11 +291,10 @@ public final class MissileDamageResolver {
       int mode = resolveAttackMode(files, ownerMonster.monstats, row, currentMode);
       int[] duration = {coldLength, poisonLength};
       int playerCount = Math.max(1, statInt(ownerAttrs, Stat.monster_playercount));
-      int combatMultiplier = MonsterStatsCalculator.nativeCombatMultiplier(
-          ownerMonster.monstats, difficulty, playerCount, true);
       com.riiablo.engine.server.NativeRng rng = new com.riiablo.engine.server.NativeRng(projectile.rngState);
-      addMonsterElemental(files, rng, ownerMonster.monstats, mode, level, difficulty,
-          sourceScale, combatMultiplier, elementalMin, elementalMax, duration);
+      int monsterLevel = ownerAttrs == null ? level : Math.max(1, statInt(ownerAttrs, Stat.level));
+      addMonsterElemental(files, rng, ownerMonster.monstats, mode, monsterLevel, difficulty,
+          sourceScale, playerCount, elementalMin, elementalMax, duration);
       projectile.rngState = rng.state();
       coldLength = duration[0];
       poisonLength = duration[1];
@@ -1102,41 +1102,19 @@ public final class MissileDamageResolver {
   }
 
   private static void addMonsterElemental(com.riiablo.Files files, com.riiablo.engine.server.NativeRng rng, MonStats.Entry monster, int mode,
-      int level, int difficulty, int sourceScale, int combatMultiplier,
+      int level, int difficulty, int sourceScale, int playerCount,
       int[] min, int[] max,
       int[] duration) {
-    String[] modes = {monster.El1Mode, monster.El2Mode, monster.El3Mode};
-    String[] types = {monster.El1Type, monster.El2Type, monster.El3Type};
-    int[][] chances = {monster.El1Pct, monster.El2Pct, monster.El3Pct};
-    for (int i = 0; i < modes.length; i++) {
-      if (!hasText(modes[i]) || files.MonMode.index(modes[i]) != mode) continue;
-      int chance = arrayValue(chances[i], difficulty);
-      if (chance <= 0 || (chance < 100 && rng.nextInt(100) >= chance)) continue;
-      MonsterStatsCalculator.MonsterStatsInit stats =
-          new MonsterStatsCalculator.MonsterStatsInit();
-      if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(files, monster.hcIdx, 1,
-          difficulty, level, (short) (0x40 << i), stats)) continue;
-      int type = damageType(types[i]);
-      if (type <= PHYSICAL) continue;
-      int elementMin = MonsterStatsCalculator.scaleMonsterCombatValue(
-          stats.ElMinD, combatMultiplier);
-      int elementMax = MonsterStatsCalculator.scaleMonsterCombatValue(
-          stats.ElMaxD, combatMultiplier);
-      int elementLength = MonsterStatsCalculator.scaleMonsterCombatValue(
-          stats.ElDur, combatMultiplier);
-      if (type == POISON) {
-        // MonsterMode.cpp stores monster poison as per-frame poison stats.
-        elementMin *= 10;
-        elementMax *= 10;
-        elementLength *= 2;
-      }
-      min[type] += scaleSource(elementMin, sourceScale);
-      max[type] += scaleSource(elementMax, sourceScale);
-      if (type == COLD) duration[0] = Math.max(duration[0],
-          scaleSource(elementLength, sourceScale));
-      if (type == POISON) duration[1] = Math.max(duration[1],
-          scaleSource(elementLength, sourceScale));
+    NativeMonsterModeElements elements = MonsterModeDamageResolver.resolveElements(
+        files, rng::nextInt, monster, level, difficulty, mode, playerCount, true);
+    for (int type = FIRE; type < DAMAGE_TYPES; type++) {
+      min[type] += scaleSource(elements.minimum[type], sourceScale);
+      max[type] += scaleSource(elements.maximum[type], sourceScale);
     }
+    // Compatibility projection only. Whole-source length/count and action-lifetime
+    // policies stay opted out until the temporary owner stat-list is migrated.
+    duration[0] = Math.max(duration[0], scaleSource(elements.coldLength, sourceScale));
+    duration[1] = Math.max(duration[1], scaleSource(elements.poisonLength, sourceScale));
   }
 
   private static int resolveAttackMode(com.riiablo.Files files, MonStats.Entry monster, Missiles.Entry missile,

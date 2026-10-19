@@ -11,11 +11,12 @@
 
 前者是现有算术、随机消费契约的快速回归；后者是独立原版期望审计，**第四阶段已修正原有 17 项中的全部已知差异**。没有禁用失败用例、没有改成当前实现的预期值；这是选定样本通过，不代表所有怪物、技能与原版实测全部一致。普通 `:server-domain:test` 与快速入口仍显式排除 `monster-parity-audit` 标签；审计必须单独运行，绝不能用普通测试通过代替原版对照。
 
-第五阶段另增物理弹体 8 项，第六阶段另增瞬时元素弹体 8 项，第七阶段另增毒速率/时长 6 项，第八阶段另增毒状态 8 项，第九阶段另增来源元素混合 8 项，当前审计合计 55 项；下文各阶段的测试数量均为当时的历史记录。
+第五阶段另增物理弹体 8 项，第六阶段另增瞬时元素弹体 8 项，第七阶段另增毒速率/时长 6 项，第八阶段另增毒状态 8 项，第九阶段另增来源元素混合 8 项，第十阶段另增模式元素 8 项，当前审计合计 63 项；下文各阶段的测试数量均为当时的历史记录。
 
 以下 core 入口均可追加 `'-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F'`：
 
 - `:core:monsterDataTest`：真实表格、等级、难度、A1/A2/S1、多人倍率及属性来源。
+- `:core:monsterModeElementTest`：MonStats 模式/概率选行、取表标志、随机类型、临时元素覆盖语义、实际飞弹工厂输入，以及 Fire Hit 适配/ECS 链路；不代表已迁移动作级临时 stat-list 生命周期。
 - `:core:monsterCombatTest`：结算包、命中/格挡阈值、宿主适配和 ECS 事件；不等待 AI 自己攻击。
 - `:core:monsterAttackTest`：普通攻击及原生动画/复活链路。
 - `:core:monsterPursuitTest`：静止/移动目标追击及重寻路回归。
@@ -221,6 +222,28 @@ CharData 提供只消耗一帧 HEALTHPOT 速率、不独立写生命的窄接口
 复现最终收尾（PowerShell，整个命令单行）：
 `./gradlew.bat :server-domain:test :server-domain:monsterCombatMathTest :server-domain:monsterCombatParityTest :core:monsterPoisonTest :core:monsterMissileTest :core:monsterElementalTest :desktop:compileJava :server:d2gs:compileJava :desktop:offscreenCamp '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' '-Pd2Version=1.10f' '-PvisualOutput=build/missile-source-smoke-closeout' --console=plain`。
 
+### 第十阶段 A：MonStats 模式元素规则统一与 1.10f DLL 核对
+
+调查确认必须先区分“单次模式刷新算什么”和“何时刷新/清理”。本阶段只完成前者及其既有调用方输入修复，没有把每颗弹体的抽取改为完整动作级缓存；第九阶段对有适用 MonStats 模式元素的原生来源混合 opt-out 继续保留。不能宣称临时 stat-list/发射时序整体已迁移。
+
+首要依据为 D2MOO revision `0c0bbd1e6bef9181a3da1c046523af622a925416`：`MONSTER/MonsterMode.cpp::sub_6FC627B0`、模式切换调用处，以及 `DataTbls/MonsterTbls.cpp::DATATBLS_CalculateMonsterStatsByLevel`。对反直觉细节进一步只读反汇编本地 `G:\BaiduNetdiskDownload\Diablo II 1.10F` 的 DLL：
+
+- D2Game.dll SHA256 `2BD92FB25E3E4B8269930712620BA9DB00CDC1AA44569D87DC4ABA76553272B6`。`0x6FC62ABA..0x6FC62B11` 核对模式和概率，零概率/不匹配/保证成功不抽概率 RNG；`0x6FC62B22..0x6FC62B47` 确认标志是 **0x40+i**，不是 0x40<<i。由于三次标志均含 0x40、而均不含 0x80/0x100，三个模式行采用各自类型/概率，但伤害及长度读取 El1 列。这是原版行为，未按直觉改成每行自己的伤害列。
+- D2Common.dll SHA256 `B9D1A27C6A35992932C7C47438D02E5269F878E899F6E614D507902CECD1BEAB`。`0x6FD68682..0x6FD686B6` 的 noRatio 分支写输出偏移 0x24/0x28（S1），而模式调用读取 0x2C/0x30（El），每行前又清零输出。因此该模式调用的 noRatio 元素端点为零，长度仍存在。只在模式适配器保留此怪癖，不扩大修改通用表格计算器原有 noRatio 契约。
+- D2Game `0x6FC62BE7..0x6FC62C24` 确认 rand 取原生 1..5 编号、长度为零时在多人缩放后回填 25；该编号为火/电/魔法/冰/毒，不是宿主火/电/冰/毒/魔法。`0x6FC62C3E..0x6FC62CC7` 为 setter 调用：同类后续成功行覆盖先前端点/时长，而非相加或取最大；毒端点乘 10、长度乘 2，均在多人缩放后执行。
+
+新增纯 domain `NativeMonsterModeElements`，以显式 RNG、原生类型和原始来源属性为输入，统一模式概率门、取表标志、随机映射、覆盖/长度/毒倍率及整数截断；它不是最终伤害包，也不拥有 ECS 生命周期。特殊生命/法力/耐力/眩晕/燃烧/freeze 类型不被冒充成这五种元素，仍待独立处理。保留端点顺序，异常超大合成数值使用宿主饱和保护，不模拟有符号溢出。
+
+`MonsterModeDamageResolver` 和旧飞弹来源投影改为共用此元素适配器，消除两份不同的选行逻辑；旧飞弹改用主人等级而非飞弹技能等级计算 MonLvl，并由真实 ServerEntityFactory 传入地图难度而非固定 0。飞弹兼容投影的总包比例、毒长度/count、元素抵抗以及概率在每颗弹体上重掷的旧生命周期并未借此宣布原版化；特殊分支仍不启用第九阶段新包。普通近战的大部分路径也未在本轮改成模式临时属性列表。
+
+新增 domain 快速数值 24 项、独立字面源码预期 8 项、资源适配/真实工厂/实际碰撞生命及事件 17 项。合成数据的 El2/El3 故意与 El1 不同，避免错误的按行取表也能通过；noRatio、Classic/LoD、三难度、概率边界及 rand 的三种错位通道均显式检查。工厂测试替换实例资源表，不修改全局安装行。八项审计为 source-derived 并经静态 DLL 指令交叉核对，不是原版进程逐击捕获样本。
+
+验证过程保留失败记录：`build/monster-mode-elements-first.log` 在新测试缺失 getValue 默认参数处编译失败，此前 domain 默认 227 / 快速 211 / 审计 63 已通过；`build/monster-mode-elements-focused.log` 因实例资源夹具反射写 final 字段未显式 setAccessible 而失败。均只修测试夹具/调用，不放宽数值断言。扩大复验 `build/monster-mode-elements-verified.log` 返回 0（约 1 分 39 秒）：数据 32、元素 104、飞弹 178、特殊 26、近战 41 全过，无失败/错误/跳过，桌面/D2GS 编译通过；domain 三入口沿用此前通过的 UP-TO-DATE。该轮尚不含最后新增的实际碰撞生命/事件用例，也未跑 Fire Hit 专项或资源启动；最终窄入口另行收尾。
+
+最终 `build/monster-mode-elements-closeout.log` 返回 0（约 1 分 28 秒）：新窄入口 20 项（模式层 17 + FireHitIntegrationTest 2 + Act I Fire Hit ECS 1）全过，无失败/错误/跳过；最新测试类重新编译，桌面/D2GS 编译通过，真实 1.10f 资源营地 manifest 与退出清理均 PASS，见 `desktop/build/monster-mode-elements-smoke/rogue-encampment-manifest.txt`。生产代码与扩大复验相同，未重复三个广域专项；没有运行整个 core、完整 AI 聚合、双机或原版进程采样。
+
+日常只测本层可运行 `./gradlew.bat :server-domain:monsterCombatMathTest :server-domain:monsterCombatParityTest :core:monsterModeElementTest '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --console=plain`；不需每次启动营地或全量 AI。
+
 以下差异清单保留为**修复前基线**；当前原有 17 项全部通过，基线里的“当前”指首次审计时的实现，不是第四阶段状态。
 
 `MonsterMeleeOriginalParityTest` 不调用生产公式生成期望值：
@@ -242,6 +265,6 @@ CharData 提供只消耗一帧 HEALTHPOT 速率、不独立写生命的窄接口
 
 ## 下一阶段生产修复与实测
 
-已完成怪物近战、普通物理弹体、纯表格瞬时元素/毒速率时长、第八阶段选定中毒状态及第九阶段普通来源元素混合子域。下一步优先单独调查 MonStats 按攻击模式/概率临时附加元素的 stat-list 生成与发射时序；本轮对此显式 opt-out。随后是特殊伤害、弹体创建时暴击及完整随机调度、技能/公式/精通、主人属性读取时机、玩家/佣兵武器力量和敏捷系数，以及防御状态和难度组合；其他 DOT/无毒回血继续独立待办。这些不能直接打开同一开关来替代调查。源代码推导样本全绿仍不等于已获取原版逐击实测基准。
+已完成怪物近战、普通物理弹体、纯表格瞬时元素/毒速率时长、第八阶段选定中毒状态、第九阶段普通来源元素混合子域及第十阶段 A 的单次模式元素规则统一。下一步继续 MonStats 临时 stat-list 的动作级生命周期：动作进入前选一次、多弹体共享、非受击模式切换清理/重建、受击模式保留，以及原生序列动作初始化次序；在此之前不移除第九阶段相关 opt-out。随后是特殊伤害、弹体创建时暴击及完整随机调度、技能/公式/精通、主人属性读取时机、玩家/佣兵武器力量和敏捷系数，以及防御状态和难度组合；其他 DOT/无毒回血继续独立待办。这些不能直接打开同一开关来替代调查。源代码推导样本全绿仍不等于已获取原版逐击实测基准。
 
 原版实测时记录：1.10f EXE/DLL 与 MPQ 版本/哈希、Classic/LoD、难度、人数、区域、怪物 ID/等级/词缀/攻击模式、双方实际属性、运行/格挡/状态、动作帧、随机输入（若可捕获）、伤害包及命中前后原始 8.8 HP。只看屏幕整数血量无法区分 10 与 10.996 HP，少量随机攻击也无法证明命中概率。实测样本确认后新增来源为 executable-captured 的数据，与 source-derived 样本并存。

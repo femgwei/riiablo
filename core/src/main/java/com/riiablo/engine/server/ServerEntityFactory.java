@@ -1506,7 +1506,7 @@ public class ServerEntityFactory extends EntityFactory {
     int ownerMode = ownerId >= 0 && mCofReference.has(ownerId)
         ? mCofReference.get(ownerId).mode : -1;
     MissileDamageResolver.initialize(files(), missileComponent, ownerAttrs, ownerMonster,
-        ownerMode, Math.max(1, damageLevel), 0,
+        ownerMode, Math.max(1, damageLevel), map == null ? 0 : map.getDifficulty(),
         ownerId >= 0 && mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null,
         // Hireling/equipped-weapon coefficients retain the legacy creation policy.
         ownerId < 0 || !world.getMapper(Mercenary.class).has(ownerId));
