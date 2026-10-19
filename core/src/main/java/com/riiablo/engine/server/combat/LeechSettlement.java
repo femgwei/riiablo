@@ -18,7 +18,7 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.ServerGameplayContext;
 import com.riiablo.engine.server.NativeUnitRandom;
 
-/** Authoritative player/hireling percentage leech shared by melee and owned missiles. */
+/** Authoritative percentage and monster fixed-resource drain settlement. */
 final class LeechSettlement {
   private LeechSettlement() {}
   private static final class Binding {
@@ -26,10 +26,15 @@ final class LeechSettlement {
   }
 
   static void apply(World world, DamageEvent hit, float lifeBefore) {
-    if (!hit.isLeechableAttack() || hit.suppressLeech || hit.attacker < 0 || hit.damage <= 0f) return;
+    if (!hit.isLeechableAttack() || hit.suppressLeech || hit.attacker < 0) return;
     boolean player = world.getMapper(Player.class).has(hit.attacker);
     boolean mercenary = world.getMapper(Mercenary.class).has(hit.attacker);
-    // Ordinary monsters use fixed drain damage, NOT these percentage stats.
+    if (hit.fixedMonsterDrain) {
+      if (!player && !mercenary && world.getMapper(Monster.class).has(hit.attacker))
+        healMonster(world, hit, lifeBefore);
+      return;
+    }
+    if (hit.damage <= 0f) return;
     if (!player && !mercenary) return;
     AttributesWrapper wrapper = world.getMapper(AttributesWrapper.class).get(hit.attacker);
     if (wrapper == null || wrapper.attrs == null) return;
@@ -80,6 +85,53 @@ final class LeechSettlement {
             ? "steallife" : "stealmana";
       } else if (lifeCue || manaCue) hit.leechOverlay = lifeCue ? "steallife" : "stealmana";
     }
+  }
+
+  private static void healMonster(World world, DamageEvent hit, float lifeBefore) {
+    // The native outer gate excludes stamina-only healing, but not its resource loss.
+    if (hit.lifeDrainFixed <= 0 && hit.manaDrainFixed <= 0) return;
+    AttributesWrapper source = world.getMapper(AttributesWrapper.class).get(hit.attacker);
+    AttributesWrapper victim = world.getMapper(AttributesWrapper.class).get(hit.victim);
+    if (source == null || source.attrs == null || victim == null || victim.attrs == null) return;
+    if (source.attrs.getValue(Stat.hitpoints, 0f) <= 0f) return;
+    UnitStates states = world.getMapper(UnitStates.class).get(hit.attacker);
+    if (states != null && states.snapshotOnly) return;
+    int drain = 100;
+    Monster target = world.getMapper(Monster.class).get(hit.victim);
+    if (target != null) {
+      int difficulty = difficulty(world, hit.victim, hit.attacker);
+      drain = target.monstats == null || target.monstats.Drain == null
+          || difficulty >= target.monstats.Drain.length ? 0 : target.monstats.Drain[difficulty];
+    }
+    int physical = Math.min(raw(hit.physicalDamage), raw(lifeBefore));
+    long amount = Math.min(Math.max(0, hit.lifeDrainFixed), physical)
+        + (long) Math.min(Math.max(0, hit.manaDrainFixed), resource(victim.attrs, Stat.mana))
+        + Math.min(Math.max(0, hit.staminaDrainFixed), resource(victim.attrs, Stat.stamina));
+    int heal = (int) Math.min(Integer.MAX_VALUE, amount * Math.max(0, drain) / 100);
+    hit.lifeLeeched = restore(source.attrs, Stat.hitpoints, Stat.maxhp, heal);
+    if (hit.lifeLeeched > 0f) hit.leechOverlay = "steallife";
+  }
+
+  /** Native resource loss happens after the life write, even when Drain is zero/full HP. */
+  static void drainResources(World world, DamageEvent hit) {
+    if (!hit.fixedMonsterDrain) return;
+    AttributesWrapper target = world.getMapper(AttributesWrapper.class).get(hit.victim);
+    if (target == null || target.attrs == null) return;
+    subtract(target.attrs, Stat.mana, hit.manaDrainFixed);
+    subtract(target.attrs, Stat.stamina, hit.staminaDrainFixed);
+  }
+
+  private static int resource(Attributes attrs, short stat) {
+    StatRef ref = attrs.get(stat);
+    return ref == null ? 0 : Math.max(0, ref.encodedValues());
+  }
+
+  private static void subtract(Attributes attrs, short stat, int amount) {
+    if (amount <= 0) return;
+    StatRef ref = attrs.get(stat, StatRef.obtain());
+    if (ref == null) return;
+    long next = (long) ref.encodedValues() - amount;
+    ref.setEncoded(next < 256 ? 0 : (int) next);
   }
 
   private static int stat(Attributes attrs, short id) {

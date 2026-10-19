@@ -9,6 +9,24 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ItemDataResourceRefreshTest extends RiiabloTest {
+  @Test void itemRefreshPersistsRescaledStaminaAndDoesNotUndoStateMaximumCallback() {
+    CharData data = CharData.obtain().clear().set(
+        Riiablo.NORMAL, false, "StaminaRefresh", Riiablo.AMAZON);
+    Attributes stats = data.getStats();
+    stats.base().put(Stat.maxstamina, 100f);
+    stats.base().put(Stat.stamina, 100f);
+    stats.reset();
+    stats.aggregate().put(Stat.stamina, 40f);
+    stats.staminaMaximum().applyStatePercent(stats, 50);
+    assertEquals(60f, stats.get(Stat.stamina).asFixed());
+    data.getItems().updateStats();
+    assertEquals(150f, stats.get(Stat.maxstamina).asFixed());
+    assertEquals(60f, stats.get(Stat.stamina).asFixed());
+    assertEquals(60f, stats.base().get(Stat.stamina).asFixed());
+    stats.aggregate().put(Stat.stamina, 0f);
+    data.getItems().updateStats();
+    assertEquals(0f, stats.get(Stat.stamina).asFixed());
+  }
 
   @Test
   void progressionSynchronizationClampsAndPersistsCurrentLife() {

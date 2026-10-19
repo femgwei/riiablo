@@ -167,10 +167,25 @@ class MonsterModeElementLifecycleTest extends RiiabloTest {
 
   @Test void unsupportedSelectedModeTypesCannotSilentlyEnableTheFiveChannelPolicy() {
     try (Fixture f = new Fixture()) {
-      f.row.El1Type = "life";
+      f.row.El1Type = "stun";
       f.cofs.setMode(f.id, Engine.Monster.MODE_A1, true);
       assertTrue(f.monster.modeElements.unsupportedType);
       assertNull(f.projectile(1).nativeElemental);
+    }
+  }
+
+  @Test void supportedLifeModeIsCapturedAsRawMissileDrainWithoutRerollOrExtraShift() {
+    try (Fixture f = new Fixture()) {
+      f.row.El1Type = "life";
+      f.cofs.setMode(f.id, Engine.Monster.MODE_A1, true);
+      assertFalse(f.monster.modeElements.unsupportedType);
+      int value = f.monster.modeElements.drainMinimum[0];
+      assertTrue(value > 0);
+      int ownerSeed = f.monster.rngState;
+      Missile p = f.projectile(123);
+      assertEquals(value, p.damage.getValue(Stat.lifedrainmindam, 0));
+      assertEquals(ownerSeed, f.monster.rngState);
+      assertEquals(123, p.rngState);
     }
   }
 

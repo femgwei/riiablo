@@ -290,6 +290,7 @@ public final class MissileDamageResolver {
           scaleSource(statInt(ownerAttrs, Stat.poisonlength), sourceScale));
     }
 
+    NativeMonsterModeElements sourceElements = ownerMonster == null ? null : ownerMonster.modeElements;
     if (sourceScale > 0 && ownerMonster != null && ownerMonster.monstats != null) {
       int mode = resolveAttackMode(files, ownerMonster.monstats, row, currentMode);
       int[] duration = {coldLength, poisonLength};
@@ -299,6 +300,7 @@ public final class MissileDamageResolver {
       NativeMonsterModeElements elements = ownerMonster.modeElements;
       if (elements == null) elements = MonsterModeDamageResolver.resolveElements(
           files, rng::nextInt, ownerMonster.monstats, monsterLevel, difficulty, mode, playerCount, true);
+      sourceElements = elements;
       addMonsterElemental(elements, sourceScale, elementalMin, elementalMax, duration);
       projectile.rngState = rng.state();
       coldLength = duration[0];
@@ -327,14 +329,26 @@ public final class MissileDamageResolver {
     }
     // A known native zero packet is still authoritative. Falling back to the
     // owner's generic attack here would invent damage for empty/zero endpoints.
-    if (!meaningful && nativePhysical == null && nativeElemental == null) {
+    if (!meaningful && nativePhysical == null && nativeElemental == null
+        && drainStat(row.EType) == -1) {
       return false;
     }
 
     writeSnapshot(files, projectile, ownerAttrs, sourceScale > 0, level,
         physicalMin, physicalMax, attackRating,
         elementalMin, elementalMax, coldLength, poisonLength);
-    snapshotLeech(projectile, ownerAttrs, ownerStates, sourceScale);
+    snapshotLeech(projectile, ownerAttrs, ownerStates, sourceScale, sourceElements);
+    short drain = drainStat(row.EType);
+    if (drain != -1) {
+      // Missile table drain endpoints are already raw 8.8. Impact uses MIN,
+      // unlike melee's source-stat endpoint roll; stamina is not SrcDam-scaled.
+      int value = missileElementalDamageFixed(row, level, true);
+      if (drain != Stat.stamdrainmindam && sourceScale > 0)
+        value = scaleSource(value, sourceScale);
+      projectile.damage.base().put(drain,
+          projectile.damage.base().getValue(drain, 0) + Math.max(0, value));
+      projectile.damage.reset();
+    }
     projectile.nativePhysical = nativePhysical;
     projectile.nativeElemental = nativeElemental;
     if (nativeElemental != null && nativeElemental.poisonCount != 0) {
@@ -976,13 +990,30 @@ public final class MissileDamageResolver {
 
   /** D2Common MISSILE_AddStatsToDamage / MISSILE_CalculateFinalDamage. */
   private static void snapshotLeech(Missile projectile, Attributes owner, StateList states, int scale) {
+    snapshotLeech(projectile, owner, states, scale, null);
+  }
+
+  private static void snapshotLeech(Missile projectile, Attributes owner, StateList states, int scale,
+      NativeMonsterModeElements elements) {
     int life = statInt(owner, Stat.lifedrainmindam);
+    int mana = statInt(owner, Stat.manadrainmindam);
     if (states != null) life += states.getTotalLifeLeechModifier();
+    if (elements != null) {
+      life += elements.drainMinimum[0];
+      mana += elements.drainMinimum[1];
+    }
     projectile.damage.base().put(Stat.lifedrainmindam,
         (int) ((long) Math.max(0, life) * scale / 128));
     projectile.damage.base().put(Stat.manadrainmindam,
-        (int) ((long) Math.max(0, statInt(owner, Stat.manadrainmindam)) * scale / 128));
+        (int) ((long) Math.max(0, mana) * scale / 128));
     projectile.damage.reset();
+  }
+
+  private static short drainStat(String type) {
+    if ("life".equalsIgnoreCase(type)) return Stat.lifedrainmindam;
+    if ("mana".equalsIgnoreCase(type)) return Stat.manadrainmindam;
+    if ("stam".equalsIgnoreCase(type)) return Stat.stamdrainmindam;
+    return -1;
   }
 
   private static void writeSnapshot(com.riiablo.Files files, Missile projectile, Attributes ownerAttrs,

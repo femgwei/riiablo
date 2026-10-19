@@ -2340,8 +2340,7 @@ public class Actioneer extends PassiveSystem {
           MonsterUniqueModifiers.ElementalAttack uniqueAttack = attackingMonster == null
               ? null : MonsterUniqueModifiers.rollSpectralHit(
                   attackingMonster, attackerAttrs, combatDifficulty());
-          if (attackingMonster != null && attackingMonster.modeElements != null
-              && !attackerPlayer && !mMercenary.has(entityId)) {
+          if (attackingMonster != null && !attackerPlayer && !mMercenary.has(entityId)) {
             NativeUnitRandom meleeRng = NativeUnitRandom.monster(attackingMonster, gameSeed(), entityId);
             CombatSystem meleeCombat = serverContext == null ? combatSystemResolver
                 : new CombatSystem(meleeRng, NativeUnitRandom.unit(world, gameSeed(), targetId));
@@ -2494,7 +2493,7 @@ public class Actioneer extends PassiveSystem {
         if (log.debugEnabled()) {
           log.debug("{} calculated damage: {} on {}", entityId, damage, targetId);
         }
-        if (damage <= 0 && combat.absorbedLife <= 0) {
+        if (damage <= 0 && combat.absorbedLife <= 0 && !combat.hasResourceDrain()) {
           if (combat.nativeElementalSettlement) applyCombatStates(entityId, targetId, combat);
           log.debug("{} melee hit on {} caused no damage", entityId, targetId);
           if (loggedMonsterMelee) {
@@ -5575,18 +5574,16 @@ public class Actioneer extends PassiveSystem {
     NativeUnitRandom hitRng = NativeUnitRandom.monster(monster, gameSeed(), entityId);
     CombatSystem hitCombat = serverContext == null ? combatSystemResolver
         : new CombatSystem(hitRng, NativeUnitRandom.unit(world, gameSeed(), targetId));
-    CombatSystem.CombatResult combat = monster.modeElements != null
-        ? hitCombat.calculateMonsterMeleeAttack(attacker, defender, isPlayerEntity(targetId),
+    CombatSystem.CombatResult combat = hitCombat.calculateMonsterMeleeAttack(
+            attacker, defender, isPlayerEntity(targetId),
             profile.minDamage, profile.maxDamage, profile.attackRating, monster.modeElements,
-            null, null, 0, 0, stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+            monster.modeElements == null ? profile.elementalMin : null,
+            monster.modeElements == null ? profile.elementalMax : null,
+            monster.modeElements == null ? profile.coldLength : 0,
+            monster.modeElements == null ? profile.poisonLength : 0,
+            stateList(entityId), stateList(targetId), isEntityMoving(targetId),
             nativeDifficultyContext(), isDemonTarget(targetId), isUndeadTarget(targetId),
-            isIgnoreTargetDefenseAllowed(targetId), monster.monstats.Crit)
-        : combatSystemResolver.calculateAttackWithContext(
-        attacker, defender, false, isPlayerEntity(targetId), false,
-        profile.minDamage, profile.maxDamage, profile.attackRating, false,
-        profile.elementalMin, profile.elementalMax,
-        profile.coldLength, profile.poisonLength,
-        stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
+            isIgnoreTargetDefenseAllowed(targetId), monster.monstats.Crit);
     if (serverContext != null && monster.modeElements != null) monster.rngState = hitRng.state();
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit) {
@@ -5604,7 +5601,7 @@ public class Actioneer extends PassiveSystem {
             + "physical={} fire={} total={}",
         entityId, targetId, combat.hitChance, combat.physicalDamageHp(),
         combat.elementalDamage[CombatSystem.DAMAGE_FIRE], damage);
-    if (damage <= 0 && combat.absorbedLife <= 0) {
+    if (damage <= 0 && combat.absorbedLife <= 0 && !combat.hasResourceDrain()) {
       if (combat.nativeElementalSettlement) applyCombatStates(entityId, targetId, combat);
       return;
     }

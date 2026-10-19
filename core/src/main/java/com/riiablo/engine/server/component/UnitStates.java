@@ -45,10 +45,8 @@ public class UnitStates extends Component {
   /** Unmodified permanent/equipment aggregate captured before the state percentage phase. */
   public int baseMaxLifeEncoded;
   public int baseMaxManaEncoded;
-  public int baseMaxStaminaEncoded;
   public int resolvedMaxLifeEncoded;
   public int resolvedMaxManaEncoded;
-  public int resolvedMaxStaminaEncoded;
   public long observedAggregateRevision;
 
   /** Authoritative allocation path; init(int) remains the detached/client bridge. */
@@ -72,10 +70,8 @@ public class UnitStates extends Component {
     appliedMaxStaminaPercent = 0;
     baseMaxLifeEncoded = Integer.MIN_VALUE;
     baseMaxManaEncoded = Integer.MIN_VALUE;
-    baseMaxStaminaEncoded = Integer.MIN_VALUE;
     resolvedMaxLifeEncoded = Integer.MIN_VALUE;
     resolvedMaxManaEncoded = Integer.MIN_VALUE;
-    resolvedMaxStaminaEncoded = Integer.MIN_VALUE;
     observedAggregateRevision = Long.MIN_VALUE;
     if (stateList == null) {
       stateList = new StateList(entityId);
@@ -96,10 +92,8 @@ public class UnitStates extends Component {
     appliedMaxStaminaPercent = 0;
     baseMaxLifeEncoded = Integer.MIN_VALUE;
     baseMaxManaEncoded = Integer.MIN_VALUE;
-    baseMaxStaminaEncoded = Integer.MIN_VALUE;
     resolvedMaxLifeEncoded = Integer.MIN_VALUE;
     resolvedMaxManaEncoded = Integer.MIN_VALUE;
-    resolvedMaxStaminaEncoded = Integer.MIN_VALUE;
     observedAggregateRevision = Long.MIN_VALUE;
   }
 }

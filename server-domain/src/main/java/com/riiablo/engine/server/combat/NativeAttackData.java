@@ -104,6 +104,9 @@ public class NativeAttackData {
 
   /** 法力偷取百分比 */
   public int manaLeech;
+  public boolean fixedMonsterDrain;
+  public int[] drainMinimum = new int[3], drainMaximum = new int[3];
+  public int drainSourceDamage = 128;
 
   /** 击中后冰冻敌人时间（帧） */
   public int coldLength;

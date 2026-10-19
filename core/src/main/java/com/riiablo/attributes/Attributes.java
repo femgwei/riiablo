@@ -153,6 +153,9 @@ public final class Attributes implements Iterable<StatRef> {
   private StatListRef rem;
   /** Changes only when the permanent/equipment aggregate is rebuilt from base. */
   private long aggregateRevision;
+  private StaminaMaximum staminaMaximum = new StaminaMaximum();
+
+  public StaminaMaximum staminaMaximum() { return staminaMaximum; }
 
   /** Runtime-only native combat context; never serialized with the stat list. */
   private boolean combatShieldKnown;
@@ -284,6 +287,7 @@ public final class Attributes implements Iterable<StatRef> {
   }
 
   public void clear()  {
+    staminaMaximum = new StaminaMaximum();
     difficultyResistanceIncluded = false;
     list.forceClear();
     base.clear();

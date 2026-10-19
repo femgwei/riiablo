@@ -39,7 +39,9 @@ public final class AttributesUpdater {
       final Attributes attrs,
       final CharStats.Entry charStats,
       final Attributes opBase) {
-    apply(attrs.base(), attrs.aggregate(), attrs.remaining(), opBase, charStats);
+    apply(attrs.base(), attrs.aggregate(), attrs.remaining(), opBase, charStats,
+        attrs.staminaMaximum());
+    attrs.staminaMaximum().finishRebuild(attrs, charStats == null ? 0 : charStats.StaminaPerVitality);
   }
 
   static void add(
@@ -74,6 +76,13 @@ public final class AttributesUpdater {
       final StatListRef rem,
       final Attributes opBase,
       final CharStats.Entry charStats) {
+    apply(base, agg, rem, opBase, charStats, null);
+  }
+
+  private void apply(
+      final StatListRef base, final StatListRef agg, final StatListRef rem,
+      final Attributes opBase, final CharStats.Entry charStats,
+      final StaminaMaximum stamina) {
     for (final StatList.StatIterator it = rem.statIterator(); it.hasNext();) {
       final StatRef stat = it.next();
       final ItemStatCost.Entry entry = stat.entry();
@@ -82,7 +91,7 @@ public final class AttributesUpdater {
         final int op = entry.op;
         if (op > 0) {
           if (log.traceEnabled()) log.trace("Applying stat({}) op({})", stat.debugString(), op);
-          final int ops = op(agg, opBase, charStats, stat);
+          final int ops = op(agg, opBase, charStats, stat, stamina);
           if (ops == 0) {
             if (log.traceEnabled()) log.trace("Propagating stat({})", stat.debugString());
             it.pushback();
@@ -108,12 +117,17 @@ public final class AttributesUpdater {
       final Attributes opBase,
       final CharStats.Entry charStats,
       final StatRef stat) {
+    return op(agg, opBase, charStats, stat, null);
+  }
+
+  private static int op(final StatListRef agg, final Attributes opBase,
+      final CharStats.Entry charStats, final StatRef stat, final StaminaMaximum stamina) {
     final ItemStatCost.Entry entry = stat.entry();
     final int op = entry.op;
     final int op_param = entry.op_param;
     assert op_param == 0 || !entry.op_base.isEmpty();
     final short opBaseStatId = stat.table().index(entry.op_base);
-    assert op_param == 0 || opBase.aggregate().contains(opBaseStatId) : "entry.op_base " + entry.op_base;
+    assert op_param == 0 || opBase.aggregate().containsAny(opBaseStatId) : "entry.op_base " + entry.op_base;
     final int op_base = op_param > 0 ? opBase.aggregate().getValue(opBaseStatId, 1) : 1;
 
     int ops = 0, expectedOps = 0;
@@ -124,9 +138,21 @@ public final class AttributesUpdater {
       final short opStatId = stat.table().index(op_stat);
       final StatRef opStat = agg.get(opStatId);
       if (opStat != null) {
+        if (stamina != null && opStatId == Stat.maxstamina && op == 9) {
+          // Shared stamina policy resolves bonus vitality after equipment ops.
+          ops++;
+          continue;
+        }
+        if (stamina != null && opStatId == Stat.maxstamina
+            && (op == 1 || op == 11 || op == 13)) {
+          stamina.addEquipmentPercent(stat.id(), stat.encodedValues());
+          ops++;
+          continue;
+        }
         if (log.traceEnabled()) log.trace("Op stat({}) with opStat({})", stat.debugString(), opStat.debugString());
         final int value = op(stat, opStat, charStats, op, op_param, op_base);
-        opStat.addEncoded(value);
+        if (stamina != null && opStatId == Stat.maxstamina) stamina.addEquipmentBonus(value);
+        else opStat.addEncoded(value);
         ops++;
       } else {
         log.debug("stat({}) modifies opStat({}) but agg({}) does not contain it", stat.debugString(), stat.table().entry(opStatId), agg);

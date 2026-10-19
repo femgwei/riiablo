@@ -1141,11 +1141,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         Stat.mana, Stat.maxmana, unitStates.baseMaxManaEncoded, maxManaPercent);
     unitStates.appliedMaxManaPercent = maxManaPercent;
     int maxStaminaPercent = stateList.getTotalMaxStaminaModifier();
-    int currentMaxStamina = encoded(attrs, Stat.maxstamina);
-    unitStates.baseMaxStaminaEncoded = resolveUnmodifiedBase(currentMaxStamina,
-        unitStates.resolvedMaxStaminaEncoded, unitStates.baseMaxStaminaEncoded, aggregateRebuilt);
-    unitStates.resolvedMaxStaminaEncoded = applyMaximumResourceModifier(attrs,
-        Stat.stamina, Stat.maxstamina, unitStates.baseMaxStaminaEncoded, maxStaminaPercent);
+    attrs.staminaMaximum().applyStatePercent(attrs,
+        stateList.getTotalMaxStaminaModifier(Stat.skill_staminapercent),
+        stateList.getTotalMaxStaminaModifier(Stat.skill_passive_staminapercent));
     unitStates.appliedMaxStaminaPercent = maxStaminaPercent;
     unitStates.observedAggregateRevision = attrs.aggregateRevision();
     if (previousMaxLifePercent != maxLifePercent

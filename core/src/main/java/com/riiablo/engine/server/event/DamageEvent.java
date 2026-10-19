@@ -12,6 +12,8 @@ public class DamageEvent implements Event {
   /** Skill percentages join item/state leech before native truncation and difficulty scaling. */
   public int extraLifeLeechPercent, extraManaLeechPercent;
   public float lifeLeeched, manaLeeched;
+  public boolean fixedMonsterDrain;
+  public int lifeDrainFixed, manaDrainFixed, staminaDrainFixed;
   /** Physical spell missiles must not inherit equipment leech. */
   public boolean suppressLeech;
   public String leechOverlay;
@@ -130,6 +132,10 @@ public class DamageEvent implements Event {
   public DamageEvent withElementalDamage(CombatSystem.CombatResult result, float scale) {
     if (result == null) return this;
     float appliedScale = Math.max(0f, scale);
+    fixedMonsterDrain = result.fixedMonsterDrain;
+    lifeDrainFixed = (int) (result.lifeDrainFixed * appliedScale);
+    manaDrainFixed = (int) (result.manaDrainFixed * appliedScale);
+    staminaDrainFixed = (int) (result.staminaDrainFixed * appliedScale);
     fireDamage = Math.max(0f, result.elementalDamageHp(CombatSystem.DAMAGE_FIRE) * appliedScale);
     lightningDamage = Math.max(0f,
         result.elementalDamageHp(CombatSystem.DAMAGE_LIGHTNING) * appliedScale);

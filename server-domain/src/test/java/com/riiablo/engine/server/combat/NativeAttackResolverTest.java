@@ -10,6 +10,42 @@ import org.junit.jupiter.api.Test;
 
 /** Executes complete attacks without core, ECS, MPQs or global RNG. */
 class NativeAttackResolverTest {
+  @Test void collapsedDrainPreservesFractionAndNeedsNoDamageDrawOrResistance() {
+    List<Integer> bounds = new ArrayList<>();
+    NativeAttackData a = guaranteedAttack(0);
+    a.fixedMonsterDrain = true;
+    a.drainSourceDamage = 64;
+    a.drainMinimum[0] = a.drainMaximum[0] = 1;
+    NativeDefenseData d = new NativeDefenseData();
+    java.util.Arrays.fill(d.resistances, 100);
+    NativeDamagePacket hit = zeroRolls(bounds).resolve(a, d);
+    assertEquals(384, hit.lifeDrainFixed);
+    assertEquals(hit.physicalDamageHp() + 1.5f, hit.totalDamageHp());
+    // Only the legacy hit roll is consumed; zero/collapsed drain channels
+    // never add an impact/source damage draw.
+    assertEquals(Arrays.asList(100), bounds);
+  }
+  @Test void monsterDrainsRollAfterElementsAndStayOutsideCriticalAndResistance() {
+    List<Integer> bounds = new ArrayList<>();
+    NativeAttackData a = guaranteedAttack(10);
+    a.fixedMonsterDrain = true;
+    a.monsterCriticalChance = 100;
+    a.drainMinimum = new int[] {2, 4, 6};
+    a.drainMaximum = new int[] {3, 6, 9};
+    NativeDefenseData d = new NativeDefenseData();
+    NativeDamagePacket hit = zeroRolls(bounds).resolve(a, d);
+    assertEquals(4 * 256, hit.lifeDrainFixed);
+    assertEquals(8 * 256, hit.manaDrainFixed);
+    assertEquals(12 * 256, hit.staminaDrainFixed);
+    assertEquals(24f, hit.totalDamageHp());
+    assertEquals(20f, hit.physicalDamageHp());
+    assertTrue(hit.hasResourceDrain());
+    assertEquals(Arrays.asList(256, 512, 768, 100),
+        bounds.subList(bounds.size() - 4, bounds.size()));
+    hit.reset();
+    assertFalse(hit.fixedMonsterDrain);
+    assertEquals(0, hit.lifeDrainFixed + hit.manaDrainFixed + hit.staminaDrainFixed);
+  }
   @Test
   void snapshotsOwnTheirArraysAndContainNoRuntimeReferences() {
     for (Class<?> type : new Class<?>[] {NativeAttackData.class, NativeDefenseData.class}) {

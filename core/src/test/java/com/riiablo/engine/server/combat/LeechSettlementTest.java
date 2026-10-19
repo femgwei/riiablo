@@ -20,6 +20,53 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LeechSettlementTest extends RiiabloTest {
+  @Test void fixedDrainUsesVictimPoolsForHealingButSubtractsFullResourcePacketOnce() {
+    World world = world();
+    try {
+      int source = monster(world, 10f, 100), victim = monster(world, 5f, 50);
+      attrs(world, victim).aggregate().put(Stat.stamina, 3f);
+      world.process();
+      DamageEvent hit = fixedHit(source, victim, 30, 20, 8 * 256, 4 * 256, 6 * 256);
+      DamageSettlement.commit(world, hit);
+      // min(life drain 8, physical capped to pre-life 5) + mana 2 + stamina 3, /2.
+      assertEquals(5f, hit.lifeLeeched);
+      assertEquals(15f, attrs(world, source).get(Stat.hitpoints).asFixed());
+      assertEquals(0f, attrs(world, victim).get(Stat.mana).asFixed());
+      assertEquals(0f, attrs(world, victim).get(Stat.stamina).asFixed());
+      assertEquals("steallife", hit.leechOverlay);
+      DamageSettlement.commit(world, hit);
+      assertEquals(15f, attrs(world, source).get(Stat.hitpoints).asFixed());
+    } finally { world.dispose(); }
+  }
+
+  @Test void zeroLifeDamageFullAttackerZeroDrainAndStaminaOnlyStillLoseResources() {
+    for (int scenario = 0; scenario < 4; scenario++) {
+      World world = world();
+      try {
+        int source = monster(world, scenario == 1 ? 100f : 10f, 100);
+        int victim = monster(world, 100f, scenario == 2 ? 0 : 100);
+        attrs(world, victim).aggregate().put(Stat.stamina, 3f);
+        world.process();
+        DamageEvent hit = fixedHit(source, victim, 0, 0, 0,
+            scenario == 3 ? 0 : 300, 600);
+        DamageSettlement.commit(world, hit);
+        assertEquals(scenario == 3 ? 2f : 0f, attrs(world, victim).get(Stat.mana).asFixed());
+        assertEquals(0f, attrs(world, victim).get(Stat.stamina).asFixed());
+        assertEquals(scenario == 0 ? 900 / 256f : 0f, hit.lifeLeeched);
+        assertEquals(100f, attrs(world, victim).get(Stat.hitpoints).asFixed());
+      } finally { world.dispose(); }
+    }
+  }
+
+  private static DamageEvent fixedHit(int source, int victim, float damage, float physical,
+      int life, int mana, int stamina) {
+    DamageEvent hit = DamageEvent.obtainMelee(source, victim, damage, physical);
+    hit.fixedMonsterDrain = true;
+    hit.lifeDrainFixed = life;
+    hit.manaDrainFixed = mana;
+    hit.staminaDrainFixed = stamina;
+    return hit;
+  }
   @Test void nativeRawOrderingIncludesDivisorDrainAndOverkill() {
     assertEquals(2560, NativeLeechMath.percentage(200 * 256, 300 * 256, 30, 3, 50));
     assertEquals(1280, NativeLeechMath.percentage(200 * 256, 300 * 256, 15, 3, 50));

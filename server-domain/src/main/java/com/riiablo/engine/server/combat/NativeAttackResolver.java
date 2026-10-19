@@ -160,6 +160,21 @@ public final class NativeAttackResolver {
         value += value * attacker.magicTargetBonusPercent / 100;
       rawElements[type] = value;
     }
+    // SUNITDMG_FillDamageValues rolls life, mana, then stamina after elements.
+    // The extra SrcDam share is ADDITIVE; MonStats.Crit never doubles drain.
+    if (attacker.fixedMonsterDrain) {
+      int[] drains = new int[3];
+      for (int i = 0; i < drains.length; i++) {
+        int min = saturatingInt((long) attacker.drainMinimum[i] * 256);
+        int max = saturatingInt((long) attacker.drainMaximum[i] * 256);
+        int value = max >= 8 ? rolls.physicalFixed(min, max) : 0;
+        drains[i] = Math.max(0, saturatingInt(value + (long) value * attacker.drainSourceDamage / 128));
+      }
+      result.fixedMonsterDrain = true;
+      result.lifeDrainFixed = drains[0];
+      result.manaDrainFixed = drains[1];
+      result.staminaDrainFixed = drains[2];
+    }
     // MonsterMode::ApplyCriticalDamage is after source rolls/conversion, before
     // resistances; doubles ALL five channels (including poison RATE), not lengths.
     result.monsterCritical = rollMonsterCritical(attacker);
@@ -226,6 +241,7 @@ public final class NativeAttackResolver {
 
     // 8. 计算总伤害
     result.totalDamage = result.physicalDamage / result.physicalScale;
+    if (result.fixedMonsterDrain) result.totalDamage += result.lifeDrainFixed / 256;
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       // Poison damage is applied by StateUpdater over its duration. Do not
       // also apply it as an immediate hit when a duration is present.

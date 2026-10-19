@@ -831,14 +831,22 @@ public class StateList {
   }
 
   public int getTotalMaxStaminaModifier() {
+    return getTotalMaxStaminaModifier(Stat.skill_staminapercent)
+        + getTotalMaxStaminaModifier(Stat.skill_passive_staminapercent);
+  }
+
+  /** Keep native op-stat identities: the two percentage terms truncate separately. */
+  public int getTotalMaxStaminaModifier(short stat) {
     int total = 0;
     for (UnitState state : states) {
-      int value = state.hasStatContribution(Stat.skill_staminapercent)
-          ? state.getStatContributionValue(Stat.skill_staminapercent)
-          : state.hasStatContribution(Stat.skill_passive_staminapercent)
-              ? state.getStatContributionValue(Stat.skill_passive_staminapercent)
-              : state.maxStaminaModifier;
-      total += value;
+      if (state.hasStatContribution(Stat.skill_staminapercent)
+          || state.hasStatContribution(Stat.skill_passive_staminapercent)) {
+        total += state.getStatContributionValue(stat);
+      } else {
+        short legacyStat = state.stateId == StateId.INCREASEDSTAMINA
+            ? Stat.skill_passive_staminapercent : Stat.skill_staminapercent;
+        if (stat == legacyStat) total += state.maxStaminaModifier;
+      }
     }
     return total;
   }

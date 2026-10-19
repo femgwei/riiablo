@@ -53,6 +53,7 @@ public class UpdateSequence {
     }
 
     this.updater = updater;
+    attrs.staminaMaximum().beginRebuild(attrs);
     this.attrs = attrs.reset();
     this.opBase = opBase;
     this.charStats = charStats;

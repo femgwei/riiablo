@@ -696,11 +696,8 @@ public class ExperienceManager extends PassiveSystem {
     stats.put(Stat.mana, newMaxMana);
     charData.getStats().aggregate().put(Stat.mana, newMaxMana);
 
-    float maxStaminaIncrease = levelDiff * charStats.StaminaPerLevel / 4f;
-    addFixed(stats, Stat.maxstamina, maxStaminaIncrease);
-    addFixed(charData.getStats().aggregate(), Stat.maxstamina, maxStaminaIncrease);
-    float newMaxStamina = getFixed(charData.getStats().aggregate(), Stat.maxstamina,
-        getFixed(stats, Stat.maxstamina, 0f));
+    float newMaxStamina = charData.getStats().staminaMaximum().increaseBaseMaximum(
+        charData.getStats(), levelDiff * (charStats.StaminaPerLevel << 6)) / 256f;
     stats.put(Stat.stamina, newMaxStamina);
     charData.getStats().aggregate().put(Stat.stamina, newMaxStamina);
 

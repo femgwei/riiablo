@@ -3,6 +3,8 @@ package com.riiablo.engine.server;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -2601,6 +2603,54 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertEquals(blade.startmana, attrs.get(Stat.mana).asFixed());
     } finally {
       world.dispose();
+    }
+  }
+
+  @Test void bladeFuryServerPacketDoesNotUseDivergentClientMissileLifetimeOrVelocity() {
+    Skills.Entry blade = Riiablo.files.skills.get("Blade Fury");
+    Missiles.Entry logical = Riiablo.files.Missiles.get(blade.srvmissilea);
+    Missiles.Entry visual = Riiablo.files.Missiles.get("arrow");
+    assertNotSame(logical, visual);
+    String previousClient = blade.cltmissilea;
+    int logicalRange = logical.Range, logicalVelocity = logical.Vel;
+    int visualRange = visual.Range, visualVelocity = visual.Vel;
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      blade.cltmissilea = visual.Missile;
+      logical.Range = 40; logical.Vel = 22;
+      visual.Range = 33; visual.Vel = 99;
+      int assassin = createBladeShieldPlayer(world, blade);
+      Attributes attrs = world.getMapper(AttributesWrapper.class).get(assassin).attrs;
+      attrs.aggregate().put(Stat.mana, 100f);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, blade.Id, Engine.INVALID_ENTITY, new Vector2(8, 0),
+          blade.srvdofunc, blade.cltdofunc));
+      assertEquals(1, factory.missiles);
+      Missile packet = world.getMapper(Missile.class).get(factory.missileEntityId);
+      assertSame(logical, packet.missile);
+      assertEquals(40, packet.nativeLifetimeFrames);
+      assertEquals(22f, world.getMapper(Velocity.class).get(factory.missileEntityId).velocity.len());
+      assertTrue(packet.damageSnapshot);
+      assertEquals(38, packet.damage.get(Stat.mindamage).asInt());
+      // A visual-only declaration is not a server fallback.
+      String previousServer = blade.srvmissilea;
+      try {
+        blade.srvmissilea = "";
+        int other = createBladeShieldPlayer(world, blade);
+        world.getMapper(AttributesWrapper.class).get(other).attrs.aggregate().put(Stat.mana, 100f);
+        world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+            other, blade.Id, Engine.INVALID_ENTITY, new Vector2(8, 0),
+            blade.srvdofunc, blade.cltdofunc));
+        assertEquals(1, factory.missiles);
+      } finally { blade.srvmissilea = previousServer; }
+    } finally {
+      world.dispose();
+      blade.cltmissilea = previousClient;
+      logical.Range = logicalRange; logical.Vel = logicalVelocity;
+      visual.Range = visualRange; visual.Vel = visualVelocity;
     }
   }
 

@@ -19,6 +19,10 @@ final class CombatSnapshotFactory {
       Stat.poisonmindam, Stat.magicmindam};
   private static final short[] MAX_STATS = {0, Stat.firemaxdam, Stat.lightmaxdam, Stat.coldmaxdam,
       Stat.poisonmaxdam, Stat.magicmaxdam};
+  private static final short[] DRAIN_MIN_STATS = {
+      Stat.lifedrainmindam, Stat.manadrainmindam, Stat.stamdrainmindam};
+  private static final short[] DRAIN_MAX_STATS = {
+      Stat.lifedrainmaxdam, Stat.manadrainmaxdam, Stat.stamdrainmaxdam};
 
   /** Named host request; legacy positional overloads are translated once at the facade. */
   static final class Request {
@@ -53,6 +57,7 @@ final class CombatSnapshotFactory {
     NativeMissileElementalDamage missileElemental;
     NativeMonsterModeElements monsterModeElements;
     int monsterCriticalChance;
+    boolean fixedMonsterDrain;
 
     Request(Attributes attacker, Attributes defender, boolean attackerPlayer,
         boolean defenderPlayer, NativeCombatContext context) {
@@ -271,6 +276,15 @@ final class CombatSnapshotFactory {
     a.crushingBlow = statInt(attacker, Stat.item_crushingblow, 0);
     a.lifeLeech = statInt(attacker, Stat.lifedrainmindam, 0);
     a.manaLeech = statInt(attacker, Stat.manadrainmindam, 0);
+    a.fixedMonsterDrain = request.fixedMonsterDrain;
+    if (a.fixedMonsterDrain) for (int i = 0; i < 3; i++) {
+      a.drainMinimum[i] = statInt(attacker, DRAIN_MIN_STATS[i], 0);
+      a.drainMaximum[i] = statInt(attacker, DRAIN_MAX_STATS[i], 0);
+      if (request.monsterModeElements != null) {
+        a.drainMinimum[i] += request.monsterModeElements.drainMinimum[i];
+        a.drainMaximum[i] += request.monsterModeElements.drainMaximum[i];
+      }
+    }
     if (attackerStates != null) {
       a.lifeLeech += attackerStates.getTotalLifeLeechModifier();
     }

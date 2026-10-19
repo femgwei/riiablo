@@ -76,11 +76,25 @@ class NativeMonsterModeElementsTest {
   }
 
   @ParameterizedTest
-  @CsvSource({"6", "7", "8", "9", "11", "12"})
+  @CsvSource({"9", "11", "12"})
   void unsupportedSpecialTypesDoNotInventOneOfTheFiveElements(int type) {
     NativeMonsterModeElements p = new NativeMonsterModeElements();
     p.set(type, 10, 20, 25, 0, n -> fail("not rand"));
     assertEquals(0, p.matchedRows);
+    for (int value : p.maximum) assertEquals(0, value);
+  }
+
+  @Test void resourceRowsSetIndependentDrainEndpoints() {
+    NativeMonsterModeElements p = new NativeMonsterModeElements();
+    for (int i = 0; i < 3; i++) {
+      p.set(6 + i, 10, 20, 25, 128, n -> fail("drain does not select random type"));
+      assertEquals(20, p.drainMinimum[i]);
+      assertEquals(40, p.drainMaximum[i]);
+    }
+    p.set(7, 2, 3, 0, 0, n -> 0);
+    assertEquals(2, p.drainMinimum[1]);
+    assertEquals(4, p.matchedRows);
+    assertFalse(p.unsupportedType);
     for (int value : p.maximum) assertEquals(0, value);
   }
 }

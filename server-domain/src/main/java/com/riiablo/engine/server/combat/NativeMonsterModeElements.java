@@ -3,7 +3,7 @@ package com.riiablo.engine.server.combat;
 import static com.riiablo.engine.server.combat.NativeCombatConstants.*;
 import java.util.function.IntUnaryOperator;
 
-/** One refresh of MonsterMode::sub_6FC627B0's five supported elemental stats.
+/** One refresh of MonsterMode::sub_6FC627B0's elemental and resource-drain stats.
  * Values are source stats, NOT a final damage packet: poison is raw 8.8 rate.
  * The host owns table reads, RNG state and the lifetime of this refresh.
  */
@@ -12,6 +12,8 @@ public final class NativeMonsterModeElements {
   public final int[] maximum = new int[DAMAGE_TYPE_COUNT];
   public int coldLength, poisonLength, matchedRows;
   public boolean unsupportedType;
+  /** Native LIFE/MANA/STAMINA source-stat endpoints, whole stat units. */
+  public final int[] drainMinimum = new int[3], drainMaximum = new int[3];
 
   /** Verified in 1.10f D2Game 6FC62B22..6FC62B47: addition, not 0x40 << row. */
   public static short tableFlags(int row) {
@@ -26,9 +28,10 @@ public final class NativeMonsterModeElements {
         && (chance >= 100 || random.applyAsInt(100) < chance);
   }
 
-  /** Native EType numbering: fire=1, ltng=2, magic=3, cold=4, pois=5, rand=10.
+  /** Native EType numbering: fire=1, ltng=2, magic=3, cold=4, pois=5,
+   * life/mana/stamina=6..8, rand=10.
    * Repeated successful rows SET a stat, they do not sum or maximize it.
-   * Other native types remain outside this five-channel migration.
+   * Other native types remain outside this migration.
    */
   public void set(int nativeType, int min, int max, int length, int multiplier,
       IntUnaryOperator random) {
@@ -40,6 +43,12 @@ public final class NativeMonsterModeElements {
       if (length == 0) length = 25;
     }
     int type;
+    if (nativeType >= 6 && nativeType <= 8) {
+      drainMinimum[nativeType - 6] = min;
+      drainMaximum[nativeType - 6] = max;
+      matchedRows++;
+      return;
+    }
     switch (nativeType) {
       case 1: type = DAMAGE_FIRE; break;
       case 2: type = DAMAGE_LIGHTNING; break;

@@ -1833,6 +1833,15 @@ public class MissileCollisionSystem extends IteratingSystem {
         log.debug("Missile {} attack blocked by {} (owner={})", missileId, targetId, missile.ownerId);
         queueHitReaction(targetId, combat);
       } else {
+        // MISSMODE_FillDamageParams reads launch-owned drain fields directly:
+        // these are raw packet values, not percentages or new impact-time rolls.
+        if (missile.damageSnapshot && mMonster.has(ownerId) && !mMercenary.has(ownerId)
+            && !mPlayer.has(ownerId)) {
+          combat.fixedMonsterDrain = true;
+          combat.lifeDrainFixed = Math.max(0, missile.damage.getValue(Stat.lifedrainmindam, 0));
+          combat.manaDrainFixed = Math.max(0, missile.damage.getValue(Stat.manadrainmindam, 0));
+          combat.staminaDrainFixed = Math.max(0, missile.damage.getValue(Stat.stamdrainmindam, 0));
+        }
         float damage = combat.totalDamageHp() * Math.max(0.01f, missile.damageMultiplier);
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=hit "
                 + "attackerLevel={} monsterLevel={} attackRating={} targetDefense={} "
@@ -1856,11 +1865,12 @@ public class MissileCollisionSystem extends IteratingSystem {
         // immediate damage is zero.
         applyCombatStates(missile, targetId, combat);
         // SUNITDMG applies absorbed life independently of positive damage.
-        // Keep zero-damage hits out of the damage/pain event path below.
-        if (damage <= 0f && combat.absorbedLife > 0) {
+        // Resource-only packets enter settlement below and restore absorb
+        // there once; only packets with no resource write take this shortcut.
+        if (damage <= 0f && combat.absorbedLife > 0 && !combat.hasResourceDrain()) {
           restoreMissileAbsorbedLife(missileId, missile, targetId, targetAttrs, combat);
         }
-        if (damage > 0 && mAttributesWrapper.has(targetId)) {
+        if ((damage > 0 || combat.hasResourceDrain()) && mAttributesWrapper.has(targetId)) {
           log.info("Missile {} hits {} for {} damage (ownerId={}, critical={}, deadly={})",
               missileId, targetId, damage, missile.ownerId, combat.critical, combat.deadlyStrike);
           // 使用 get(stat, dst) 接口避免重用问题

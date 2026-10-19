@@ -26,6 +26,56 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /** Creation -> immutable multichannel packet -> collision -> states -> raw HP / wire. */
 class MonsterMissileSourceIntegrationTest extends RiiabloTest {
+  @Test void resourceOnlyImpactWithFullyAbsorbedElementRestoresAbsorbOnlyOnce() {
+    try (Fixture f = new Fixture(true)) {
+      f.source.base().put(Stat.mindamage, 0); f.source.base().put(Stat.maxdamage, 0);
+      f.source.base().put(Stat.manadrainmindam, 512); f.source.reset();
+      f.target.attrs.base().put(Stat.item_absorbfire, 1000);
+      f.target.attrs.reset();
+      f.target.attrs.aggregate().put(Stat.hitpoints, 9000f);
+      f.target.attrs.aggregate().put(Stat.mana, 5f);
+      f.spawn(row("fire", 128));
+      f.land();
+      assertEquals(9000 * 256 + 511, hp(f));
+      assertEquals(3f, f.target.attrs.get(Stat.mana).asFixed());
+      assertNotNull(f.probe.applied);
+      assertEquals(0f, f.probe.applied.damage);
+    }
+  }
+  @Test void monsterMissileUsesRawLaunchDrainInsteadOfPercentOrCurrentOwnerStats() {
+    try (Fixture f = new Fixture(true)) {
+      f.source.base().put(Stat.manadrainmindam, 512);
+      f.source.base().put(Stat.mindamage, 0); f.source.base().put(Stat.maxdamage, 0);
+      f.source.reset();
+      f.source.aggregate().put(Stat.hitpoints, 9000f);
+      f.target.attrs.aggregate().put(Stat.mana, 5f);
+      Missile p = f.spawn(row("", 128));
+      assertEquals(512, p.damage.getValue(Stat.manadrainmindam, 0));
+      f.source.get(Stat.manadrainmindam).set(999);
+      f.land();
+      assertEquals(3f, f.target.attrs.get(Stat.mana).asFixed());
+      assertEquals(9002f, f.source.get(Stat.hitpoints).asFixed());
+      assertEquals(10000 * 256, hp(f));
+    }
+  }
+
+  @Test void directDrainMissilesUseTableMinWithoutNewRollAndOnlyLifeAddsHpDamage() {
+    String[] types = {"life", "mana", "stam"};
+    for (int i = 0; i < types.length; i++) try (Fixture f = new Fixture(true)) {
+      f.source.aggregate().put(Stat.hitpoints, 9000f);
+      f.target.attrs.aggregate().put(Stat.mana, 10f);
+      f.target.attrs.aggregate().put(Stat.stamina, 10f);
+      Missiles.Entry row = row(types[i], 0);
+      row.EMin = 2; row.Emax = 99;
+      f.spawn(row);
+      f.land();
+      assertEquals((10000 - (i == 0 ? 2 : 0)) * 256, hp(f));
+      assertEquals(i == 1 ? 8f : 10f, f.target.attrs.get(Stat.mana).asFixed());
+      assertEquals(i == 2 ? 8f : 10f, f.target.attrs.get(Stat.stamina).asFixed());
+      // No physical damage means no healing from life; stamina-only has no outer gate.
+      assertEquals(i == 1 ? 9002f : 9000f, f.source.get(Stat.hitpoints).asFixed());
+    }
+  }
   @ParameterizedTest
   @CsvSource({"64,384,640,639", "128,768,1280,1279", "192,1152,1920,1919"})
   void tablePlusSourceScalesAsOneFixedPacket(int scale, int min, int max, int rolled) {

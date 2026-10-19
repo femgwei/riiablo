@@ -27,6 +27,12 @@ public class NativeDamagePacket {
   public boolean nativeElementalSettlement;
   public int lifeStolen;
   public int manaStolen;
+  /** Monster drain channels are raw 8.8, not player percentages. */
+  public boolean fixedMonsterDrain;
+  public boolean hasResourceDrain() {
+    return fixedMonsterDrain && (manaDrainFixed > 0 || staminaDrainFixed > 0);
+  }
+  public int lifeDrainFixed, manaDrainFixed, staminaDrainFixed;
   public int absorbedLife;
   public int hitChance;
   public int attackRating;
@@ -53,8 +59,9 @@ public class NativeDamagePacket {
   }
 
   public float totalDamageHp() {
-    if (elementalScale == 1 && physicalScale == 1) return totalDamage;
+    if (elementalScale == 1 && physicalScale == 1 && !fixedMonsterDrain) return totalDamage;
     float total = physicalDamageHp();
+    if (fixedMonsterDrain) total += lifeDrainFixed / 256f;
     for (int i = 1; i < NativeCombatConstants.DAMAGE_TYPE_COUNT; i++) {
       if (i != NativeCombatConstants.DAMAGE_POISON || poisonDuration <= 0) {
         total += elementalDamageHp(i);
@@ -86,6 +93,8 @@ public class NativeDamagePacket {
     nativeElementalSettlement = false;
     lifeStolen = 0;
     manaStolen = 0;
+    fixedMonsterDrain = false;
+    lifeDrainFixed = manaDrainFixed = staminaDrainFixed = 0;
     absorbedLife = 0;
     hitChance = 0;
     attackRating = 0;

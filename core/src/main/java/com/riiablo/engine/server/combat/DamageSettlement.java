@@ -69,6 +69,7 @@ public final class DamageSettlement {
       life.set(0f);
     }
     hit.appliedDamage = damage;
+    LeechSettlement.drainResources(world, hit);
     hit.lethal = life.asFixed() <= 0f;
     EventSystem events = world.getSystem(EventSystem.class);
     if (events != null) events.dispatch(new DamageAppliedEvent(hit, before, life.asFixed()));

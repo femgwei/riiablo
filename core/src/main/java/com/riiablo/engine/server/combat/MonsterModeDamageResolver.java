@@ -134,6 +134,9 @@ public final class MonsterModeDamageResolver {
       return 3;
     }
     if ("rand".equalsIgnoreCase(type)) return 10;
+    if ("life".equalsIgnoreCase(type)) return 6;
+    if ("mana".equalsIgnoreCase(type)) return 7;
+    if ("stam".equalsIgnoreCase(type)) return 8;
     return 0;
   }
 

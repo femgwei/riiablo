@@ -99,6 +99,20 @@ class MonsterModeMeleeIntegrationTest extends RiiabloTest {
     a.base().put(Stat.mindamage,2); a.base().put(Stat.maxdamage,2); a.reset(); return a;
   }
 
+  @Test void manaModeDrainReachesSettlementDespiteZeroHpDamage() {
+    try (Fixture f = new Fixture("mana")) {
+      f.source.aggregate().put(Stat.hitpoints, 9000f);
+      f.target.aggregate().put(Stat.mana, 20f);
+      f.attack();
+      assertNotNull(f.probe.request);
+      assertTrue(f.probe.request.fixedMonsterDrain);
+      assertTrue(f.probe.request.manaDrainFixed > 0);
+      assertEquals(0f, f.target.get(Stat.mana).asFixed());
+      assertEquals(9020f, f.source.get(Stat.hitpoints).asFixed());
+      assertEquals(10000 * 256, f.hp());
+    }
+  }
+
   @Test void selectedFireCombinesWithPermanentStatsExactlyOnceInLifeEventsAndVitals() {
     try (Fixture f = new Fixture("fire")) {
       f.source.base().put(Stat.firemindam,2); f.source.base().put(Stat.firemaxdam,2); f.source.reset();

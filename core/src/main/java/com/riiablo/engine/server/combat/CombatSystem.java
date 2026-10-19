@@ -1477,6 +1477,7 @@ public class CombatSystem {
     request.coldLengthOverride = coldLength;
     request.poisonLengthOverride = poisonLength;
     request.monsterModeElements = modeElements;
+    request.fixedMonsterDrain = true;
     request.monsterCriticalChance = monsterCriticalChance;
     request.attackerStates = attackerStates;
     request.defenderStates = defenderStates;

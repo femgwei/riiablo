@@ -1382,7 +1382,6 @@ public class ItemData {
     // HP to 60). Preserve the authoritative runtime values across the reset.
     float hitpoints = currentResource(Stat.hitpoints);
     float mana = currentResource(Stat.mana);
-    float stamina = currentResource(Stat.stamina);
     StatRef stat;
     int equippedArmorClass = 0;
     int equippedFireMin = 0;
@@ -1559,7 +1558,10 @@ public class ItemData {
 
     restoreCurrentResource(Stat.hitpoints, Stat.maxhp, hitpoints);
     restoreCurrentResource(Stat.mana, Stat.maxmana, mana);
-    restoreCurrentResource(Stat.stamina, Stat.maxstamina, stamina);
+    // AttributesUpdater already ran the native max-stamina ratio callback.
+    // Persist its resolved current value; restoring the pre-rebuild value
+    // would undo the callback on equipment changes.
+    restoreCurrentResource(Stat.stamina, Stat.maxstamina, currentResource(Stat.stamina));
     
     notifyUpdated();
   }
