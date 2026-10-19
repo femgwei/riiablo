@@ -37,7 +37,9 @@ public class StatLabel extends Label {
 
   private void updateValue() {
     StatRef s = attrs.get(stat, StatRef.obtain());
-    int curValue = s == null ? 0 : s.asInt();
+    int curValue = colorizer == Colorizer.RESISTANCE
+        ? ResistanceDisplayValue.capture(attrs, stat).displayed
+        : s == null ? 0 : s.asInt();
     if (!initialized || value != curValue) {
       initialized = true;
       value = curValue;
@@ -95,11 +97,7 @@ public class StatLabel extends Label {
           return Riiablo.colors.red;
         }
 
-        String maxstat = stat.entry().maxstat;
-        if (maxstat != null && !maxstat.isEmpty()) {
-          StatRef maximum = attrs.get(Stat.index(maxstat), StatRef.obtain());
-          if (maximum != null && value >= maximum.asInt()) return Riiablo.colors.gold;
-        }
+        if (ResistanceDisplayValue.capture(attrs, stat.id()).capped) return Riiablo.colors.gold;
 
         // The native character screen does not use the generic "modified"
         // blue for resistances. Only negative and capped values are special;
