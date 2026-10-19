@@ -1,5 +1,16 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-20 兼容战斗结算链收敛
+
+- 按 D2MOO `SUNITDMG_RollDamageValueInRange` 修正旧 `DamageCalculator` 的伤害区间：
+  上限为排他边界，最小值等于最大值时不凭空扩大区间，也不额外消耗随机数；装备
+  `item_deadlystrike` 现在进入兼容入口的致命一击判定。
+- 按 `SUNITDMG_CalculateTotalDamage` 修正旧 `DamageApplier`：物理固定减伤先于物理抗性，
+  元素和毒素穿透在最终抗性边界应用；毒素持续时间仍独立使用 `PoisonLen` 抗性，不受
+  伤害穿透影响。
+- 新增 5 项边界回归，连同既有战斗定向测试共 21 项通过。该轮收敛兼容入口的结算顺序，
+  不代表技能公式、`SrcMissDmg`、`DamageRate` 和完整玩家/佣兵/PvP 分支已经全部迁移。
+
 ## 2026-10-20 怪物全量审计失败项修复
 
 - 修复房间休眠被同 Zone 接缝回退绕过、扼杀者不完整参数空指针、无效 Casting 的

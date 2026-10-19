@@ -104,7 +104,7 @@ public class DamageApplier {
         defenderAttrs,
         Stat.fireresist, 
         Stat.maxfireresist,
-        Stat.passive_fire_pierce,
+        result.piercePercent,
         Stat.item_absorbfire_percent,
         Stat.item_absorbfire,
         result, monsterTarget);
@@ -115,7 +115,7 @@ public class DamageApplier {
         defenderAttrs,
         Stat.lightresist,
         Stat.maxlightresist,
-        Stat.passive_ltng_pierce,
+        result.piercePercent,
         Stat.item_absorblight_percent,
         Stat.item_absorblight,
         result, monsterTarget);
@@ -126,7 +126,7 @@ public class DamageApplier {
         defenderAttrs,
         Stat.coldresist,
         Stat.maxcoldresist,
-        Stat.passive_cold_pierce,
+        result.piercePercent,
         Stat.item_absorbcold_percent,
         Stat.item_absorbcold,
         result, monsterTarget);
@@ -137,13 +137,14 @@ public class DamageApplier {
         defenderAttrs,
         Stat.magicresist,
         Stat.maxmagicresist,
-        (short) -1, // 魔法没有穿透
+        0, // 魔法没有穿透
         Stat.item_absorbmagic_percent,
         Stat.item_absorbmagic,
         result, monsterTarget);
 
     // 毒素伤害：应用毒素抗性
-    result.poisonDamage = applyPoisonResist(result.poisonDamage, defenderAttrs, monsterTarget);
+    result.poisonDamage = applyPoisonResist(result.poisonDamage, defenderAttrs,
+        result.piercePercent, monsterTarget);
 
     // 毒素持续时间减免
     result.poisonDuration = applyPoisonLengthResist(result.poisonDuration, defenderAttrs);
@@ -182,16 +183,13 @@ public class DamageApplier {
     // 限制抗性范围
     resist = Math.max(MIN_RESIST, Math.min(ABSOLUTE_MAX_RESIST, resist));
 
-    // 应用抗性
-    int reducedDamage = damage * (100 - resist) / 100;
-
-    // 应用伤害减免（固定值）
+    // D2MOO applies flat physical reduction before percentage resistance.
+    // DamageResult stores this channel in raw 8.8 units, so the stat is
+    // converted once and is never reduced by elemental pierce.
     int damageReduction = getInt(attrs, Stat.normal_damage_reduction, 0) << 8;
-    if (damageReduction > 0 && piercePercent > 0) {
-      // 穿透降低伤害减免效果
-      damageReduction = damageReduction * piercePercent / 1024;
-    }
-    reducedDamage = Math.max(0, reducedDamage - damageReduction);
+    int reducedDamage = Math.max(0, damage - Math.max(0, damageReduction));
+    reducedDamage = (int) Math.min(Integer.MAX_VALUE,
+        (long) reducedDamage * (100 - resist) / 100);
 
     return reducedDamage;
   }
@@ -203,21 +201,21 @@ public class DamageApplier {
    * @param attrs 防御者属性
    * @param resistStat 抗性属性ID
    * @param maxResistStat 最大抗性属性ID
-   * @param pierceStat 穿透属性ID（攻击者）
+   * @param piercePercent 攻击者的元素穿透百分比
    * @param absorbPctStat 百分比吸收属性ID
    * @param absorbStat 固定值吸收属性ID
    * @param result 伤害结果（用于记录吸收的生命）
    * @return 减免后的伤害
    */
   private int applyElementalResist(int damage, Attributes attrs,
-      short resistStat, short maxResistStat, short pierceStat,
+      short resistStat, short maxResistStat, int piercePercent,
       short absorbPctStat, short absorbStat, DamageResult result) {
-    return applyElementalResist(damage, attrs, resistStat, maxResistStat, pierceStat,
+    return applyElementalResist(damage, attrs, resistStat, maxResistStat, piercePercent,
         absorbPctStat, absorbStat, result, false);
   }
 
   private int applyElementalResist(int damage, Attributes attrs,
-      short resistStat, short maxResistStat, short pierceStat,
+      short resistStat, short maxResistStat, int piercePercent,
       short absorbPctStat, short absorbStat, DamageResult result,
       boolean monsterTarget) {
     
@@ -234,11 +232,8 @@ public class DamageApplier {
       maxResist = Math.min(maxResist, ABSOLUTE_MAX_RESIST);
     }
 
-    // TODO: 应用攻击者的穿透（需要从攻击者属性获取）
-    // 这里简化处理，穿透在攻击者计算时已应用
-
     // 限制抗性范围
-    resist = Math.max(MIN_RESIST, Math.min(maxResist, resist));
+    resist = Math.max(MIN_RESIST, Math.min(maxResist, resist - Math.max(0, piercePercent)));
 
     // 应用抗性
     int reducedDamage = damage * (100 - resist) / 100;
@@ -265,18 +260,19 @@ public class DamageApplier {
   /**
    * 应用毒素抗性
    */
-  private int applyPoisonResist(int damage, Attributes attrs) {
-    return applyPoisonResist(damage, attrs, false);
+  private int applyPoisonResist(int damage, Attributes attrs, int piercePercent) {
+    return applyPoisonResist(damage, attrs, piercePercent, false);
   }
 
-  private int applyPoisonResist(int damage, Attributes attrs, boolean monsterTarget) {
+  private int applyPoisonResist(int damage, Attributes attrs, int piercePercent,
+      boolean monsterTarget) {
     if (damage <= 0) return 0;
 
     int resist = getInt(attrs, Stat.poisonresist, 0);
     if (monsterTarget && resist >= 100) return 0;
     int maxResist = DEFAULT_MAX_RESIST + getInt(attrs, Stat.maxpoisonresist, 0);
     maxResist = Math.min(maxResist, ABSOLUTE_MAX_RESIST);
-    resist = Math.max(MIN_RESIST, Math.min(maxResist, resist));
+    resist = Math.max(MIN_RESIST, Math.min(maxResist, resist - Math.max(0, piercePercent)));
 
     return damage * (100 - resist) / 100;
   }

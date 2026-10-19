@@ -187,7 +187,10 @@ public class DamageCalculator {
     
     // 1. 确保最小/最大伤害有效
     if (minDamage < 1) minDamage = 1;
-    if (maxDamage <= minDamage) maxDamage = minDamage + 1;
+    // SUNITDMG_RollDamageValueInRange keeps a collapsed interval collapsed;
+    // adding one here creates an extra damage point and consumes RNG that the
+    // native path does not consume.
+    if (maxDamage < minDamage) maxDamage = minDamage;
     
     // 2. 计算伤害加成百分比
     int totalDamagePercent = damagePercent;
@@ -212,7 +215,9 @@ public class DamageCalculator {
     // 5. 在范围内随机
     int damage = finalMin;
     if (finalMax > finalMin) {
-      damage += MathUtils.random(finalMax - finalMin);
+      // ITEMS_RollLimitedRandomNumber uses [0, bound), while LibGDX's
+      // MathUtils.random(int) is inclusive at the upper bound.
+      damage += MathUtils.random(finalMax - finalMin - 1);
     }
     
     // 6. 应用技能伤害系数（128 = 100%）
@@ -246,7 +251,7 @@ public class DamageCalculator {
     
     if (maxDamage < 1) return 0;
     if (minDamage < 0) minDamage = 0;
-    if (maxDamage <= minDamage) maxDamage = minDamage + 1;
+    if (maxDamage < minDamage) maxDamage = minDamage;
     
     // 应用精通加成
     int finalMin = minDamage + minDamage * masteryBonus / 100;
@@ -255,7 +260,7 @@ public class DamageCalculator {
     // 在范围内随机
     int damage = finalMin;
     if (finalMax > finalMin) {
-      damage += MathUtils.random(finalMax - finalMin);
+      damage += MathUtils.random(finalMax - finalMin - 1);
     }
     
     return Math.max(damage, 0);
@@ -568,7 +573,7 @@ public class DamageCalculator {
     
     // 5. 暴击判定
     int critChance = getInt(attacker, Stat.passive_critical_strike, 0);
-    int deadlyStrike = 0; // TODO: 从装备获取
+    int deadlyStrike = getInt(attacker, Stat.item_deadlystrike, 0);
     if (rollCriticalStrike(critChance, deadlyStrike, 0)) {
       result.physicalDamage *= 2;
       result.resultFlags |= RESULT_CRITICAL_STRIKE;

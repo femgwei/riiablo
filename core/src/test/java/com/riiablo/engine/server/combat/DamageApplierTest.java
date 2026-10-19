@@ -58,4 +58,49 @@ public class DamageApplierTest extends RiiabloTest {
     assertEquals(20, CombatSystem.scaleMonsterColdDuration(80, true, 2));
     assertEquals(80, CombatSystem.scaleMonsterColdDuration(80, false, 2));
   }
+
+  @Test
+  public void elementalPierceIsAppliedAtTheMitigationBoundary() {
+    Attributes monster = Attributes.obtainStandard();
+    monster.base().put(Stat.fireresist, 50);
+    monster.reset();
+    DamageResult result = new DamageResult();
+    result.fireDamage = 100;
+    result.piercePercent = 20;
+
+    new DamageApplier().applyResistancesAndAbsorb(result, monster, false, true);
+
+    assertEquals(70, result.fireDamage);
+  }
+
+  @Test
+  public void physicalFlatReductionPrecedesResistance() {
+    Attributes defender = Attributes.obtainStandard();
+    defender.base().put(Stat.damageresist, 50);
+    defender.base().put(Stat.normal_damage_reduction, 10);
+    defender.reset();
+    DamageResult result = new DamageResult();
+    result.physicalDamage = 10_000;
+
+    new DamageApplier().applyResistancesAndAbsorb(result, defender, false, false);
+
+    assertEquals((10_000 - (10 << 8)) * 50 / 100, result.physicalDamage);
+  }
+
+  @Test
+  public void poisonPierceAffectsDamageButNotItsDurationRow() {
+    Attributes defender = Attributes.obtainStandard();
+    defender.base().put(Stat.poisonresist, 50);
+    defender.base().put(Stat.item_poisonlengthresist, 50);
+    defender.reset();
+    DamageResult result = new DamageResult();
+    result.poisonDamage = 100;
+    result.poisonDuration = 100;
+    result.piercePercent = 20;
+
+    new DamageApplier().applyResistancesAndAbsorb(result, defender, false, false);
+
+    assertEquals(70, result.poisonDamage);
+    assertEquals(50, result.poisonDuration);
+  }
 }
