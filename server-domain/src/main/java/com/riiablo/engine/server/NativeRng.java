@@ -1,10 +1,9 @@
 package com.riiablo.engine.server;
 
 /**
- * Deterministic per-unit RNG used by native-style server rolls.  D2 keeps a
- * seed on the game/unit state; consuming a roll must not perturb an unrelated
- * map, AI or client.  This small LCG has the same explicit 32-bit state and
- * bounded-roll contract, while remaining independent of LibGDX's global RNG.
+ * Legacy host LCG used by compatibility/loot/tool paths, NOT the native
+ * D2Common two-word pSeed algorithm. Audited live unit combat and AI use
+ * core's NativeUnitRandom; do not replace unrelated legacy streams globally.
  */
 public final class NativeRng {
   private int state;

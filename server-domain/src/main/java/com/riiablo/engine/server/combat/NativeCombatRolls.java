@@ -9,9 +9,37 @@ import java.util.function.IntUnaryOperator;
  */
 public final class NativeCombatRolls {
   private final IntUnaryOperator random;
+  private final IntUnaryOperator defenseRandom;
+  private final boolean nativeDefense;
+  private final IntUnaryOperator hitRandom;
+  private final java.util.function.BooleanSupplier monsterCritical;
 
   public NativeCombatRolls(IntUnaryOperator random) {
     this.random = Objects.requireNonNull(random, "random");
+    this.defenseRandom = random;
+    this.nativeDefense = false;
+    this.hitRandom = random;
+    this.monsterCritical = null;
+  }
+
+  /** SUNITDMG_ApplyBlockOrDodge/ApplyDodge draw pDefender->pSeed. */
+  public NativeCombatRolls(IntUnaryOperator random, IntUnaryOperator defenseRandom) {
+    this(random, defenseRandom, random, null);
+  }
+
+  /** Missile damage uses pMissile, AR/MonStats.Crit use pOwner, defense uses pDefender. */
+  public NativeCombatRolls(IntUnaryOperator random, IntUnaryOperator defenseRandom,
+      IntUnaryOperator hitRandom, java.util.function.BooleanSupplier monsterCritical) {
+    this.random = Objects.requireNonNull(random, "random");
+    this.defenseRandom = Objects.requireNonNull(defenseRandom, "defenseRandom");
+    this.nativeDefense = true;
+    this.hitRandom = Objects.requireNonNull(hitRandom, "hitRandom");
+    this.monsterCritical = monsterCritical;
+  }
+
+  public boolean nativeSchedule() { return nativeDefense; }
+  public boolean monsterCritical(int chance) {
+    return monsterCritical != null ? monsterCritical.getAsBoolean() : percent(chance);
   }
 
   /** Melee draws even when the endpoints coincide. */
@@ -32,9 +60,9 @@ public final class NativeCombatRolls {
     return range > 0 ? minimum + random.applyAsInt((int) Math.min(Integer.MAX_VALUE, range)) : minimum;
   }
 
-  /** Hit resolution consumes a draw even for an always-hit attack. */
+  /** The resolver decides whether native AR is needed; legacy callers always draw. */
   public int hitRoll() {
-    return random.applyAsInt(100);
+    return hitRandom.applyAsInt(100);
   }
 
   /** Positive chances, including guaranteed successes, still consume a draw. */
@@ -42,7 +70,14 @@ public final class NativeCombatRolls {
     return chance > 0 && random.applyAsInt(100) < chance;
   }
 
+  public boolean defensePercent(int chance) {
+    return chance > 0 && defenseRandom.applyAsInt(100) < chance;
+  }
+
   private boolean passive(int chance) {
+    // Native positive passive chances always draw, including >=100; unlike
+    // the legacy host passive API there is no arbitrary 75% cap here.
+    if (nativeDefense) return defensePercent(chance);
     return chance >= 100
         || random.applyAsInt(100) < Math.min(Math.max(chance, 0), 75);
   }

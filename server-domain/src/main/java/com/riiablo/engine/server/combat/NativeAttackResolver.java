@@ -60,12 +60,29 @@ public final class NativeAttackResolver {
     // 1. Resolve the complete hit packet once. Both the combat result and
     // the structured missile audit consume this same AR/defense/chance/roll
     // snapshot instead of recalculating individual fields.
-    int hitRoll = rolls.hitRoll();
+    // GetResultFlags skips AR for running melee targets; missiles with no
+    // ToHit flag skip IsHitSuccessful altogether. Legacy snapshots retain
+    // their historical unconditional draw contract.
+    boolean runningMelee = rolls.nativeSchedule() && !attacker.isMissile
+        && defender.isPlayer && defender.isRunning;
+    int hitRoll = rolls.nativeSchedule() && (attacker.alwaysHit || runningMelee) ? -1 : rolls.hitRoll();
     if (gates == null) copyHit(result, calculateHit(attacker, defender, hitRoll));
     else gates.resolveHit(result, hitRoll);
+    if (runningMelee) { result.hit = true; result.hitChance = 100; result.hitRoll = -1; }
 
     if (!result.hit) {
       return result;
+    }
+
+    // HandleMissileCollision: owner AR first, FillDamageParams second,
+    // SetDamageFlags (defense then owner Crit) third. A blocked missile still
+    // fills its damage and consumes owner Crit; an AR miss does neither.
+    boolean nativeMissileSchedule = rolls.nativeSchedule() && attacker.isMissile
+        && attacker.missilePhysical != null && attacker.missilePhysical.criticalCaptured;
+    int prePhysical = nativeMissileSchedule ? calculateBaseDamage(attacker, defender) : 0;
+    int[] rawElements = new int[DAMAGE_TYPE_COUNT];
+    if (nativeMissileSchedule) {
+      for (int type : MISSILE_ELEMENT_ORDER) rawElements[type] = calculateElementalDamage(attacker, type);
     }
 
     // D2MOO SUNITDMG_ApplyBlockOrDodge evaluates shield block first. Missile
@@ -73,9 +90,10 @@ public final class NativeAttackResolver {
     // elemental-only spell missiles continue to Avoid/Weapon Block instead.
     if (defender.canBlock && hasBlockablePhysicalDamage(attacker)) {
       int blockChance = gates == null ? calculateBlockChance(defender) : gates.blockChance();
-      result.blocked = gates == null ? rolls.percent(blockChance) : gates.shieldBlock(blockChance);
+      result.blocked = gates == null ? rolls.defensePercent(blockChance) : gates.shieldBlock(blockChance);
 
       if (result.blocked) {
+        if (nativeMissileSchedule) result.monsterCritical = rollMonsterCritical(attacker);
         result.defenseType = NativeCombatConstants.DEFENSE_BLOCK;
         result.blockAnimationAllowed = gates == null
             ? advanceBlockAnimation(defender) : gates.blockAnimation();
@@ -94,11 +112,12 @@ public final class NativeAttackResolver {
         || passiveDefense == NativeCombatConstants.DEFENSE_WEAPON_BLOCK) {
       result.blocked = true;
       result.defenseType = passiveDefense;
+      if (nativeMissileSchedule) result.monsterCritical = rollMonsterCritical(attacker);
       return result;
     }
 
     // 3. 计算基础物理伤害
-    int baseDamage = calculateBaseDamage(attacker, defender);
+    int baseDamage = nativeMissileSchedule ? prePhysical : calculateBaseDamage(attacker, defender);
 
     // 4. 判定暴击/致命一击
     boolean capturedCritical = attacker.missilePhysical != null
@@ -129,11 +148,10 @@ public final class NativeAttackResolver {
       convertedDamage = baseDamage * attacker.physicalConversionPercent / 100;
       baseDamage -= convertedDamage;
     }
-    int[] rawElements = new int[DAMAGE_TYPE_COUNT];
     for (int channel = 1; channel < DAMAGE_TYPE_COUNT; channel++) {
       int type = attacker.missileElemental != null ? MISSILE_ELEMENT_ORDER[channel - 1]
           : attacker.nativeMonsterMeleeElements ? MELEE_ELEMENT_ORDER[channel - 1] : channel;
-      int value = calculateElementalDamage(attacker, type);
+      int value = nativeMissileSchedule ? rawElements[type] : calculateElementalDamage(attacker, type);
       if (!attacker.fixedPointElements && nativeElements == null && result.elementalScale != 1)
         value = saturatingInt((long) value * result.elementalScale);
       if (type == attacker.physicalConversionType)
@@ -144,9 +162,7 @@ public final class NativeAttackResolver {
     }
     // MonsterMode::ApplyCriticalDamage is after source rolls/conversion, before
     // resistances; doubles ALL five channels (including poison RATE), not lengths.
-    result.monsterCritical = attacker.missilePhysical != null
-        && attacker.missilePhysical.ownerCriticalCaptured ? attacker.missilePhysical.ownerCritical
-        : rolls.percent(attacker.monsterCriticalChance);
+    result.monsterCritical = rollMonsterCritical(attacker);
     if (result.monsterCritical) {
       baseDamage = saturatingInt((long) baseDamage * 2);
       for (int type = 1; type < DAMAGE_TYPE_COUNT; type++)
@@ -232,6 +248,11 @@ public final class NativeAttackResolver {
     out.hitChance = hit.chance;
     out.hitRoll = hit.roll;
     out.hit = hit.hit;
+  }
+
+  private boolean rollMonsterCritical(NativeAttackData attacker) {
+    return attacker.missilePhysical != null && attacker.missilePhysical.ownerCriticalCaptured
+        ? attacker.missilePhysical.ownerCritical : rolls.monsterCritical(attacker.monsterCriticalChance);
   }
 
   public static class Hit {

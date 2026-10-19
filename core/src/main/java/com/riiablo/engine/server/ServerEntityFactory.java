@@ -1512,8 +1512,7 @@ public class ServerEntityFactory extends EntityFactory {
         ownerId < 0 || !world.getMapper(Mercenary.class).has(ownerId));
 
     if (ownerMonster != null && !world.getMapper(Mercenary.class).has(ownerId)) {
-      NativeRng creationRng = ownerMonster.rngState == 0 ? NativeRng.forUnit(gameSeed(), ownerId)
-          : new NativeRng(ownerMonster.rngState);
+      NativeUnitRandom creationRng = NativeUnitRandom.monster(ownerMonster, gameSeed(), ownerId);
       MissileDamageResolver.captureMonsterCreationCritical(missileComponent, ownerAttrs,
           mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null, creationRng::nextInt);
       ownerMonster.rngState = creationRng.state();

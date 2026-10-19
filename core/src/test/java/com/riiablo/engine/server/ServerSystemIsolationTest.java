@@ -126,8 +126,8 @@ class ServerSystemIsolationTest {
     second.serverContext = new ServerGameplayContext(mock(Files.class), 456);
     Monster a = new Monster();
     Monster b = new Monster();
-    NativeRng expectedA = NativeRng.forUnit(123, 7);
-    NativeRng expectedB = NativeRng.forUnit(456, 7);
+    NativeSeedReference expectedA = new NativeSeedReference(123 ^ 7 * 0x45D9F3B);
+    NativeSeedReference expectedB = new NativeSeedReference(456 ^ 7 * 0x45D9F3B);
     int previousSeed = Riiablo.gameSeed;
     try {
       for (int i = 0; i < 8; i++) {
@@ -136,6 +136,8 @@ class ServerSystemIsolationTest {
         assertEquals(expectedB.nextInt(100), second.roll(b, 7, 100));
         assertEquals(expectedA.state(), a.rngState);
         assertEquals(expectedB.state(), b.rngState);
+        assertEquals(expectedA.high(), a.nativeSeed.getNHighSeed());
+        assertEquals(expectedB.high(), b.nativeSeed.getNHighSeed());
       }
     } finally { Riiablo.gameSeed = previousSeed; }
   }

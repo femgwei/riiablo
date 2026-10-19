@@ -1596,18 +1596,19 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void processDamageOverTime(int entityId, StateList stateList) {
     // Poison and burning both install negative HPREGEN. Merge them with
     // natural/stat-list/potion healing once, including ticks without poison.
-    applyLifeRegeneration(entityId, stateList);
-    
-    // 处理撕开伤口
-    if (stateList.hasState(StateId.OPENWOUNDS)) {
-      UnitState woundsState = stateList.getState(StateId.OPENWOUNDS);
-      // 撕开伤口伤害基于角色等级
-      int damage = woundsState.hasStatContribution(Stat.hpregen) ? 0 : woundsState.level * 2;
-      if (damage > 0) {
-        applyDamageOverTime(entityId, woundsState.sourceEntityId,
-            damage, stateList, StateId.OPENWOUNDS);
-      }
+    UnitState wounds = stateList.getState(StateId.OPENWOUNDS);
+    if (wounds != null && !wounds.hasStatContribution(Stat.hpregen)) {
+      // Legacy/manual ingress has no ranged event metadata. Treat it as
+      // melee, using the native rate rather than level*2 whole HP per tick.
+      Attributes source = wounds.sourceEntityId >= 0 && mAttributesWrapper.has(wounds.sourceEntityId)
+          ? mAttributesWrapper.get(wounds.sourceEntityId).attrs : null;
+      int level = source != null ? source.getValue(Stat.level, 1) : wounds.level;
+      Monster victim = mMonster.get(entityId);
+      boolean elite = victim != null && com.riiablo.engine.server.monster.MonsterRank.isElite(victim.rank);
+      wounds.setNativeModifier(Stat.hpregen,
+          -com.riiablo.engine.server.combat.NativeOpenWounds.rate(level, mPlayer.has(entityId), false, elite));
     }
+    applyLifeRegeneration(entityId, stateList);
   }
 
   /** PlrModes::EVENTS_HpRegen / MonsterMode::ApplyStatRegen scalar merge. */
@@ -2184,10 +2185,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     Monster monster = mMonster.get(entityId);
     UnitStates component = mUnitStates.get(entityId);
     if (component.stateList == null) component.init(world, entityId);
-    if (monster.rngState == 0) {
-      monster.rngState = NativeRng.forUnit(gameSeed(), entityId).state();
-    }
-    NativeRng rng = new NativeRng(monster.rngState);
+    NativeUnitRandom rng = NativeUnitRandom.monster(monster, gameSeed(), entityId);
     int roll = rng.nextInt(100);
     monster.rngState = rng.state();
     boolean eligible = isNativeShatterEligible(monster);

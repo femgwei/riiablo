@@ -2342,9 +2342,9 @@ public class Actioneer extends PassiveSystem {
                   attackingMonster, attackerAttrs, combatDifficulty());
           if (attackingMonster != null && attackingMonster.modeElements != null
               && !attackerPlayer && !mMercenary.has(entityId)) {
-            NativeRng meleeRng = attackingMonster.rngState == 0 ? NativeRng.forUnit(gameSeed(), entityId)
-                : new NativeRng(attackingMonster.rngState);
-            CombatSystem meleeCombat = serverContext == null ? combatSystemResolver : new CombatSystem(meleeRng);
+            NativeUnitRandom meleeRng = NativeUnitRandom.monster(attackingMonster, gameSeed(), entityId);
+            CombatSystem meleeCombat = serverContext == null ? combatSystemResolver
+                : new CombatSystem(meleeRng, NativeUnitRandom.unit(world, gameSeed(), targetId));
             combat = meleeCombat.calculateMonsterMeleeAttack(
                 attackerAttrs, attrs, targetPlayer,
                 monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId),
@@ -4799,6 +4799,8 @@ public class Actioneer extends PassiveSystem {
 
   private void applyCombatStates(int attackerId, int targetId,
       CombatSystem.CombatResult combat) {
+    com.riiablo.engine.server.combat.NativeOpenWoundsApplier.apply(
+        world, attackerId, targetId, false, gameSeed());
     if (!mUnitStates.has(targetId)) return;
     if (combat.poisonDuration > 0
         && (combat.poisonDamagePerFrame > 0f
@@ -5567,8 +5569,7 @@ public class Actioneer extends PassiveSystem {
         .get(Aspect.all(Player.class)).getEntities().size();
     int playerCount = MonsterStatsCalculator.nativePlayerCount(
         monster.monstats, connectedPlayers);
-    NativeRng profileRng = monster.rngState == 0 ? NativeRng.forUnit(gameSeed(), entityId)
-        : new NativeRng(monster.rngState);
+    NativeUnitRandom profileRng = NativeUnitRandom.monster(monster, gameSeed(), entityId);
     MonsterModeDamageResolver.Profile profile = monster.modeElements == null
         ? MonsterModeDamageResolver.resolve(files(), profileRng::nextInt, monster.monstats,
             level, combatDifficulty(), Engine.Monster.MODE_S1, playerCount,
@@ -5594,9 +5595,9 @@ public class Actioneer extends PassiveSystem {
         profile.elementalMax[CombatSystem.DAMAGE_MAGIC],
         profile.matchedElementProfiles);
 
-    NativeRng hitRng = monster.rngState == 0 ? NativeRng.forUnit(gameSeed(), entityId)
-        : new NativeRng(monster.rngState);
-    CombatSystem hitCombat = serverContext == null ? combatSystemResolver : new CombatSystem(hitRng);
+    NativeUnitRandom hitRng = NativeUnitRandom.monster(monster, gameSeed(), entityId);
+    CombatSystem hitCombat = serverContext == null ? combatSystemResolver
+        : new CombatSystem(hitRng, NativeUnitRandom.unit(world, gameSeed(), targetId));
     CombatSystem.CombatResult combat = monster.modeElements != null
         ? hitCombat.calculateMonsterMeleeAttack(attacker, defender, isPlayerEntity(targetId),
             profile.minDamage, profile.maxDamage, profile.attackRating, monster.modeElements,

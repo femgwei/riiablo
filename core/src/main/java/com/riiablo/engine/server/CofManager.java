@@ -153,8 +153,8 @@ public class CofManager extends BaseEntitySystem {
     int players = MonsterStatsCalculator.nativePlayerCount(monster.monstats,
         world.getAspectSubscriptionManager().get(com.artemis.Aspect.all(
             com.riiablo.engine.server.component.Player.class)).getEntities().size());
-    NativeRng rng = monster.rngState != 0 ? new NativeRng(monster.rngState)
-        : NativeRng.forUnit(serverContext == null ? 0 : serverContext.gameSeed(), id);
+    NativeUnitRandom rng = NativeUnitRandom.monster(monster,
+        serverContext == null ? 0 : serverContext.gameSeed(), id);
     boolean expansion = serverContext != null
         ? serverContext.combatContext(difficulty).expansion()
         : ServerGameplayContext.legacyCombatContext(difficulty).expansion();

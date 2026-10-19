@@ -66,6 +66,7 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
             new Pathfinder(), new CofManager(), new AnimDataResolver(), new SequenceHandler(),
             new AnimStepper(), new TestFactory())
         .build()
+        .register("serverContext", new ServerGameplayContext(Riiablo.files, 0xFA11E))
         .register("map", new Map(0, 0)));
     Riiablo.engine = world;
     try {
@@ -86,6 +87,11 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
           Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
       world.getMapper(CofReference.class).create(fallen).set("FA", Engine.Monster.MODE_NU);
       world.process(); // publish created units to the native target subscriptions
+      // Bind the production unit stream, not the no-context MathUtils fallback.
+      // This animation scene needs a known successful attack, not a random 5% miss.
+      Monster attackSource = world.getMapper(Monster.class).get(fallen);
+      attackSource.rngState = 1;
+      attackSource.nativeSeed = null;
 
       // Enter through the same native AI decision used by the live server,
       // rather than calling Actioneer directly.  This catches target/range

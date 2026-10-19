@@ -90,7 +90,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   private static int rollStun(Missile missile) {
-    NativeRng rng = new NativeRng(missile.rngState);
+    NativeUnitRandom rng = NativeUnitRandom.missile(missile, 0, 0);
     int roll = rng.nextInt(100);
     missile.rngState = rng.state();
     return roll;
@@ -1745,20 +1745,19 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
       // Factory-audited ordinary missiles own their combat stream. Keep legacy
       // skill/special policies on their existing schedule until audited too.
-      NativeRng impactRng = missile.nativePhysical != null && missile.nativePhysical.criticalCaptured
+      NativeUnitRandom impactRng = missile.nativePhysical != null && missile.nativePhysical.criticalCaptured
           && !mPlayer.has(ownerId) && !mMercenary.has(ownerId)
-          ? new NativeRng(missile.rngState) : null;
-      CombatSystem impactCombat = impactRng == null ? combatSystemResolver : new CombatSystem(impactRng);
+          ? NativeUnitRandom.missile(missile, serverContext == null ? 0 : serverContext.gameSeed(), missileId) : null;
+      final Monster impactOwner = impactRng != null && mMonster.has(ownerId) ? mMonster.get(ownerId) : null;
+      final NativeUnitRandom ownerRng = impactOwner == null ? null : NativeUnitRandom.monster(impactOwner,
+          serverContext == null ? 0 : serverContext.gameSeed(), ownerId);
+      CombatSystem impactCombat = impactRng == null ? combatSystemResolver
+          : new CombatSystem(impactRng, NativeUnitRandom.unit(world,
+              serverContext == null ? 0 : serverContext.gameSeed(), targetId),
+              ownerRng == null ? impactRng : ownerRng,
+              () -> impactOwner != null && impactOwner.monstats != null
+                  && impactOwner.monstats.Crit > 0 && ownerRng.nextInt(100) < impactOwner.monstats.Crit);
       com.riiablo.engine.server.combat.NativeMissilePhysicalDamage impactPhysical = missile.nativePhysical;
-      if (impactRng != null && mMonster.has(ownerId)) {
-        Monster ownerMonster = mMonster.get(ownerId);
-        int chance = ownerMonster.monstats == null ? 0 : ownerMonster.monstats.Crit;
-        NativeRng ownerRng = ownerMonster.rngState == 0
-            ? NativeRng.forUnit(serverContext == null ? 0 : serverContext.gameSeed(), ownerId)
-            : new NativeRng(ownerMonster.rngState);
-        impactPhysical = impactPhysical.withOwnerCritical(chance > 0 && ownerRng.nextInt(100) < chance);
-        ownerMonster.rngState = ownerRng.state();
-      }
       CombatSystem.CombatResult combat = impactCombat.calculateAttackAtDifficulty(
           attackAttrs,
           targetAttrs,
@@ -2024,7 +2023,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         skill, level, name -> baseSkillLevel(missile.ownerId, name));
     int amount = healing[0];
     if (healing[1] > healing[0]) {
-      NativeRng rng = new NativeRng(missile.rngState);
+      NativeUnitRandom rng = NativeUnitRandom.missile(missile, 0, 0);
       amount += rng.nextInt(healing[1] - healing[0]);
       missile.rngState = rng.state();
     }
@@ -2047,7 +2046,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       int missileId, Missile missile, int targetId, Attributes targetAttrs) {
     int min = Math.max(0, missile.poisonMinRateFixed);
     int max = Math.max(min, missile.poisonMaxRateFixed);
-    NativeRng rng = new NativeRng(missile.rngState);
+    NativeUnitRandom rng = NativeUnitRandom.missile(missile, 0, 0);
     int raw = min;
     if (max > min) raw += rng.nextInt(max - min);
     missile.rngState = rng.state();
@@ -2130,7 +2129,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       int missileId, Missile missile, int targetId, Attributes targetAttrs) {
     int min = Math.max(0, missile.elementalMinRateFixed);
     int max = Math.max(min, missile.elementalMaxRateFixed);
-    NativeRng rng = new NativeRng(missile.rngState);
+    NativeUnitRandom rng = NativeUnitRandom.missile(missile, 0, 0);
     int raw = min;
     if (max > min) raw += rng.nextInt(max - min);
     missile.rngState = rng.state();
@@ -2172,8 +2171,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       // SrvDmg03 requests hit recovery with dParam1 / 128 probability.
       int chance = missile.missile.dParam != null && missile.missile.dParam.length > 0
           ? Math.max(0, missile.missile.dParam[0]) : 0;
-      NativeRng recoveryRng = new NativeRng(missile.rngState);
-      boolean recovery = (recoveryRng.nextInt() & 127) < chance;
+      NativeUnitRandom recoveryRng = NativeUnitRandom.missile(missile, 0, 0);
+      boolean recovery = (recoveryRng.nextUnsigned() & 127) < chance;
       missile.rngState = recoveryRng.state();
       if (recovery) queueHitReaction(targetId, false);
     }
@@ -2394,7 +2393,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   static boolean rollPierce(Missile missile, int chance) {
     if (missile == null || chance <= 0) return false;
-    NativeRng rng = new NativeRng(missile.rngState);
+    NativeUnitRandom rng = NativeUnitRandom.missile(missile, 0, 0);
     boolean result = rng.roll(Math.min(100, chance), 100);
     missile.rngState = rng.state();
     return result;
@@ -3575,6 +3574,16 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   private void applyCombatStates(Missile missile, int targetId,
       CombatSystem.CombatResult combat) {
+    // D2Common source damage sets missile flag 1; only that flag permits
+    // UNITEVENT_DOMISSILEDMG. Pure table/spell/origin packets must not proc OW.
+    // Skill and SrcMissDmg event flags are not migrated by this ordinary adapter.
+    if (missile != null && missile.nativePhysical != null && missile.missile != null
+        && missile.missile.SrcDamage > 0 && missile.missile.SrcMissDmg == 0
+        && missile.skillId <= 0) {
+      com.riiablo.engine.server.combat.NativeOpenWoundsApplier.apply(world,
+          missile.ownerId, targetId, true,
+          serverContext == null ? 0 : serverContext.gameSeed());
+    }
     if (!mUnitStates.has(targetId)) return;
     int attackerId = missile != null ? missile.ownerId : Engine.INVALID_ENTITY;
     boolean nativePoison = missile != null && missile.nativeElemental != null;

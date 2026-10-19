@@ -145,8 +145,25 @@ public class CombatSystem {
   }
 
   public CombatSystem(com.riiablo.engine.server.NativeRng rng) {
-    java.util.function.IntUnaryOperator random = java.util.Objects.requireNonNull(rng, "rng")::nextInt;
+    this(java.util.Objects.requireNonNull(rng, "rng")::nextInt);
+  }
+
+  public CombatSystem(java.util.function.IntUnaryOperator random) {
     this.rolls = new NativeCombatRolls(random);
+    this.attackResolver = new NativeAttackResolver(rolls);
+  }
+
+  public CombatSystem(java.util.function.IntUnaryOperator random,
+      java.util.function.IntUnaryOperator defenseRandom) {
+    this.rolls = new NativeCombatRolls(random, defenseRandom);
+    this.attackResolver = new NativeAttackResolver(rolls);
+  }
+
+  public CombatSystem(java.util.function.IntUnaryOperator random,
+      java.util.function.IntUnaryOperator defenseRandom,
+      java.util.function.IntUnaryOperator hitRandom,
+      java.util.function.BooleanSupplier monsterCritical) {
+    this.rolls = new NativeCombatRolls(random, defenseRandom, hitRandom, monsterCritical);
     this.attackResolver = new NativeAttackResolver(rolls);
   }
 
@@ -1563,7 +1580,7 @@ public class CombatSystem {
 
   /** Test seam for the defender-owned native block roll. */
   protected boolean rollShieldBlock(int blockChance) {
-    return rolls.percent(blockChance);
+    return rolls.defensePercent(blockChance);
   }
 
   //==========================================================================

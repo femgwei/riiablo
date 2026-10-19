@@ -123,6 +123,9 @@ class BaalCrabCloneAiIntegrationTest extends RiiabloTest {
   void spawnUsesFourNativeDrawsAndTargetRelativeIntegerOffsets() {
     try (Fixture f = new Fixture()) {
       Riiablo.gameSeed = 0x12345;
+      // The live pSeed may already have been consumed by mode entry.
+      f.monster(f.baal).nativeSeed = new D2Seed(Riiablo.gameSeed ^ (f.baal * 0x45D9F3B), 666);
+      f.monster(f.baal).rngState = f.monster(f.baal).nativeSeed.getNLowSeed();
       D2Seed seed = new D2Seed(Riiablo.gameSeed ^ (f.baal * 0x45D9F3B), 666);
       Seed.rollRandomNumber(seed);
       Seed.rollRandomNumber(seed);
@@ -220,6 +223,8 @@ class BaalCrabCloneAiIntegrationTest extends RiiabloTest {
       ai.execute(9, Engine.INVALID_ENTITY);
       f.position(f.player).set(1000, 1000);
       Riiablo.gameSeed = 77;
+      f.monster(clone).nativeSeed = new D2Seed(77 ^ (clone * 0x45D9F3B), 666);
+      f.monster(clone).rngState = f.monster(clone).nativeSeed.getNLowSeed();
       D2Seed seed = new D2Seed(77 ^ (clone * 0x45D9F3B), 666);
       ai.update(14 * Animation.FRAME_DURATION);
       assertEquals(Seed.rollRandomNumber(seed) & 0xFFFFFFFFL, ai.rollAiRandomNumber(),

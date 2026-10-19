@@ -26,7 +26,7 @@ class MonsterMissileCreationCriticalIntegrationTest extends RiiabloTest {
       assertTrue(p.nativePhysical.creationCritical); assertEquals(1,draws[0]);
       f.source.base().put(Stat.passive_critical_strike,0); f.source.reset();
       MissileDamageResolver.captureMonsterCreationCritical(p,f.source,null,n -> fail("already captured"));
-      NativeRng expected = new NativeRng(135); expected.nextInt(100);
+      NativeSeedReference expected = new NativeSeedReference(135);
       int physical = 2 * (2560 + expected.nextInt(256));
       f.land();
       assertEquals(10000 * 256 - physical - 512, f.target.attrs.get(Stat.hitpoints).encodedValues());
@@ -70,7 +70,7 @@ class MonsterMissileCreationCriticalIntegrationTest extends RiiabloTest {
       attrs.base().put(Stat.maxdamage,11); attrs.base().put(Stat.passive_critical_strike,100); attrs.reset();
       world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).create(owner).attrs = attrs;
       cofs.setMode(owner,com.riiablo.engine.Engine.Monster.MODE_A1,true);
-      monster.rngState = 777; NativeRng expected = new NativeRng(777);
+      monster.rngState = 777; NativeSeedReference expected = new NativeSeedReference(777);
       for (int i = 0; i < 2; i++) {
         int id = factory.createMissile(com.riiablo.Riiablo.files.Missiles.get("arrow"),
             new com.badlogic.gdx.math.Vector2(1,0),new com.badlogic.gdx.math.Vector2(10,10),owner,1);
@@ -88,8 +88,7 @@ class MonsterMissileCreationCriticalIntegrationTest extends RiiabloTest {
       Missile a = f.spawn(row()), b = f.spawn(row()); a.rngState = 135; b.rngState = 246;
       MissileDamageResolver.captureMonsterCreationCritical(a,f.source,null,n -> 99);
       MissileDamageResolver.captureMonsterCreationCritical(b,f.source,null,n -> 99);
-      NativeRng ar = new NativeRng(135), br = new NativeRng(246);
-      ar.nextInt(100); br.nextInt(100);
+      NativeSeedReference ar = new NativeSeedReference(135), br = new NativeSeedReference(246);
       int damage = 5120 + ar.nextInt(256) + br.nextInt(256);
       f.land(); assertEquals(10000 * 256 - damage,f.target.attrs.get(Stat.hitpoints).encodedValues());
       assertEquals(2,f.probe.impactSeeds.size());
@@ -106,8 +105,8 @@ class MonsterMissileCreationCriticalIntegrationTest extends RiiabloTest {
       f.source.base().put(Stat.firemindam,2); f.source.base().put(Stat.firemaxdam,2); f.source.reset();
       Missile p = f.spawn(row()); p.rngState = 135;
       MissileDamageResolver.captureMonsterCreationCritical(p,f.source,null,n -> 0);
-      NativeRng expectedOwner = new NativeRng(777); expectedOwner.nextInt(100);
-      NativeRng expectedImpact = new NativeRng(135); expectedImpact.nextInt(100);
+      NativeSeedReference expectedOwner = new NativeSeedReference(777); expectedOwner.nextInt(100);
+      NativeSeedReference expectedImpact = new NativeSeedReference(135);
       int physical = 4 * (2560 + expectedImpact.nextInt(256));
       f.land();
       assertEquals(10000 * 256 - physical - 1024,f.target.attrs.get(Stat.hitpoints).encodedValues());

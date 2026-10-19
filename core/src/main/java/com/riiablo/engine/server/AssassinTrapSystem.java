@@ -61,9 +61,8 @@ public class AssassinTrapSystem extends IteratingSystem {
   }
 
   int roll(Monster monster, int unitId, int bound) {
-    NativeRng rng = monster.rngState == 0
-        ? NativeRng.forUnit(serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed, unitId)
-        : new NativeRng(monster.rngState);
+    NativeUnitRandom rng = NativeUnitRandom.monster(monster,
+        serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed, unitId);
     int value = rng.nextInt(bound);
     monster.rngState = rng.state();
     return value;

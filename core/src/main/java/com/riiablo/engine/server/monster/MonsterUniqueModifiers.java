@@ -5,7 +5,6 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.MonLvl;
-import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.combat.CombatSystem;
 
@@ -47,7 +46,8 @@ public final class MonsterUniqueModifiers {
     result.coldLength = value(attrs, Stat.coldlength);
     result.poisonLength = value(attrs, Stat.poisonlength);
 
-    NativeRng random = new NativeRng(monster.rngState);
+    com.riiablo.engine.server.NativeUnitRandom random =
+        com.riiablo.engine.server.NativeUnitRandom.monster(monster, 0, 0);
     int[] nativeTypes = {CombatSystem.DAMAGE_FIRE, CombatSystem.DAMAGE_LIGHTNING,
         CombatSystem.DAMAGE_MAGIC, CombatSystem.DAMAGE_COLD, CombatSystem.DAMAGE_POISON};
     int type = nativeTypes[random.nextInt(nativeTypes.length)];

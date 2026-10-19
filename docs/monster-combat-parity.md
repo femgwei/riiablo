@@ -11,7 +11,7 @@
 
 前者是现有算术、随机消费契约的快速回归；后者是独立原版期望审计，**第四阶段已修正原有 17 项中的全部已知差异**。没有禁用失败用例、没有改成当前实现的预期值；这是选定样本通过，不代表所有怪物、技能与原版实测全部一致。普通 `:server-domain:test` 与快速入口仍显式排除 `monster-parity-audit` 标签；审计必须单独运行，绝不能用普通测试通过代替原版对照。
 
-第五阶段另增物理弹体 8 项，第六阶段另增瞬时元素弹体 8 项，第七阶段另增毒速率/时长 6 项，第八阶段另增毒状态 8 项，第九阶段另增来源元素混合 8 项，第十阶段 A 另增模式元素 8 项，本轮再增普通近战元素 8 项，当前审计合计 71 项；下文各阶段的测试数量均为当时的历史记录。
+第五阶段另增物理弹体 8 项，第六阶段另增瞬时元素弹体 8 项，第七阶段另增毒速率/时长 6 项，第八阶段另增毒状态 8 项，第九阶段另增来源元素混合 8 项，第十阶段 A 另增模式元素 8 项，第十阶段 B 另增普通近战元素 8 项，第十一阶段另增撕裂伤口 15 项，当前严格审计合计 86 项；下文各阶段的测试数量均为当时的历史记录。
 
 一次执行全部怪物分层、独立审计、AI 行为及架构门禁：
 
@@ -24,21 +24,21 @@
 以下 core 入口均可追加 `'-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F'`：
 
 - `:core:monsterDataTest`：真实表格、等级、难度、A1/A2/S1、多人倍率及属性来源。
-- `:core:monsterModeElementTest`：MonStats 模式规则、动作进入/清理/受击保留、原生序列第零动作点、多弹共享、近战实际扣血/状态/Vitals，以及真实工厂创建暴击与碰撞主人 Crit；不代表完整原版事件和 RNG 调度。
+- `:core:monsterModeElementTest`：MonStats 模式规则、动作进入/清理/受击保留、原生序列第零动作点、多弹共享、近战实际扣血/状态/Vitals、双字单位随机流，以及真实工厂创建暴击与碰撞主人 Crit；不代表所有技能和事件队列的原版调度。
 - `:core:monsterCombatTest`：结算包、命中/格挡阈值、宿主适配和 ECS 事件；不等待 AI 自己攻击。
 - `:core:monsterAttackTest`：普通攻击及原生动画/复活链路。
 - `:core:monsterPursuitTest`：静止/移动目标追击及重寻路回归。
 - `:core:monsterSummonTest`：产怪、孵化、生成上限及阻挡。
 - `:core:monsterMissileTest`：怪物物理/瞬时元素/纯表格毒素及选定来源混合弹体端点、发射快照、碰撞/状态扣血/事件/同步，以及刺毛鼠和已有弹体生命周期。
 - `:core:monsterElementalTest`：瞬时元素及选定来源混合弹体全链路与真实萨满火弹表格/行为；不代表所有元素技能、毒云或地面持续伤害。
-- `:core:monsterPoisonTest`：纯表格及选定来源混合毒速率/时长、实际状态逐帧扣血/到期、无毒回血/毒/燃烧/药水 HPREGEN 合算、难度适配，以及既有毒标枪/毒云/毒匕首/毒新星/狂犬病/淬毒兼容回归；不代表完整回血与毒伤调度已经原版化。
-- `:core:monsterSpecialTest`：自爆、弹体、诅咒及已有特殊技能。
+- `:core:monsterPoisonTest`：纯表格及选定来源混合毒速率/时长、实际状态逐帧扣血/到期、无毒回血/毒/燃烧/药水 HPREGEN 合算、普通怪物撕裂伤口触发/速率/刷新、难度适配，以及既有毒标枪/毒云/毒匕首/毒新星/狂犬病/淬毒兼容回归；不代表完整回血与毒伤调度已经原版化。
+- `:core:monsterSpecialTest`：自爆、弹体、诅咒、火/冷/电强化回调及已有特殊技能。
 - `:core:monsterAiTest`：已有 AI 决策回归，排除新增端到端场景类。
 - `:core:monsterBehaviorTest`：保留原有广域聚合入口；不是所有层的别名，亦不包含严格原版审计。
 
 每个任务有独立报告：对应模块 `build/reports/tests/<任务名>/index.html`。按修改范围选任务；跨模块或玩法阶段验收再跑广域聚合。共享的 RiiabloTest 每类重新加载资源仍然存在，本轮没有引入全局资源缓存或并行执行，以免污染可变全局状态。
 
-本轮验证：无资源快速层 47 项通过；core 数据 16、结算 62、攻击 23、追击 7、召唤 10、特殊 26 项均通过，AI 决策入口 719 项通过。首轮六个 core 任务一次执行含构建约 2 分 1 秒，之后补入两项格挡阈值并复跑结算。XML 的 testcase 时间不包括类级资源初始化，不能把它当任务总耗时；首次构建与后续增量执行也不可直接比较。
+初始分层阶段的历史验证：无资源快速层 47 项通过；core 数据 16、结算 62、攻击 23、追击 7、召唤 10、特殊 26 项均通过，AI 决策入口 719 项通过。首轮六个 core 任务一次执行含构建约 2 分 1 秒，之后补入两项格挡阈值并复跑结算。最新结果见第十一阶段。XML 的 testcase 时间不包括类级资源初始化，不能把它当任务总耗时；首次构建与后续增量执行也不可直接比较。
 
 ## 样本来源与可信度
 
@@ -281,6 +281,48 @@ StateUpdater 依据 `PlrModes::EVENTS_HpRegen` / `MonsterMode::ApplyStatRegen` �
 
 另一台电脑拉取后先替换资源路径运行上面的统一门禁；再实机检查持续移动下的女猎人追击/转向/攻击，多弹发射与动作中断、毒/冷在零即时伤害下的状态，以及召唤、自爆延迟、服务端/客户端生命同步。原版逐击数据按文末字段另行采集，不把现有自动化报告当作双机或原版实测已完成。
 
+### 第十一阶段：共享双字种子、三方随机调度与普通怪物撕裂伤口
+
+本轮不把全量迁移当作已完成。以下是实际接入生产入口的范围，文末仍列出未迁移分支。主要依据仍为上述 D2MOO revision，未新增原版进程逐击数据。
+
+`NativeUnitRandom` 复用已有 D2MOO_JAVA `D2Seed/Seed` 的 low/high 双字运算：`high + 0x6AC690C5 * unsigned(low)`，完整种子持续保存在单位上。AI、模式进入、普通近战、发射时暴击、怪物词缀和选定技能回调共用怪物种子；每颗弹体的伤害/已接入回调持有自己的双字流。玩家防御使用服务端临时 `UnitRandomSeed`，不写 D2S 或联网 schema。旧 `rngState` 仅作低字兼容/诊断镜像，不能在每次调用时丢弃 high 重建。回收/重新创建清空种子；原版单位分配器的初始种子分配过程仍未移植，初始 low 保留宿主 game/entity 混合。
+
+AI `SEED_RollPercentage` 对完整 uint64 取模；战斗 `ITEMS_RollRandomNumber` 对截断后的 uint32 取模，不能混为一个百分比函数。非正 bound 返回零且不抽取；正的 guaranteed item/防御概率仍抽取。零 low 在已初始化种子内合法；旧工具仅写低字零仍有“未初始化”歧义，精确重放应同时设置 `D2Seed` 两字。没有全局替换用于掉落、商人和兼容技能的宿主 `NativeRng` LCG。
+
+另用本地 1.10f D2Common.dll 静态核对 `MISSILE_HasBonusStats`：`0x6FDBAE07..0x6FDBAE27` 保存双字后清 EDX，再以 `div` 对低字取余；`0x6FDBAE4A..0x6FDBAE6A` 对 deadly 分支相同。虽然 D2MOO 该函数文本有 `(int)SEED_RollRandomNumber`，原 DLL 不是有符号 `idiv`。因此保留 uint32 `%100`，不按 Java 有符号低字取模。DLL SHA256 与第十阶段相同；这是静态指令证据，不是运行捕获。
+
+普通已审计飞弹按 `HandleMissileCollision → FillDamageParams → SetDamageFlags` 拆成三条流：需要 ToHit 时从主人抽 AR；AR miss 不填伤害、不抽主人 Crit；成功进入后弹体先抽物理、火、魔法、电、冰、毒，再由防御者抽格挡/闪避，最后主人抽 MonStats.Crit。被格挡仍消费伤害和主人 Crit，但不扣血、不触发 OW；未设 ToHit 的弹体不再抽一次虚假的命中值。创建暴击仍冻结于发射包，主人 Crit 不改写快照。普通近战则在命中/防御通过后填伤害，跑动玩家走原版自动命中、不抽 AR，仍检查降低后的格挡。源代码追踪测试明确断言三方顺序；旧单流兼容快照保留原调度，未用新规则改写旧 oracle。
+
+`SUNITDMG_ApplyBlockOrDodge/ApplyDodge` 的盾挡和被动防御从**防御者**抽数，不再推进普通攻击者流。原生被动概率不套旧宿主 75% 截断，正概率包括 100% 均抽一次；移动时只检查 Evade，静止时 Weapon Block 后按攻击类型检查 Dodge/Avoid。武器资格、所有技能生产入口和全量客户端动作仍受既有范围限制，未宣称整个玩家战斗都已切换到新流。
+
+`NativeOpenWounds` 依照 `SkillItem.cpp::SKILLITEM_CalculateOpenWoundsHpRegen/EventFunc15_OpenWounds` 实现等级分段 `{9,18,27,36,45}` 加 40 的原始 8.8 HPREGEN，持续 200 帧；玩家 /4，远程对玩家再 /2，冠军/暗金目标 /2。例：40 级原速率 706，近战对玩家 176/256 HP 每帧；20 级远程对玩家 32/256；99 级原速率 3136。巨量 Mod 输入使用 long/饱和保护，不模拟原版整数溢出。
+
+生产普通怪物命中事件读取当时 OW 概率并从主人抽取，chance<=0 不抽，100 仍抽。近战动作点与已审计带来源伤害标志的普通飞弹均能安装状态，包括瞬时伤害被完全抵消的命中；miss/block、纯表格飞弹、快照副本不触发。技能/SrcMissDmg 的完整事件标志不借此放开。NPC/明确不可攻击怪物不接受状态。按 `Skills.cpp::sub_6FD10EC0`，相同 skill=0/level=1 的现存列表只刷新到期，保留首次伤害速率与来源，即使后来攻击者更强或改用远程。不会因 OW 叠加多个负回血列表。
+
+OW 作为负 HPREGEN 与自然回血、药水、毒/燃烧合算，玩家保留 1 HP，200 tick 后到期且没有额外一帧。旧手动状态入口不再使用 `level*2` 整数 HP/帧：在首次 tick 从来源等级补齐原生速率；由于该旧入口没有远程事件元数据，只能明确按近战兼容。状态队列仍是宿主 tick-before-expiry，不冒称原版整个事件优先级队列已移植。
+
+新增独立 BigInteger 测试 oracle、字面 low/high 向量、AI/战斗交替抽取、零/负 bound、无符号低/高字组合、消费者重绑、高字保留、弹体隔离与实际回收测试；创建/碰撞旧 LCG 预期改为独立原式，不放宽为“任意种子”。另有普通飞弹三方调用序列 5 项（含五通道不同宽度区分原版顺序）、防御归属/阈值 3 项、OW 快速数值 15 项、严格字面审计 15 项，以及实际近战/碰撞/状态/HP/事件/Vitals 的 OW 场景 11 项。
+
+窄入口 `build/monster-remainder-schedule-focused.log` 返回 0（1 分 12 秒）：domain 默认 272、严格审计 86，core 新随机/OW/近战/创建暴击 27 项及架构 3 项通过，无失败/错误/跳过。更早的统一组合 `build/monster-remainder-acceptance.log` 返回 1：新增直接访问 Riiablo.gameSeed 触发架构预算门禁，已改用注入上下文；该组合还不含最后的三方调度，不能作为最终版本通过证据。最终扩大回归结果另记在本节后续。
+
+全 core 扩大运行发现怪物专项之外的失败，未将其忽略后称为全绿。用 `git archive dc1e1a355` 导出未修改基线到独立 build 目录，没有回退工作区。基线 `baseline-check.log` 的 5 项中，祝福之锤亡灵/恶魔加成（100/50）、熊人生命（71/64）、震波弹体为空共 3 项已失败；火焰强化与单独运行的牺牲之箭通过。扩大基线 `baseline-expanded-check.log` 的 117 项有 17 项失败，复现缺少存档/资源样本、系统分组旧断言、客户端 context 注入、物品标签、近战动画夹具缺 CofManager，以及房间激活断言。牺牲之箭在该基线组合仍通过，但使用全局随机流且只发射一次，不足以证明其在全部运行顺序下稳定；不能因此认定本轮全量中的失败已解释完毕。附加基线结果保留于 `build/monster-remainder-baseline-dc1e1a355/baseline-extra-check.log`。
+
+火焰强化实际伤害测试保留固定源种子 123，改由独立 BigInteger 原式计算新双字流预期，并核对消费后的 low/high；不再沿用单字 LCG 数值。火/冷/电强化与诅咒测试加入 `monsterSpecialTest`，以后统一门禁会覆盖这些本轮触及的回调。牺牲之箭范围场景改为局部固定命中 RNG，并在 finally 恢复原对象；保留范围伤害的原 HP 断言，不再以一次随机发射判断范围功能是否存在，不替代独立命中概率测试。
+
+陷阱跨服务器隔离测试也改为独立 BigInteger 双字预期，8 次交错抽取逐次核对两份世界种子的 low/high，并加入模式随机分层。基线附加检查另确认德鲁伊数据、客户端爆炸和天堂之拳注入、毒新星/祝福之锤资源字段、绕墙寻路、技能审计引用缺失、无全局表的弹体属性写入，以及 Smite 的旧整数生命断言已有失败；相关日志分别为 `baseline-extra-check.log`、`baseline-data-path-check.log`、`baseline-isolation-smite-check.log`。这些独立基线失败没有在本轮扩大修改其生产代码，也不被怪物所选子域的通过掩盖。
+
+召唤宠物落地足印、非传送卷轴物品判断、A3 流浪者余光时序也分别在未修改基线复现，见 `baseline-pets-check.log`、`baseline-item-check.log`、`baseline-wanderer-check.log`；并未把这些未修问题排除后称为项目全量验收成功。
+
+全 core 的 `build/monster-remainder-full.log` 返回 1（36 分 9 秒），保存的 XML 为 941 类、5508 项、147 失败、0 错误、14 跳过；报告备份在 `build/monster-remainder-full-core-results` 和 `build/monster-remainder-full-core-report`，不会被后续筛选入口覆盖。这一报告在上述火焰强化/陷阱旧 oracle、牺牲之箭夹具修正之前，**不是最终全 core 全绿，也没有重跑全 core 来宣称所有 147 项都已解决**。额外缺失样本还涉及物品/地图/MPQ/视频；其余未逐项复现的失败不擅自统一归因为环境。
+
+后续 `build/monster-remainder-final.log` 返回 1（7 分 45 秒）：只有攻击层的沉沦魔实际动画场景失败，其余分层、编译与资源 smoke 通过。该旧夹具未绑定 serverContext，走 MathUtils 兼容战斗流，单次攻击可能落入 5% miss；未修改基线单独复跑通过。夹具现绑定真实服务端上下文与明确的单位初始种子，仍经过 AI 决策、实际序列/COF/关键帧和 HP/事件断言，不绕过生产伤害。修正后 `build/monster-remainder-fixture-retry.log` 返回 0（56 秒）：相关 core 4 类 45 项，以及攻击层 41 项均通过，无失败/错误/跳过。这里没有借夹具修正取消 AR miss 测试，独立命中测试仍保留。
+
+1.10f 真实资源启动 `desktop/build/monster-remainder-final-smoke/rogue-encampment-manifest.txt` 为 PASS，退出 `CLIENT_SHUTDOWN` 为 PASS；这是相同生产代码的资源启动验证，不是运行原版 EXE 采样。
+
+最终统一复验 `build/monster-remainder-verified.log` 返回 0（7 分 10 秒）：模式 46、数据 33、元素 109、飞弹 192、毒/回血/OW 151、结算 62、攻击 41、追击 7、召唤 10、特殊 38、AI 行为聚合 821、架构 3 项均通过，无失败/错误/跳过；桌面及 D2GS 编译通过。domain 默认 273、快速 257、严格审计 86 为当前源版本已通过的 UP-TO-DATE 结果，不声称在这个组合又执行一次。各 core 入口有重叠，不能相加当作去重数量。此后只更新文档，不再改生产代码或测试。
+
+另一台电脑复验（替换资源路径）：`./gradlew.bat :core:monsterCombatAcceptance :desktop:compileJava :server:d2gs:compileJava '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --console=plain`。需要同版本资源启动时再加 `:desktop:offscreenCamp '-Pd2Version=1.10f' '-PvisualOutput=build/monster-remainder-final-smoke'`。本轮没有达到“剩余全部完成”：下面的特殊生产分支仍须迁移；全 core 的已记录失败也没有整体修完，不能仅凭此统一门禁通过替代整个项目的验收。
+
 以下差异清单保留为**修复前基线**；当前原有 17 项全部通过，基线里的“当前”指首次审计时的实现，不是第四阶段状态。
 
 `MonsterMeleeOriginalParityTest` 不调用生产公式生成期望值：
@@ -302,6 +344,10 @@ StateUpdater 依据 `PlrModes::EVENTS_HpRegen` / `MonsterMode::ApplyStatRegen` �
 
 ## 下一阶段生产修复与实测
 
-当前已完成分层测试和所选普通怪物命中/物理/五通道元素子域，包括本轮动作级元素生命周期、普通弹体创建暴击、主人 MonStats Crit、无毒回血与毒/燃烧合算。并非全部伤害、特殊攻击或原版随机调度已完成。后续仍有技能公式与弹体精通、SrcMissDmg/DamageRate/特殊回调、吸取/眩晕/冻结等特殊类型、撕开伤口完整公式与触发、玩家/佣兵武器系数、防御/难度/多人/PvP 的完整组合，以及原版双字种子和事件先后。原版进程逐击采样与跨电脑验收仍必须另取证。不能用同一开关覆盖这些未调查分支；源码推导样本全绿也不能替代原版实测。
+当前已完成分层测试和所选普通怪物命中/物理/五通道元素子域，并增加动作级元素、两类暴击、双字种子、普通攻击三方随机归属/选定调用顺序，以及普通怪物 OW 公式/触发/刷新和 HPREGEN 合算。**仍未全部完成，不能把剩余项说成仅需另一台电脑验证**。
+
+仍需生产代码迁移及独立预期的分支：技能公式/弹体精通、SrcMissDmg、DamageRate 与特殊伤害回调；生命/法力/耐力吸取、眩晕、燃烧/freeze 特殊包；玩家/佣兵武器系数与完整 PvP/难度/多人组合；未迁移技能的随机流/初始单位种子分配/原版 stat-list 事件队列，以及大生命值经过 float 事件的精度。现存 opt-out 继续显式保留，不能删除 guard 冒充完成。普通 OW 不代表所有技能物品事件的 OW 已原版化。
+
+外部验收仍缺原版 EXE/DLL 逐击运行采样和另一台电脑实机/联机记录。源码与静态 DLL 足以推导已选子域，但不足以宣称全部实机行为一致；不能用源码样本全绿替代原版采样，也不能用 riiablo 读取原版 MPQ 的 smoke 代替运行原版游戏。
 
 原版实测时记录：1.10f EXE/DLL 与 MPQ 版本/哈希、Classic/LoD、难度、人数、区域、怪物 ID/等级/词缀/攻击模式、双方实际属性、运行/格挡/状态、动作帧、随机输入（若可捕获）、伤害包及命中前后原始 8.8 HP。只看屏幕整数血量无法区分 10 与 10.996 HP，少量随机攻击也无法证明命中概率。实测样本确认后新增来源为 executable-captured 的数据，与 source-derived 样本并存。

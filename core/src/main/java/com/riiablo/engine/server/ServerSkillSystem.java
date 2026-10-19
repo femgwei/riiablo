@@ -235,7 +235,7 @@ public class ServerSkillSystem extends PassiveSystem {
     int maximum = com.riiablo.engine.server.combat.NativeDifficultyRules
         .monsterCorpseExplosionMaximum(base.maxHP, combatContext);
     int minimum = (int) ((long) maximum * 60 / 100);
-    NativeRng rng = new NativeRng(monster.rngState);
+    NativeUnitRandom rng = NativeUnitRandom.monster(monster, gameSeed(), source);
     int rolled = minimum + (maximum > minimum ? rng.nextInt(maximum - minimum) : 0);
     monster.rngState = rng.state();
     Missiles.Entry row = files().Missiles.get("monstercorpseexplode");
@@ -297,8 +297,8 @@ public class ServerSkillSystem extends PassiveSystem {
     if (!MonsterRank.isUnique(monster.rank)
         || !com.riiablo.engine.server.monster.MonsterAffix.hasAffix(monster.affixes,
             com.riiablo.engine.server.monster.MonsterAffix.CURSED)) return;
-    NativeRng rng = new NativeRng(monster.rngState);
-    int roll = rng.nextInt();
+    NativeUnitRandom rng = NativeUnitRandom.monster(monster, gameSeed(), source);
+    int roll = (int) rng.nextUnsigned();
     monster.rngState = rng.state();
     if (!cursedHitRollSucceeds(roll)) return;
     Skills.Entry skill = files().skills.get(SkillId.AMPLIFY_DAMAGE);

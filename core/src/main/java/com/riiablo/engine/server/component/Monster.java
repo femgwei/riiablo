@@ -56,8 +56,9 @@ public class Monster extends Component {
   public int baalLinkedOwnerId = -1;
   /** Successful Baal clone creations, native AiParam[1]; deaths do not refund it. */
   public int baalClonesCreated;
-  /** Native per-monster seed consumed by cold/shatter rolls. */
+  /** Low-word diagnostic mirror of the shared native unit seed. */
   public int rngState;
+  public com.d2moo.common.drlg.D2Seed nativeSeed;
   /** One mode-entry selection, shared by every hit/projectile until the next
    * non-gethit mode change. Never written back into permanent Attributes. */
   public com.riiablo.engine.server.combat.NativeMonsterModeElements modeElements;
@@ -131,6 +132,7 @@ public class Monster extends Component {
     baalLinkedOwnerId = -1;
     baalClonesCreated = 0;
     rngState = 0;
+    nativeSeed = null;
     modeElements = null;
     nativePackId = -1;
     nativePackLeader = false;

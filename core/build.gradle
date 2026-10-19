@@ -317,6 +317,8 @@ flatbuffers {
 def monsterScenarioSuite = 'com.riiablo.engine.server.ai.MonsterBehaviorScenarioIntegrationTest'
 def monsterTestGroups = [
     monsterModeElementTest: [
+        'com.riiablo.engine.server.NativeUnitRandomTest',
+        'com.riiablo.engine.server.ServerSystemIsolationTest.trapRollsKeepUnitStateAndUseTheWorldSeed',
         'com.riiablo.engine.server.MonsterMissileCreationCriticalIntegrationTest',
         'com.riiablo.engine.server.MonsterModeElementLifecycleTest',
         'com.riiablo.engine.server.MonsterModeMeleeIntegrationTest',
@@ -367,6 +369,7 @@ def monsterTestGroups = [
         'com.riiablo.engine.server.MonsterMissileElementalIntegrationTest',
         'com.riiablo.engine.server.ShamanFireballAuditTest'],
     monsterPoisonTest: [
+        'com.riiablo.engine.server.MonsterOpenWoundsIntegrationTest',
         'com.riiablo.engine.server.MonsterMissileSourceIntegrationTest',
         'com.riiablo.engine.server.PoisonRegenIntegrationTest',
         'com.riiablo.engine.server.PotionRecoverySystemTest',
@@ -383,6 +386,11 @@ def monsterTestGroups = [
         'com.riiablo.engine.server.NecromancerPoisonNovaIntegrationTest',
         'com.riiablo.engine.server.NecromancerExplosionIntegrationTest.poisonExplosionCreatesEightAuthoritativeDriftingCloudsAndAppliesFixedPoison'],
     monsterSpecialTest: [
+        'com.riiablo.engine.server.FireEnchantedDamageIntegrationTest',
+        'com.riiablo.engine.server.FireEnchantedDeathTest',
+        'com.riiablo.engine.server.ColdEnchantedNovaTest',
+        'com.riiablo.engine.server.LightningEnchantedTimingTest',
+        'com.riiablo.engine.server.CursedMonsterTriggerTest',
         monsterScenarioSuite + '.suicideAiDamagesNearbyPlayerOnlyAfterNativeFourFrameDelay',
         monsterScenarioSuite + '.shamanRangedAiMissileMustReachAndDamagePlayer',
         monsterScenarioSuite + '.succubusCurseMustInstallStateOnPlayer',

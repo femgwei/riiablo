@@ -55,7 +55,7 @@ class MonsterModeElementLifecycleTest extends RiiabloTest {
   @Test void entrySelectsOnceAndManyMissilesShareItWithoutConsumingEitherSeed() {
     try (Fixture f = new Fixture()) {
       f.row.El1Pct = new int[] {50,50,50}; f.row.El1Type = "rand";
-      NativeRng expected = new NativeRng(f.monster.rngState);
+      NativeSeedReference expected = new NativeSeedReference(f.monster.rngState);
       NativeMonsterModeElements selected = MonsterModeDamageResolver.resolveElements(
           f.files, expected::nextInt, f.row, 40, 1, Engine.Monster.MODE_A1, 1, true);
       f.cofs.setMode(f.id, Engine.Monster.MODE_A1, true);

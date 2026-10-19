@@ -177,8 +177,8 @@ public abstract class AI implements Interactable.Interactor {
    *
    * <p>AIRollChanceParam always consumes SEED_RollPercentage, even at 0/100.
    * This stream uses D2Common's 64-bit seed arithmetic, not NativeRng's LCG.
-   * The initial low seed is still a riiablo game/entity mix: native unit
-   * creation and combat do not yet share one fully ported pSeed stream.
+   * Live monsters share pSeed with mode entry, skills and combat. Initial
+   * unit allocation still uses the host game/entity mix, not native spawning.
    */
   protected final boolean rollAiChance(int percent) {
     return rollAiPercentage() < percent;
@@ -186,11 +186,15 @@ public abstract class AI implements Interactable.Interactor {
 
   /** Native AI percentage roll, exposed when a decision compares the raw roll. */
   protected final int rollAiPercentage() {
+    if (monster != null) return com.riiablo.engine.server.NativeUnitRandom
+        .monster(monster, gameSeed(), entityId).percentage();
     return Seed.rollPercentage(aiSeed());
   }
 
   /** D2Game ITEMS_RollRandomNumber truncates the shared seed draw to uint32. */
   protected final long rollAiRandomNumber() {
+    if (monster != null) return com.riiablo.engine.server.NativeUnitRandom
+        .monster(monster, gameSeed(), entityId).nextUnsigned();
     return Seed.rollRandomNumber(aiSeed()) & 0xFFFFFFFFL;
   }
 

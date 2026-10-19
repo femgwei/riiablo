@@ -60,6 +60,7 @@ class MonsterModeMeleeIntegrationTest extends RiiabloTest {
       world.getMapper(MovementModes.class).create(owner)
           .set(Engine.Monster.MODE_NU,Engine.Monster.MODE_WL,Engine.Monster.MODE_RN);
       world.getMapper(Player.class).create(victim);
+      world.getMapper(UnitRandomSeed.class).create(victim).low = 1;
       world.getMapper(com.riiablo.engine.server.component.Class.class).create(victim).type =
           com.riiablo.engine.server.component.Class.Type.PLR;
       world.getMapper(AttributesWrapper.class).create(victim).attrs = target;
@@ -72,9 +73,12 @@ class MonsterModeMeleeIntegrationTest extends RiiabloTest {
       world.setDelta(Animation.FRAME_DURATION); world.process();
     }
     void attack() {
+      attack(1068);
+    }
+    void attack(int seed) {
       actions.cast(owner, com.riiablo.skill.SkillCodes.attack, victim, new Vector2(11,10));
       cofs.setMode(owner, Engine.Monster.MODE_A1, true);
-      world.getMapper(Monster.class).get(owner).rngState = 1068;
+      world.getMapper(Monster.class).get(owner).rngState = seed;
       world.getSystem(EventSystem.class).dispatch(AnimDataKeyframeEvent.obtain(owner, Engine.KEYFRAME_ATK));
     }
     UnitState state(int id) { return world.getMapper(UnitStates.class).get(victim).stateList.getState(id); }

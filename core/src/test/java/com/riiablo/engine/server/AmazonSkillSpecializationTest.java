@@ -494,6 +494,12 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), collisions, factory)
         .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    java.util.Random previousRandom = com.badlogic.gdx.math.MathUtils.random;
+    // This scene verifies SrvHit09 radius/settlement, not the separate AR
+    // probability contract. A single random miss must not hide that behavior.
+    com.badlogic.gdx.math.MathUtils.random = new java.util.Random(0) {
+      @Override public int nextInt(int bound) { return 0; }
+    };
     try {
       int amazon = world.create();
       world.getMapper(Player.class).create(amazon).data =
@@ -527,6 +533,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
           "SrvHit09 must apply the arrow packet to hostile units within radius 4");
     } finally {
       world.dispose();
+      com.badlogic.gdx.math.MathUtils.random = previousRandom;
     }
   }
 

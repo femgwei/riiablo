@@ -48,14 +48,16 @@ class FireEnchantedDamageIntegrationTest extends RiiabloTest {
           row.hcIdx, 1, 0, 20, (short) 1, base));
       int maximum = base.maxHP * Riiablo.files.DifficultyLevels.get(0).MonsterCEDamagePercent / 100;
       int minimum = maximum * 60 / 100;
-      int roll = (123 * 1103515245 + 12345) & 0x7fffffff;
-      int channel = (minimum + (maximum > minimum ? roll % (maximum - minimum) : 0)) / 4;
+      NativeSeedReference random = new NativeSeedReference(123);
+      int channel = (minimum + random.nextInt(maximum - minimum)) / 4;
       system.resolveFireEnchantedDeath(source);
       assertNotNull(probe.hit);
       assertEquals(channel, probe.hit.physicalDamage, .001f);
       assertEquals(channel / 2, probe.hit.fireDamage, .001f);
       assertEquals(10000 - channel - channel / 2,
           defender.get(Stat.hitpoints).asFixed(), .001f);
+      assertEquals(random.state(), monster.rngState);
+      assertEquals(random.high(), monster.nativeSeed.getNHighSeed());
       verify(factory, times(1)).createMissile(any(), any(), any(), eq(source), eq(1));
     } finally { world.dispose(); }
   }

@@ -25,8 +25,9 @@ public class Missile extends PooledComponent {
   /** Wave and owner lifetime captured by the Baal spawn controller. */
   public int nativeBaalWave = -1;
   public NativePathIdentity.Token nativeBaalOwnerIdentity;
-  /** Per-projectile native RNG state (pierce/branch rolls never use global RNG). */
+  /** Low-word diagnostic/legacy mirror; nativeSeed persists the full pSeed. */
   public int rngState;
+  public com.d2moo.common.drlg.D2Seed nativeSeed;
 
   /** Current native RoomEx id, updated as the missile crosses room borders. */
   public int roomId = -1;
@@ -276,6 +277,7 @@ public class Missile extends PooledComponent {
     nativeBaalWave = -1;
     nativeBaalOwnerIdentity = null;
     rngState = 0;
+    nativeSeed = null;
     roomId = -1;
     authoritative = true;
     presentationOnly = false;
