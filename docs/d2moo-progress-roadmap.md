@@ -2,6 +2,10 @@
 
 ## 2026-10-19 扼杀者导弹追踪与拖尾
 
+- 补修实际发射缺少 targetId 的接线：FingerMage 使用 Casting，不能依赖 owner 的
+  Target 回退；SrvDo11 导弹现保留 SkillDoEvent 的目标。新增真实技能发射测试，
+  验证没有 owner Target、施法结束后目标移动仍可连续改变导弹方向。
+
 - 对照 1.10f MPQ、D2MOO SrvDo11 和 D2Client 0x6FB31DD0，接入主体倒计时
   每 5 帧、20 距离内的符号方向修正，以及客户端每 3 帧的静止拖尾；子单元
   20 帧清理，禁止伤害和递归生成。保留原版 16 方向、5 帧 DCC 动画。

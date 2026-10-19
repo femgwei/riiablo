@@ -1,5 +1,17 @@
 # 扼杀者 FingerMageSpider 导弹
 
+## 发射目标补修
+
+实机反馈主体没有转向后，确认通用 ServerSkillSystem 发射分支只用 SkillDoEvent
+目标计算初始方向，没有把 targetId 保存到导弹。FingerMage AI 使用 Casting，
+并不保证拥有 Target 组件，因此 SrvDo11 的 owner Target 回退取不到目标。
+现在发射 pSrvDoFunc=11 导弹时保留 event.targetId，施法结束后仍跟踪该单位。
+新增 FingerMageLaunchIntegrationTest，通过真实 ServerSkillSystem/ServerEntityFactory
+发射技能 196，覆盖没有 owner Target、清除施法状态、目标连续改变位置后两次转向。
+此前仅手动构造 owner Target 的测试未覆盖这个生产接线缺口。
+使用本机 1.10f 资源运行 FingerMageLaunchIntegrationTest 和 FingerMageFlightTest，
+两项通过（零跳过、零失败）。本轮只补发射目标，不重复运行营地烟测。
+
 依据：本机 Diablo II 1.10f MPQ、D2MOO SkillMonst.cpp SrvDo101、
 MissMode.cpp SrvDo11，以及原版 D2Client.dll 客户端回调 0x6FB31DD0。
 DLL SHA256：94466B84C0593AB682F1D3D8DC65EF4F8170F33E430865D802BC752458B2B282。

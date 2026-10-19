@@ -1609,6 +1609,12 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       int missileId = createMissile(missile, direction, start, event.entityId,
           sharedHitTargets, skillLevel);
+      // SrvDo101 must retain the cast unit: native AI casting uses Casting,
+      // not the owner's transient Target component. SrvDo11 repaths after
+      // the cast/sequence has finished as the victim moves.
+      if (missileId >= 0 && missile.pSrvDoFunc == 11 && mMissile.has(missileId)) {
+        mMissile.get(missileId).targetId = event.targetId;
+      }
       if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
           || event.srvdofunc == 3 || event.srvdofunc == 5) {
         com.badlogic.gdx.Gdx.app.log("ServerSkillSystem", String.format(
