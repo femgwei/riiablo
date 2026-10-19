@@ -54,6 +54,8 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
   ClickListener clickListener;
   final CharData charData;
   final Array<WaypointControl> waypointControls = new Array<>(42);
+  private final Tab[] tabs = new Tab[5];
+  private final Button[] actButtons = new Button[5];
 
   public WaygatePanel(CharData charData) {
     this(Riiablo.game, charData);
@@ -139,7 +141,6 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
       waypoint.sort(comparator);
     }
 
-    final Tab[] tabs = new Tab[5];
     for (int i = 0; i < tabs.length; i++) {
       Tab tab = tabs[i] = new Tab();
       session.own(tab);
@@ -160,7 +161,7 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
     }
 
     float x = 2, y = getHeight() - 3;
-    Button[] actors = new Button[5];
+    Button[] actors = actButtons;
     for (int i = 0; i < actors.length; i++) {
       final int j = i << 1;
       final Button actor = actors[i] = new Button(new Button.ButtonStyle() {{
@@ -194,6 +195,15 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
     refresh();
 
     //setDebug(true, true);
+  }
+
+  /** Opens the current act's destinations and synchronizes the selected tab. */
+  public void refresh(int act) {
+    if (!isCurrentSession()) return;
+    refresh();
+    if (act < 0 || act >= tabs.length) return;
+    actButtons[act].setChecked(true);
+    for (int i = 0; i < tabs.length; i++) tabs[i].setVisible(i == act);
   }
 
   /** Refreshes destination availability from the current difficulty save flags. */

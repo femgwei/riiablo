@@ -1670,7 +1670,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   public void openWaygatePanel(int waypointEntity) {
     activeWaygateEntity = waypointEntity;
-    waygatePanel.refresh();
+    waygatePanel.refresh(map.getAct());
     setLeftPanel(waygatePanel);
   }
 
