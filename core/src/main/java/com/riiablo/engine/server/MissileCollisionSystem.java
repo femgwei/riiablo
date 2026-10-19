@@ -3560,8 +3560,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       CombatSystem.CombatResult combat) {
     if (!mUnitStates.has(targetId)) return;
     int attackerId = missile != null ? missile.ownerId : Engine.INVALID_ENTITY;
+    boolean nativePoison = missile != null && missile.nativeElemental != null
+        && missile.nativeElemental.type == CombatSystem.DAMAGE_POISON;
     if (combat.poisonDuration > 0
-        && combat.elementalDamage[CombatSystem.DAMAGE_POISON] > 0) {
+        && ((nativePoison && combat.poisonDamagePerFrame > 0f)
+            || combat.elementalDamage[CombatSystem.DAMAGE_POISON] > 0)) {
       float poisonPerFrame = combat.poisonDamagePerFrame > 0f
           ? combat.poisonDamagePerFrame
           : CombatSystem.totalPoisonToPerFrame(

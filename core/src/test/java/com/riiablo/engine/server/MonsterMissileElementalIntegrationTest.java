@@ -169,7 +169,7 @@ class MonsterMissileElementalIntegrationTest extends RiiabloTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"source", "sourceSentinel", "sourceMissile", "skill", "formula", "physicalFormula", "mastery", "rate", "special", "poison", "player", "hireling"})
+  @ValueSource(strings = {"source", "sourceSentinel", "sourceMissile", "skill", "formula", "physicalFormula", "mastery", "rate", "special", "player", "hireling"})
   void deferredPoliciesNeverSilentlyOptIn(String policy) {
     try (Fixture f = new Fixture()) {
       Missiles.Entry row = row("fire", 10, 11);
@@ -183,7 +183,6 @@ class MonsterMissileElementalIntegrationTest extends RiiabloTest {
         case "mastery": row.ApplyMastery = true; break;
         case "rate": row.DamageRate = 1; break;
         case "special": row.pSrvDmgFunc = 2; break;
-        case "poison": row.EType = "pois"; break;
       }
       Missile p = new Missile().set(row, new Vector2(), 100);
       MissileDamageResolver.initialize(Riiablo.files, p, f.source,

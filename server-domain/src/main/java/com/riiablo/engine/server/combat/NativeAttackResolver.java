@@ -130,7 +130,9 @@ public final class NativeAttackResolver {
       result.coldDuration = scaleMonsterColdDuration(
           result.coldDuration, defender.isMonster, attacker.difficulty);
     }
-    result.poisonDuration = Math.max(0, attacker.poisonLength);
+    result.poisonDuration = attacker.missileElemental != null
+        ? attacker.missileElemental.poisonDuration(defender, attacker.elementalPierce[DAMAGE_POISON])
+        : Math.max(0, attacker.poisonLength);
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       int elemDamage = calculateElementalDamage(attacker, i);
       if (!attacker.fixedPointElements && attacker.missileElemental == null && result.elementalScale != 1) {

@@ -97,6 +97,10 @@ public class NativeDefenseData {
   public boolean cannotBeFrozen;
   public boolean halfFreezeDuration;
 
+  /** Native PoisLen row, including its separate difficulty penalty. */
+  public int poisonLengthResistance;
+  public boolean poisonShrine;
+
   /** Native elemental absorption, applied after resistance. */
   public int[] absorbPercent = new int[DAMAGE_TYPE_COUNT];
   public int[] absorbFlat = new int[DAMAGE_TYPE_COUNT];

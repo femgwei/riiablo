@@ -57,7 +57,7 @@ public class Missile extends PooledComponent {
   public boolean damageSnapshot;
   /** Independent native physical policy; legacy/skill packets leave this null. */
   public com.riiablo.engine.server.combat.NativeMissilePhysicalDamage nativePhysical;
-  /** Table-only instantaneous element; source/skill/rate policies leave this null. */
+  /** Table-only instant element or poison rate; source/skill/DamageRate policies opt out. */
   public com.riiablo.engine.server.combat.NativeMissileElementalDamage nativeElemental;
   public int damageLevel;
   /** Skills.txt row used to build this projectile's authoritative snapshot. */

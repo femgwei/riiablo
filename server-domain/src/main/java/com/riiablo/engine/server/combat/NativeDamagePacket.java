@@ -31,6 +31,7 @@ public class NativeDamagePacket {
   public int hitRoll = -1;
   public int coldDuration;
   public int poisonDuration;
+  /** Resisted HP/frame. Native table poison keeps its rate out of elementalDamage. */
   public float poisonDamagePerFrame;
   public int poisonRawDamageFixed;
   public int poisonPiercePercent;

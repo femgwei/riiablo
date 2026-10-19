@@ -342,6 +342,8 @@ def monsterTestGroups = [
     monsterMissileTest: [
         'com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest',
         'com.riiablo.engine.server.MonsterMissileElementalIntegrationTest',
+        'com.riiablo.engine.server.MonsterMissilePoisonIntegrationTest',
+        'com.riiablo.engine.server.combat.MonsterPoisonSnapshotTest',
         'com.riiablo.engine.server.QuillRatMissileTest',
         'com.riiablo.engine.server.MissileNativePolicyTest',
         'com.riiablo.engine.server.MissileRoomTrackingTest',
@@ -349,6 +351,19 @@ def monsterTestGroups = [
     monsterElementalTest: [
         'com.riiablo.engine.server.MonsterMissileElementalIntegrationTest',
         'com.riiablo.engine.server.ShamanFireballAuditTest'],
+    monsterPoisonTest: [
+        'com.riiablo.engine.server.MonsterMissilePoisonIntegrationTest',
+        'com.riiablo.engine.server.combat.MonsterPoisonSnapshotTest',
+        'com.riiablo.engine.server.combat.StatusEffectApplierTest',
+        'com.riiablo.engine.server.StatusEffectEcsScenarioTest',
+        'com.riiablo.engine.server.AmazonSkillSpecializationTest.poisonJavelinCreatesPersistentPoisonCloud',
+        'com.riiablo.engine.server.AmazonSkillSpecializationTest.corpsePoisonCloudUsesSharedPersistentAreaLifecycle',
+        'com.riiablo.engine.server.AmazonSkillSpecializationTest.plagueJavelinHitFansOutNativePoisonCloudRing',
+        'com.riiablo.engine.server.AssassinSkillSpecializationTest.venomAddsDamageAndOverridesItemPoisonLength',
+        'com.riiablo.engine.server.DruidRabiesFireClawsTest',
+        'com.riiablo.engine.server.NecromancerPoisonDaggerIntegrationTest',
+        'com.riiablo.engine.server.NecromancerPoisonNovaIntegrationTest',
+        'com.riiablo.engine.server.NecromancerExplosionIntegrationTest.poisonExplosionCreatesEightAuthoritativeDriftingCloudsAndAppliesFixedPoison'],
     monsterSpecialTest: [
         monsterScenarioSuite + '.suicideAiDamagesNearbyPlayerOnlyAfterNativeFourFrameDelay',
         monsterScenarioSuite + '.shamanRangedAiMissileMustReachAndDamagePlayer',

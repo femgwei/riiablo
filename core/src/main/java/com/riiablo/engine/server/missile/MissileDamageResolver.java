@@ -247,16 +247,18 @@ public final class MissileDamageResolver {
     NativeMissilePhysicalDamage nativePhysical = nativeMonsterDamage && ownerMonster != null
         && row.SrcMissDmg == 0 && !hasText(row.DmgSymPerCalc)
         ? monsterPhysical(row, level, ownerAttrs, ownerStates) : null;
-    // Do not silently reuse this policy for poison rates, mastery, special damage
+    // Do not silently reuse this policy for mastery, special damage
     // callbacks or owner/skill/formula damage. Each needs a separate source audit.
     NativeMissileElementalDamage nativeElemental = nativeMonsterDamage && ownerMonster != null
         && row.SrcDamage == 0 && row.SrcMissDmg == 0 && row.pSrvDmgFunc == 0
         && row.DamageRate == 0 && !row.ApplyMastery && !hasText(row.DmgSymPerCalc)
         && !hasText(row.EDmgSymPerCalc)
-        && (directType == FIRE || directType == LIGHTNING || directType == COLD || directType == MAGIC)
+        && (directType == FIRE || directType == LIGHTNING || directType == COLD
+            || directType == MAGIC || directType == POISON)
         ? new NativeMissileElementalDamage(directType,
             missileElementalDamageFixed(row, level, true),
-            missileElementalDamageFixed(row, level, false), coldLength) : null;
+            missileElementalDamageFixed(row, level, false),
+            directType == POISON ? poisonLength : coldLength) : null;
     int attackRating = statInt(ownerAttrs, Stat.tohit);
     if (sourceScale > 0 && ownerAttrs != null) {
       int sourceMin = statInt(ownerAttrs, Stat.item_throw_mindamage);
