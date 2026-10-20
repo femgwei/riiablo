@@ -52,6 +52,7 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.MissileImpactEvent;
+import com.riiablo.engine.server.event.SoundEvent;
 import com.riiablo.io.ByteInput;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
@@ -102,6 +103,7 @@ import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.net.packet.d2gs.MissileP;
 import com.riiablo.net.packet.d2gs.MissileImpactP;
+import com.riiablo.net.packet.d2gs.SoundP;
 import com.riiablo.net.packet.d2gs.WarpP;
 import com.riiablo.net.packet.d2gs.StateP;
 import com.riiablo.net.packet.d2gs.SnapshotBaseline;
@@ -297,6 +299,15 @@ public class ClientNetworkReceiver extends IntervalSystem {
               impact.missileId(), impact.ownerId(), impact.targetEntityId(),
               new Vector2(impact.x(), impact.y()),
               new Vector2(impact.dx(), impact.dy())));
+        }
+        break;
+      case D2GSData.SoundP:
+        SoundP sound = (SoundP) packet.data(new SoundP());
+        if (events != null) {
+          SoundEvent event = SoundEvent.obtain(
+              sound.entityId(), sound.sound(), sound.global());
+          if (sound.positionPresent()) event.withPosition(sound.x(), sound.y());
+          events.dispatch(event);
         }
         break;
       case D2GSData.SnapshotBaseline:

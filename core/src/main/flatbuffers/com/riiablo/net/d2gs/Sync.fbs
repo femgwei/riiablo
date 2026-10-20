@@ -284,3 +284,16 @@ table MissileImpactP {
   dx:float32 = 1.0;
   dy:float32;
 }
+
+// One-shot authoritative audio intent. The sound key is resolved by the
+// receiving client; the server never sends an asset or opens an audio device.
+// Position is captured at emission so death/cleanup in the same tick cannot
+// make a remote client lose the spatial source.
+table SoundP {
+  entityId:int32;
+  sound:string;
+  global:bool = true;
+  x:float32;
+  y:float32;
+  positionPresent:bool;
+}

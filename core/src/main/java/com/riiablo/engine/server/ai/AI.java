@@ -176,7 +176,12 @@ public abstract class AI implements Interactable.Interactor {
   /** Publishes a server sound intent; the client owns all actual playback. */
   protected final void playSound(String sound) {
     if (events != null && sound != null && !sound.isEmpty()) {
-      events.dispatch(SoundEvent.obtain(entityId, sound, true));
+      SoundEvent event = SoundEvent.obtain(entityId, sound, true);
+      if (mPosition != null && mPosition.has(entityId)) {
+        Vector2 position = mPosition.get(entityId).position;
+        event.withPosition(position.x, position.y);
+      }
+      events.dispatch(event);
     }
   }
 

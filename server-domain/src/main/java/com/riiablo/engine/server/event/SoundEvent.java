@@ -15,6 +15,9 @@ public final class SoundEvent implements Event {
   public int entityId;
   public String sound;
   public boolean global;
+  public float x;
+  public float y;
+  public boolean positionPresent;
 
   public static SoundEvent obtain(int entityId, String sound, boolean global) {
     SoundEvent event = new SoundEvent();
@@ -22,5 +25,12 @@ public final class SoundEvent implements Event {
     event.sound = sound;
     event.global = global;
     return event;
+  }
+
+  public SoundEvent withPosition(float x, float y) {
+    this.x = x;
+    this.y = y;
+    this.positionPresent = true;
+    return this;
   }
 }

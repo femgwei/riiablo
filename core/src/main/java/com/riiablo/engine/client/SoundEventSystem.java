@@ -35,13 +35,15 @@ public final class SoundEventSystem extends PassiveSystem {
     if (audio == null) return;
 
     int listenerId = session.listener();
-    if (listenerId == Engine.INVALID_ENTITY || !mPosition.has(listenerId)
-        || !mPosition.has(event.entityId)) return;
+    if (listenerId == Engine.INVALID_ENTITY || !mPosition.has(listenerId)) return;
 
-    boolean sameZone = sameZone(event.entityId, listenerId);
+    boolean hasEntityPosition = mPosition.has(event.entityId);
+    if (!hasEntityPosition && !event.positionPresent) return;
+    float sourceX = hasEntityPosition ? mPosition.get(event.entityId).position.x : event.x;
+    float sourceY = hasEntityPosition ? mPosition.get(event.entityId).position.y : event.y;
+    boolean sameZone = hasEntityPosition ? sameZone(event.entityId, listenerId) : true;
     float gain = MonsterAudio.spatialGain(
-        mPosition.get(listenerId).position.dst2(mPosition.get(event.entityId).position),
-        sameZone);
+        mPosition.get(listenerId).position.dst2(sourceX, sourceY), sameZone);
     if (gain <= 0f) return;
 
     Audio.Instance instance = audio.play(event.sound, event.global);

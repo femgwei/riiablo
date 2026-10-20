@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.AuthoritativeSimulation;
 import com.riiablo.engine.server.event.MissileImpactEvent;
+import com.riiablo.engine.server.event.SoundEvent;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Flags;
@@ -24,6 +25,7 @@ import com.riiablo.map.Map;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.MissileImpactP;
+import com.riiablo.net.packet.d2gs.SoundP;
 import com.riiablo.net.packet.d2gs.EntityFlags;
 import com.riiablo.net.EntitySnapshotCache;
 
@@ -363,6 +365,29 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       Gdx.app.error(TAG, "[MISSILE_IMPACT] phase=network_drop source="
           + event.missileEntityId + " recipients=0x"
           + Integer.toHexString(recipients));
+    }
+  }
+
+  /** Broadcasts an authoritative one-shot sound intent to visible clients. */
+  @Subscribe
+  public void onSound(SoundEvent event) {
+    if (event == null || event.entityId < 0 || event.sound == null || event.sound.isEmpty()) {
+      return;
+    }
+    int recipients = recipientMask(event.entityId);
+    if (recipients == 0) return;
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int sound = builder.createString(event.sound);
+    int soundOffset = SoundP.createSoundP(builder, event.entityId, sound, event.global,
+        event.x, event.y, event.positionPresent);
+    int root = D2GS.createD2GS(builder, D2GSData.SoundP, soundOffset);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer bytes = builder.dataBuffer().duplicate();
+    byte[] copy = new byte[bytes.remaining()];
+    bytes.get(copy);
+    if (!outPackets.offer(Packet.obtain(recipients, ByteBuffer.wrap(copy)))) {
+      Gdx.app.error(TAG, "[SOUND_EVENT] phase=network_drop entity=" + event.entityId
+          + " recipients=0x" + Integer.toHexString(recipients));
     }
   }
 
