@@ -31,6 +31,7 @@ import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ServerGameplayContext;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
+import com.riiablo.engine.server.event.SoundEvent;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.combat.NativeMeleeDistance;
 import com.riiablo.engine.server.component.Angle;
@@ -170,6 +171,13 @@ public abstract class AI implements Interactable.Interactor {
 
   protected final int gameSeed() {
     return serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed;
+  }
+
+  /** Publishes a server sound intent; the client owns all actual playback. */
+  protected final void playSound(String sound) {
+    if (events != null && sound != null && !sound.isEmpty()) {
+      events.dispatch(SoundEvent.obtain(entityId, sound, true));
+    }
   }
 
   /**
@@ -329,7 +337,7 @@ public abstract class AI implements Interactable.Interactor {
       lookAt(sourceId);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(SkillCodes.attack, sourceId, source);
-      com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
+      playSound(monsound + "_attack_1");
     } else {
       walkTo(source, sourceId);
     }
@@ -499,7 +507,7 @@ public abstract class AI implements Interactable.Interactor {
 
   public void hit() {
     invalidateNativePathCache();
-    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_hit_1", true);
+    playSound(monsound + "_hit_1");
   }
 
   /** Authoritative damage reaction, independent of whether a local client plays a sound. */

@@ -188,6 +188,7 @@ public final class ClientSimulationAssembly {
 
         .with(new SoundEnvironmentSystem(clientAudioSession))
         .with(new FootstepEmitter())
+        .with(new SoundEventSystem(clientAudioSession))
         .with(new MonsterSoundEmitter())
         .with(new BlockSoundEmitter())
 

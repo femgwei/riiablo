@@ -126,7 +126,7 @@ public final class NecroPet extends AI {
         state = "ATTACK";
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(SkillCodes.attack, targetId, target);
-        com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
+        playSound(monsound + "_attack_1");
       } else {
         state = "IDLE_COMBAT";
       }
@@ -216,7 +216,7 @@ public final class NecroPet extends AI {
     targetId = Engine.INVALID_ENTITY;
     state = "DEAD";
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
-    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_death_1", true);
+    playSound(monsound + "_death_1");
   }
 
   @Override

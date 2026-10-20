@@ -251,7 +251,7 @@ abstract class NativeDecisionAI extends AI {
     state = "ATTACK";
     mSequence.create(entityId).sequence((byte) attackMode, Engine.Monster.MODE_NU);
     mCasting.create(entityId).set(SkillCodes.attack, targetId, target);
-    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
+    playSound(monsound + "_attack_1");
     nextThinkFrame = 0;
   }
 
@@ -324,7 +324,7 @@ abstract class NativeDecisionAI extends AI {
     stopMovement();
     mCasting.remove(entityId);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
-    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_death_1", true);
+    playSound(monsound + "_death_1");
   }
 
   @Override

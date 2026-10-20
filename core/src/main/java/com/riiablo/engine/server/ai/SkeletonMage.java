@@ -94,7 +94,7 @@ public class SkeletonMage extends AI {
     pathfinder.findPath(entityId, null);
     stateMachine.changeState(State.DEAD);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
-    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_death_1", true);
+    playSound(monsound + "_death_1");
   }
 
   @Override
@@ -191,7 +191,7 @@ public class SkeletonMage extends AI {
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
+      playSound(monsound + "_attack_1");
       time = MathUtils.random(1f, 2);
       return;
     }

@@ -91,7 +91,7 @@ public final class Navi extends Npc {
     // the cast and will not emit a duplicate if a later keyframe is present.
     if (createNativeArrow(targetId, target)) casting.monsterMissileCreated = true;
     mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
+    playSound(monsound + "_attack_1");
     burstRemaining--;
     if (burstRemaining == 0) {
       burstPause = BURST_PAUSE_MIN

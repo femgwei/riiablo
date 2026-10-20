@@ -60,7 +60,7 @@ public class QuillRat extends AI {
     pathfinder.findPath(entityId, null);
     stateMachine.changeState(State.DEAD);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
-    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_death_1", true);
+    playSound(monsound + "_death_1");
   }
 
   /**
@@ -169,11 +169,11 @@ public class QuillRat extends AI {
       if (isInCombat(targetId)) {
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, mPosition.get(targetId).position);
-        com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
+        playSound(monsound + "_attack_1");
       } else {
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, mPosition.get(targetId).position);
-        com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_shoot_1", true);
+        playSound(monsound + "_shoot_1");
       }
       time = MathUtils.random(1f, 2f);
       return;
@@ -193,7 +193,7 @@ public class QuillRat extends AI {
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, mPosition.get(targetId).position);
-      com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
+      playSound(monsound + "_attack_1");
       time = MathUtils.random(1f, 2);
       return;
     }
@@ -205,7 +205,7 @@ public class QuillRat extends AI {
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, mPosition.get(targetId).position);
-      com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_shoot_1", true);
+      playSound(monsound + "_shoot_1");
       time = MathUtils.random(1f, 2);
       return;
     }
@@ -256,7 +256,7 @@ public class QuillRat extends AI {
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_shoot_1", true);
+      playSound(monsound + "_shoot_1");
       time = MathUtils.random(1f, 2);
       return;
     }
@@ -271,7 +271,7 @@ public class QuillRat extends AI {
         stateMachine.changeState(State.ATTACK);
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-        com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_shoot_1", true);
+        playSound(monsound + "_shoot_1");
         time = MathUtils.random(1f, 2);
         return;
       }

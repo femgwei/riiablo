@@ -48,6 +48,7 @@ class ClientAudioSessionTest {
     assertAll(
         () -> assertThrows(NullPointerException.class, () -> new SoundEnvironmentSystem(null)),
         () -> assertThrows(NullPointerException.class, () -> new ObjectAmbientSoundSystem(null)),
-        () -> assertThrows(NullPointerException.class, () -> new SoundEmitterHandler(null)));
+        () -> assertThrows(NullPointerException.class, () -> new SoundEmitterHandler(null)),
+        () -> assertThrows(NullPointerException.class, () -> new SoundEventSystem(null)));
   }
 }

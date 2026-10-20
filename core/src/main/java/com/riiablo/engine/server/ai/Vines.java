@@ -214,7 +214,7 @@ public class Vines extends AI {
     stopMovement();
     state = "DEAD";
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
-    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_death_1", true);
+    playSound(monsound + "_death_1");
   }
 
   @Override
