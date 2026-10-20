@@ -6223,10 +6223,13 @@ public class Actioneer extends PassiveSystem {
     if (holyShield != null && holyShield.skillId >= 0) {
       Skills.Entry hs = files().skills.get(holyShield.skillId);
       int hsLevel = Math.max(1, holyShield.level);
-      int hsBonus = hs != null ? Math.max(0, SkillFormula.evaluate(hs.calc1, hs, hsLevel)) : 0;
-      min += hsBonus;
-      max += hsBonus;
+      int[] hsDamage = PaladinSkills.getHolyShieldPhysicalDamage(hs, hsLevel);
+      min += hsDamage[0];
+      max += hsDamage[1];
     }
+    int smiteBonus = PaladinSkills.getSmiteDamageBonus(skill, level);
+    min = (int) ((long) min * (100L + smiteBonus) / 100L);
+    max = (int) ((long) max * (100L + smiteBonus) / 100L);
     CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, true, isPlayerEntity(targetId), min, max,
         statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),

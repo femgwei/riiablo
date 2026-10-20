@@ -36,6 +36,12 @@ class PaladinMeleeSkillDataTest extends RiiabloTest {
     assertEquals(150, skill.srvdofunc);
     assertTrue(SkillFormula.evaluate(skill.calc2, skill, 1) > 0,
         "Smite must carry a native stun duration formula");
+    assertTrue(PaladinSkills.getSmiteDamageBonus(skill, 1) > 0,
+        "Smite must apply its native calc1 enhanced damage");
+    Skills.Entry holyShield = Riiablo.files.skills.get(SkillId.HOLY_SHIELD);
+    int[] shieldDamage = PaladinSkills.getHolyShieldPhysicalDamage(holyShield, 1);
+    assertTrue(shieldDamage[1] >= shieldDamage[0] && shieldDamage[1] > 0,
+        "Holy Shield must expose its separate physical damage packet");
   }
 
   @Test

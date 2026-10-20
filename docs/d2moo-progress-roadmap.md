@@ -11783,3 +11783,10 @@ build/ai-shared-collision-phase1-closeout.log。此前扩展轮 architectureRegr
 - 扩大验证数据 32、元素 104、飞弹 178、特殊 26、近战 41 全过，桌面/D2GS 编译通过；domain 默认 227 / 快速 211 / 审计 63 已通过。新夹具的编译参数/反射访问失败及各轮版本边界均保留在详情文档，不隐藏失败。
 - 最终收尾 `build/monster-mode-elements-closeout.log` 返回 0（约 1 分 28 秒）：窄入口 20 项（模式 17 + Fire Hit 3）全部通过，失败/错误/跳过为 0，桌面/D2GS 编译与真实 1.10f 资源营地 manifest/退出清理 PASS。未跑完整 AI 聚合、整个 core 或双机；最新测试与扩大复验使用相同生产代码。
 - 尚未实现动作级临时 stat-list：每颗飞弹重掷的旧调度、多弹体共享、非受击模式清理/重建、受击模式保留及原生序列初始化次序仍是下一步；有适用 MonStats 模式元素时仍保留第九阶段原生混合 opt-out。特殊资源伤害、通用近战模式元素、完整 RNG、全 core、双机及原版运行采样均未据此宣布完成。
+`n## 2026-10-21 Smite 玩家盾击伤害闭环`n`n- 按 D2MOO `SKILLS_SrvDo150_Smite` 接入 Smite `calc1` 增强物理伤害；Holy Shield 改为读取 Skills.txt 独立 MinDam/MaxDam 曲线，不再把防御 calc1 当作平坦伤害。`n- 新增 PaladinMeleeSkillDataTest 断言覆盖两层数值来源；Smite 怪物旧测试在本机仍有既有 0.23 点浮点差异，未据此修改其预期。`n
+
+
+## 2026-10-21 Smite 玩家盾击伤害闭环
+
+- 按 D2MOO SKILLS_SrvDo150_Smite 接入 Smite calc1 增强物理伤害；Holy Shield 改为读取 Skills.txt 独立 MinDam/MaxDam 曲线，不再把防御 calc1 当作平坦伤害。
+- 新增 PaladinMeleeSkillDataTest 断言覆盖两层数值来源；Smite 怪物旧测试在本机仍有既有 0.23 点浮点差异，未据此修改其预期。

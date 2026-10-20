@@ -65,6 +65,21 @@ public final class PaladinSkills {
     return 15 + (skillLevel - 1) * 5;
   }
 
+  /** Native Smite enhanced-damage percent from Skills.txt calc1. */
+  public static int getSmiteDamageBonus(Skills.Entry skill, int skillLevel) {
+    if (skill == null || skill.Id != SkillId.SMITE) return 0;
+    return Math.max(0, SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel)));
+  }
+
+  /** Holy Shield's separate physical min/max packet used by SrvDo150. */
+  public static int[] getHolyShieldPhysicalDamage(Skills.Entry skill, int skillLevel) {
+    if (!isHolyShield(skill)) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    int min = shiftedDamage(skill.MinDam, skill.MinLevDam, level, skill.HitShift);
+    int max = shiftedDamage(skill.MaxDam, skill.MaxLevDam, level, skill.HitShift);
+    return new int[] {Math.max(0, min), Math.max(Math.max(0, min), max)};
+  }
+
   /**
    * 重击击退概率
    * 
