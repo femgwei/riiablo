@@ -1561,6 +1561,28 @@ public class CombatSystem {
     return calculateAttack(snapshot.attacker, snapshot.defender);
   }
 
+  /** Six audited melee skills share source construction, not precomputed HP endpoints. */
+  public CombatResult calculateWeaponSkillAttack(Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, WeaponAttackSource source,
+      WeaponSkillAttackProfile skill, int baseAttackRating,
+      StateList attackerStates, StateList defenderStates, boolean defenderMoving,
+      NativeCombatContext context, boolean demon, boolean undead, boolean ignoreAllowed) {
+    if (source == null || skill == null) throw new IllegalArgumentException("missing weapon skill source");
+    CombatSnapshotFactory.Request request = new CombatSnapshotFactory.Request(
+        attacker, defender, attackerPlayer, defenderPlayer, context);
+    request.weaponSource = source;
+    request.weaponSkill = skill;
+    request.attackRatingOverride = Math.max(1, baseAttackRating);
+    request.mastery = source.mastery(attackerStates, false);
+    request.attackerStates = attackerStates;
+    request.defenderStates = defenderStates;
+    request.defenderMoving = defenderMoving;
+    request.defenderDemon = demon;
+    request.defenderUndead = undead;
+    request.defenderIgnoreTargetDefenseAllowed = ignoreAllowed;
+    return resolveSnapshot(request);
+  }
+
   private static int mitigationStat(Attributes attrs, StateList states, short stat) {
     return statInt(attrs, stat, 0) + (states == null ? 0 : states.getTotalStatContribution(stat));
   }

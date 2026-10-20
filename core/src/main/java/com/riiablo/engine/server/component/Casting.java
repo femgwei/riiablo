@@ -36,6 +36,11 @@ public class Casting extends PooledComponent {
   @EntityId public int impaleTargetId;
   public Item impaleWeapon;
   public boolean impalePrepared;
+  /** Berserk/Sacrifice allocate one combat record at SrvSt, consumed once at SrvDo. */
+  public CombatSystem.CombatResult weaponSkillCombat;
+  @EntityId public int weaponSkillTargetId;
+  public boolean weaponSkillPrepared, weaponSkillProcessed;
+  public int weaponSkillSelfPercent;
   /** Native Amazon SrvSt06 combat record consumed by Power/Charged Strike. */
   public CombatSystem.CombatResult amazonElementalCombat;
   @EntityId public int amazonElementalTargetId;
@@ -151,6 +156,10 @@ public class Casting extends PooledComponent {
     impaleTargetId = Engine.INVALID_ENTITY;
     impaleWeapon = null;
     impalePrepared = false;
+    weaponSkillCombat = null;
+    weaponSkillTargetId = Engine.INVALID_ENTITY;
+    weaponSkillPrepared = weaponSkillProcessed = false;
+    weaponSkillSelfPercent = 0;
     amazonElementalCombat = null;
     amazonElementalTargetId = Engine.INVALID_ENTITY;
     amazonElementalWeapon = null;
@@ -230,6 +239,10 @@ public class Casting extends PooledComponent {
 
   @Override
   protected void reset() {
+    weaponSkillCombat = null;
+    weaponSkillTargetId = Engine.INVALID_ENTITY;
+    weaponSkillPrepared = weaponSkillProcessed = false;
+    weaponSkillSelfPercent = 0;
     monsterLeapStarted = false;
     monsterHatchResolved = false;
     monsterHatchStarted = false;

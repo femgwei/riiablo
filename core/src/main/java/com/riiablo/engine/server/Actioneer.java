@@ -1448,6 +1448,11 @@ public class Actioneer extends PassiveSystem {
       case 29: { // SKILLS_SrvSt29_Sacrifice: validate the tick-snapshotted target
         Casting casting = mCasting.get(entityId);
         if (casting == null || targetId == Engine.INVALID_ENTITY
+            || !mPlayer.has(entityId)
+            || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+            || mAttributesWrapper.get(entityId).attrs == null
+            || mAttributesWrapper.get(targetId).attrs == null
+            || !canDamageRelation(entityId, targetId, true, isPlayerEntity(targetId))
             || !mPosition.has(entityId) || !mPosition.has(targetId)
             || !isAlive(entityId) || !isAlive(targetId)
             || !isInMeleeRangeAtTick(entityId, targetId, 0,
@@ -1456,6 +1461,15 @@ public class Actioneer extends PassiveSystem {
               entityId, targetId);
           if (mCasting.has(entityId)) mCasting.remove(entityId);
           if (mSequence.has(entityId)) mSequence.remove(entityId);
+        } else if (!casting.weaponSkillPrepared && !casting.weaponSkillProcessed) {
+          Skills.Entry skill = files().skills.get(casting.skillId);
+          casting.weaponSkillCombat = rollWeaponSkill(entityId, targetId, skill,
+              Math.max(1, skillLevel(entityId, casting.skillId)), false);
+          casting.weaponSkillTargetId = targetId;
+          casting.weaponSkillPrepared = true;
+          casting.weaponSkillSelfPercent = Math.max(0,
+              SkillFormula.evaluate(skill.calc2, skill, Math.max(1, skillLevel(entityId, skill.Id)),
+                  name -> baseSkillLevel(entityId, name)));
         }
         break;
       }
@@ -2177,50 +2191,15 @@ public class Actioneer extends PassiveSystem {
               combat.totalDamageHp(), combat.hitChance, combat.hit, combat.blocked);
         } else if (berserk) {
           berserkWeapon = whirlwindPrimaryWeapon(entityId);
-          int[] weaponDamage = BarbarianSkills.calculateBerserkWeaponDamage(
-              activeSkill, activeSkillLevel, attackerAttrs, berserkWeapon,
-              name -> baseSkillLevel(entityId, name), stateList(entityId));
-          int attackRating = BarbarianSkills.getWeaponMasteryAttackRating(
-              activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer,
-              berserkWeapon, stateList(entityId));
-          int conversion = BarbarianSkills.getBerserkMagicConversion(
-              activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name));
-          combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
-              attackerAttrs, attrs, attackerPlayer, targetPlayer,
-              weaponDamage[0], weaponDamage[1], attackRating,
-              conversion, CombatSystem.DAMAGE_MAGIC,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
-              weaponMastery(entityId, berserkWeapon, false), nativeDifficultyContext());
-          log.info("[BERSERK] phase=roll source={} target={} skill={} weapon={} "
-                  + "damageRange={}..{} enhancedPercent={} conversion={} chance={}",
-              entityId, targetId, activeCasting != null ? activeCasting.skillId : -1,
-              berserkWeapon != null ? berserkWeapon.code : "unarmed", weaponDamage[0], weaponDamage[1],
-              BarbarianSkills.calculateBerserkDamageBonus(
-                  activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name)),
-              conversion, combat.hitChance);
+          if (!activeCasting.weaponSkillPrepared || activeCasting.weaponSkillProcessed
+              || activeCasting.weaponSkillTargetId != targetId) break;
+          combat = activeCasting.weaponSkillCombat;
+          activeCasting.weaponSkillCombat = null;
+          activeCasting.weaponSkillPrepared = false;
+          activeCasting.weaponSkillProcessed = true;
         } else if (frenzyAttack && srvdofunc == 9 && frenzyWeapon != null) {
-          int[] weaponDamage = BarbarianSkills.calculateFrenzyWeaponDamage(
-              activeSkill, activeSkillLevel, attackerAttrs, frenzyWeapon,
-              name -> baseSkillLevel(entityId, name), stateList(entityId));
-          int attackRating = BarbarianSkills.getWeaponMasteryAttackRating(
-              activeSkill, activeSkillLevel, attackerAttrs, true,
-              frenzyWeapon, stateList(entityId));
-          int conversion = BarbarianSkills.getFrenzyMagicConversion(
-              activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name));
-          combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
-              attackerAttrs, attrs, attackerPlayer, targetPlayer,
-              weaponDamage[0], weaponDamage[1], attackRating,
-              conversion, CombatSystem.DAMAGE_MAGIC,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
-              weaponMastery(entityId, frenzyWeapon, false), nativeDifficultyContext());
-          log.info("[FRENZY] phase=roll source={} target={} index={} weapon={} "
-                  + "damageRange={}..{} enhancedPercent={} attackRating={} conversion={}",
-              entityId, targetId, frenzyStrike + 1, frenzyWeapon.code,
-              weaponDamage[0], weaponDamage[1],
-              BarbarianSkills.calculateFrenzyDamageBonus(
-                  activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name)),
-              attackRating,
-              conversion);
+          combat = rollWeaponSkill(entityId, targetId, activeSkill, activeSkillLevel,
+              (frenzyStrike & 1) != 0);
         } else if (frenzyAttack) {
           int attackRating = BarbarianSkills.getFrenzyAttackRating(
               activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer);
@@ -2291,6 +2270,8 @@ public class Actioneer extends PassiveSystem {
               dragonClawStrike == 0 ? "right" : "left", dragonClawWeapon.code,
               clawDamage[0], clawDamage[1], attackRating,
               activeCasting.dragonClawRemainingStrikes);
+        } else if (jab && activeSkill != null && (attackerPlayer || mMercenary.has(entityId))) {
+          combat = rollWeaponSkill(entityId, targetId, activeSkill, activeSkillLevel, false);
         } else if (jab && activeSkill != null) {
           Item jabWeapon = activeAttackWeapon(entityId);
           int[] weaponDamage = AmazonSkills.calculateWeaponDamage(
@@ -3110,17 +3091,7 @@ public class Actioneer extends PassiveSystem {
     Attributes attacker = mAttributesWrapper.get(entityId).attrs;
     Attributes defender = mAttributesWrapper.get(target).attrs;
     Item weapon = activeAttackWeapon(entityId);
-    int[] damage = AmazonSkills.calculateWeaponDamage(
-        skill, level, attacker, weapon, stateList(entityId));
-    int attackRating = amazonAttackRating(
-        entityId, skill, level, attacker, isPlayerEntity(entityId));
-    int conversion = skill.EType != null && !skill.EType.isEmpty()
-        ? Math.max(0, Math.min(100, SkillFormula.evaluate(skill.calc4, skill, level))) : 0;
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
-        attacker, defender, isPlayerEntity(entityId), isPlayerEntity(target),
-        damage[0], damage[1], attackRating, conversion,
-        lightningDamageType(skill.EType), stateList(entityId), stateList(target),
-        isEntityMoving(target), weaponMastery(entityId, weapon, false), nativeDifficultyContext());
+    CombatSystem.CombatResult combat = rollWeaponSkill(entityId, target, skill, level, false);
     int strike = ++casting.fendStrikeIndex;
     casting.fendRemainingStrikes--;
     casting.fendStrikeProcessed = true;
@@ -3152,10 +3123,10 @@ public class Actioneer extends PassiveSystem {
       casting.targetVec.set(mPosition.get(next).position);
     }
     log.info("[AMAZON_FEND] phase=strike source={} index={} target={} result={} damage={} "
-            + "hp={} -> {} damageRange={}..{} attackRating={} chance={} remaining={} nextTarget={}",
+            + "hp={} -> {} physicalFixed={} scale={} attackRating={} chance={} remaining={} nextTarget={}",
         entityId, strike, target, combat.blocked ? "blocked" : combat.hit ? "hit" : "miss",
-        applied, before, hp != null ? hp.asFixed() : before, damage[0], damage[1],
-        attackRating, combat.hitChance, casting.fendRemainingStrikes, next);
+        applied, before, hp != null ? hp.asFixed() : before, combat.physicalDamage, combat.physicalScale,
+        combat.attackRating, combat.hitChance, casting.fendRemainingStrikes, next);
   }
 
   /** Native SrvSt16: roll one dagger combat record before the attack keyframe. */
@@ -3738,15 +3709,7 @@ public class Actioneer extends PassiveSystem {
     Attributes defender = mAttributesWrapper.get(target).attrs;
     if (attacker == null || defender == null) return;
     Item weapon = activeAttackWeapon(entityId);
-    int min = statInt(attacker, Stat.mindamage);
-    int max = Math.max(min, statInt(attacker, Stat.maxdamage));
-    int attackRating = statInt(attacker, Stat.tohit);
-    int arBonus = PaladinSkills.getZealAttackRatingPercent(skill, level);
-    attackRating += attackRating * arBonus / 100;
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
-        attacker, defender, true, isPlayerEntity(target), min, max, attackRating,
-        stateList(entityId), stateList(target), isEntityMoving(target),
-        weaponMastery(entityId, weapon, false), nativeDifficultyContext());
+    CombatSystem.CombatResult combat = rollWeaponSkill(entityId, target, skill, level, false);
     casting.zealStrikeIndex++;
     casting.zealRemainingStrikes--;
     casting.zealStrikeProcessed = true;
@@ -3755,16 +3718,17 @@ public class Actioneer extends PassiveSystem {
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     float before = hp != null ? hp.asFixed() : 0f;
     float applied = 0f;
+    if (combat.blocked) queueHitReaction(target, combat);
     if (combat.hit && !combat.blocked && hp != null && before > 0f) {
-      int damagePct = PaladinSkills.getZealDamagePercent(skill, level);
-      float multiplier = (100f + damagePct) / 100f;
+      drainSharedMeleeDurability(entityId, weapon, target);
       DamageEvent event = DamageEvent.obtainMelee(entityId, target,
-          combat.totalDamageHp() * multiplier, combat.physicalDamageHp() * multiplier, combat, multiplier);
+          combat.totalDamageHp(), combat.physicalDamageHp(), combat);
       DamageSettlement.prepare(world, event);
       applied = Math.max(0f, event.damage);
       DamageSettlement.commit(world, event);
       if (hp.asFixed() < 0f) hp.set(0f);
       applyCombatStates(entityId, target, combat);
+      if (hp.asFixed() > 0f) queueHitReaction(target, false);
       if (hp.asFixed() <= 0f) DamageSettlement.finishDeath(world, event);
     }
     if (casting.zealRemainingStrikes > 0) {
@@ -4304,6 +4268,39 @@ public class Actioneer extends PassiveSystem {
     return AmazonSkills.getPlayerAttackRating(skill, level, attacker, classFactor);
   }
 
+  /** SUNITDMG source stats + additive skill/mastery AR percentages, no early HP rounding. */
+  private CombatSystem.CombatResult rollWeaponSkill(int entityId, int targetId,
+      Skills.Entry skill, int level, boolean left) {
+    syncCombatDefenderContext(targetId);
+    com.riiablo.engine.server.combat.WeaponAttackSource source =
+        com.riiablo.engine.server.combat.WeaponAttackSource.forUnit(world, entityId, false, left);
+    com.riiablo.engine.server.combat.WeaponSkillAttackProfile profile =
+        com.riiablo.engine.server.combat.WeaponSkillAttackProfile.create(
+            skill, level, name -> baseSkillLevel(entityId, name));
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    // Non-player callers have no equipment ownership adapter. Keep an explicit
+    // unarmed/source-stat profile rather than dereferencing a missing hand.
+    if (source == null) source = new com.riiablo.engine.server.combat.WeaponAttackSource(
+        attacker, null, activeAttackWeapon(entityId), false, false);
+    boolean player = mPlayer.has(entityId);
+    int baseRating = source.stat(Stat.tohit);
+    if (player) {
+      com.riiablo.save.CharData data = mPlayer.get(entityId).data;
+      if (data != null && data.classId != null) {
+        baseRating += 5 * (statInt(attacker, Stat.dexterity) - 7)
+            + data.classId.entry().ToHitFactor;
+      }
+    } else baseRating += 5 * statInt(attacker, Stat.dexterity) + profile.toHitPercent;
+    CombatSystem resolver = serverContext == null ? combatSystemResolver
+        : new CombatSystem(NativeUnitRandom.unit(world, gameSeed(), entityId),
+            NativeUnitRandom.unit(world, gameSeed(), targetId));
+    return resolver.calculateWeaponSkillAttack(attacker, mAttributesWrapper.get(targetId).attrs,
+        player, isPlayerEntity(targetId), source, profile, baseRating,
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+        nativeDifficultyContext(), isDemonTarget(targetId), isUndeadTarget(targetId),
+        isIgnoreTargetDefenseAllowed(targetId));
+  }
+
   private Armor.Entry equippedBoots(int entityId) {
     if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return null;
     Item item = mPlayer.get(entityId).data.getItems().getEquipped(BodyLoc.FEET);
@@ -4378,7 +4375,10 @@ public class Actioneer extends PassiveSystem {
     Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
     if (casting == null || skill == null || skill.srvdofunc != 2
         || targetId == Engine.INVALID_ENTITY || !mPosition.has(entityId)
-        || !mPosition.has(targetId) || !isAlive(entityId) || !isAlive(targetId)) {
+        || !mPosition.has(targetId) || !isAlive(entityId) || !isAlive(targetId)
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || mAttributesWrapper.get(entityId).attrs == null
+        || mAttributesWrapper.get(targetId).attrs == null) {
       rejectBerserk(entityId, "invalid_target");
       return;
     }
@@ -4394,6 +4394,10 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     int level = Math.max(1, skillLevel(entityId, casting.skillId));
+    if (casting.weaponSkillPrepared || casting.weaponSkillProcessed) return;
+    casting.weaponSkillCombat = rollWeaponSkill(entityId, targetId, skill, level, false);
+    casting.weaponSkillTargetId = targetId;
+    casting.weaponSkillPrepared = true;
     int duration = BarbarianSkills.getBerserkDuration(
         skill, level, name -> baseSkillLevel(entityId, name));
     if (mUnitStates.has(entityId)) {
@@ -6263,9 +6267,8 @@ public class Actioneer extends PassiveSystem {
     return right != null && right.type != null && right.type.is(Type.SHLD) ? right : null;
   }
 
-  /** D2MOO SKILLS_SrvDo064_Sacrifice. The target and range are evaluated from
-   * the attack-start position snapshot, while the self-damage packet is
-   * derived from the uncapped physical hit before resist/PvP side effects. */
+  /** SrvDo064 consumes SrvSt29's mitigated record once. Self-damage executes
+   * before target life loss/leech, capped by the target's current life. */
   private void resolveSacrifice(int entityId, int targetId) {
     if (!mPlayer.has(entityId) || targetId == Engine.INVALID_ENTITY
         || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
@@ -6283,55 +6286,53 @@ public class Actioneer extends PassiveSystem {
           entityId, targetId);
       return;
     }
+    if (!casting.weaponSkillPrepared || casting.weaponSkillProcessed
+        || casting.weaponSkillTargetId != targetId || casting.weaponSkillCombat == null) return;
     Attributes attacker = mAttributesWrapper.get(entityId).attrs;
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
     if (attacker == null || defender == null || !canDamageRelation(
         entityId, targetId, true, isPlayerEntity(targetId))) return;
     int level = Math.max(1, skillLevel(entityId, skill.Id));
-    CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
-        attacker, defender, true, isPlayerEntity(targetId),
-        statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
-        statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),
-        isEntityMoving(targetId), nativeDifficultyContext());
+    CombatSystem.CombatResult combat = casting.weaponSkillCombat;
+    casting.weaponSkillCombat = null;
+    casting.weaponSkillPrepared = false;
+    casting.weaponSkillProcessed = true;
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       log.info("[PALADIN_SACRIFICE] phase=hit_result source={} target={} result={} chance={}",
           entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
       return;
     }
-    int bonus = Math.max(0, SkillFormula.evaluate(skill.calc1, skill, level));
-    float multiplier = (100f + bonus) / 100f;
     float targetBefore = defender.get(Stat.hitpoints, StatRef.obtain()).asFixed();
-    float totalDamage = combat.totalDamageHp() * multiplier;
-    float physicalDamage = combat.physicalDamageHp() * multiplier;
+    int selfPercent = casting.weaponSkillSelfPercent;
+    int selfFixed = com.riiablo.engine.server.combat.NativeSacrificeMath.selfDamage(
+        combat.physicalDamage, (int) Math.min(Integer.MAX_VALUE, Math.max(0d, targetBefore * 256d)),
+        selfPercent);
+    float selfDamage = selfFixed / 256f;
+    if (selfFixed > 0) {
+      DamageEvent self = DamageEvent.obtain(entityId, entityId, selfDamage);
+      self.physicalDamage = selfDamage;
+      self.suppressLeech = true;
+      DamageSettlement.commit(world, self);
+      DamageSettlement.finishDeath(world, self);
+    }
     DamageEvent damageEvent = DamageEvent.obtainMelee(
-        entityId, targetId, totalDamage, physicalDamage, combat, multiplier);
+        entityId, targetId, combat.totalDamageHp(), combat.physicalDamageHp(), combat);
     DamageSettlement.prepare(world, damageEvent);
     StatRef targetHp = defender.get(Stat.hitpoints, StatRef.obtain());
     if (targetHp != null) {
       DamageSettlement.commit(world, damageEvent);
       if (targetHp.asFixed() < 0f) targetHp.set(0f);
     }
-    int selfPercent = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, level));
-    float selfDamage = Math.min(Math.max(0f, combat.physicalDamageHp()), Math.max(0f, targetBefore))
-        * selfPercent / 100f;
-    if (selfDamage > 0f) {
-      StatRef selfHp = attacker.get(Stat.hitpoints, StatRef.obtain());
-      if (selfHp != null) {
-        selfHp.sub(selfDamage);
-        if (selfHp.asFixed() < 0f) selfHp.set(0f);
-      }
-    }
-    log.info("[PALADIN_SACRIFICE] phase=hit_result source={} target={} level={} bonusPct={} "
+    drainSharedMeleeDurability(entityId, activeAttackWeapon(entityId), targetId);
+    applyCombatStates(entityId, targetId, combat);
+    if (targetHp != null && targetHp.asFixed() > 0f) queueHitReaction(targetId, false);
+    log.info("[PALADIN_SACRIFICE] phase=hit_result source={} target={} level={} "
             + "damage={} selfPct={} selfDamage={} hp={} -> {}",
-        entityId, targetId, level, bonus, damageEvent.damage, selfPercent, selfDamage,
+        entityId, targetId, level, damageEvent.damage, selfPercent, selfDamage,
         targetBefore, targetHp != null ? targetHp.asFixed() : -1f);
     if (targetHp != null && targetHp.asFixed() <= 0f) {
       DamageSettlement.finishDeath(world, damageEvent);
-    }
-    StatRef selfHp = attacker.get(Stat.hitpoints, StatRef.obtain());
-    if (selfHp != null && selfHp.asFixed() <= 0f) {
-      events.dispatch(DeathEvent.obtain(entityId, entityId));
     }
   }
 

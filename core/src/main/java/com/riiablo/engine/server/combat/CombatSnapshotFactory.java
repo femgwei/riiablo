@@ -60,6 +60,7 @@ final class CombatSnapshotFactory {
     int monsterCriticalChance;
     boolean fixedMonsterDrain;
     WeaponAttackSource weaponSource;
+    WeaponSkillAttackProfile weaponSkill;
 
     Request(Attributes attacker, Attributes defender, boolean attackerPlayer,
         boolean defenderPlayer, NativeCombatContext context) {
@@ -344,7 +345,8 @@ final class CombatSnapshotFactory {
     }
     a.ignoreTargetDefense = statInt(attacker, Stat.item_ignoretargetac, 0) > 0;
 
-    // Explicit ordinary attack boundary. Special/precomputed skills never enter here.
+    // Explicit concrete-weapon boundary. Only audited skills opt in; legacy
+    // precomputed profiles retain their separate source/scale contracts.
     if (request.weaponSource != null && !missile && !precomputedPhysicalDamage) {
       WeaponAttackSource source = request.weaponSource;
       a.fixedPointPhysical = a.ordinaryWeaponPhysical = true;
@@ -410,6 +412,18 @@ final class CombatSnapshotFactory {
       }
       UnitState venom = attackerStates == null ? null : attackerStates.getState(StateId.VENOMCLAWS);
       if (venom != null) a.poisonOverrideLength = venom.poisonLengthOverride;
+      if (request.weaponSkill != null) {
+        WeaponSkillAttackProfile skill = request.weaponSkill;
+        a.enhancedDamagePercent += skill.enhancedDamage;
+        if (attackerPlayer) a.attackRatingPercent += skill.toHitPercent;
+        a.weaponSourceDamage = skill.sourceDamage;
+        a.physicalConversionPercent = skill.conversionPercent;
+        a.physicalConversionType = skill.conversionType;
+        a.suppressWeaponCritical = skill.sacrifice;
+        // Sacrifice pre-fills physical damage before FillDamageValues adds
+        // target ED. DAMAGEHITFLAG_1 prevents reapplying that late bonus.
+        if (skill.sacrifice) a.demonDamagePercent = a.undeadDamagePercent = 0;
+      }
     }
 
     DefenderData d = new DefenderData();

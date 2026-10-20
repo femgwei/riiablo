@@ -55,7 +55,8 @@ class DruidRabiesFireClawsTest extends RiiabloTest {
     int[] maxs = new int[CombatSystem.DAMAGE_TYPE_COUNT];
     mins[CombatSystem.DAMAGE_FIRE] = fire[0];
     maxs[CombatSystem.DAMAGE_FIRE] = fire[1];
-    CombatSystem.CombatResult result = new CombatSystem()
+    // This is a damage/channel assertion, not a probabilistic hit-rate test.
+    CombatSystem.CombatResult result = new CombatSystem(n -> 0)
         .calculatePrecomputedMeleeElementalAttack(attacker, defender, true, false,
             10, 10, 1000, mins, maxs, 0, 0, states, null, false);
     assertTrue(result.hit);

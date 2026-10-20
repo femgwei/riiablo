@@ -23,20 +23,26 @@ public final class NativePhysicalDamageMath {
     max += percentage(max, (long) percent + a.maximumDamagePercent);
     // Gameplay stats fit in the native signed interval. Clamp exceptional
     // synthetic/mod inputs before passing a positive int bound to the RNG.
-    return Math.max(0, rolls.physicalFixed(endpoint(min), endpoint(max)));
+    int value = Math.max(0, rolls.physicalFixed(endpoint(min), endpoint(max)));
+    return a.weaponSourceDamage == 128 ? value
+        : endpoint(percentage(value, a.weaponSourceDamage, 128));
   }
 
   /** MONSTERUNIQUE_CalculatePercentage(value, percent, 100), including its
    * large-value early division. Host long intermediates avoid undefined native
    * overflow for mod inputs; that exceptional overflow is not modelled. */
   static long percentage(long value, long percent) {
+    return percentage(value, percent, 100);
+  }
+
+  static long percentage(long value, long percent, int divisor) {
     if (value <= 1048576) {
-      if (percent <= 65536) return value * percent / 100;
-      if (100 <= (percent >> 4)) return value * (percent / 100);
-    } else if (100 <= (value >> 4)) {
-      return percent * (value / 100);
+      if (percent <= 65536) return value * percent / divisor;
+      if (divisor <= (percent >> 4)) return value * (percent / divisor);
+    } else if (divisor <= (value >> 4)) {
+      return percent * (value / divisor);
     }
-    return value * percent / 100;
+    return value * percent / divisor;
   }
 
   private static int endpoint(long value) {

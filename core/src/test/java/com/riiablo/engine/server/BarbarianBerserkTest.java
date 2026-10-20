@@ -76,9 +76,10 @@ class BarbarianBerserkTest extends RiiabloTest {
       int target = monster(world, 1, 0, attributes(1000, 0, 0, 0, 100));
       world.getMapper(Casting.class).create(barbarian)
           .set(skill.Id, target, new Vector2(1, 0));
+      // SrvSt39 owns the hit/damage draws, not the later animation keyframe.
+      MathUtils.random.setSeed(0xBE25E2L);
       actioneer.onSkillStart(SkillStartEvent.obtain(
           barbarian, skill.Id, target, new Vector2(1, 0), skill.srvstfunc, skill.cltstfunc));
-      MathUtils.random.setSeed(0xBE25E2L);
       actioneer.onAnimDataKeyframe(AnimDataKeyframeEvent.obtain(barbarian, Engine.KEYFRAME_ATK));
 
       assertTrue(hp(world, target) < 1000f,

@@ -131,12 +131,12 @@ public final class NativeAttackResolver {
     // 4. 判定暴击/致命一击
     boolean capturedCritical = attacker.missilePhysical != null
         && attacker.missilePhysical.criticalCaptured;
-    result.critical = capturedCritical ? attacker.missilePhysical.creationCritical
-        : rollCriticalStrike(attacker);
+    result.critical = !attacker.suppressWeaponCritical && (capturedCritical ? attacker.missilePhysical.creationCritical
+        : rollCriticalStrike(attacker));
     // D2MOO only rolls Deadly Strike after the passive/mastery critical
     // branch fails. This preserves both native RNG consumption and the
     // mutually-exclusive result flags.
-    result.deadlyStrike = !capturedCritical && !result.critical && rollDeadlyStrike(attacker);
+    result.deadlyStrike = !attacker.suppressWeaponCritical && !capturedCritical && !result.critical && rollDeadlyStrike(attacker);
 
     // 暴击和致命一击不叠加，取较高者
     if (result.critical || result.deadlyStrike) {
@@ -154,7 +154,8 @@ public final class NativeAttackResolver {
     // calc4 converts physical damage to magic without losing item elements.
     int convertedDamage = 0;
     if (convertsPhysical) {
-      convertedDamage = baseDamage * attacker.physicalConversionPercent / 100;
+      convertedDamage = saturatingInt(NativePhysicalDamageMath.percentage(
+          baseDamage, attacker.physicalConversionPercent));
       baseDamage -= convertedDamage;
     }
     for (int channel = 1; channel < DAMAGE_TYPE_COUNT; channel++) {

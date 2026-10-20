@@ -2,6 +2,8 @@
 
 普通玩家／佣兵武器已新增独立 8.8 来源和生产链路回归，详见
 [普通武器批次](ordinary-weapon-combat-2026-10-20.md)。这不解除特殊技能／SrcMissDmg 的保护。
+其中 Frenzy／Berserk／Zeal／Sacrifice／Jab／Fend 现已单独审计并显式接入，详见
+[六技能批次](weapon-skill-combat-2026-10-20.md)；不能据此把所有特殊技能都切换。
 
 ## 运行入口
 

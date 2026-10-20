@@ -86,6 +86,10 @@ public class NativeAttackData {
   public boolean equippedWeapon;
   public int weaponAttributePercent;
   public int masteryCritical;
+  /** SUNITDMG_ApplyDamageBonuses scales the completed draw, before critical/conversion. */
+  public int weaponSourceDamage = 128;
+  /** Sacrifice pre-fills physical damage and sets DAMAGEHITFLAG_1. */
+  public boolean suppressWeaponCritical;
   /** Explicit projectile policy; endpoints are already 8.8, not melee HP stats. */
   public NativeMissilePhysicalDamage missilePhysical;
   /** Audited ordinary elements: instantaneous 8.8 damage and poison 8.8 per-frame rates. */

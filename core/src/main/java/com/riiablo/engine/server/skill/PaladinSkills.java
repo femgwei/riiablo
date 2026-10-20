@@ -275,8 +275,12 @@ public final class PaladinSkills {
   /** Native Zeal physical damage bonus (calc2). */
   public static int getZealDamagePercent(Skills.Entry skill, int skillLevel) {
     if (skill == null || skill.Id != SkillId.ZEAL) return 0;
-    int value = SkillFormula.evaluate(skill.calc2, skill, Math.max(1, skillLevel));
-    return value != 0 ? value : calculateZealDamageBonus(skillLevel);
+    int level = Math.max(1, skillLevel);
+    int paramBase = skill.Param != null && skill.Param.length > 2 ? skill.Param[2] : 0;
+    int paramPerLevel = skill.Param != null && skill.Param.length > 3 ? skill.Param[3] : 0;
+    return skill.calc2 != null && !skill.calc2.isEmpty()
+        ? SkillFormula.evaluate(skill.calc2, skill, level)
+        : Math.max(0, paramBase + (level - 1) * paramPerLevel);
   }
 
   /** Native Zeal attack-rating bonus (calc3). */
@@ -293,8 +297,8 @@ public final class PaladinSkills {
    * @return 伤害加成百分比
    */
   public static int calculateZealDamageBonus(int skillLevel) {
-    // 每级 +10%
-    return 10 * skillLevel;
+    // Compatibility fallback when a caller has no Skills row.
+    return Math.max(0, 6 * (skillLevel - 1));
   }
 
   /**
