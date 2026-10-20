@@ -1,9 +1,10 @@
 package com.riiablo.engine.server.combat;
 
-/** Immutable weaponless monster projectile packet captured at creation.
+/** Immutable ordinary projectile packet captured at creation.
  * D2Common MISSILE_CalculateDamageData stores 8.8 endpoints; D2Game
  * MISSMODE_FillDamageParams applies percentages AFTER the exclusive draw.
- * Weapon coefficients and source-missile inheritance remain separate policies.
+ * Host creation supplies audited weapon coefficients; source-missile inheritance
+ * remains a separate policy.
  */
 public final class NativeMissilePhysicalDamage {
   public final int minimum, maximum;
@@ -54,8 +55,15 @@ public final class NativeMissilePhysicalDamage {
    * even at zero chance; deadly is drawn only after failure and when nonzero. */
   public static boolean creationCritical(int passive, int deadly,
       java.util.function.IntUnaryOperator random) {
+    return creationCritical(passive, deadly, 0, random);
+  }
+
+  /** Equipped source: mastery is last, unlike SUNITDMG melee's mastery-first order. */
+  public static boolean creationCritical(int passive, int deadly, int mastery,
+      java.util.function.IntUnaryOperator random) {
     return random.applyAsInt(100) < passive
-        || (deadly != 0 && random.applyAsInt(100) < deadly);
+        || (deadly != 0 && random.applyAsInt(100) < deadly)
+        || (mastery != 0 && random.applyAsInt(100) < mastery);
   }
 
   public boolean blockable() { return minimum > 0 && maximum > 0; }

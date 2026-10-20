@@ -134,6 +134,10 @@ public class DamageEvent implements Event {
   public DamageEvent withElementalDamage(CombatSystem.CombatResult result, float scale) {
     if (result == null) return this;
     float appliedScale = Math.max(0f, scale);
+    if (result.snapshotLifeLeechPercent >= 0)
+      snapshotLifeLeechPercent = result.snapshotLifeLeechPercent;
+    if (result.snapshotManaLeechPercent >= 0)
+      snapshotManaLeechPercent = result.snapshotManaLeechPercent;
     absorbedLife = Math.max(0f, result.absorbedLifeHp() * appliedScale);
     fixedMonsterDrain = result.fixedMonsterDrain;
     lifeDrainFixed = (int) (result.lifeDrainFixed * appliedScale);

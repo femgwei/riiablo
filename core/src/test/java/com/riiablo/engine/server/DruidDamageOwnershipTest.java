@@ -24,7 +24,9 @@ import org.junit.jupiter.api.Test;
 /** Completeness gate for the DMG-03B Druid damage-owner audit. */
 class DruidDamageOwnershipTest extends RiiabloTest {
   private static final String FILE = "skill-damage-druid-ownership.tsv";
-  private static final Set<Integer> CONFIRMED_GAPS = Set.of(229, 230, 235, 240, 243, 245, 246);
+  // Shock Wave (#243) now has independent missile/target-wide NextDelay and
+  // hit/stun/death synchronization regressions; retain the other known gaps.
+  private static final Set<Integer> CONFIRMED_GAPS = Set.of(229, 230, 235, 240, 245, 246);
   private static final Set<Integer> TEST_GAPS = Set.of(221, 222, 227, 236, 237, 242, 247);
 
   @Test

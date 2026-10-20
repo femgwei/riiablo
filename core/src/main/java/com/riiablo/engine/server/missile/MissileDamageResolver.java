@@ -1021,6 +1021,7 @@ public final class MissileDamageResolver {
       int attackRating, int[] elementalMin, int[] elementalMax,
       int coldLength, int poisonLength) {
     projectile.nativePhysical = null;
+    projectile.ordinaryWeaponSnapshot = false;
     projectile.nativeElemental = null;
     StatListRef base = projectile.damage.base();
     base.clear();
@@ -1206,6 +1207,91 @@ public final class MissileDamageResolver {
         sum(sourceStat(owner, states, Stat.poisonlength), elements == null ? 0 : elements.poisonLength),
         sourceStat(owner, states, Stat.poison_count),
         sourceStat(owner, states, Stat.skill_poison_override_length));
+  }
+
+  /** Ordinary Attack/Throw only. Caller must prove owner and dispatch skill;
+   * unsupported skill rows, formula/callback and origin packets stay protected. */
+  public static boolean initializeOrdinaryWeapon(com.riiablo.Files files, Missile projectile,
+      Attributes owner, com.riiablo.engine.server.combat.WeaponAttackSource source,
+      StateList states, int level, boolean throwing, java.util.function.IntUnaryOperator random) {
+    if (projectile == null || source == null || projectile.missile == null) return false;
+    if (projectile.ordinaryWeaponSnapshot) return true;
+    Missiles.Entry row = projectile.missile;
+    if (hasText(row.Skill) || row.MissileSkill || row.Half2HSrc || row.SrcMissDmg != 0 || row.SrcDamage <= 0
+        || row.SrcDamage > 255 || row.pSrvDmgFunc != 0 || row.DamageRate != 0
+        || row.ApplyMastery || hasText(row.DmgSymPerCalc) || hasText(row.EDmgSymPerCalc)
+        || hasText(row.EType) || hasSpecialSourceElements(owner, states)) return false;
+    StateList.WeaponMasteryBonus mastery = source.mastery(states, throwing);
+    int minPct = source.stat(Stat.item_mindamage_percent);
+    int maxPct = source.stat(Stat.item_maxdamage_percent);
+    int percent = source.stat(Stat.damagepercent) + (source.equipped ? source.attributePercent
+        : source.hireling ? owner.getValue(Stat.dexterity, 0) : 0)
+        + (mastery == null ? 0 : mastery.damagePercent);
+    int demon = source.stat(Stat.item_demondamage_percent);
+    int undead = source.stat(Stat.item_undeaddamage_percent) + (source.blunt ? 50 : 0);
+    if (states != null) {
+      minPct += states.getTotalStatContribution(Stat.item_mindamage_percent);
+      maxPct += states.getTotalStatContribution(Stat.item_maxdamage_percent);
+      percent += states.getTotalDamageModifier();
+      demon += states.getTotalStatContribution(Stat.item_demondamage_percent);
+      undead += states.getTotalStatContribution(Stat.item_undeaddamage_percent);
+    }
+    int min = physicalEndpoint(row.MinDamage, row.MinLevDam, level, row.HitShift,
+        source.minimum, row.SrcDamage);
+    int max = physicalEndpoint(row.MaxDamage, row.MaxLevDam, level, row.HitShift,
+        source.maximum, row.SrcDamage);
+    // MonsterUnique.cpp sub_6FC6CF90: Rogue's innate damage is added to the
+    // created missile, AFTER SrcDamage; it is not another weapon source share.
+    if (source.rogue && max > 0) {
+      min = Math.max(0, sum(min, owner.base().getValue(Stat.secondary_mindamage, 0) * 256 - 256));
+      max = Math.max(0, sum(max, owner.base().getValue(Stat.secondary_maxdamage, 0) * 256 - 256));
+    }
+    short[] minStats = {0, Stat.firemindam, Stat.lightmindam, Stat.coldmindam, Stat.poisonmindam, Stat.magicmindam};
+    short[] maxStats = {0, Stat.firemaxdam, Stat.lightmaxdam, Stat.coldmaxdam, Stat.poisonmaxdam, Stat.magicmaxdam};
+    int[] elementsMin = new int[DAMAGE_TYPES], elementsMax = new int[DAMAGE_TYPES];
+    for (int type = FIRE; type < DAMAGE_TYPES; type++) {
+      elementsMin[type] = source.stat(minStats[type]) + (states == null ? 0 : states.getTotalStatContribution(minStats[type]));
+      elementsMax[type] = source.stat(maxStats[type]) + (states == null ? 0 : states.getTotalStatContribution(maxStats[type]));
+    }
+    int cold = source.stat(Stat.coldlength) + (states == null ? 0 : states.getTotalStatContribution(Stat.coldlength));
+    int poison = source.stat(Stat.poisonlength) + (states == null ? 0 : states.getTotalStatContribution(Stat.poisonlength));
+    int override = source.stat(Stat.skill_poison_override_length)
+        + (states == null ? 0 : states.getTotalStatContribution(Stat.skill_poison_override_length));
+    com.riiablo.engine.server.state.UnitState venom = states == null ? null : states.getState(StateId.VENOMCLAWS);
+    if (venom != null) {
+      elementsMin[POISON] += venom.poisonMinDamage;
+      elementsMax[POISON] += venom.poisonMaxDamage;
+      override = venom.poisonLengthOverride;
+    }
+    NativeMissileElementalDamage elements = NativeMissileElementalDamage.mixed(PHYSICAL, 0, 0, 0,
+        row.SrcDamage, elementsMin, elementsMax, cold, poison, source.stat(Stat.poison_count)
+            + (states == null ? 0 : states.getTotalStatContribution(Stat.poison_count)), override);
+    writeSnapshot(files, projectile, owner, false, level, min / 256, max / 256,
+        owner.getValue(Stat.tohit, 0), elementsMin, elementsMax, elements.coldLength, elements.poisonLength);
+    short[] copied = {Stat.item_tohit_percent, Stat.item_tohit_percent_vs_monster,
+        Stat.item_demon_tohit, Stat.item_undead_tohit, Stat.item_crushingblow,
+        Stat.item_ignoretargetac, Stat.item_pierce_fire, Stat.passive_fire_pierce,
+        Stat.item_pierce_ltng, Stat.passive_ltng_pierce, Stat.item_pierce_cold,
+        Stat.passive_cold_pierce, Stat.item_pierce_pois, Stat.passive_pois_pierce, Stat.passive_mag_pierce};
+    for (short stat : copied) projectile.damage.base().put(stat, source.stat(stat)
+        + (states == null ? 0 : stat == Stat.item_tohit_percent
+            ? states.getTotalAttackModifier() : states.getTotalStatContribution(stat)));
+    projectile.damage.base().add(Stat.item_tohit_percent, mastery == null ? 0 : mastery.attackRatingPercent);
+    projectile.damage.base().put(Stat.lifedrainmindam, scaleSource(source.stat(Stat.lifedrainmindam)
+        + (states == null ? 0 : states.getTotalLifeLeechModifier()), row.SrcDamage));
+    projectile.damage.base().put(Stat.manadrainmindam, scaleSource(source.stat(Stat.manadrainmindam), row.SrcDamage));
+    projectile.damage.reset();
+    boolean critical = NativeMissilePhysicalDamage.creationCritical(
+        source.stat(Stat.passive_critical_strike) + (states == null ? 0 : states.getTotalStatContribution(Stat.passive_critical_strike)),
+        source.stat(Stat.item_deadlystrike) + (states == null ? 0 : states.getTotalStatContribution(Stat.item_deadlystrike)),
+        mastery == null ? 0 : mastery.criticalChance, random);
+    projectile.nativePhysical = new NativeMissilePhysicalDamage(min, max, percent + Math.max(minPct, maxPct),
+        demon, undead, source.stat(Stat.skill_bypass_undead)
+            + (states == null ? 0 : states.getTotalStatContribution(Stat.skill_bypass_undead)) > 0)
+        .withCreationCritical(critical);
+    projectile.nativeElemental = elements;
+    projectile.ordinaryWeaponSnapshot = true;
+    return true;
   }
 
   /** Factory-only owner-seed scheduling, after endpoint capture and before emission.

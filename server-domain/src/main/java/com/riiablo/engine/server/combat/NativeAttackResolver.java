@@ -39,6 +39,10 @@ public final class NativeAttackResolver {
   public <T extends NativeDamagePacket> T resolve(NativeAttackData attacker,
       NativeDefenseData defender, T result, Gates gates) {
     result.reset();
+    if (attacker.ordinaryWeaponPhysical) {
+      result.snapshotLifeLeechPercent = attacker.lifeLeech;
+      result.snapshotManaLeechPercent = attacker.manaLeech;
+    }
     // Reuse only the scalar length/resistance/absorb policy. Melee rolls below
     // deliberately do NOT use MISSMODE_RollDamageValue's positive-min/swap rule.
     NativeMissileElementalDamage nativeElements = attacker.missileElemental;
@@ -136,7 +140,7 @@ public final class NativeAttackResolver {
 
     // 暴击和致命一击不叠加，取较高者
     if (result.critical || result.deadlyStrike) {
-      baseDamage *= 2;
+      baseDamage = saturatingInt((long) baseDamage * 2);
     }
 
     // 5. 判定压碎性打击
@@ -428,6 +432,7 @@ public final class NativeAttackResolver {
   }
 
   private boolean rollCriticalStrike(NativeAttackData attacker) {
+    if (attacker.ordinaryWeaponPhysical && rolls.percent(attacker.masteryCritical)) return true;
     return rolls.percent(Math.min(attacker.criticalStrike, MAX_CRIT_CHANCE));
   }
 

@@ -15,6 +15,22 @@ import org.junit.jupiter.api.Test;
 
 /** Checks the raw MPQ text independently of the typed Excel adapters. */
 class NativePlayerCombat110fAuditTest extends RiiabloTest {
+  @Test void rawOrdinaryWeaponCoefficientsAndMissileSourceAreLoadedUnchanged() {
+    String[] names = {"Hand Axe", "Dagger", "Javelin", "Short Bow", "Light Crossbow"};
+    // Empty native cells are decoded as zero by Excel; retain the raw distinction.
+    String[] strength = {"100", "75", "75", "", ""};
+    String[] dexterity = {"", "75", "75", "100", "100"};
+    for (int i = 0; i < names.length; i++) {
+      Map<String, String> raw = row("weapons", names[i]);
+      assertEquals(strength[i], raw.get("StrBonus"), names[i]);
+      assertEquals(dexterity[i], raw.get("DexBonus"), names[i]);
+    }
+    for (String name : new String[] {"arrow", "bolt", "javelin"}) {
+      Map<String, String> raw = row("missiles", name);
+      assertEquals("128", raw.get("SrcDamage"), name);
+    }
+  }
+
   @Test
   void rawWerebearRowAndProductionStateUse110fCoefficients() {
     Map<String, String> raw = row("skills", "Wearbear");

@@ -27,6 +27,8 @@ public class NativeDamagePacket {
   public boolean nativeElementalSettlement;
   public int lifeStolen;
   public int manaStolen;
+  /** Concrete-hand ordinary attack percentages; -1 keeps legacy event policy. */
+  public int snapshotLifeLeechPercent = -1, snapshotManaLeechPercent = -1;
   /** Monster drain channels are raw 8.8, not player percentages. */
   public boolean fixedMonsterDrain;
   public boolean hasResourceDrain() {
@@ -93,6 +95,7 @@ public class NativeDamagePacket {
     nativeElementalSettlement = false;
     lifeStolen = 0;
     manaStolen = 0;
+    snapshotLifeLeechPercent = snapshotManaLeechPercent = -1;
     fixedMonsterDrain = false;
     lifeDrainFixed = manaDrainFixed = staminaDrainFixed = 0;
     absorbedLife = 0;

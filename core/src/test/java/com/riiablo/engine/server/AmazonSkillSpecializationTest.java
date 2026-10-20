@@ -47,6 +47,58 @@ import org.junit.jupiter.api.Test;
 
 /** Native-data regression coverage for Amazon specialist skill handlers. */
 class AmazonSkillSpecializationTest extends RiiabloTest {
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"sbw", "lxb", "jav"})
+  void ordinaryWeaponLaunchAndCollisionKeepCreationPacketAndFractionalDamage(String code) {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      boolean throwing = "jav".equals(code);
+      CharData data = CharData.createRemote("ordinary", (byte) Riiablo.AMAZON);
+      data.getStats().base().put(Stat.strength, 10);
+      data.getStats().base().put(Stat.dexterity, 13);
+      data.getStats().base().put(Stat.tohit, 100000);
+      Item weapon = new Item(); weapon.reset(); weapon.setBase(Riiablo.files.weapons.get(code));
+      weapon.attrs.base().put(Stat.mindamage, 1); weapon.attrs.base().put(Stat.maxdamage, 2);
+      weapon.attrs.base().put(Stat.secondary_mindamage, 1); weapon.attrs.base().put(Stat.secondary_maxdamage, 2);
+      weapon.attrs.base().put(Stat.item_throw_mindamage, 1); weapon.attrs.base().put(Stat.item_throw_maxdamage, 2);
+      weapon.attrs.base().put(Stat.quantity, 10); weapon.attrs.reset();
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.RARM, data.getItems().add(weapon));
+      if (!throwing) {
+        Item ammo = new Item(); ammo.reset(); ammo.setBase(Riiablo.files.misc.get("sbw".equals(code) ? "aqv" : "cqv"));
+        ammo.attrs.base().put(Stat.quantity, 10); ammo.attrs.reset();
+        data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM, data.getItems().add(ammo));
+      }
+      int owner = world.create();
+      world.getMapper(Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = data.getStats();
+      world.getMapper(UnitStates.class).create(owner).init(owner);
+      int target = monster(world, 2, 0);
+      Attributes targetAttrs = attributes(1, 100);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
+      world.getMapper(UnitStates.class).create(target).init(target);
+      Skills.Entry skill = Riiablo.files.skills.get(throwing ? SkillCodes.throw_ : SkillCodes.attack);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(owner, skill.Id,
+          target, new Vector2(2, 0), skill.srvdofunc, skill.cltdofunc));
+      assertEquals(1, factory.created.size());
+      Missile projectile = factory.created.get(0);
+      assertTrue(projectile.ordinaryWeaponSnapshot, code);
+      assertTrue(projectile.nativePhysical.criticalCaptured);
+      int min = projectile.nativePhysical.minimum;
+      data.getStats().aggregate().put(Stat.dexterity, 1000);
+      weapon.attrs.aggregate().put(Stat.mindamage, 1000);
+      assertEquals(min, projectile.nativePhysical.minimum);
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      for (int i = 0; i < 8; i++) world.process();
+      float hp = targetAttrs.get(Stat.hitpoints).asFixed();
+      assertTrue(hp < 99f && hp > 97f, code + " HP=" + hp);
+      assertTrue(hp != (int) hp, "production collision must retain fractions: " + code);
+    } finally { world.dispose(); }
+  }
+
   @Test
   void localMonsterEffectsModeStillValidatesAndConsumesPlayerMana() {
     RecordingMissileFactory factory = new RecordingMissileFactory();
@@ -1497,8 +1549,13 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertEquals(1, arrows.attrs.base().get(Stat.quantity).asInt());
       Missile arrow = factory.created.get(0);
       assertTrue(arrow.damageSnapshot);
-      assertEquals(3, arrow.damage.get(Stat.mindamage).asInt());
-      assertEquals(7, arrow.damage.get(Stat.maxdamage).asInt());
+      // Ordinary Attack now uses this concrete Short Bow's two-hand 1..4
+      // endpoints, not unrelated synthetic owner mindamage/maxdamage (3..7).
+      assertTrue(arrow.ordinaryWeaponSnapshot);
+      assertEquals(256, arrow.nativePhysical.minimum);
+      assertEquals(1024, arrow.nativePhysical.maximum);
+      assertEquals(1, arrow.damage.get(Stat.mindamage).asInt());
+      assertEquals(4, arrow.damage.get(Stat.maxdamage).asInt());
       assertEquals(42, arrow.damage.get(Stat.tohit).asInt());
       assertTrue(!arrow.pierceEnabled);
       assertEquals(0, arrow.pierceChance);

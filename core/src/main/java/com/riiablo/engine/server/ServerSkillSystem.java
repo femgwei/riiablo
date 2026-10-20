@@ -4903,6 +4903,20 @@ public class ServerSkillSystem extends PassiveSystem {
     if (missileId < 0 || skill == null || !mMissile.has(missileId)
         || !mAttributesWrapper.has(ownerId)) return;
     Missile projectile = mMissile.get(missileId);
+    if ((skill.Id == SkillCodes.attack || skill.Id == SkillCodes.throw_
+        || skill.Id == SkillCodes.left_hand_throw) && (mPlayer.has(ownerId) || mMercenary.has(ownerId))) {
+      boolean throwing = skill.Id != SkillCodes.attack;
+      com.riiablo.engine.server.combat.WeaponAttackSource source =
+          com.riiablo.engine.server.combat.WeaponAttackSource.forUnit(world, ownerId, throwing,
+              skill.Id == SkillCodes.left_hand_throw);
+      if (MissileDamageResolver.initializeOrdinaryWeapon(files(), projectile,
+          mAttributesWrapper.get(ownerId).attrs, source, stateList(ownerId), skillLevel, throwing,
+          NativeUnitRandom.unit(world, gameSeed(), ownerId))) {
+        projectile.skillId = skill.Id;
+        projectile.damageLevel = Math.max(1, skillLevel);
+        return;
+      }
+    }
     boolean nativePaladin = MissileDamageResolver.initializePaladinHolyBolt(files(),
         projectile, skill, mAttributesWrapper.get(ownerId).attrs, skillLevel,
         name -> getBaseSkillLevel(ownerId, name));

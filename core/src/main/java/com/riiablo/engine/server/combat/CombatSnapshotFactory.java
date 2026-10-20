@@ -59,6 +59,7 @@ final class CombatSnapshotFactory {
     NativeMonsterModeElements monsterModeElements;
     int monsterCriticalChance;
     boolean fixedMonsterDrain;
+    WeaponAttackSource weaponSource;
 
     Request(Attributes attacker, Attributes defender, boolean attackerPlayer,
         boolean defenderPlayer, NativeCombatContext context) {
@@ -342,6 +343,74 @@ final class CombatSnapshotFactory {
               : attackerStates.getTotalStatContribution(Stat.skill_poison_override_length));
     }
     a.ignoreTargetDefense = statInt(attacker, Stat.item_ignoretargetac, 0) > 0;
+
+    // Explicit ordinary attack boundary. Special/precomputed skills never enter here.
+    if (request.weaponSource != null && !missile && !precomputedPhysicalDamage) {
+      WeaponAttackSource source = request.weaponSource;
+      a.fixedPointPhysical = a.ordinaryWeaponPhysical = true;
+      a.equippedWeapon = source.equipped;
+      a.weaponAttributePercent = source.attributePercent;
+      a.minDamage = source.minimum;
+      a.maxDamage = source.maximum;
+      a.normalDamage = source.stat(Stat.item_normaldamage);
+      a.minimumDamagePercent = source.stat(Stat.item_mindamage_percent);
+      a.maximumDamagePercent = source.stat(Stat.item_maxdamage_percent);
+      a.enhancedDamagePercent = source.stat(Stat.damagepercent)
+          + (mastery == null ? 0 : mastery.damagePercent);
+      a.demonDamagePercent = Math.max(0, source.stat(Stat.item_demondamage_percent));
+      a.undeadDamagePercent = Math.max(0, source.stat(Stat.item_undeaddamage_percent))
+          + (source.blunt ? 50 : 0);
+      a.criticalStrike = source.stat(Stat.passive_critical_strike);
+      a.masteryCritical = mastery == null ? 0 : mastery.criticalChance;
+      a.deadlyStrike = source.stat(Stat.item_deadlystrike);
+      a.lifeLeech = source.stat(Stat.lifedrainmindam);
+      a.manaLeech = source.stat(Stat.manadrainmindam);
+      a.crushingBlow = source.stat(Stat.item_crushingblow);
+      a.ignoreTargetDefense = source.stat(Stat.item_ignoretargetac) > 0;
+      a.bypassUndeadPhysicalResistance = source.stat(Stat.skill_bypass_undead) > 0;
+      a.attackRatingPercent += source.stat(Stat.item_tohit_percent) - statInt(attacker, Stat.item_tohit_percent, 0);
+      if (!defenderPlayer) a.attackRatingPercent += source.stat(Stat.item_tohit_percent_vs_monster)
+          - statInt(attacker, Stat.item_tohit_percent_vs_monster, 0);
+      a.demonToHit += source.stat(Stat.item_demon_tohit) - statInt(attacker, Stat.item_demon_tohit, 0);
+      a.undeadToHit += source.stat(Stat.item_undead_tohit) - statInt(attacker, Stat.item_undead_tohit, 0);
+      if (attackerStates != null) {
+        a.normalDamage += attackerStates.getTotalStatContribution(Stat.item_normaldamage);
+        a.minimumDamagePercent += attackerStates.getTotalStatContribution(Stat.item_mindamage_percent);
+        a.maximumDamagePercent += attackerStates.getTotalStatContribution(Stat.item_maxdamage_percent);
+        a.enhancedDamagePercent += attackerStates.getTotalDamageModifier();
+        a.demonDamagePercent += attackerStates.getTotalStatContribution(Stat.item_demondamage_percent);
+        a.undeadDamagePercent += attackerStates.getTotalStatContribution(Stat.item_undeaddamage_percent);
+        a.criticalStrike += attackerStates.getTotalStatContribution(Stat.passive_critical_strike);
+        a.deadlyStrike += attackerStates.getTotalStatContribution(Stat.item_deadlystrike);
+        a.lifeLeech += attackerStates.getTotalLifeLeechModifier();
+        a.bypassUndeadPhysicalResistance |= attackerStates.getTotalStatContribution(Stat.skill_bypass_undead) > 0;
+      }
+      // SUNITDMG_FillDamageValues ordinary source-stat elemental contract.
+      a.nativeMonsterMeleeElements = true;
+      for (int type = DAMAGE_FIRE; type < DAMAGE_TYPE_COUNT; type++) {
+        a.elementalMinDamage[type] += source.stat(MIN_STATS[type]) - statInt(attacker, MIN_STATS[type], 0);
+        a.elementalMaxDamage[type] += source.stat(MAX_STATS[type]) - statInt(attacker, MAX_STATS[type], 0);
+      }
+      a.coldLength = source.stat(Stat.coldlength);
+      a.poisonLength = source.stat(Stat.poisonlength);
+      if (attackerStates != null) {
+        a.coldLength += attackerStates.getTotalStatContribution(Stat.coldlength);
+        a.poisonLength += attackerStates.getTotalStatContribution(Stat.poisonlength);
+      }
+      short[] masteries = {0, Stat.passive_fire_mastery, Stat.passive_ltng_mastery,
+          Stat.passive_cold_mastery, Stat.passive_pois_mastery, Stat.passive_mag_mastery};
+      for (int type = DAMAGE_FIRE; type < DAMAGE_TYPE_COUNT; type++)
+        a.elementalMastery[type] = source.stat(masteries[type])
+            + (attackerStates == null ? 0 : attackerStates.getTotalStatContribution(masteries[type]));
+      a.poisonCount = source.stat(Stat.poison_count);
+      a.poisonOverrideLength = source.stat(Stat.skill_poison_override_length);
+      if (attackerStates != null) {
+        a.poisonCount += attackerStates.getTotalStatContribution(Stat.poison_count);
+        a.poisonOverrideLength += attackerStates.getTotalStatContribution(Stat.skill_poison_override_length);
+      }
+      UnitState venom = attackerStates == null ? null : attackerStates.getState(StateId.VENOMCLAWS);
+      if (venom != null) a.poisonOverrideLength = venom.poisonLengthOverride;
+    }
 
     DefenderData d = new DefenderData();
     d.isPlayer = defenderPlayer;

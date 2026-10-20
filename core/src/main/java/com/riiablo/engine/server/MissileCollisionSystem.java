@@ -1752,11 +1752,14 @@ public class MissileCollisionSystem extends IteratingSystem {
       // Factory-audited ordinary missiles own their combat stream. Keep legacy
       // skill/special policies on their existing schedule until audited too.
       NativeUnitRandom impactRng = missile.nativePhysical != null && missile.nativePhysical.criticalCaptured
-          && !mPlayer.has(ownerId) && !mMercenary.has(ownerId)
+          && (missile.ordinaryWeaponSnapshot || !mPlayer.has(ownerId) && !mMercenary.has(ownerId))
           ? NativeUnitRandom.missile(missile, serverContext == null ? 0 : serverContext.gameSeed(), missileId) : null;
-      final Monster impactOwner = impactRng != null && mMonster.has(ownerId) ? mMonster.get(ownerId) : null;
-      final NativeUnitRandom ownerRng = impactOwner == null ? null : NativeUnitRandom.monster(impactOwner,
-          serverContext == null ? 0 : serverContext.gameSeed(), ownerId);
+      final Monster impactOwner = impactRng != null && !missile.ordinaryWeaponSnapshot
+          && mMonster.has(ownerId) ? mMonster.get(ownerId) : null;
+      final NativeUnitRandom ownerRng = missile.ordinaryWeaponSnapshot
+          ? NativeUnitRandom.unit(world, serverContext == null ? 0 : serverContext.gameSeed(), ownerId)
+          : impactOwner == null ? null : NativeUnitRandom.monster(impactOwner,
+              serverContext == null ? 0 : serverContext.gameSeed(), ownerId);
       CombatSystem impactCombat = impactRng == null ? combatSystemResolver
           : new CombatSystem(impactRng, NativeUnitRandom.unit(world,
               serverContext == null ? 0 : serverContext.gameSeed(), targetId),
@@ -1775,8 +1778,8 @@ public class MissileCollisionSystem extends IteratingSystem {
           arOverride,
           alwaysHit,
           null, null, 0, 0,
-          stateList(ownerId), stateList(targetId), isEntityMoving(targetId),
-          missileMastery(missile), nativeDifficultyContext(combatDifficulty(ownerId, targetId)),
+          missile.ordinaryWeaponSnapshot ? null : stateList(ownerId), stateList(targetId), isEntityMoving(targetId),
+          missile.ordinaryWeaponSnapshot ? null : missileMastery(missile), nativeDifficultyContext(combatDifficulty(ownerId, targetId)),
           blessedHammerTargetBonusPercent(
               missile, mMonster.has(targetId) ? mMonster.get(targetId) : null),
           mMonster.has(targetId) && mMonster.get(targetId).monstats != null
@@ -1784,8 +1787,8 @@ public class MissileCollisionSystem extends IteratingSystem {
           mMonster.has(targetId) && isUndead(mMonster.get(targetId)),
           ignoreTargetDefenseAllowed,
           missile.skillId == com.riiablo.engine.server.skill.SkillId.NOVA,
-          !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? impactPhysical : null,
-          !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? missile.nativeElemental : null);
+          missile.ordinaryWeaponSnapshot || !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? impactPhysical : null,
+          missile.ordinaryWeaponSnapshot || !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? missile.nativeElemental : null);
       if (impactRng != null) missile.rngState = impactRng.state();
       boolean damageHit = combat.hit && !combat.blocked;
       if (damageHit) {

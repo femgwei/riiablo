@@ -81,6 +81,11 @@ public class NativeAttackData {
   public boolean fixedPointElements;
   /** Native monster melee endpoint scaling and exclusive 8.8 roll; explicit opt-in for snapshots. */
   public boolean fixedPointPhysical;
+  /** Ordinary weapon endpoint policy, including unarmed player attacks. */
+  public boolean ordinaryWeaponPhysical;
+  public boolean equippedWeapon;
+  public int weaponAttributePercent;
+  public int masteryCritical;
   /** Explicit projectile policy; endpoints are already 8.8, not melee HP stats. */
   public NativeMissilePhysicalDamage missilePhysical;
   /** Audited ordinary elements: instantaneous 8.8 damage and poison 8.8 per-frame rates. */

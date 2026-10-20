@@ -58,6 +58,8 @@ public class Missile extends PooledComponent {
   public boolean damageSnapshot;
   /** Independent native physical policy; legacy/skill packets leave this null. */
   public com.riiablo.engine.server.combat.NativeMissilePhysicalDamage nativePhysical;
+  /** Audited ordinary player/hireling weapon packet; not inherited by skill children. */
+  public boolean ordinaryWeaponSnapshot;
   /** Audited ordinary elements/poison rates; skill/DamageRate/special policies opt out. */
   public com.riiablo.engine.server.combat.NativeMissileElementalDamage nativeElemental;
   public int damageLevel;
@@ -291,6 +293,7 @@ public class Missile extends PooledComponent {
     damage.clear();
     damageSnapshot = false;
     nativePhysical = null;
+    ordinaryWeaponSnapshot = false;
     nativeElemental = null;
     damageLevel = 0;
     skillId = -1;

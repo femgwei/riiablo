@@ -1,6 +1,6 @@
 package com.riiablo.engine.server.combat;
 
-/** Weaponless monster branch of SUNITDMG_ApplyDamageBonuses (SUnitDmg.cpp).
+/** Ordinary weapon/unarmed branch of SUNITDMG_ApplyDamageBonuses (SUnitDmg.cpp).
  * Stats enter in whole HP; endpoints, flat normal damage, bonuses and the draw
  * stay in 8.8. Values beyond the packet's representable positive range saturate;
  * this is a host guard, not a claim about native signed-overflow behaviour.
@@ -9,13 +9,14 @@ public final class NativePhysicalDamageMath {
   private NativePhysicalDamageMath() {}
 
   public static int roll(NativeAttackData a, NativeDefenseData d, NativeCombatRolls rolls) {
-    long min = ((long) Math.max(1, a.minDamage) + a.normalDamage) * 256;
-    long max = ((long) Math.max(2, a.maxDamage) + a.normalDamage) * 256;
+    long min = ((long) (a.equippedWeapon ? a.minDamage : Math.max(1, a.minDamage)) + a.normalDamage) * 256;
+    long max = ((long) (a.equippedWeapon ? a.maxDamage : Math.max(2, a.maxDamage)) + a.normalDamage) * 256;
     if (min < 1) min = 256;
     if (max <= min) max = min + 256;
     min = Math.min(Integer.MAX_VALUE, min);
     max = Math.min(Integer.MAX_VALUE, max);
-    int percent = NativeCombatMath.physicalBonusPercent(false, a.strength,
+    int percent = NativeCombatMath.physicalBonusPercent(false,
+        a.ordinaryWeaponPhysical ? a.weaponAttributePercent : a.strength,
         a.enhancedDamagePercent, a.demonDamagePercent, a.undeadDamagePercent,
         d.isDemon, d.isUndead);
     min += percentage(min, (long) percent + a.minimumDamagePercent);

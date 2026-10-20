@@ -1533,6 +1533,24 @@ public class CombatSystem {
     return resolveSnapshot(request);
   }
 
+  /** Concrete-hand ordinary player/hireling melee; skill profiles opt in elsewhere. */
+  public CombatResult calculateOrdinaryWeaponAttack(Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, WeaponAttackSource source,
+      StateList attackerStates, StateList defenderStates, boolean defenderMoving,
+      NativeCombatContext context, boolean demon, boolean undead, boolean ignoreAllowed) {
+    CombatSnapshotFactory.Request request = new CombatSnapshotFactory.Request(
+        attacker, defender, attackerPlayer, defenderPlayer, context);
+    request.weaponSource = source;
+    request.mastery = source == null ? null : source.mastery(attackerStates, false);
+    request.attackerStates = attackerStates;
+    request.defenderStates = defenderStates;
+    request.defenderMoving = defenderMoving;
+    request.defenderDemon = demon;
+    request.defenderUndead = undead;
+    request.defenderIgnoreTargetDefenseAllowed = ignoreAllowed;
+    return resolveSnapshot(request);
+  }
+
   private CombatResult resolveSnapshot(CombatSnapshotFactory.Request request) {
     if (request.attacker == null || request.defender == null) {
       CombatResult result = new CombatResult();

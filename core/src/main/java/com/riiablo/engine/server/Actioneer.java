@@ -2356,6 +2356,20 @@ public class Actioneer extends PassiveSystem {
                 nativeDifficultyContext(), isDemonTarget(targetId), isUndeadTarget(targetId),
                 ignoreTargetDefenseAllowed, attackingMonster.monstats == null ? 0 : attackingMonster.monstats.Crit);
             if (serverContext != null) attackingMonster.rngState = meleeRng.state();
+          } else if (uniqueAttack == null && (attackerPlayer || mMercenary.has(entityId))
+              && (activeCasting == null || activeCasting.skillId == SkillCodes.attack
+                  || activeCasting.skillId == SkillCodes.left_hand_swing)) {
+            com.riiablo.engine.server.combat.WeaponAttackSource source =
+                com.riiablo.engine.server.combat.WeaponAttackSource.forUnit(world, entityId,
+                    false, activeCasting != null && activeCasting.skillId == SkillCodes.left_hand_swing);
+            CombatSystem ordinaryCombat = serverContext == null ? combatSystemResolver
+                : new CombatSystem(NativeUnitRandom.unit(world, gameSeed(), entityId),
+                    NativeUnitRandom.unit(world, gameSeed(), targetId));
+            combat = ordinaryCombat.calculateOrdinaryWeaponAttack(
+                attackerAttrs, attrs, attackerPlayer, targetPlayer, source,
+                stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+                nativeDifficultyContext(), isDemonTarget(targetId), isUndeadTarget(targetId),
+                ignoreTargetDefenseAllowed);
           } else if (uniqueAttack == null) {
             combat = combatSystemResolver.calculateAttackAtDifficulty(
                 attackerAttrs, attrs, attackerPlayer, targetPlayer, false,

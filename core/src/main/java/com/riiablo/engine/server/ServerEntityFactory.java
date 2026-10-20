@@ -1513,8 +1513,24 @@ public class ServerEntityFactory extends EntityFactory {
     MissileDamageResolver.initialize(files(), missileComponent, ownerAttrs, ownerMonster,
         ownerMode, Math.max(1, damageLevel), map == null ? 0 : map.getDifficulty(),
         ownerId >= 0 && mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null,
-        // Hireling/equipped-weapon coefficients retain the legacy creation policy.
+        // Weapon-owned creation is initialized explicitly below.
         ownerId < 0 || !world.getMapper(Mercenary.class).has(ownerId));
+
+    int dispatchSkill = ownerId >= 0 && mCasting.has(ownerId)
+        ? mCasting.get(ownerId).skillId : com.riiablo.skill.SkillCodes.attack;
+    if (ownerId >= 0 && (mPlayer.has(ownerId) || world.getMapper(Mercenary.class).has(ownerId))
+        && (dispatchSkill == com.riiablo.skill.SkillCodes.attack
+            || dispatchSkill == com.riiablo.skill.SkillCodes.throw_
+            || dispatchSkill == com.riiablo.skill.SkillCodes.left_hand_throw)) {
+      boolean throwing = dispatchSkill == com.riiablo.skill.SkillCodes.throw_
+          || dispatchSkill == com.riiablo.skill.SkillCodes.left_hand_throw;
+      com.riiablo.engine.server.combat.WeaponAttackSource source =
+          com.riiablo.engine.server.combat.WeaponAttackSource.forUnit(world, ownerId, throwing,
+              dispatchSkill == com.riiablo.skill.SkillCodes.left_hand_throw);
+      MissileDamageResolver.initializeOrdinaryWeapon(files(), missileComponent, ownerAttrs, source,
+          mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null,
+          Math.max(1, damageLevel), throwing, NativeUnitRandom.unit(world, gameSeed(), ownerId));
+    }
 
     if (ownerMonster != null && !world.getMapper(Mercenary.class).has(ownerId)) {
       NativeUnitRandom creationRng = NativeUnitRandom.monster(ownerMonster, gameSeed(), ownerId);

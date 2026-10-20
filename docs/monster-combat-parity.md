@@ -1,5 +1,8 @@
 # 怪物测试分层与原版对照
 
+普通玩家／佣兵武器已新增独立 8.8 来源和生产链路回归，详见
+[普通武器批次](ordinary-weapon-combat-2026-10-20.md)。这不解除特殊技能／SrcMissDmg 的保护。
+
 ## 运行入口
 
 七职业技能与结算/客户端同步的扩大回归另使用 `:core:playerCombatRegression`，

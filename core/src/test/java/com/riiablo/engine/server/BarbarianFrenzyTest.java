@@ -37,6 +37,35 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
 class BarbarianFrenzyTest extends RiiabloTest {
+  @Test void ordinaryAttackKeyframesUseConcreteHandsAndKeepFractionalLife() {
+    Actioneer actioneer = new Actioneer();
+    DummyFactory factory = new DummyFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    java.util.Random previous = MathUtils.random;
+    MathUtils.random = new java.util.Random(0) { @Override public int nextInt(int bound) { return 0; } };
+    try {
+      CharData data = CharData.obtain().clear().set(Riiablo.NORMAL, false, "ordinary", Riiablo.BARBARIAN);
+      data.getStats().base().put(Stat.strength, 10);
+      data.getStats().base().put(Stat.tohit, 100000);
+      data.getItems().equipItem(BodyLoc.RARM, data.getItems().add(weapon("hax", 1)));
+      data.getItems().equipItem(BodyLoc.LARM, data.getItems().add(weapon("hax", 100)));
+      int attacker = player(world, 0, 0, data.getStats());
+      world.getMapper(Player.class).get(attacker).data = data;
+      Attributes target = attributes(1000, 0, 0, 0);
+      int victim = monster(world, 1, 0, target);
+      world.getMapper(Casting.class).create(attacker).set(com.riiablo.skill.SkillCodes.attack,
+          victim, new Vector2(1, 0));
+      actioneer.onAnimDataKeyframe(AnimDataKeyframeEvent.obtain(attacker, Engine.KEYFRAME_ATK));
+      assertEquals(1000f - 281 / 256f, hp(world, victim));
+      world.getMapper(Casting.class).get(attacker).set(com.riiablo.skill.SkillCodes.left_hand_swing,
+          victim, new Vector2(1, 0));
+      actioneer.onAnimDataKeyframe(AnimDataKeyframeEvent.obtain(attacker, Engine.KEYFRAME_ATK));
+      assertEquals(1000f - (281 + 28160) / 256f, hp(world, victim));
+    } finally { world.dispose(); MathUtils.random = previous; }
+  }
+
   @Test
   void previousHitBuildsDataDrivenStateAndSkillLevelCapsStacks() {
     Skills.Entry frenzy = Riiablo.files.skills.get("Frenzy");
