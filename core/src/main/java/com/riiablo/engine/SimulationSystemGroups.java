@@ -28,19 +28,7 @@ import com.riiablo.engine.server.object.NativeShrineEffectSystem;
 import com.riiablo.engine.server.object.NativeShrineSystem;
 import com.riiablo.engine.server.object.NativeTrapFireSystem;
 import com.riiablo.engine.server.object.NativeTrapSystem;
-import com.riiablo.engine.server.quest.Act1QuestSystem;
-import com.riiablo.engine.server.quest.Act2DurielQuestSystem;
 import com.riiablo.engine.server.quest.Act2HoradricStaffDropSystem;
-import com.riiablo.engine.server.quest.Act2QuestSystem;
-import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
-import com.riiablo.engine.server.quest.Act3MephistoQuestSystem;
-import com.riiablo.engine.server.quest.Act3QuestSystem;
-import com.riiablo.engine.server.quest.Act4QuestSystem;
-import com.riiablo.engine.server.quest.Act5QuestSystem;
-import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
-import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
-import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
-import com.riiablo.engine.server.quest.NativeQuestRandomState;
 
 /**
  * Shared, ordered registration groups for local games and dedicated servers.
@@ -83,18 +71,7 @@ public final class SimulationSystemGroups {
 
   /** Quest state and the free mercenary reward share one authority boundary. */
   public static BaseSystem[] quests() {
-    return new BaseSystem[] {
-        new NativeQuestRandomState(),
-        new Act1QuestSystem(),
-        new Act2QuestSystem(),
-        new Act3QuestSystem(),
-        new Act3MephistoQuestSystem(),
-        new Act4QuestSystem(),
-        new Act5QuestSystem(),
-        new Act2TaintedSunQuestSystem(),
-        new Act2DurielQuestSystem(),
-        new NativeMercenaryRewardSystem()
-    };
+    return com.riiablo.engine.server.quest.QuestModule.authoritySystems();
   }
 
   /** Follow/lifetime updates and skill selection must both be installed. */
@@ -108,10 +85,7 @@ public final class SimulationSystemGroups {
   }
 
   public static BaseSystem[] questItemRewards() {
-    return new BaseSystem[] {
-        new NativeCountessRewardSystem(),
-        new NativeCharsiImbueSystem()
-    };
+    return com.riiablo.engine.server.quest.QuestModule.itemRewardSystems();
   }
 
   /**

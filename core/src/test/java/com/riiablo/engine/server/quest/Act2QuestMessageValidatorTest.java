@@ -17,7 +17,8 @@ class Act2QuestMessageValidatorTest {
 
     data.getQuests(Riiablo.ACT2)[Act2SummonerQuest.RECORD] =
         Act2SummonerQuest.completeObjective((short) 0);
-    assertTrue(Act2QuestMessageValidator.isAllowed(MonsterType.ATMA, data, 419));
+    assertFalse(Act2QuestMessageValidator.isAllowed(MonsterType.ATMA, data, 419));
+    assertTrue(Act2QuestMessageValidator.isAllowed(MonsterType.ATMA, data, 427));
     assertTrue(Act2QuestMessageValidator.isAllowed(MonsterType.DECKARDCAIN_ACT2, data, 429));
     assertFalse(Act2QuestMessageValidator.isAllowed(MonsterType.AKARA, data, 419));
     assertFalse(Act2QuestMessageValidator.isAllowed(MonsterType.ATMA, data, 418));

@@ -24,7 +24,6 @@ import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 import com.riiablo.widget.NpcDialogBox;
 import net.mostlyoriginal.api.event.common.EventSystem;
-import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -45,7 +44,6 @@ public class Act1QuestDialogController extends PassiveSystem {
   private static final int DEN_EARLY_RETURN_PERSISTED_FLAG = 63;
   private final IntSet denEarlyReturnShown = new IntSet();
 
-  @Subscribe
   public void onNpcInteraction(NpcInteractionEvent event) {
     if (event != null) openQuestDialog(event.entityId, event.npcId);
   }
@@ -169,9 +167,10 @@ public class Act1QuestDialogController extends PassiveSystem {
 
   private void submitMessage(int playerId, int npcId, int messageIndex) {
     if (messageIndex < 0) return;
-    if (network != null && network.requestQuest(
-        com.riiablo.net.packet.d2gs.QuestOperation.NPC_MESSAGE,
-        npcId, messageIndex) != 0) return;
+    if (network != null) {
+      network.requestQuest(com.riiablo.net.packet.d2gs.QuestOperation.NPC_MESSAGE, npcId, messageIndex);
+      return;
+    }
     // Offline/single-player worlds retain the local event path.  Dispatch at
     // dialog open, matching D2: text scrolling is presentation only and must
     // not delay quest acceptance or reward delivery.

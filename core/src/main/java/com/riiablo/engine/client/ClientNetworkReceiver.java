@@ -696,18 +696,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
     // component applications (or after a packet that omits unchanged vitals).
     character().synchronizeCurrentResources();
 
-    int questCount = Math.min(data.questRecordsLength(), com.riiablo.Riiablo.NUM_ACTS * 8);
-    if (questCount > 0) {
+    int questCount = data.questRecordsLength();
+    if (questCount > 0 && com.riiablo.engine.server.quest.QuestSnapshot.apply(
+        character(), questCount, data::questRecords)) {
       int currentDifficulty = character().diff;
       // The server serializes all acts for the character's current
       // difficulty; diff is not an act index.
-      for (int act = 0; act < com.riiablo.Riiablo.NUM_ACTS; act++) {
-        short[] records = character().getQuests(act);
-        int actOffset = act * 8;
-        for (int i = 0; i < records.length && actOffset + i < questCount; i++) {
-          records[i] = (short) data.questRecords(actOffset + i);
-        }
-      }
       Gdx.app.log(TAG, "[QUEST_SYNC] entity=" + entityId + " revision="
           + data.questRevision() + " records=" + questCount + " difficulty=" + currentDifficulty);
     }
@@ -918,14 +912,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void QuestResult(D2GS packet) {
     QuestResult result = (QuestResult) packet.data(new QuestResult());
     if (character() != null && result.questRecordsLength() > 0) {
-      int count = Math.min(result.questRecordsLength(), Riiablo.NUM_ACTS * 8);
-      for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
-        short[] records = character().getQuests(act);
-        int offset = act * 8;
-        for (int i = 0; i < records.length && offset + i < count; i++) {
-          records[i] = (short) result.questRecords(offset + i);
-        }
-      }
+      com.riiablo.engine.server.quest.QuestSnapshot.apply(
+          character(), result.questRecordsLength(), result::questRecords);
     }
     Gdx.app.log(TAG, "[QUEST_NET] phase=result request=" + result.requestId()
         + " operation=" + result.operation() + " success=" + result.success()

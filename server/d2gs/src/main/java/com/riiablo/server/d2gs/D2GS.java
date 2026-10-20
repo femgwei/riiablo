@@ -91,16 +91,12 @@ import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
-import com.riiablo.engine.server.quest.Act1QuestMessageValidator;
 import com.riiablo.engine.server.quest.Act3QuestSystem;
-import com.riiablo.engine.server.quest.Act4QuestMessageValidator;
 import com.riiablo.engine.server.quest.Act5QuestSystem;
 import com.riiablo.engine.server.quest.Act5BaalQuest;
 import com.riiablo.engine.server.quest.QuestWarpPolicy;
-import com.riiablo.engine.server.quest.Act5QuestMessageValidator;
 import com.riiablo.engine.server.quest.QuestWarp;
 import com.riiablo.engine.server.portal.TownPortalRegistry;
-import com.riiablo.engine.server.quest.Act2QuestMessageValidator;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.QuestRequestCache;
 import com.riiablo.engine.server.quest.QuestSnapshot;
@@ -6500,17 +6496,10 @@ public class D2GS extends ApplicationAdapter {
     CharData charData = CharData.loadFromBuffer(diff, d2sData);
     short[] sessionQuestRecords = disconnectedQuestRecords.remove(charData.name);
     if (sessionQuestRecords != null) {
-      int index = 0;
-      for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
-        short[] actRecords = charData.getQuests(act);
-        for (int quest = 0;
-             quest < QuestSnapshot.RECORDS_PER_ACT && index < sessionQuestRecords.length;
-             quest++) {
-          actRecords[quest] = sessionQuestRecords[index++];
-        }
-      }
+      boolean restored = QuestSnapshot.apply(charData, sessionQuestRecords.length,
+          i -> Short.toUnsignedInt(sessionQuestRecords[i]));
       Gdx.app.log(TAG, "[RECONNECT_BASELINE] phase=quest_restore character="
-          + charData.name + " records=" + index + " revision="
+          + charData.name + " records=" + sessionQuestRecords.length + " restored=" + restored + " revision="
           + QuestSnapshot.revision(QuestSnapshot.records(charData)));
     }
     // Rebuild equipment-derived attributes and native skills after loading a
@@ -8264,14 +8253,9 @@ public class D2GS extends ApplicationAdapter {
     boolean hasMalus = player.data.getItems() != null
         && player.data.getItems().containsItemCode(
             com.riiablo.engine.server.quest.Act1MalusQuest.MALUS_CODE);
-    if (!Act1QuestMessageValidator.isAllowed(npc.monstats.hcIdx, player.data, level,
-        hasMalus, messageIndex)
-        && !Act2QuestMessageValidator.isAllowed(
-            npc.monstats.hcIdx, player.data, messageIndex)
-        && !Act5QuestMessageValidator.isAllowed(
-                serverContext.files(), npc.monstats.hcIdx, player.data, levelIdOf(npcId), messageIndex)
-        && !Act4QuestMessageValidator.isAllowed(
-                npc.monstats.hcIdx, player.data, messageIndex)) {
+    if (!com.riiablo.engine.server.quest.QuestModule.isNpcMessageAllowed(
+        serverContext.files(), npc.monstats, player.data, level, hasMalus,
+        levelIdOf(npcId), messageIndex)) {
       return "QUEST_MESSAGE_NOT_AVAILABLE";
     }
     return null;

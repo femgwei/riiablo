@@ -23,7 +23,7 @@ import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Quests;
-import com.riiablo.engine.client.Act1QuestPresentation;
+import com.riiablo.engine.client.QuestPresentation;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.AnimationWrapper;
@@ -171,7 +171,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     for (int i = 0, q = 0; i < tabs.length; i++) {
       Tab tab = tabs[i] = new Tab();
       for (Quests.Entry quest : quests[i]) {
-        tab.addQuest(quest, q++, Act1QuestPresentation.recordIndex(quest));
+        tab.addQuest(quest, q++, QuestPresentation.recordIndex(quest));
       }
 
       tab.pack();
@@ -477,7 +477,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
       }
       boolean available = isAvailable();
       setTouchable(available ? Touchable.enabled : Touchable.disabled);
-      completed.setVisible(Act1QuestPresentation.isComplete(record));
+      completed.setVisible(QuestPresentation.isComplete(quest, record));
     }
 
     boolean consumeRecordChanged() {
@@ -489,24 +489,24 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     boolean isAvailable() {
       int level = character.getStats().aggregate().getValue(Stat.level, 0);
       return nativeRecordIndex <= 0
-          || Act1QuestPresentation.isAvailable(nativeRecordIndex, record(), level);
+          || QuestPresentation.isAvailable(quest, nativeRecordIndex, record(), level);
     }
 
     short record() {
-      short[] records = character.getQuests(Riiablo.ACT1);
-      return nativeRecordIndex > 0 && nativeRecordIndex < records.length
+      short[] records = character.getQuests(quest.act);
+      return records != null && nativeRecordIndex > 0 && nativeRecordIndex < records.length
           ? records[nativeRecordIndex] : 0;
     }
 
     String textId() {
       return nativeRecordIndex > 0
-          ? Act1QuestPresentation.textId(quest, record())
+          ? QuestPresentation.textId(quest, record())
           : quest.qsts[0];
     }
 
     String replaySpeech() {
       return nativeRecordIndex > 0
-          ? Act1QuestPresentation.replaySpeech(nativeRecordIndex, record()) : null;
+          ? QuestPresentation.replaySpeech(quest, nativeRecordIndex, record()) : null;
     }
   }
 }

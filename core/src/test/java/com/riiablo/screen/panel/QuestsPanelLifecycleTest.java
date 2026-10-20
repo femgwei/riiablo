@@ -130,6 +130,32 @@ class QuestsPanelLifecycleTest {
     panel.dispose(); PanelSessionAssertions.assertInactive(panel, actors);
   }
 
+  @Test void nativeQuestMessageUsesNumericLocalizationWithoutActOneSpeechMapping() {
+    when(Riiablo.string.lookup(304)).thenReturn("60\nAtma native quest text");
+    com.riiablo.widget.NpcDialogBox dialog = own(new com.riiablo.widget.NpcDialogBox(304, d -> {}));
+    verify(Riiablo.string).lookup(304);
+    verifyNoInteractions(audioHost);
+    dialog.dispose();
+  }
+
+  @Test void eachActReadsItsOwnRecordsAndGoldenBirdUsesExistingSlotOne() throws Exception {
+    for (int act = 0; act < 5; act++) {
+      Quests.Entry row = rows.get(act);
+      row.qstr = "qstsa" + (act + 1) + "q" + (act == 2 ? 4 : 1);
+      short[] records = new short[8]; records[1] = (short) (100 + act);
+      when(character.getQuests(act)).thenReturn(records);
+    }
+    QuestsPanel panel = own(new QuestsPanel());
+    Object[] tabs = (Object[]) get(panel, "tabs");
+    for (int act = 0; act < 5; act++) {
+      select(panel, act);
+      Object selected = get(tabs[act], "selected");
+      java.lang.reflect.Method record = selected.getClass().getDeclaredMethod("record");
+      record.setAccessible(true);
+      assertEquals((short) (100 + act), record.invoke(selected));
+    }
+  }
+
   @Test void independentExitBalancesAllAssetsOnOriginalManagerAndClearsWholeTree() throws Exception {
     Array<String> paths = assetPaths();
     for (String path : paths) assets.load(path, DC6.class);

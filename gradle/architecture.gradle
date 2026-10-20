@@ -3,6 +3,7 @@ ext.isolatedModuleDependencies = [
     ':shared': [] as Set,
     ':game-data': [':shared'] as Set,
     ':server-domain': [':game-data', ':D2MOO_JAVA'] as Set,
+    ':quests': [':server-domain'] as Set,
     ':server-systems': [':server-domain'] as Set,
     ':D2MOO_JAVA': [] as Set,
 ]
@@ -81,7 +82,7 @@ tasks.register('verifyModuleBoundaries') {
             /\bcom\.riiablo\.(?:Riiablo|Files)\b/,
             /\bMathUtils\s*\.\s*random\b/,
         ]
-        if (name in [':server-domain', ':server-systems']) forbidden.add(/\bINSTANCE\b/)
+        if (name in [':server-domain', ':server-systems', ':quests']) forbidden.add(/\bINSTANCE\b/)
         forbidden.each { pattern ->
           if ((text =~ pattern).find()) violations.add("${name} ${p.relativePath(file)} violates ${pattern}")
         }
@@ -107,7 +108,7 @@ configure(isolatedModuleDependencies.keySet().collect { project(it) }) {
 project(':core') {
   tasks.named('architectureRegression') {
     dependsOn rootProject.tasks.named('verifyModuleBoundaries')
-    dependsOn ':shared:test', ':game-data:test', ':server-domain:test', ':server-systems:test'
+    dependsOn ':shared:test', ':game-data:test', ':server-domain:test', ':server-systems:test', ':quests:test'
   }
   tasks.named('check') { dependsOn tasks.named('architectureRegression') }
 }

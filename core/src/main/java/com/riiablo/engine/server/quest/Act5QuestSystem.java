@@ -475,7 +475,12 @@ public class Act5QuestSystem extends ContextualQuestSystem {
       onBaalTyraelMessage(event, player, npc);
       return;
     }
-    if (!isLarzuk(npc.monstats) || event.messageIndex != Act5ShenkQuest.MESSAGE_LARZUK_REWARD) return;
+    if (!isLarzuk(npc.monstats)) return;
+    if (event.messageIndex == Act5ShenkQuest.MESSAGE_LARZUK_INIT) {
+      updateRecord(player.data, Act5ShenkQuest::start, "larzuk-shenk-init");
+      return;
+    }
+    if (event.messageIndex != Act5ShenkQuest.MESSAGE_LARZUK_REWARD) return;
     short previous = record(player.data);
     short next = Act5ShenkQuest.claimReward(previous);
     if (next == previous) return;

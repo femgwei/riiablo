@@ -17,7 +17,7 @@ public final class Act2QuestMessageValidator {
     if (act2.length > Act2SummonerQuest.RECORD
         && Act2SummonerQuest.isRewardNpc(npcType)
         && Act2SummonerQuest.isRewardMessage(messageIndex)) {
-      return Act2SummonerQuest.isRewardMessage(messageIndex)
+      return messageIndex == QuestDialogue.summonerMessage(npcType)
           && NativeQuestRecord.has(act2[Act2SummonerQuest.RECORD],
               NativeQuestRecord.REWARD_PENDING);
     }

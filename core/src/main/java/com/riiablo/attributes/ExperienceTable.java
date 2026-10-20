@@ -10,7 +10,7 @@ import com.riiablo.logger.Logger;
  * Uses native Experience.txt data when available; the embedded values are an
  * explicitly logged compatibility fallback for table-less tests/tools.
  */
-public class ExperienceTable {
+public class ExperienceTable implements com.riiablo.engine.server.quest.QuestExperience {
   private static final Logger log = LogManager.getLogger(ExperienceTable.class);
 
   private static ExperienceTable instance;

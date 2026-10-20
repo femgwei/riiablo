@@ -1,0 +1,4 @@
+// A1-A5 quest rules and state, independent of the game host and presentation.
+dependencies {
+  api project(':server-domain')
+}

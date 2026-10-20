@@ -30,7 +30,6 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.DialogManager;
 import com.riiablo.engine.client.MenuManager;
-import com.riiablo.engine.client.Act1QuestDialogController;
 import com.riiablo.engine.client.ClientNetworkSynchronizer;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.pet.MercenaryManager;
@@ -111,28 +110,14 @@ public final class ClientNpc extends Npc {
               }));
             }
           })
-          .addItem("Quest", new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-              if (entType == MonsterType.CAIN4 || entType == MonsterType.TYRAEL2) {
-                com.riiablo.engine.client.Act4QuestDialogController quests =
-                    Riiablo.engine.getSystem(com.riiablo.engine.client.Act4QuestDialogController.class);
-                if (quests != null && Riiablo.game != null) {
-                  menuManager.setMenu(null, Engine.INVALID_ENTITY);
-                  quests.openQuestDialog(Riiablo.game.player, entityId);
-                }
-                return;
-              }
-              Act1QuestDialogController quests =
-                  Riiablo.engine.getSystem(Act1QuestDialogController.class);
-              if (quests != null && Riiablo.game != null) {
-                menuManager.setMenu(null, Engine.INVALID_ENTITY);
-                quests.openQuestDialog(Riiablo.game.player, entityId);
-              }
-            }
-          })
+          .addItem("Quest", questClick())
           .addCancel(null)
           .build());
+    } else if (com.riiablo.engine.server.quest.QuestDialogue.supportsNpc(
+        com.riiablo.engine.server.quest.QuestPlayerView.npcType(monstats))) {
+      // The legacy TALKERS list is mostly A1. Later acts still need a quest
+      // entry, but must not acquire fake Act-I intro/gossip speech keys.
+      menu.addItem("Quest", questClick());
     }
 
     if (REPAIRERS.contains(entType)) {
@@ -186,6 +171,18 @@ public final class ClientNpc extends Npc {
         }
       })
       .build();
+  }
+
+  private ClickListener questClick() {
+    return new ClickListener() {
+      @Override public void clicked(InputEvent event, float x, float y) {
+        QuestDialogController quests = Riiablo.engine.getSystem(QuestDialogController.class);
+        if (quests != null && Riiablo.game != null) {
+          menuManager.setMenu(null, Engine.INVALID_ENTITY);
+          quests.openQuestDialog(Riiablo.game.player, entityId);
+        }
+      }
+    };
   }
 
   /** Refreshes the hireling menu so a death after the first interaction is visible. */

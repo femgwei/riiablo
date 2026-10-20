@@ -16,6 +16,7 @@ import com.riiablo.codec.Animation;
 import com.riiablo.codec.DCC;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.monster.MonsterType;
@@ -33,11 +34,12 @@ import com.riiablo.graphics.BlendMode;
 import com.riiablo.widget.Label;
 import com.riiablo.util.AssetReferenceScope;
 
-/** Draws the native Act I quest-available/reward marker above town NPCs. */
+/** Draws A1-A5 quest markers; the class name is retained for assembly compatibility. */
 @GpuSystem
 @All({Monster.class, Position.class})
 public class Act1QuestIndicatorSystem extends IteratingSystem {
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Player> mPlayer;
   protected RenderSystem renderer;
@@ -90,7 +92,10 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
     if (!mPlayer.has(playerId)) return;
     CharData data = mPlayer.get(playerId).data;
     Monster npc = mMonster.get(entityId);
-    if (data == null || npc.monstats == null || !hasQuestMarker(npc.monstats.hcIdx, data)) return;
+    MapWrapper map = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    int levelId = map == null || map.zone == null || map.zone.level == null ? -1 : map.zone.level.Id;
+    if (data == null || npc.monstats == null || !hasQuestMarker(
+        com.riiablo.engine.server.quest.QuestPlayerView.npcType(npc.monstats), data, levelId)) return;
 
     Vector2 screen = new Vector2(mPosition.get(entityId).position);
     iso.toScreen(screen);
@@ -149,6 +154,10 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
   }
 
   static boolean hasQuestMarker(int monsterType, CharData data) {
+    return hasQuestMarker(monsterType, data, -1);
+  }
+
+  static boolean hasQuestMarker(int monsterType, CharData data, int levelId) {
     short[] quests = data.getQuests(com.riiablo.Riiablo.ACT1);
     if (quests == null) return false;
     short record;
@@ -204,7 +213,10 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
       case MonsterType.DECKARDCAIN_TOWN:
         return false;
       default:
-        return false;
+        com.riiablo.engine.server.quest.QuestDialogue.Offer offer =
+            com.riiablo.engine.server.quest.QuestDialogue.select(monsterType,
+                new com.riiablo.engine.server.quest.QuestPlayerView(data), levelId);
+        return offer != null && offer.attention;
     }
   }
 

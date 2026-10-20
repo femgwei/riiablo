@@ -33,6 +33,17 @@ public class NpcDialogBox extends Table implements Disposable {
   }
 
   public NpcDialogBox(String sound, String fallbackText, DialogCompletionListener listener) {
+    this(sound, fallbackText, listener, false);
+  }
+
+  /** Native message ids address StringTBLs directly, including expansion 20000+.
+   * A2-A5 need not have rows in the project's Act-I-only speech table. */
+  public NpcDialogBox(int messageId, DialogCompletionListener listener) {
+    this(null, Riiablo.string.lookup(messageId), listener, true);
+  }
+
+  private NpcDialogBox(String sound, String fallbackText, DialogCompletionListener listener,
+      boolean nativeMessage) {
     this.listener = listener;
     try {
       setBackground(border = new BorderedPaletteIndexedDrawable());
@@ -43,8 +54,8 @@ public class NpcDialogBox extends Table implements Disposable {
       //        problem seems to be with fontformat11 metrics, applying scalar to line height
       final float lineScalar = 0.85f;
       final FontTBL.BitmapFont FONT = Riiablo.fonts.fontformal11;
-      Speech.Entry speech = Riiablo.files.speech.get(sound);
-      if (speech == null) {
+      Speech.Entry speech = sound == null ? null : Riiablo.files.speech.get(sound);
+      if (speech == null && !nativeMessage) {
         // Speech IDs are data keys and must not be derived from localized NPC
         // display names. Keep malformed/missing rows from taking down the client.
         log.error("Missing speech mapping: {}", sound);

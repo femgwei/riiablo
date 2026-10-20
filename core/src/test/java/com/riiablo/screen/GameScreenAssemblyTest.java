@@ -214,8 +214,8 @@ class GameScreenAssemblyTest {
         + "MissileCollisionSystem Actioneer ServerMonsterCorpseSystem UnitLifecycleSystem NativePlayerTargetSlots "
         + "SkillCastHandler OverlayManager MissileImpactPresentationSystem ElementalHitPresentationSystem "
         + "NativeShrinePresentationSystem OverlayStepper DamageHandler DeathHandler CorpseManager "
-        + "Act2QuestDialogController Act4QuestDialogController "
-        + (local ? "Act1QuestDialogController ActTransitionSystem EnvironmentObjectSystem "
+        + "Act1QuestDialogController QuestDialogController "
+        + (local ? "ActTransitionSystem EnvironmentObjectSystem "
             + "NativeQuestRandomState Act1QuestSystem Act2QuestSystem Act3QuestSystem Act3MephistoQuestSystem Act4QuestSystem "
             + "Act5QuestSystem Act2TaintedSunQuestSystem Act2DurielQuestSystem NativeMercenaryRewardSystem "
             + "MercenaryFollowSystem SummonedPetSystem AssassinTrapSystem MercenarySkillSystem "
@@ -230,6 +230,7 @@ class GameScreenAssemblyTest {
         + "CofAlphaHandler CofTransformHandler ItemLoader MissileLoader AnimationStepper "
         + "ObjectCollisionUpdater BoneWallCollisionSystem StateOverlaySystem "
         + "Box2DDisposer "
+        + (local ? "VelocityAdder " : "")
         + "Box2DSynchronizerPre Box2DPhysics Box2DSynchronizerPost VelocityModeChanger "
         + "DruidShapeShiftResolver ExperienceManager PlayerCorpseRetrievalSystem ZoneChangeTracker "
         + "ZoneMovementModesChanger NpcVendorSessionSystem ZoneEntryDisplayer SoundEnvironmentSystem "

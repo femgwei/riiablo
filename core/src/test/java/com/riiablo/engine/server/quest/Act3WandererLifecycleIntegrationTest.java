@@ -38,7 +38,7 @@ class Act3WandererLifecycleIntegrationTest extends RiiabloTest {
     } finally { world.dispose(); }
   }
 
-  @Test void afterglowOpeningAndExpiryAreDrivenByTwentySevenSimulationFrames() {
+  @Test void afterglowSpawnDelayAndAnimationExpiryUseSeparateNativeDeadlines() {
     Act3QuestSystem quests = new Act3QuestSystem();
     Map map = new Map(0, 0);
     Map.Zone zone = mock(Map.Zone.class);
@@ -47,6 +47,10 @@ class Act3WandererLifecycleIntegrationTest extends RiiabloTest {
       int id = world.create();
       Objects.Entry row = new Objects.Entry();
       row.InitFn = 59;
+      // D2MOO OBJECTS_InitFunction59: ENDANIM = FrameCnt[OP] >> 8 + frame + 1;
+      // the separate MONUMOD/spawn event is frame + 27, not ENDANIM.
+      row.FrameCnt = new int[8];
+      row.FrameCnt[Engine.Object.MODE_OP] = 27 << 8;
       com.riiablo.engine.server.component.Object object = world.getMapper(
           com.riiablo.engine.server.component.Object.class).create(id);
       object.base = row;
@@ -58,6 +62,8 @@ class Act3WandererLifecycleIntegrationTest extends RiiabloTest {
       world.process();
       assertEquals(Engine.Object.MODE_OP, object.mode);
       for (int i = 0; i < 26; i++) world.process();
+      assertEquals(Engine.Object.MODE_OP, object.mode);
+      world.process();
       assertEquals(Engine.Object.MODE_OP, object.mode);
       world.process();
       assertEquals(Engine.Object.MODE_ON, object.mode);

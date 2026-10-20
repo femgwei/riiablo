@@ -21,7 +21,7 @@ import com.riiablo.item.StoreLoc;
 import com.riiablo.item.Type;
 import com.riiablo.util.EnumIntMap;
 
-public class ItemData {
+public class ItemData implements com.riiablo.engine.server.quest.QuestInventory {
   public static final int INVALID_ITEM = -1;
 
   final Attributes stats;

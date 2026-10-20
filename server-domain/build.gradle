@@ -1,4 +1,4 @@
-// Domain records, quest rules, managers and ECS state without a game host.
+// Domain records, managers and ECS state without a game host; quest rules live in :quests.
 dependencies {
   api project(':game-data')
   api project(':D2MOO_JAVA')

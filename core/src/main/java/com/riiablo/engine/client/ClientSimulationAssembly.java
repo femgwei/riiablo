@@ -102,15 +102,14 @@ public final class ClientSimulationAssembly {
         .with(new DeathHandler()) // TODO: move to more appropriate spot in list
         .with(new CorpseManager()) // Manages corpse lifetime and removal
         ;
-    // Presentation-only adapter is also required by network clients; quest
-    // mutation remains authoritative in the local/server Act2QuestSystem.
-    builder.with(new Act2QuestDialogController());
-    builder.with(new Act4QuestDialogController());
+    // Presentation is shared by local and remote clients; only authority
+    // worlds install quest mutation systems below.
+    builder.with(new Act1QuestDialogController(), new QuestDialogController());
     if (mode.isAuthoritative()) {
       // Local games own the authoritative combat world.  Dedicated servers
       // already register this system; network clients must not create a
       // duplicate missile for the same SkillDoEvent.
-      builder.with(new Act1QuestDialogController(), new ActTransitionSystem());
+      builder.with(new ActTransitionSystem());
       builder.with(new com.riiablo.engine.server.EnvironmentObjectSystem(
           simulationSession.environment()));
       builder.with(SimulationSystemGroups.quests());

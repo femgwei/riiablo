@@ -29,6 +29,7 @@ project.ext.flatbuffersSourceDirs = file('src/main/flatbuffers/')
 // Java
 dependencies {
   api project(':server-systems')
+  api project(':quests')
   implementation 'javax.annotation:javax.annotation-api:1.3.2'
 }
 
@@ -213,6 +214,31 @@ task architectureRegression(type: Test) {
   classpath = sourceSets.test.runtimeClasspath
   useJUnitPlatform()
   filter { includeTestsMatching 'com.riiablo.architecture.*' }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
+
+// All-act quest gate, independent of unrelated combat acceptance suites.
+task questRegression(type: Test) {
+  group = 'verification'
+  description = 'A1-A5 quest rules/adapters, dialogue, records, D2S and client assembly.'
+  dependsOn testClasses, ':quests:test', ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    includeTestsMatching 'com.riiablo.engine.server.quest.*'
+    includeTestsMatching 'com.riiablo.engine.client.*Quest*'
+    includeTestsMatching 'com.riiablo.save.Act1QuestD2SRoundTripTest'
+    includeTestsMatching 'com.riiablo.screen.panel.QuestsPanelLifecycleTest'
+    includeTestsMatching 'com.riiablo.screen.GameScreenAssemblyTest'
+    includeTestsMatching 'com.riiablo.architecture.*'
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
   maxHeapSize = test.maxHeapSize
   systemProperty 'java.awt.headless', 'true'
   systemProperty 'gdx.test.headless', 'true'

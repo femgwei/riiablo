@@ -17,6 +17,34 @@ import org.junit.jupiter.api.Test;
 
 class Act1QuestIndicatorSystemTest extends RiiabloTest {
   @Test
+  void baalTyraelMarkerUsesChamberAndStopsAfterTerminalAcknowledgement() {
+    CharData data = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "BaalMarker", Riiablo.AMAZON);
+    short[] records = data.getQuests(Riiablo.ACT5);
+    records[6] = com.riiablo.engine.server.quest.Act5BaalQuest.complete((short) 0);
+    int tyrael = com.riiablo.engine.server.quest.Act5BaalQuest.TYRAEL3_CLASS;
+    int chamber = com.riiablo.engine.server.quest.Act5BaalQuest.WORLDSTONE_CHAMBER;
+    assertTrue(Act1QuestIndicatorSystem.hasQuestMarker(tyrael, data, chamber));
+    assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(tyrael, data, 109));
+    records[6] = NativeQuestRecord.set(records[6], NativeQuestRecord.CUSTOM3);
+    assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(tyrael, data, chamber));
+  }
+
+  @Test
+  void atmaMarkerCoversFreshStartedPendingAndGrantedRecords() {
+    CharData data = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "AtmaMarker", Riiablo.AMAZON);
+    assertTrue(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.ATMA, data));
+    short[] records = data.getQuests(Riiablo.ACT2);
+    records[1] = com.riiablo.engine.server.quest.Act2RadamentQuest.start((short) 0);
+    assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.ATMA, data));
+    records[1] = com.riiablo.engine.server.quest.Act2RadamentQuest.completeObjective(records[1]);
+    assertTrue(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.ATMA, data));
+    records[1] = com.riiablo.engine.server.quest.Act2RadamentQuest.claimReward(records[1]);
+    assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.ATMA, data));
+  }
+
+  @Test
   void akaraMarkerAdvancesFromDenToCainAndCainTownDoesNotDuplicateIt() {
     CharData data = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "QuestMarker", Riiablo.AMAZON);

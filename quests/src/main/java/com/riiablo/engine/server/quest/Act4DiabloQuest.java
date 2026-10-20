@@ -1,0 +1,65 @@
+package com.riiablo.engine.server.quest;
+
+
+import com.d2moo.common.drlg.D2LevelIds;
+
+/** Native D2MOO A4Q2 Diablo record transitions. */
+public final class Act4DiabloQuest {
+  private Act4DiabloQuest() {}
+
+  /** Act IV record index: Q0 gossip, Q1 Izual, Q2 Diablo. */
+  public static final int RECORD = 2;
+  public static final int FIRST_SEAL = 392;
+  public static final int LAST_SEAL = 396;
+  /** Native 1.10f level id (D2LevelIds.LEVEL_CHAOSSANCTUARY = 108). */
+  public static final int CHAOS_SANCTUARY = D2LevelIds.LEVEL_CHAOSSANCTUARY;
+  public static final int PANDEMONIUM_FORTRESS = D2LevelIds.LEVEL_THEPANDEMONIUMFORTRESS;
+  public static final int HARROGATH = D2LevelIds.LEVEL_HARROGATH;
+  public static final int MESSAGE_TYRAEL_ACT5 = 20000;
+
+  public static boolean isSealObject(int objectClassId) {
+    return objectClassId >= FIRST_SEAL && objectClassId <= LAST_SEAL;
+  }
+
+  /** Native seal groups that spawn a super-unique pack; 395/396 are non-boss seals. */
+  public static int sealBossGroup(int objectClassId) {
+    switch (objectClassId) {
+      case FIRST_SEAL: return 1; // Infector of Souls
+      case FIRST_SEAL + 1: return 2; // Lord De Seis
+      case FIRST_SEAL + 2: return 3; // Grand Vizier of Chaos
+      default: return 0;
+    }
+  }
+
+  public static short start(short record) {
+    return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+        ? record : NativeQuestRecord.set(record, NativeQuestRecord.STARTED);
+  }
+
+  /** Native level-change callback marks Chaos Sanctuary as entered while the
+   * seal/Diablo state is still pending. */
+  public static short enterArea(short record) {
+    return NativeQuestRecord.set(start(record), NativeQuestRecord.ENTERED_AREA);
+  }
+
+  /** A saved pending/completed record is enough to rebuild the Chaos quest
+   * presentation after the transient ECS state has been recreated. */
+  public static boolean shouldRestoreCompletedState(short record) {
+    return NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
+  public static short complete(short record) {
+    if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)) return record;
+    record = NativeQuestRecord.set(record, NativeQuestRecord.PRIMARY_GOAL_DONE);
+    record = NativeQuestRecord.set(record, NativeQuestRecord.REWARD_PENDING);
+    return NativeQuestRecord.set(record, NativeQuestRecord.COMPLETED_NOW);
+  }
+
+  public static short claimCompletion(short record) {
+    if (!NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE)) return record;
+    record = NativeQuestRecord.set(record, NativeQuestRecord.REWARD_GRANTED);
+    return NativeQuestRecord.clear(record, NativeQuestRecord.REWARD_PENDING);
+  }
+}
