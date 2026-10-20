@@ -25,6 +25,8 @@ import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.item.Item;
 import com.riiablo.item.Type;
+import com.riiablo.item.BodyLoc;
+import com.riiablo.codec.excel.Weapons;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.skill.SkillCodes;
@@ -548,7 +550,25 @@ public class SkillCastHandler extends PassiveSystem {
   //==========================================================================
 
   private String getHitClassSound(int entityId) {
-    // TODO: get actual weapon hit class from equipped weapon
+    // Attack's stsound is empty in the native Skills.txt row.  D2Client
+    // selects the swing bank from the active weapon class at the attack
+    // keyframe; using a fixed 1hs sound makes bow attacks silent/mismatched.
+    if (clientContext.charData() != null && clientContext.charData().getItems() != null) {
+      com.riiablo.save.ItemData items = clientContext.charData().getItems();
+      Item weapon = items.getEquippedRangedWeapon();
+      if (weapon != null) {
+        return weapon.type.is(Type.XBOW) ? "weapon_xbow_1" : "weapon_bow_1";
+      }
+      weapon = items.getEquipped(BodyLoc.RARM);
+      if (weapon == null || !items.isActive(weapon)) {
+        weapon = items.getEquipped(BodyLoc.LARM);
+      }
+      if (weapon != null && items.isActive(weapon)
+          && weapon.base instanceof Weapons.Entry) {
+        Weapons.Entry entry = (Weapons.Entry) weapon.base;
+        return entry._2handed ? "weapon_2hs_large_1" : "weapon_1hs_large_1";
+      }
+    }
     return "weapon_1hs_large_1";
   }
 
