@@ -44,6 +44,44 @@
 | M8-D 网络三层收敛 | protocol / transport / authoritative session | 收敛 FlatBuffers、Netty、D2GS session 和旧网络实现；禁止规则系统直接操作 socket | 未开始 | 协议、传输、会话各有唯一 owner；重连、快照和命令路径不再存在多套权威实现 |
 | M7-A 机制/策略分离 | Go ECS 保持通用机制，Lua/D2 规则作为策略 | Java 中先把可参数化的 AI、技能、掉落和任务公式移入 policy/data，不进行一次性脚本化 | 未开始 | 规则策略可由纯数据/策略测试替换；通用 ECS 机制不读取具体 D2 表行 |
 
+### M1/M7/M8 结构债务子项
+
+这组子项把前期结构审计中发现的反向依赖和多代实现单独登记，避免它们被“表现层剥离”或“网络收敛”一句话掩盖。这里的状态表示改造状态，不表示问题已经解决。
+
+| 子项 | 审计对象 | 目标边界 | 当前状态 | 完成判定 |
+|---|---|---|---|---|
+| M1-A 机制/表现依赖审计 | `engine/client` 对 `screen/widget` 的反向 import；客户端 NPC、对话、标签和区域提示 | `engine` 只发布快照/语义事件，`presentation` 负责 widget、音频和渲染资源 | 进行中（问题已登记，M8-C 尚未迁移） | 架构检查禁止 engine/server 引入 UI、音频设备或渲染对象；现有调用均有 owner 和删除条件 |
+| M1-B 地图/实体边界 | `map`、`MapBuilder` 直接引用 `EntityFactory`、服务端组件和 `NativeDataTables` | 地图只产布局、碰撞、warp 和对象描述；实体创建由 population/assembly 系统完成 | 未开始 | 地图模块可在无 ECS world 的 headless 测试中生成布局；实体工厂不再由地图 builder 直接调用 |
+| M1-C 网络实现盘点 | `server/netty` 中 `net`、`nnet`、`onet`，以及 `d2gs`、`d2gs_netty`、`d2gs_test` 并存 | 明确 protocol、transport、authoritative session 的唯一 owner，测试实现与生产实现隔离 | 进行中（已盘点，M8-D 尚未迁移） | 每个消息/会话路径只有一套生产入口；旧实现删除或标记为仅测试适配器 |
+| M7-B 地图代际收敛 | `map`、`map2`、`map5`、`map/d2moo`、`D2MOO_JAVA` 并存 | 保留主地图链和 D2MOO bridge，过渡实现不再被新规则依赖 | 未开始 | Act 1 关键地图在主链上通过真实 MPQ/headless 验收；过渡目录无生产调用者 |
+
+### 前期 dark-magic 对比核对（2026-10-21）
+
+原结构分析的结论已逐项复核并映射到上面的迁移项。标记为“部分属实”的项目表示 riiablo 已有局部机制，但还没有 dark-magic 意义上的完整边界；不能因此提前标记完成。
+
+| 原分析结论 | riiablo 当前证据 | 判定 | 计划落点 |
+|---|---|---|---|
+| 固定 25Hz 与渲染解耦 | `SimulationClock` 目前提供 25Hz 常量，`AuthoritativeSimulation`/D2GS 已按 25Hz 配置；仍缺可独立推进的 accumulator | 部分属实 | M3-A |
+| 命名确定性 RNG stream | `map2.random.Random` 和多处 `RandomXS128`/`MathUtils.random` 已存在，但没有按系统/实体命名、隔离和消费计数 | 属实（缺口存在） | M4-A |
+| 回放、检查点、校验和恢复 | 客户端预测与若干 snapshot 类型存在，但未形成跨系统的 replay/checkpoint/checksum 协议 | 部分属实 | M8-A |
+| 意图命令与权威准入 | 客户端已有 `ClientPredictionBuffer`，D2GS 也有命令处理；尚无统一 actor/序号/目标 Tick/权限 envelope | 属实（缺口存在） | M3-B |
+| ECS 相位、读写集和结构屏障 | `SimulationSystemGroups` 已表达系统组顺序；没有统一 phase contract、读写集登记和 deferred structural barrier | 部分属实 | M3-C |
+| 机制/策略分离 | 数据表和若干 policy 已存在，但大量 D2 公式仍直接位于 engine/server system | 部分属实 | M7-A |
+| Mod 内容包与运行时锁定 | 当前没有完整 Mod/package digest/namespace/session lock；计划明确不引入 Lua/Go | 属实（暂不迁移） | M4-B（暂停） |
+| 服务端直接播放音频 | 历史审计记录 83 处；声音事件迁移后服务端不再直接播放，当前仅剩 3 处客户端表现层 `MonsterAudio` 兼容调用 | 已完成主项，仍有表现收口 | M8-B、M8-C |
+| engine/client ↔ screen/widget 反向依赖 | `ClientGameplayContext`、`ClientNpc`、对话/标签/区域提示类仍直接 import UI 类型 | 属实 | M1-A、M8-C |
+| map ↔ engine/server 反向依赖 | `Map` 和多个 `Act*MapBuilder*` 仍直接引用 `EntityFactory`、服务端组件和数据表 | 属实 | M1-B、M7-B |
+| 网络和地图多代并存 | `server/netty` 与 `server/d2gs` 同时存在，且 `net/nnet/onet`、`d2gs_netty/d2gs_test` 并存；`map/map2/map5` 也仍存在 | 属实 | M1-C、M7-B、M8-D |
+
+### 明确不迁移的部分
+
+以下是对比分析中“dark-magic 不占优或移植收益不足”的结论，不再作为 riiablo 的迁移任务：
+
+- **平台与渲染后端**：保留 LibGDX 的桌面/Android 能力；只吸收 headless 可测和表现订阅边界，不替换渲染栈。
+- **D2 数据/记录管线**：继续使用现有 TXT/MPQ、table、codec、serializer 和 D2MOO 证据链，不照搬 dark-magic 的数据实现。
+- **测试工具与真实资源验收**：保留地图回归、AI 竞技场、headless 和真实 1.10f/MPQ 验收；只补回放、检查点和确定性校验。
+- **QUIC/TLS 传输本身**：不为迁移而替换 TCP/Netty+FlatBuffers；只迁移意图准入、协议/传输/会话分层和重连语义。
+
 ### M8-B 声音语义事件已完成记录
 
 完成日期：2026-10-21
