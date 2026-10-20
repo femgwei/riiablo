@@ -262,10 +262,10 @@ public class ServerSkillSystem extends PassiveSystem {
           defender, mPlayer.has(target), channel, states);
       CombatSystem.CombatResult fire = combatSystemResolver.calculateNativeFixedElementalDamage(
           defender, mPlayer.has(target), false, CombatSystem.DAMAGE_FIRE, channel, 0, states, combatContext);
-      applyElementalAbsorbForFireDeath(defender, fire.absorbedLife);
       DamageEvent damage = DamageEvent.obtainMissile(source, target,
           physical.totalDamage + fire.totalDamage, physical.physicalDamage, null);
       damage.fireDamage = fire.totalDamage;
+      damage.absorbedLife = fire.absorbedLifeHp();
       DamageSettlement.prepare(world, damage);
       StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
       DamageSettlement.commit(world, damage);
@@ -276,12 +276,6 @@ public class ServerSkillSystem extends PassiveSystem {
     }
   }
 
-  private static void applyElementalAbsorbForFireDeath(Attributes attrs, float amount) {
-    StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
-    StatRef max = attrs.get(Stat.maxhp, StatRef.obtain());
-    if (amount > 0 && hp != null && max != null)
-      hp.add(Math.max(0f, Math.min(amount, max.asFixed() - hp.asFixed())));
-  }
 
   @Subscribe
   public void onMonsterMeleeHit(com.riiablo.engine.server.event.MeleeAttackEvent event) {
@@ -363,11 +357,9 @@ public class ServerSkillSystem extends PassiveSystem {
               coldLength == 1 ? CombatSystem.DAMAGE_FIRE : CombatSystem.DAMAGE_COLD,
               raw, 0, states, nativeDifficultyContext(difficulty));
       StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
-      StatRef max = defender.get(Stat.maxhp, StatRef.obtain());
-      if (elemental.absorbedLife > 0 && max != null)
-        hp.add(Math.max(0f, Math.min(elemental.absorbedLife, max.asFixed() - hp.asFixed())));
       DamageEvent damage = DamageEvent.obtainMissile(source, target,
           physical.totalDamage + elemental.totalDamage, physical.physicalDamage, null);
+      damage.withElementalDamage(elemental, 1f);
       DamageSettlement.prepare(world, damage);
       DamageSettlement.commit(world, damage);
       if (hp.asFixed() <= 0f) {
@@ -1759,11 +1751,7 @@ public class ServerSkillSystem extends PassiveSystem {
           defender, player, false, elementalDamageType(skill.EType), elementalRaw, 0,
           states, nativeDifficultyContext(combatDifficulty(source, target)));
       StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
-      StatRef max = defender.get(Stat.maxhp, StatRef.obtain());
       if (hp == null) continue;
-      if (elemental.absorbedLife > 0 && max != null
-          && (states == null || !states.hasState(StateId.DEATH_DELAY)))
-        hp.add(Math.max(0f, Math.min(elemental.absorbedLife, max.asFixed() - hp.asFixed())));
       DamageEvent damage = DamageEvent.obtainMissile(source, target,
           physical.totalDamage + elemental.totalDamage, physical.physicalDamage, null, elemental);
       DamageSettlement.prepare(world, damage);
@@ -1880,16 +1868,14 @@ public class ServerSkillSystem extends PassiveSystem {
       CombatSystem.StaticFieldDamageResult resolved =
           combatSystemResolver.calculateStaticFieldDamage(
               target, mPlayer.has(targetId), mPlayer.has(event.entityId), damageType,
-              rawFixed, targetStates, combatContext);
-      // SUNITDMG does not restore absorbed life during delayed death.
-      if (resolved.absorbedLifeFixed > 0
-          && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY))) {
-        float restored = resolved.absorbedLifeFixed / 256f;
-        hp.add(Math.max(0f, Math.min(restored, maxHp.asFixed() - hp.asFixed())));
-      }
-      if (resolved.damageFixed <= 0) continue;
+              rawFixed, targetStates, combatContext,
+              elementalPierce(mAttributesWrapper.has(event.entityId)
+                  ? mAttributesWrapper.get(event.entityId).attrs : null,
+                  stateList(event.entityId), damageType));
+      if (resolved.damageFixed <= 0 && resolved.absorbedLifeFixed <= 0) continue;
       DamageEvent damage = DamageEvent.obtain(
           event.entityId, targetId, resolved.damageFixed / 256f);
+      damage.absorbedLife = resolved.absorbedLifeFixed / 256f;
       DamageSettlement.prepare(world, damage);
       DamageSettlement.commit(world, damage);
       if (hp.asFixed() <= 0f) {
@@ -2507,12 +2493,8 @@ public class ServerSkillSystem extends PassiveSystem {
         baseLength, elementalPierce(attacker, sourceStates, CombatSystem.DAMAGE_COLD),
         targetStates, nativeDifficultyContext(difficulty));
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
-    StatRef maximum = defender.get(Stat.maxhp, StatRef.obtain());
     if (hp == null) return;
     float before = hp.asFixed();
-    if (result.absorbedLife > 0 && maximum != null
-        && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY)))
-      hp.add(Math.max(0f, Math.min(result.absorbedLife, maximum.asFixed() - hp.asFixed())));
     DamageEvent damage = DamageEvent.obtainMissile(source, target, result.totalDamage, 0f, null, result);
     DamageSettlement.prepare(world, damage);
     // Apply control even when magic damage was resisted/absorbed to zero.
@@ -2596,15 +2578,9 @@ public class ServerSkillSystem extends PassiveSystem {
             target, targetPlayer, sourcePlayer, damageType, elementalRaw,
             pierce, targetStates, nativeDifficultyContext(combatDifficulty(sourceId, targetId)));
     StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
-    StatRef maxHp = target.get(Stat.maxhp, StatRef.obtain());
     if (hp == null) return;
-    if (elemental.absorbedLife > 0 && maxHp != null
-        && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY))) {
-      hp.add(Math.max(0f,
-          Math.min((float) elemental.absorbedLife, maxHp.asFixed() - hp.asFixed())));
-    }
     int resolved = physical.totalDamage + elemental.totalDamage;
-    if (resolved <= 0) {
+    if (resolved <= 0 && elemental.absorbedLife <= 0) {
       log.info("[TELEKINESIS] phase=immune source={} target={} skill={} level={} raw={}..{}",
           sourceId, targetId, event.skillId, skillLevel, elementalMin, elementalMax);
       return;
@@ -5283,13 +5259,8 @@ public class ServerSkillSystem extends PassiveSystem {
               fireDamage, 0, targetStates, nativeDifficultyContext(combatDifficulty(source, target)));
       int resolved = physicalResult.totalDamage + fireResult.totalDamage;
       if (resolved <= 0 && fireResult.absorbedLife <= 0) continue;
-      if (fireResult.absorbedLife > 0
-          && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY))) {
-        StatRef maxHp = targetAttrs.get(Stat.maxhp, StatRef.obtain());
-        if (maxHp != null) hp.add(Math.max(0f,
-            Math.min((float) fireResult.absorbedLife, maxHp.asFixed() - hp.asFixed())));
-      }
       DamageEvent damage = DamageEvent.obtain(source, target, resolved);
+      damage.withElementalDamage(fireResult, 1f);
       damage.physicalDamage = physicalResult.physicalDamage;
       DamageSettlement.prepare(world, damage);
       float applied = Math.max(0f, damage.damage);

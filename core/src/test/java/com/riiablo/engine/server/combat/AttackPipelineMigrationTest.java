@@ -26,8 +26,18 @@ class AttackPipelineMigrationTest {
       boolean frozenCompatible = i % 2 == 0;
       a.fixedPointPhysical = !frozenCompatible && !a.isPlayer && !a.isMissile;
       if (frozenCompatible) {
+        // Native fixed8 PvP now also preserves the original large-value early
+        // division; the frozen legacy multiplier is not its numerical oracle.
+        d.isPlayer = false;
+        d.isMonster = true;
         d.damageReduced = d.damageReducedPercent = 0;
         d.immunePhysical = false;
+        d.magicDamageReduced = 0;
+        java.util.Arrays.fill(d.resistances, 0);
+        java.util.Arrays.fill(d.absorbPercent, 0);
+        java.util.Arrays.fill(d.absorbFlat, 0);
+        java.util.Arrays.fill(d.immuneElemental, false);
+        java.util.Arrays.fill(a.elementalPierce, 0);
         a.strength = 0;
         a.enhancedDamagePercent = Math.max(0, a.enhancedDamagePercent);
         a.demonDamagePercent = Math.max(0, a.demonDamagePercent);

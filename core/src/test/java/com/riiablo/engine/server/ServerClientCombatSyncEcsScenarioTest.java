@@ -34,6 +34,32 @@ import org.junit.jupiter.api.Test;
 
 /** Server serializer to client ECS regression for authoritative combat state. */
 class ServerClientCombatSyncEcsScenarioTest extends RiiabloTest {
+  @Test void absorbedFractionalHitSettlesOnceAndItsSurvivingLifeReachesClient() {
+    SerializationManager serialization = new SerializationManager();
+    World server = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), serialization).build());
+    try {
+      int entity = server.create();
+      server.getMapper(Class.class).create(entity).type = Class.Type.PLR;
+      server.getMapper(Flags.class).create(entity);
+      server.getMapper(AttributesWrapper.class).create(entity).attrs = vitals(1f, 100f, 7f, 30f);
+      com.riiablo.engine.server.event.DamageEvent hit =
+          com.riiablo.engine.server.event.DamageEvent.obtain(-1, entity, 12.25f);
+      hit.absorbedLife = 20.5f;
+      com.riiablo.engine.server.combat.DamageSettlement.commit(server, hit, true);
+      com.riiablo.engine.server.combat.DamageSettlement.commit(server, hit, true);
+      EntitySync packet = serialize(serialization, entity);
+      int index = find(packet, ComponentP.VitalsP);
+      VitalsP wire = (VitalsP) packet.component(new VitalsP(), index);
+      AttributesWrapper client = new AttributesWrapper();
+      client.attrs = vitals(0f, 100f, 0f, 30f);
+      new VitalsSerializer().getData(packet, index, client);
+      assertEquals(9.25f, value(client.attrs, Stat.hitpoints));
+      assertTrue(!wire.dead());
+      assertEquals(7f, value(client.attrs, Stat.mana));
+    } finally { server.dispose(); }
+  }
+
   @Test
   void serverDeathAndProgressionReplaceStaleClientState() {
     SerializationManager serialization = new SerializationManager();

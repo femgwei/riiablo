@@ -298,9 +298,10 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
       for (int i = 0; i < 6; i++) world.process();
       float after = life(world, target);
       DamageProbe probe = world.getSystem(DamageProbe.class);
-      assertEquals(expectedDamage > 0f ? 1 : 0, probe.count,
-          "a fully absorbed hit must not manufacture a damage/pain event");
-      if (expectedDamage > 0f) {
+      int expectedEvents = initialLife > 0f ? 1 : 0;
+      assertEquals(expectedEvents, probe.count,
+          "absorb-only packets settle once; dead targets never settle");
+      if (expectedEvents > 0) {
         assertEquals(target, probe.victim);
         assertEquals(expectedDamage, probe.damage, EPSILON);
         assertEquals(expectedDamage, probe.lightning, EPSILON);
@@ -310,7 +311,7 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
       if (initialLife > 0f) assertEquals(2, factory.created.get(0).sharedHitTargets.size);
       for (int i = 0; i < 6; i++) world.process();
       assertEquals(after, life(world, target), EPSILON, "overlapping paths must not replay healing");
-      assertEquals(expectedDamage > 0f ? 1 : 0, probe.count);
+      assertEquals(expectedEvents, probe.count);
       assertEquals(expectedDeaths, world.getSystem(DeathProbe.class).count,
           "overlapping paths must not replay death");
       return after;

@@ -10,7 +10,8 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import org.junit.jupiter.api.Test;
 
-/** Frozen 122f51f9b adapter/arithmetic oracle; proves migration equivalence, not native correctness. */
+/** Frozen 122f51f9b helpers retained below. Changed production settlement uses
+ * an independent D2MOO transcription; unchanged duration adapters retain the frozen oracle. */
 class DirectDamageMigrationTest extends RiiabloTest {
   @Test
   void directAndDurationAdaptersMatchPreviousAcrossTwoThousandSnapshots() throws IllegalAccessException {
@@ -54,14 +55,17 @@ class DirectDamageMigrationTest extends RiiabloTest {
       int length = i % 25 == 0 ? Integer.MAX_VALUE : random.nextInt(1001);
       int pierce = random.nextInt(271) - 20;
       int type = 1 + random.nextInt(5);
-      assertPacket(previousElemental(attrs, player, attacker, type, raw, pierce, states, context, false),
-          host.calculateFixedElementalDamage(attrs, player, attacker, type, raw, pierce, states, context));
-      assertPacket(previousElemental(attrs, player, attacker, type, raw, pierce, states, context, true),
-          host.calculateNativeFixedElementalDamage(attrs, player, attacker, type, raw, pierce, states, context));
+      NativeFixedElementalMath.Result expected = NativeMitigationReference.attributes(attrs, player,
+          attacker, type, raw, pierce, 1, 0, false, states, context);
+      CombatResult direct = host.calculateFixedElementalDamage(attrs, player, attacker, type, raw, pierce, states, context);
+      assertEquals(expected.damageFixed, direct.totalDamage, "direct snapshot " + i);
+      assertEquals(expected.absorbedLifeFixed, direct.absorbedLife);
+      assertPacket(direct, host.calculateNativeFixedElementalDamage(attrs, player, attacker, type, raw, pierce, states, context));
       assertPacket(previousNativePhysical(attrs, player, raw, states),
           host.calculateNativeFixedPhysicalDamage(attrs, player, raw, states));
-      assertPacket(previousReflected(attrs, player, attacker, raw, states),
-          host.calculateFixedPhysicalDamage(attrs, player, attacker, raw, states));
+      NativeFixedElementalMath.Result reflected = NativeMitigationReference.attributes(attrs, player,
+          attacker, DAMAGE_PHYSICAL, raw, 0, 1, 0, false, states, context);
+      assertEquals(reflected.damageFixed, host.calculateFixedPhysicalDamage(attrs, player, attacker, raw, states).totalDamage);
       assertEquals(previousCold(attrs, player, length, pierce, states, context),
           host.resolveColdLengthBeforeState(attrs, player, length, pierce, states, context));
       assertEquals(previousPoison(attrs, player, length, pierce, states, context),

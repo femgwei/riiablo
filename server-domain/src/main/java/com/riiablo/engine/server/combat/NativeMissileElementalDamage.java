@@ -116,11 +116,10 @@ public final class NativeMissileElementalDamage {
       out.poisonDamagePerFrame = positiveInt(resist(raw, resistance(d, damageType, pierce))) / 256f;
       return;
     }
-    long damage = Math.max(0L, (long) raw - Math.max(0L, d.magicDamageReduced) * 256);
-    damage = resist(damage, resistance(d, damageType, pierce));
-    long absorbed = NativePhysicalDamageMath.percentage(damage,
-        Math.max(0, Math.min(40, d.absorbPercent[damageType])));
-    absorbed += Math.min(damage - absorbed, Math.max(0L, d.absorbFlat[damageType]) * 256);
+    int damage = NativeMitigationMath.reduce(raw, 256,
+        (int) resistance(d, damageType, pierce), d.magicDamageReduced, 0);
+    int absorbed = NativeMitigationMath.absorb(damage, 256,
+        d.absorbPercent[damageType], d.absorbFlat[damageType]);
     out.elementalDamage[damageType] = positiveInt(damage - absorbed);
     out.absorbedLife = positiveInt((long) out.absorbedLife + absorbed);
   }

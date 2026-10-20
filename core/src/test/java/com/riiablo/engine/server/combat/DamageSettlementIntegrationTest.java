@@ -17,6 +17,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DamageSettlementIntegrationTest extends RiiabloTest {
+  @Test void defaultDirectSettlementSnapsBelowOneButPeriodicTicksKeepTheirOwnLifeFloor() {
+    Probe probe = new Probe(); World world = world(probe);
+    try {
+      int direct = unit(world, 1.5f), periodic = unit(world, 1.5f);
+      DamageSettlement.commit(world, DamageEvent.obtain(-1, direct, 1));
+      DamageSettlement.commit(world, DamageEvent.obtainDamageOverTime(-1, periodic, 1));
+      assertEquals(0f, life(world, direct));
+      assertEquals(.5f, life(world, periodic));
+    } finally { world.dispose(); }
+  }
   @Test void defensiveCallbackPrecedesOneResourceWriteAndImmutablePresentation() {
     Probe probe = new Probe();
     World world = world(probe);
@@ -79,12 +89,52 @@ class DamageSettlementIntegrationTest extends RiiabloTest {
       int victim = unit(world, 10);
       Attributes attrs = world.getMapper(AttributesWrapper.class).get(victim).attrs;
       DamageEvent hit = DamageEvent.obtain(-1, victim, 12);
+      hit.absorbedLife = 10;
       DamageSettlement.prepare(world, hit);
-      CombatResourceWriter.restore(attrs, Stat.hitpoints, Stat.maxhp, 10);
       DamageSettlement.commit(world, hit);
+      assertEquals(10f, hit.lifeAbsorbed);
+      assertEquals(10f, probe.last.lifeAbsorbed);
       assertEquals(8f, life(world, victim));
       assertEquals(20f, probe.last.lifeBefore);
       assertEquals(12f, probe.last.lifeLost);
+    } finally { world.dispose(); }
+  }
+
+  @Test void zeroDamageAbsorbIsCommittedOnceAndRespectsDeathDelayAndSnapshot() {
+    for (int scenario = 0; scenario < 4; scenario++) {
+      Probe probe = new Probe(); World world = world(probe);
+      try {
+        int victim = unit(world, scenario == 3 ? 0 : 10);
+        if (scenario == 1) {
+          UnitStates states = world.getMapper(UnitStates.class).create(victim);
+          states.stateList = new com.riiablo.engine.server.state.StateList(victim);
+          states.stateList.addState(com.riiablo.engine.server.state.StateId.DEATH_DELAY, 0);
+        }
+        if (scenario == 2) world.getMapper(UnitStates.class).create(victim).snapshotOnly = true;
+        DamageEvent hit = DamageEvent.obtain(-1, victim, 0);
+        hit.absorbedLife = 20.5f;
+        DamageSettlement.commit(world, hit);
+        DamageSettlement.commit(world, hit);
+        assertEquals(scenario == 0 ? 30.5f : scenario == 3 ? 0f : 10f, life(world, victim));
+        assertEquals(scenario == 0 ? 20.5f : 0f, hit.lifeAbsorbed);
+        assertEquals(scenario < 2 ? 1 : 0, probe.presentations);
+      } finally { world.dispose(); }
+    }
+  }
+
+  @Test void fullLifeAbsorbCannotBecomePostDamageHealingAndReentrantCommitDoesNotRepeatIt() {
+    Probe probe = new Probe(); World world = world(probe);
+    try {
+      int victim = unit(world, 100);
+      probe.commitInCallback = true;
+      DamageEvent hit = DamageEvent.obtain(-1, victim, 30);
+      hit.absorbedLife = 20;
+      DamageSettlement.commit(world, hit);
+      DamageSettlement.commit(world, hit);
+      assertEquals(70f, life(world, victim));
+      assertEquals(0f, hit.lifeAbsorbed);
+      assertEquals(30f, probe.last.lifeLost);
+      assertEquals(1, probe.presentations);
     } finally { world.dispose(); }
   }
 

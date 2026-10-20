@@ -78,11 +78,13 @@ class MonsterMissileElementalIntegrationTest extends RiiabloTest {
       f.spawn(row("fire", 10, 11));
       f.land();
       assertEquals(finalFixed, f.target.attrs.get(Stat.hitpoints).encodedValues());
-      if (damage > 0) {
-        assertEquals(damage / 256f, f.probe.applied.damage);
-        assertEquals(damage / 256f, f.probe.applied.lifeLost);
-        assertEquals(beforeLoss, f.probe.applied.lifeBefore);
-      } else assertEquals(0, f.probe.events);
+      // An absorb-only packet is still an authoritative resource write.
+      assertEquals(1, f.probe.events);
+      assertNotNull(f.probe.applied);
+      assertEquals(damage / 256f, f.probe.applied.damage);
+      assertEquals(damage / 256f, f.probe.applied.lifeLost);
+      assertEquals(beforeLoss, f.probe.applied.lifeBefore);
+      assertEquals(beforeLoss - life, f.probe.applied.lifeAbsorbed);
       assertWireHp(f);
     }
   }

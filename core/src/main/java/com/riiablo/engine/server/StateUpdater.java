@@ -278,13 +278,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     CombatSystem.CombatResult result = combatSystemResolver.calculateFixedElementalDamage(
         attacker, isPlayerAligned(attackerId), isPlayerAligned(victimId),
         CombatSystem.DAMAGE_COLD, raw, pierce, attackerStates, nativeDifficultyContext());
-    applyElementalAbsorb(attacker, result.absorbedLife);
     float applied = 0f;
     StatRef life = attacker != null ? attacker.get(Stat.hitpoints, StatRef.obtain()) : null;
     float before = life != null ? life.asFixed() : 0f;
-    if (life != null && before > 0f && result.totalDamage > 0) {
+    if (life != null && before > 0f && (result.totalDamage > 0 || result.absorbedLife > 0)) {
       DamageEvent reactive = DamageEvent.obtainReactive(
           victimId, attackerId, result.totalDamage, 0f);
+      reactive.withElementalDamage(result, 1f);
       DamageSettlement.prepare(world, reactive);
       applied = Math.max(0f, reactive.damage);
       DamageSettlement.commit(world, reactive);
@@ -600,7 +600,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     StateList attackerStates = mUnitStates.has(event.attacker)
         ? mUnitStates.get(event.attacker).stateList : null;
     CombatSystem.CombatResult reflected = combatSystemResolver.calculateFixedPhysicalDamage(
-        attacker, isPlayerAligned(event.attacker), true, raw, attackerStates);
+        attacker, isPlayerAligned(event.attacker), isPlayerAligned(event.victim), raw, attackerStates);
     if (reflected.totalDamage <= 0) return;
     DamageEvent reactive = DamageEvent.obtainReactive(
         event.victim, event.attacker, reflected.totalDamage, reflected.physicalDamage);
@@ -671,9 +671,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       CombatSystem.CombatResult combat = combatSystemResolver.calculateFixedElementalDamage(
           target, isPlayerAligned(targetId), true, CombatSystem.DAMAGE_FIRE,
           raw, 0, targetStates, nativeDifficultyContext());
-      applyElementalAbsorb(target, combat.absorbedLife);
-      if (combat.totalDamage <= 0) continue;
+      if (combat.totalDamage <= 0 && combat.absorbedLife <= 0) continue;
       DamageEvent event = DamageEvent.obtain(entityId, targetId, combat.totalDamage);
+      event.withElementalDamage(combat, 1f);
       DamageSettlement.prepare(world, event);
       StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null) continue;
@@ -1770,8 +1770,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       DamageEvent damage = null;
       if (requested > 0f || combat.absorbedLife > 0) {
         damage = DamageEvent.obtain(entityId, targetId, requested);
+        damage.withElementalDamage(combat, 1f);
         DamageSettlement.prepare(world, damage);
-        applyElementalAbsorb(target, combat.absorbedLife);
         DamageSettlement.commit(world, damage);
         if (hp.asFixed() < 0f) hp.set(0f);
       }
@@ -1846,10 +1846,6 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     return hp != null && hp.asFixed() > 0f;
   }
 
-  private static float applyElementalAbsorb(Attributes target, int absorbedLife) {
-    return com.riiablo.engine.server.combat.CombatResourceWriter.restore(
-        target, Stat.hitpoints, Stat.maxhp, absorbedLife);
-  }
 
   private boolean isMoving(int entityId) {
     return mVelocity.has(entityId) && !mVelocity.get(entityId).velocity.isZero(0.0001f);

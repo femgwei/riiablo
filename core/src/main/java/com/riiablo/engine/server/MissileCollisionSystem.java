@@ -1867,13 +1867,8 @@ public class MissileCollisionSystem extends IteratingSystem {
         // It also preserves poison/cold application for packets whose
         // immediate damage is zero.
         applyCombatStates(missile, targetId, combat);
-        // SUNITDMG applies absorbed life independently of positive damage.
-        // Resource-only packets enter settlement below and restore absorb
-        // there once; only packets with no resource write take this shortcut.
-        if (damage <= 0f && combat.absorbedLife > 0 && !combat.hasResourceDrain()) {
-          restoreMissileAbsorbedLife(missileId, missile, targetId, targetAttrs, combat);
-        }
-        if ((damage > 0 || combat.hasResourceDrain()) && mAttributesWrapper.has(targetId)) {
+        if ((damage > 0 || combat.absorbedLife > 0 || combat.hasResourceDrain())
+            && mAttributesWrapper.has(targetId)) {
           log.info("Missile {} hits {} for {} damage (ownerId={}, critical={}, deadly={})",
               missileId, targetId, damage, missile.ownerId, combat.critical, combat.deadlyStrike);
           // 使用 get(stat, dst) 接口避免重用问题
@@ -1904,11 +1899,6 @@ public class MissileCollisionSystem extends IteratingSystem {
               missile.damage.getValue(Stat.manadrainmindam, 0));
           DamageSettlement.prepare(world, event);
           float appliedDamage = Math.max(0f, event.damage);
-          // Native elemental absorb restores the defender's life from the same
-          // post-multiplier packet that produced this hit.  Apply it before
-          // subtracting damage so a target at low life can survive an absorbed
-          // elemental missile, and clamp to maxhp just like D2Game.
-          restoreMissileAbsorbedLife(missileId, missile, targetId, targetAttrs, combat);
           boolean mercenaryDamage = appliedDamage > 0f && mMercenary.has(ownerId);
           if (mercenaryDamage) {
             mercenaryDamageCount++;
@@ -2193,15 +2183,8 @@ public class MissileCollisionSystem extends IteratingSystem {
             nativeDifficultyContext(combatDifficulty(missile.ownerId, targetId)));
     StatRef life = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
     if (life == null || life.asFixed() <= 0f) return;
-    StatRef maximum = targetAttrs.get(Stat.maxhp, StatRef.obtain());
-    float absorbed = combat.absorbedLifeFixed / 256f;
-    StateList targetStates = stateList(targetId);
-    if (absorbed > 0f && maximum != null
-        && (targetStates == null || !targetStates.hasState(StateId.DEATH_DELAY))) {
-      life.add(Math.min(absorbed, Math.max(0f, maximum.asFixed() - life.asFixed())));
-    }
     float damage = combat.damageFixed / 256f;
-    if (damage <= 0f) return;
+    if (damage <= 0f && combat.absorbedLifeFixed <= 0) return;
     DamageEvent event = DamageEvent.obtainMissile(
         missile.ownerId, targetId, damage, 0f,
         missile.impactSound != null ? missile.impactSound
@@ -2212,6 +2195,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         .suppressMonsterHitSound(missile.persistent)
         .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
     if (missile.diabWallFire) { event.fireDamage = damage; event.missileId = missileId; }
+    event.absorbedLife = combat.absorbedLifeFixed / 256f;
     DamageSettlement.prepare(world, event);
     float applied = Math.max(0f, event.damage);
     float before = life.asFixed();
@@ -2231,7 +2215,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     log.info("[FIRE_AREA_HIT] missileId={} missile={} owner={} target={} skill={} "
             + "rawFixed={} damage={} absorbed={} hp={} -> {} damageRate={}",
         missileId, missile.missile != null ? missile.missile.Missile : "",
-        missile.ownerId, targetId, missile.skillId, raw, applied, absorbed,
+        missile.ownerId, targetId, missile.skillId, raw, applied, event.lifeAbsorbed,
         before, life.asFixed(), missile.elementalDamageRate);
   }
 
@@ -2583,25 +2567,6 @@ public class MissileCollisionSystem extends IteratingSystem {
     Monster monster = mMonster.get(targetId);
     StateList stateList = mUnitStates.has(targetId) ? mUnitStates.get(targetId).stateList : null;
     return BarbarianSkills.canSwitchWarCryAi(monster, stateList);
-  }
-
-  /** Native absorbed life precedes damage and never resurrects a dead/delayed unit. */
-  private void restoreMissileAbsorbedLife(int missileId, Missile missile, int targetId,
-      Attributes attrs, CombatSystem.CombatResult combat) {
-    if (combat.absorbedLife <= 0 || attrs == null) return;
-    StateList states = stateList(targetId);
-    if (states != null && states.hasState(StateId.DEATH_DELAY)) return;
-    StatRef hitpoints = attrs.get(Stat.hitpoints, StatRef.obtain());
-    if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
-    StatRef maximum = attrs.get(Stat.maxhp, StatRef.obtain());
-    float maxLife = maximum != null ? Math.max(0f, maximum.asFixed()) : Float.MAX_VALUE;
-    float requested = combat.absorbedLifeHp() * Math.max(0.01f, missile.damageMultiplier);
-    float healed = com.riiablo.engine.server.combat.NativeResourceMath.cappedRestore(
-        hitpoints.asFixed(), maxLife, requested);
-    if (healed <= 0f) return;
-    hitpoints.add(healed);
-    log.info("[MISSILE_ABSORB] missileId={} target={} absorbed={} healed={} hp={}/{}",
-        missileId, targetId, combat.absorbedLifeHp(), healed, hitpoints.asFixed(), maxLife);
   }
 
   private boolean isAlive(int entityId) {

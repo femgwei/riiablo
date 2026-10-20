@@ -654,7 +654,7 @@ public class CombatSystem {
       int damageType, int rawDamage, int piercePercent,
       StateList defenderStates, int difficulty) {
     return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer, damageType, rawDamage,
-        piercePercent, defenderStates, NativeCombatContext.ofDifficulty(difficulty), false);
+        piercePercent, defenderStates, NativeCombatContext.ofDifficulty(difficulty), true);
   }
 
   public CombatResult calculateFixedElementalDamage(
@@ -662,7 +662,7 @@ public class CombatSystem {
       int damageType, int rawDamage, int piercePercent,
       StateList defenderStates, NativeCombatContext context) {
     return calculateFixedElementalDamage(defender, defenderPlayer, attackerPlayer, damageType, rawDamage,
-        piercePercent, defenderStates, context, false);
+        piercePercent, defenderStates, context, true);
   }
 
   /** Native direct packet: MDR before resistance, no monster player-cap, 40% absorb cap. */
@@ -717,10 +717,19 @@ public class CombatSystem {
     d.absorbFlat[DAMAGE_LIGHTNING] = statInt(defender, Stat.item_absorblight, 0);
     d.absorbFlat[DAMAGE_COLD] = statInt(defender, Stat.item_absorbcold, 0);
     d.absorbFlat[DAMAGE_MAGIC] = statInt(defender, Stat.item_absorbmagic, 0);
-    d.magicDamageReduced = Math.max(0,
-        statInt(defender, Stat.magic_damage_reduction, 0));
+    d.magicDamageReduced = statInt(defender, Stat.magic_damage_reduction, 0);
     if (defenderStates != null) {
       d.resistances[DAMAGE_FIRE] += defenderStates.getTotalResistModifier(0);
+      d.magicDamageReduced = Math.max(0, d.magicDamageReduced
+          + defenderStates.getTotalStatContribution(Stat.magic_damage_reduction));
+      d.absorbPercent[DAMAGE_FIRE] += defenderStates.getTotalStatContribution(Stat.item_absorbfire_percent);
+      d.absorbPercent[DAMAGE_LIGHTNING] += defenderStates.getTotalStatContribution(Stat.item_absorblight_percent);
+      d.absorbPercent[DAMAGE_COLD] += defenderStates.getTotalStatContribution(Stat.item_absorbcold_percent);
+      d.absorbPercent[DAMAGE_MAGIC] += defenderStates.getTotalStatContribution(Stat.item_absorbmagic_percent);
+      d.absorbFlat[DAMAGE_FIRE] += defenderStates.getTotalStatContribution(Stat.item_absorbfire);
+      d.absorbFlat[DAMAGE_LIGHTNING] += defenderStates.getTotalStatContribution(Stat.item_absorblight);
+      d.absorbFlat[DAMAGE_COLD] += defenderStates.getTotalStatContribution(Stat.item_absorbcold);
+      d.absorbFlat[DAMAGE_MAGIC] += defenderStates.getTotalStatContribution(Stat.item_absorbmagic);
       d.resistances[DAMAGE_COLD] += defenderStates.getTotalResistModifier(1);
       d.resistances[DAMAGE_LIGHTNING] += defenderStates.getTotalResistModifier(2);
       d.resistances[DAMAGE_POISON] += defenderStates.getTotalResistModifier(3);
@@ -875,10 +884,12 @@ public class CombatSystem {
       return result;
     }
     NativeFixedElementalMath.rateDamage(result, rawDamageFixed, defenderPlayer, attackerPlayer,
-        resistance, statInt(defender, maximumStats[damageType], 0), piercePercent,
-        statInt(defender, Stat.magic_damage_reduction, 0), damageRate,
-        absorbPercentStats[damageType] != 0 ? statInt(defender, absorbPercentStats[damageType], 0) : 0,
-        absorbFlatStats[damageType] != 0 ? statInt(defender, absorbFlatStats[damageType], 0) : 0);
+        resistance, statInt(defender, maximumStats[damageType], 0)
+            + (defenderStates != null ? defenderStates.getTotalStatContribution(maximumStats[damageType]) : 0),
+        damageType == DAMAGE_MAGIC ? 0 : piercePercent,
+        damageType == DAMAGE_POISON ? 0 : mitigationStat(defender, defenderStates, Stat.magic_damage_reduction), damageRate,
+        absorbPercentStats[damageType] != 0 ? mitigationStat(defender, defenderStates, absorbPercentStats[damageType]) : 0,
+        absorbFlatStats[damageType] != 0 ? mitigationStat(defender, defenderStates, absorbFlatStats[damageType]) : 0);
     return result;
   }
 
@@ -886,8 +897,8 @@ public class CombatSystem {
    * Resolves the packet built by D2Game's Static Field callback without
    * discarding its signed 8.8 precision. Native first compensates negative
    * resistance and then runs the ordinary elemental mitigation path; this
-   * deliberately prevents negative resistance from increasing Static Field
-   * damage while positive resistance and immunity still reduce it.
+   * compensates negative stat resistance before difficulty and pierce. Those
+   * later adjustments still affect the ordinary settlement rows.
    */
   public StaticFieldDamageResult calculateStaticFieldDamage(
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
@@ -899,6 +910,14 @@ public class CombatSystem {
   public StaticFieldDamageResult calculateStaticFieldDamage(
       Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
       int damageType, int rawDamageFixed, StateList defenderStates, NativeCombatContext context) {
+    return calculateStaticFieldDamage(defender, defenderPlayer, attackerPlayer,
+        damageType, rawDamageFixed, defenderStates, context, 0);
+  }
+
+  public StaticFieldDamageResult calculateStaticFieldDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int damageType, int rawDamageFixed, StateList defenderStates, NativeCombatContext context,
+      int piercePercent) {
     StaticFieldDamageResult result = new StaticFieldDamageResult();
     if (defender == null || damageType <= DAMAGE_PHYSICAL
         || damageType >= DAMAGE_TYPE_COUNT || rawDamageFixed <= 0) return result;
@@ -927,10 +946,15 @@ public class CombatSystem {
       return result;
     }
     NativeFixedElementalMath.staticFieldDamage(result, rawDamageFixed, defenderPlayer, attackerPlayer,
-        resistance, statInt(defender, maximumStats[damageType], 0), damageType == DAMAGE_POISON,
-        damageType != DAMAGE_POISON ? statInt(defender, Stat.magic_damage_reduction, 0) : 0,
-        absorbPercentStats[damageType] != 0 ? statInt(defender, absorbPercentStats[damageType], 0) : 0,
-        absorbFlatStats[damageType] != 0 ? statInt(defender, absorbFlatStats[damageType], 0) : 0);
+        resistance, statInt(defender, maximumStats[damageType], 0)
+            + (defenderStates != null ? defenderStates.getTotalStatContribution(maximumStats[damageType]) : 0),
+        damageType == DAMAGE_POISON,
+        damageType != DAMAGE_POISON ? mitigationStat(defender, defenderStates, Stat.magic_damage_reduction) : 0,
+        absorbPercentStats[damageType] != 0 ? mitigationStat(defender, defenderStates, absorbPercentStats[damageType]) : 0,
+        absorbFlatStats[damageType] != 0 ? mitigationStat(defender, defenderStates, absorbFlatStats[damageType]) : 0,
+        damageType == DAMAGE_MAGIC ? 0 : piercePercent,
+        resistance - (defenderPlayer && damageType != DAMAGE_MAGIC
+            ? NativeDifficultyRules.playerResistancePenalty(context) : 0));
     return result;
   }
 
@@ -947,7 +971,7 @@ public class CombatSystem {
     result.hit = true;
     result.hitChance = 100;
     result.physicalDamage = NativeDirectDamageMath.nativePhysicalDamage(rawDamage, defenderPlayer,
-        resistance, statInt(defender, Stat.normal_damage_reduction, 0));
+        resistance, mitigationStat(defender, defenderStates, Stat.normal_damage_reduction));
     result.totalDamage = result.physicalDamage;
     return result;
   }
@@ -965,7 +989,7 @@ public class CombatSystem {
     result.hit = true;
     result.hitChance = 100;
     result.physicalDamage = NativeDirectDamageMath.reflectedPhysicalDamage(rawDamage,
-        defenderPlayer, attackerPlayer, resistance, statInt(defender, Stat.normal_damage_reduction, 0));
+        defenderPlayer, attackerPlayer, resistance, mitigationStat(defender, defenderStates, Stat.normal_damage_reduction));
     result.totalDamage = result.physicalDamage;
     return result;
   }
@@ -1517,6 +1541,10 @@ public class CombatSystem {
     }
     CombatSnapshotFactory.Snapshot snapshot = CombatSnapshotFactory.create(request);
     return calculateAttack(snapshot.attacker, snapshot.defender);
+  }
+
+  private static int mitigationStat(Attributes attrs, StateList states, short stat) {
+    return statInt(attrs, stat, 0) + (states == null ? 0 : states.getTotalStatContribution(stat));
   }
 
   private static int statInt(Attributes attrs, short stat, int defaultValue) {

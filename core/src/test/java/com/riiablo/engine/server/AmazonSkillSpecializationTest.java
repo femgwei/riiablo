@@ -993,6 +993,11 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), collisions, factory)
         .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    java.util.Random previousRandom = com.badlogic.gdx.math.MathUtils.random;
+    // Isolate traversal from the independent 95%-capped AR probability contract.
+    com.badlogic.gdx.math.MathUtils.random = new java.util.Random(0) {
+      @Override public int nextInt(int bound) { return 0; }
+    };
     try {
       int amazon = world.create();
       world.getMapper(Player.class).create(amazon).data =
@@ -1031,6 +1036,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertEquals(0f, corpseAttrs.get(Stat.hitpoints).asFixed());
     } finally {
       world.dispose();
+      com.badlogic.gdx.math.MathUtils.random = previousRandom;
     }
   }
 

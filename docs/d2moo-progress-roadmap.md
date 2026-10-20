@@ -1,15 +1,28 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-## 2026-10-20 兼容战斗结算链收敛
+## 2026-10-20 生产战斗结算链统一
 
-- 按 D2MOO `SUNITDMG_RollDamageValueInRange` 修正旧 `DamageCalculator` 的伤害区间：
+- 生产 `NativeAttackResolver`、`CombatSystem` 直伤/反伤、Static Field、Blaze/Fire Wall
+  使用共享减免规则：PvP 先于固定减伤，再处理抗性和最高 40% 的百分比吸收/固定吸收。
+  怪物不套玩家抗性上限；免疫不能靠穿透打破；魔法无穿透、毒素无 MDR/吸收。
+- `DamageRate` 按原版 `/1024` 缩放固定减伤，不再与抗性穿透混淆；8.8 分支保留
+  `MONSTERUNIQUE_CalculatePercentage` 的大数提前除法。整数技能包仍是 HP 投影，
+  本轮不宣称所有来源已具备 8.8 端点精度。
+- 吸收回血统一进入 `DamageSettlement`：防御回调 → 按回血前生命封顶吸取 → 吸收回血
+  → 扣血/资源损失 → 不可变事件 → 来源专用死亡处理。纯吸收命中也进入结算，
+  重入/重复提交不再重复回血；死亡、快照副本和 DEATH_DELAY 不获得吸收回血。
+- 原版依据、独立预期、验证结果与剩余边界见 [生产结算批次](combat-settlement-2026-10-20.md)。
+
+## 2026-10-20 旧兼容类修正（历史记录，更正范围和计数）
+
+- 旧 `DamageCalculator` 的兼容区间策略调整为：
   上限为排他边界，最小值等于最大值时不凭空扩大区间，也不额外消耗随机数；装备
   `item_deadlystrike` 现在进入兼容入口的致命一击判定。
-- 按 `SUNITDMG_CalculateTotalDamage` 修正旧 `DamageApplier`：物理固定减伤先于物理抗性，
-  元素和毒素穿透在最终抗性边界应用；毒素持续时间仍独立使用 `PoisonLen` 抗性，不受
-  伤害穿透影响。
-- 新增 5 项边界回归，连同既有战斗定向测试共 21 项通过。该轮收敛兼容入口的结算顺序，
-  不代表技能公式、`SrcMissDmg`、`DamageRate` 和完整玩家/佣兵/PvP 分支已经全部迁移。
+- 旧 `DamageApplier` 调整了物理固定减伤和抗性顺序，但这两个类没有生产战斗调用者。
+  不能据此宣称实际战斗入口已完善，也不能把统一的 `piercePercent` 解释成所有原版通道的穿透。
+- 当时实际通过的是 `DamageApplierTest` 7 项和 `DamageCalculatorNativeRangeTest` 2 项，
+  共 **9 项**，此前“21 项”记录错误。退化区间也不能通用于近战原生端点策略，
+  后者会先扩展端点；原版 PoisLen 独立抗性行同样读取毒穿透，不是“不受穿透影响”。
 
 ## 2026-10-20 怪物全量审计失败项修复
 

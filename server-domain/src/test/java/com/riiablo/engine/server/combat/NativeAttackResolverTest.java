@@ -186,7 +186,7 @@ class NativeAttackResolverTest {
   }
 
   @Test
-  void mixedPvpPacketKeepsNativeLightningSeparateAndPoisonDeferred() {
+  void mixedPvpPacketScalesEveryChannelBeforeMdrAndKeepsPoisonDeferred() {
     NativeAttackData a = guaranteedAttack(100);
     a.isPlayer = true;
     a.isMissile = true;
@@ -203,12 +203,12 @@ class NativeAttackResolverTest {
     d.magicDamageReduced = 2;
     NativeDamagePacket result = zeroRolls(new ArrayList<>()).resolve(a, d);
     assertEquals(8, result.physicalDamage);
-    assertEquals(783, result.elementalDamage[DAMAGE_FIRE]); // (20 - 2) * 256 * 17 / 100
+    assertEquals(358, result.elementalDamage[DAMAGE_FIRE]); // 20*256*17/100 - 2*256
     assertEquals(1228, result.elementalDamage[DAMAGE_LIGHTNING]); // 40 * 256 * 17 / 100 - 2 * 256
-    assertEquals(4264, result.elementalDamage[DAMAGE_MAGIC]); // (100 - 2) * 256 * 17 / 100
+    assertEquals(3840, result.elementalDamage[DAMAGE_MAGIC]); // 100*256*17/100 - 2*256
     assertEquals(435, result.elementalDamage[DAMAGE_POISON]); // poison does not pay MDR
-    assertEquals(31, result.totalDamage); // per-channel integer truncation, no immediate poison
-    assertEquals(8 + (783 + 1228 + 4264) / 256f, result.totalDamageHp());
+    assertEquals(28, result.totalDamage); // per-channel integer truncation, no immediate poison
+    assertEquals(8 + (358 + 1228 + 3840) / 256f, result.totalDamageHp());
   }
 
   @Test

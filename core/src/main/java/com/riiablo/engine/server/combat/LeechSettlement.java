@@ -70,10 +70,10 @@ final class LeechSettlement {
           NativeLeechMath.percentage(physical, raw(lifeBefore), lifePercent,
               player ? row.LifeStealDivisor : 1, drain));
     }
-    if (player) {
+    if (player || mercenary) {
       hit.manaLeeched = restore(attrs, Stat.mana, Stat.maxmana,
           NativeLeechMath.percentage(physical, raw(lifeBefore), manaPercent,
-              row.ManaStealDivisor, drain));
+              player ? row.ManaStealDivisor : 1, drain));
     }
     // Native cues depend on positive leech channels, even when the pool is full.
     if (physical > 0 && drain > 0) {

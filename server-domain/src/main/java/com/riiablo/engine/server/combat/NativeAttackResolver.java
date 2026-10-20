@@ -4,7 +4,7 @@ import static com.riiablo.engine.server.combat.NativeCombatConstants.*;
 
 /**
  * Complete snapshot attack resolution, with no attributes, ECS or global random access.
- * Uses native physical mitigation; legacy/native elemental packet differences remain explicit.
+ * Uses shared native mitigation; integer/fixed8 source construction remains explicit.
  * Does not apply life, mana or status changes to the world.
  */
 public final class NativeAttackResolver {
@@ -188,21 +188,23 @@ public final class NativeAttackResolver {
       for (int type = 1; type < DAMAGE_TYPE_COUNT; type++)
         rawElements[type] = saturatingInt((long) rawElements[type] * 2);
     }
+    boolean pvp = attacker.isPlayer && defender.isPlayer;
+    baseDamage = NativeMitigationMath.pvp(baseDamage, pvp, result.physicalScale);
     result.physicalDamage = applyPhysicalDamageReduction(baseDamage, defender,
         defender.isUndead && (attacker.missilePhysical != null
             ? attacker.missilePhysical.bypassUndead : attacker.bypassUndeadPhysicalResistance),
         result.physicalScale);
 
     // 7. 计算元素伤害
-    // D2Game runs ColdLen through the same cold-resistance/pierce row as
-    // cold damage, then applies Cannot Be Frozen / Half Freeze Duration.
-    result.coldDuration = nativeElements != null
-        ? nativeElements.coldDuration(defender, attacker.elementalPierce[DAMAGE_COLD])
-        : applyElementalResistance(
-        Math.max(0, attacker.coldLength), defender, DAMAGE_COLD,
-        attacker.elementalPierce[DAMAGE_COLD]);
-    if (defender.cannotBeFrozen) result.coldDuration = 0;
-    else if (defender.halfFreezeDuration) result.coldDuration /= 2;
+    // D2Game handles Cannot Be Frozen / Half Freeze Duration before the
+    // ColdLen resistance/pierce row; length never pays damage reduction.
+    int coldLength = nativeElements != null ? nativeElements.coldLength : Math.max(0, attacker.coldLength);
+    if (defender.cannotBeFrozen) coldLength = 0;
+    else if (defender.halfFreezeDuration) coldLength /= 2;
+    result.coldDuration = NativeMitigationMath.reduce(coldLength, nativeElements != null ? 256 : 1,
+        NativeMitigationMath.resistance(defender.isPlayer, false, false,
+            defender.resistances[DAMAGE_COLD], defender.maxResistances[DAMAGE_COLD],
+            attacker.elementalPierce[DAMAGE_COLD]), 0, 0);
     if (!attacker.stateDurationsDeferred) {
       result.coldDuration = scaleMonsterColdDuration(
           result.coldDuration, defender.isMonster, attacker.difficulty);
@@ -213,7 +215,7 @@ public final class NativeAttackResolver {
     for (int channel = 1; channel < DAMAGE_TYPE_COUNT; channel++) {
       int i = attacker.missileElemental != null ? MISSILE_ELEMENT_ORDER[channel - 1]
           : attacker.nativeMonsterMeleeElements ? MELEE_ELEMENT_ORDER[channel - 1] : channel;
-      int elemDamage = rawElements[i];
+      int elemDamage = NativeMitigationMath.pvp(rawElements[i], pvp, result.elementalScale);
       if (attacker.nativeMonsterMeleeElements && i == DAMAGE_COLD && elemDamage <= 0)
         result.coldDuration = 0;
       if (elemDamage > 0) {
@@ -221,26 +223,12 @@ public final class NativeAttackResolver {
           nativeElements.resolve(i, elemDamage, defender, attacker.elementalPierce[i], result);
           continue;
         }
-        if (attacker.fixedPointElements && i == DAMAGE_LIGHTNING) {
-          resolveNativeLightningDamage(elemDamage, attacker, defender, result);
-          continue;
-        }
         result.elementalDamage[i] = applyElementalResistance(
             elemDamage, defender, i, attacker.elementalPierce[i], result.elementalScale);
         int absorbed = absorbElementalDamage(result.elementalDamage[i], defender, i,
             result.elementalScale);
         result.elementalDamage[i] -= absorbed;
-        result.absorbedLife += absorbed;
-      }
-    }
-
-    // Preserve legacy ordering outside the opted-in Nova lightning packet,
-    // which already applied native PvP scaling before mitigation.
-    if (attacker.isPlayer && defender.isPlayer) {
-      result.physicalDamage = result.physicalDamage * PVP_DAMAGE_PERCENT / 100;
-      for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
-        if (attacker.fixedPointElements && i == DAMAGE_LIGHTNING) continue;
-        result.elementalDamage[i] = (int) ((long) result.elementalDamage[i] * PVP_DAMAGE_PERCENT / 100);
+        result.absorbedLife = NativeMitigationMath.positive((long) result.absorbedLife + absorbed);
       }
     }
 
@@ -413,17 +401,6 @@ public final class NativeAttackResolver {
         damage, defender.isPlayer, resistance, defender.damageReduced, scale);
   }
 
-  private void resolveNativeLightningDamage(int rawDamage, NativeAttackData attacker,
-      NativeDefenseData defender, NativeDamagePacket result) {
-    int type = DAMAGE_LIGHTNING;
-    if (defender.immuneElemental[type]
-        || (defender.isMonster && defender.resistances[type] >= 100)) return;
-    NativeFixedElementalMath.lightningDamage(result, rawDamage, attacker.isPlayer, defender.isPlayer,
-        defender.isMonster, defender.immuneElemental[type], defender.resistances[type],
-        defender.maxResistances[type], attacker.elementalPierce[type], defender.magicDamageReduced,
-        defender.absorbPercent[type], defender.absorbFlat[type]);
-  }
-
   public static int applyElementalResistance(int damage, NativeDefenseData defender, int damageType,
       int piercePercent) {
     return applyElementalResistance(damage, defender, damageType, piercePercent, 1);
@@ -431,24 +408,23 @@ public final class NativeAttackResolver {
 
   public static int applyElementalResistance(int damage, NativeDefenseData defender, int damageType,
       int piercePercent, int scale) {
-    // Preserve the early immunity return and missing-channel default from the host adapter.
-    if (defender.immuneElemental[damageType]) return 0;
+    if (!defender.isPlayer && defender.immuneElemental[damageType]) return 0;
     int maximum = defender.maxResistances != null
-        && damageType < defender.maxResistances.length && defender.maxResistances[damageType] > 0
+        && damageType < defender.maxResistances.length
         ? defender.maxResistances[damageType] : 75;
-    return NativeCombatMath.legacyElementalResistance(damage, false,
-        defender.resistances[damageType], maximum, piercePercent,
-        damageType != DAMAGE_POISON && damageType != DAMAGE_PHYSICAL,
-        defender.magicDamageReduced, scale);
+    return NativeMitigationMath.reduce(damage, scale,
+        NativeMitigationMath.resistance(defender.isPlayer, damageType == DAMAGE_PHYSICAL,
+            damageType == DAMAGE_MAGIC, defender.resistances[damageType], maximum, piercePercent),
+        damageType == DAMAGE_POISON || damageType == DAMAGE_PHYSICAL ? 0 : defender.magicDamageReduced, 0);
   }
 
   private int absorbElementalDamage(int damage, NativeDefenseData defender, int damageType, int scale) {
-    if (damage <= 0 || defender.absorbPercent == null || damageType >= defender.absorbPercent.length) {
+    if (damageType == DAMAGE_POISON || damage <= 0 || defender.absorbPercent == null || damageType >= defender.absorbPercent.length) {
       return 0;
     }
     int flat = defender.absorbFlat != null && damageType < defender.absorbFlat.length
         ? defender.absorbFlat[damageType] : 0;
-    return NativeCombatMath.elementalAbsorb(damage, defender.absorbPercent[damageType], flat, scale);
+    return NativeMitigationMath.absorb(damage, scale, defender.absorbPercent[damageType], flat);
   }
 
   private boolean rollCriticalStrike(NativeAttackData attacker) {

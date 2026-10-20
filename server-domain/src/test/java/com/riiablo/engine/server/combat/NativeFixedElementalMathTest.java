@@ -30,18 +30,21 @@ class NativeFixedElementalMathTest {
   }
 
   @Test
-  void staticFieldKeepsCompensationUnscaledMdrAndPvpAfterAbsorb() {
+  void staticFieldCompensatesThenUsesNativePvpMdrResistanceAndCappedAbsorb() {
     NativeFixedElementalMath.Result out = new NativeFixedElementalMath.Result();
     NativeFixedElementalMath.staticFieldDamage(out, 25600, true, true, -100, 0, false, 10, 25, 1);
-    assertEquals(3219, out.damageFixed);
-    assertEquals(6653, out.absorbedLifeFixed);
+    assertEquals(0, out.damageFixed); // compensated 50hp * 17% < 10hp MDR
+    assertEquals(0, out.absorbedLifeFixed);
+    NativeFixedElementalMath.staticFieldDamage(out, 25600, true, false, -100, 0, false, 10, 25, 1);
+    assertEquals(15104, out.damageFixed); // (50-10)*2=80hp; absorb 20+1hp
+    assertEquals(5376, out.absorbedLifeFixed);
     NativeFixedElementalMath.staticFieldDamage(out, 257, true, false, -50, 0, true, 100, 0, 0);
     assertEquals(256, out.damageFixed); // Negative-resistance compensation keeps both truncations.
     NativeFixedElementalMath.staticFieldDamage(out, 1000, false, false, 100, 0, false, 0, 0, 0);
     assertTrue(out.immune);
     NativeFixedElementalMath.staticFieldDamage(out, 1000, true, false, 0, 0, false, 0, 90, 0);
-    assertEquals(100, out.damageFixed);
-    assertEquals(900, out.absorbedLifeFixed); // Static path's existing cap differs from rate/lightning.
+    assertEquals(600, out.damageFixed);
+    assertEquals(400, out.absorbedLifeFixed); // Same 40% cap as every elemental packet.
   }
 
   @Test

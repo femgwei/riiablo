@@ -129,9 +129,9 @@ class CombatMathMigrationTest {
     expected.nextInt(1); // Existing inclusive fixed-range fire roll also advances the stream.
     CombatResult result = host.calculateAttack(a, d);
     assertEquals(physical, result.physicalDamage);
-    assertEquals(27, result.elementalDamage[DAMAGE_FIRE]); // (100 * 50% - 10) - (25% + 3).
-    assertEquals(13, result.absorbedLife);
-    assertEquals(physical + 27, result.totalDamage);
+    assertEquals(31, result.elementalDamage[DAMAGE_FIRE]); // (100-10)*50%=45; absorb floor(45/4)+3=14.
+    assertEquals(14, result.absorbedLife);
+    assertEquals(physical + 31, result.totalDamage);
     assertEquals(physical / 10, result.lifeStolen);
     assertEquals(physical * 5 / 100, result.manaStolen);
     assertEquals(expected.state(), rng.state());

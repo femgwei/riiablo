@@ -522,8 +522,8 @@ public class AssassinTrapSystem extends IteratingSystem {
       if (!result.hit || result.blocked
           || (result.totalDamage <= 0 && result.absorbedLife <= 0)) continue;
       DamageEvent event = DamageEvent.obtain(sentryId, targetId, result.totalDamage);
+      event.withElementalDamage(result, 1f);
       DamageSettlement.prepare(world, event);
-      applyAbsorb(targetAttrs, result.absorbedLife);
       DamageSettlement.commit(world, event);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
@@ -532,12 +532,6 @@ public class AssassinTrapSystem extends IteratingSystem {
       hit++;
     }
     return hit;
-  }
-
-  /** Restores elemental absorb life for corpse-explosion targets. */
-  private static float applyAbsorb(Attributes target, int absorbedLife) {
-    return com.riiablo.engine.server.combat.CombatResourceWriter.restore(
-        target, Stat.hitpoints, Stat.maxhp, absorbedLife);
   }
 
   private void spawnCorpseExplosionVisual(int sentryId, Vector2 origin, Skills.Entry skill) {

@@ -14,6 +14,8 @@ public final class DamageAppliedEvent implements Event {
   /** Chosen by authority, never rerolled by presentation. */
   public final String leechOverlay;
   public final float lifeLeeched, manaLeeched;
+  /** Actual defender healing before the life-loss phase, not the requested absorb. */
+  public final float lifeAbsorbed;
   public final boolean suppressElementalPresentation, suppressMonsterHitSound;
 
   public DamageAppliedEvent(DamageEvent hit, float lifeBefore, float lifeAfter) {
@@ -35,6 +37,7 @@ public final class DamageAppliedEvent implements Event {
     leechOverlay = hit.leechOverlay;
     lifeLeeched = hit.lifeLeeched;
     manaLeeched = hit.manaLeeched;
+    lifeAbsorbed = hit.lifeAbsorbed;
     suppressElementalPresentation = hit.suppressElementalPresentation;
     suppressMonsterHitSound = hit.suppressMonsterHitSound;
   }

@@ -621,7 +621,7 @@ public class CombatSystemTest extends RiiabloTest {
     fireMax[CombatSystem.DAMAGE_FIRE] = 100;
 
     CombatSystem.CombatResult result = combat.calculateAttack(attacker, defender,
-        true, false, false, 1, 1, 1000, true, fireMin, fireMax, 0, 0, null, null);
+        false, true, false, 1, 1, 1000, true, fireMin, fireMax, 0, 0, null, null);
     assertEquals(5, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
   }
 
@@ -896,8 +896,8 @@ public class CombatSystemTest extends RiiabloTest {
     CombatSystem.CombatResult result = combat.calculateAttack(
         attacker, defender, false, false, false, 1, 1, 1000, true,
         fireMin, fireMax, 0, 0, null, null);
-    assertEquals(40, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
-    assertEquals(60, result.absorbedLife);
+    assertEquals(50, result.elementalDamage[CombatSystem.DAMAGE_FIRE]); // 40% cap + 10 flat
+    assertEquals(50, result.absorbedLife);
     assertTrue(result.absorbedLife <= 100);
   }
 
@@ -964,11 +964,10 @@ public class CombatSystemTest extends RiiabloTest {
 
     CombatSystem.CombatResult result = combat.calculateFixedElementalDamage(
         defender, true, true, CombatSystem.DAMAGE_FIRE, 100, 0, null, 0);
-    // 100 -> 50 after resistance -> 40 after absorb; PvP scalar is applied
-    // after absorb, matching the regular attack resolver.
-    assertEquals(6, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
-    assertEquals(10, result.absorbedLife);
-    assertEquals(6, result.totalDamage);
+    // Native: PvP 17 -> resistance 8 -> 20% absorb 1, leaving 7.
+    assertEquals(7, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    assertEquals(1, result.absorbedLife);
+    assertEquals(7, result.totalDamage);
   }
 
   @Test
@@ -1076,8 +1075,8 @@ public class CombatSystemTest extends RiiabloTest {
     CombatSystem.CombatResult pvp = combat.calculateFixedPhysicalDamage(
         defender, true, true, 100, null);
 
-    assertEquals(70, pve.physicalDamage);
-    assertEquals(70 * CombatSystem.PVP_DAMAGE_PERCENT / 100, pvp.physicalDamage);
+    assertEquals(71, pve.physicalDamage); // (100-5)*75%
+    assertEquals(9, pvp.physicalDamage); // (17-5)*75%
   }
 
   @Test
@@ -1131,7 +1130,7 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
-  public void staticFieldUsesSameTableForResistanceWithoutAmplifyingNegativeResistance() {
+  public void staticFieldCompensationUsesStatsBeforeDifficultyPenaltyEvenForFoldedAttributes() {
     Attributes defender = attrs(100, 1, 0, 1, 1, 1);
     com.riiablo.codec.excel.DifficultyLevels.Entry row =
         new com.riiablo.codec.excel.DifficultyLevels.Entry();
@@ -1140,13 +1139,13 @@ public class CombatSystemTest extends RiiabloTest {
     assertEquals(12056, combat.calculateStaticFieldDamage(
         defender, true, false, CombatSystem.DAMAGE_LIGHTNING, 13700, null, context).damageFixed);
     row.ResistPenalty = -37;
-    assertEquals(13700, combat.calculateStaticFieldDamage(
+    assertEquals(18769, combat.calculateStaticFieldDamage(
         defender, true, false, CombatSystem.DAMAGE_LIGHTNING, 13700, null, context).damageFixed);
     defender.base().put(Stat.lightresist, -37);
     defender.setDifficultyResistanceIncluded(true);
     defender.reset();
     row.ResistPenalty = 12;
-    assertEquals(13700, combat.calculateStaticFieldDamage(
+    assertEquals(12595, combat.calculateStaticFieldDamage(
         defender, true, false, CombatSystem.DAMAGE_LIGHTNING, 13700, null, context).damageFixed);
   }
 

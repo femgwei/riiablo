@@ -478,9 +478,8 @@ final class CombatSnapshotFactory {
         + (defenderStates == null ? 0
             : defenderStates.getTotalStatContribution(Stat.normal_damage_reduction)));
     d.magicDamageReduced = statInt(defender, Stat.magic_damage_reduction, 0);
-    // Preserve legacy snapshot contracts elsewhere; this audited policy reads
-    // the defender's active stat lists as well as permanent/item attributes.
-    if ((a.missileElemental != null || a.nativeMonsterMeleeElements) && defenderStates != null) {
+    // Every production source reads the same active mitigation stat lists.
+    if (defenderStates != null) {
       d.magicDamageReduced += defenderStates.getTotalStatContribution(Stat.magic_damage_reduction);
       d.absorbPercent[DAMAGE_FIRE] += defenderStates.getTotalStatContribution(Stat.item_absorbfire_percent);
       d.absorbPercent[DAMAGE_LIGHTNING] += defenderStates.getTotalStatContribution(Stat.item_absorblight_percent);

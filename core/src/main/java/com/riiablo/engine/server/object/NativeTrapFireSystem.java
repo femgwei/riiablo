@@ -124,8 +124,8 @@ public class NativeTrapFireSystem extends BaseSystem {
         nativeDifficultyContext(sourceDifficulty(fireId, targetId)));
     if (!combat.hit || (combat.totalDamage <= 0 && combat.absorbedLife <= 0)) return;
     DamageEvent event = DamageEvent.obtain(fireId, targetId, combat.totalDamage);
+    event.withElementalDamage(combat, 1f);
     DamageSettlement.prepare(world, event);
-    applyAbsorb(attrs, combat.absorbedLife);
     float applied = Math.max(0f, event.damage);
     DamageSettlement.commit(world, event);
     if (hp.asFixed() <= 0f) {
@@ -151,8 +151,4 @@ public class NativeTrapFireSystem extends BaseSystem {
     return states != null ? states.stateList : null;
   }
 
-  private static float applyAbsorb(Attributes attrs, int absorbedLife) {
-    return com.riiablo.engine.server.combat.CombatResourceWriter.restore(
-        attrs, Stat.hitpoints, Stat.maxhp, absorbedLife);
-  }
 }

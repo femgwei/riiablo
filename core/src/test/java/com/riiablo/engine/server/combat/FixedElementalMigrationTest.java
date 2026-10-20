@@ -9,7 +9,8 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.state.StateList;
 import org.junit.jupiter.api.Test;
 
-/** Frozen 20c73a1d7 migration oracle, not a new claim of native-mechanics correctness. */
+/** Frozen 20c73a1d7 helpers retained unchanged below; corrected settlement is
+ * checked against an independent native transcription, not those historical policies. */
 class FixedElementalMigrationTest extends RiiabloTest {
   @Test
   void publicRateAndStaticAdaptersMatchPreviousAcrossTwoThousandSnapshots() {
@@ -38,9 +39,11 @@ class FixedElementalMigrationTest extends RiiabloTest {
       int raw = i % 25 == 0 ? Integer.MAX_VALUE : random.nextInt(100001);
       int rate = new int[] {-1, 0, 41, 1024, 2048}[random.nextInt(5)];
       int pierce = random.nextInt(271) - 20;
-      assertResult(previousRate(attrs, defenderPlayer, attackerPlayer, type, raw, pierce, rate, null, context),
+      assertResult(NativeMitigationReference.attributes(attrs, defenderPlayer, attackerPlayer,
+              type, raw, pierce, 256, rate, false, null, context),
           host.calculateFixedElementalRateDamage(attrs, defenderPlayer, attackerPlayer, type, raw, pierce, rate, null, context));
-      assertResult(previousStatic(attrs, defenderPlayer, attackerPlayer, type, raw, null, context),
+      assertResult(NativeMitigationReference.attributes(attrs, defenderPlayer, attackerPlayer,
+              type, raw, 0, 256, 0, true, null, context),
           host.calculateStaticFieldDamage(attrs, defenderPlayer, attackerPlayer, type, raw, null, context));
     }
   }
@@ -67,7 +70,15 @@ class FixedElementalMigrationTest extends RiiabloTest {
       expected.absorbedLife = actual.absorbedLife = i % 10 == 0 ? Integer.MAX_VALUE - 1 : i;
       expected.elementalDamage[DAMAGE_LIGHTNING] = actual.elementalDamage[DAMAGE_LIGHTNING] = 17;
       actual.elementalDamage[DAMAGE_FIRE] = 23;
-      previousLightning(raw, a, d, expected);
+      if (!d.immuneElemental[DAMAGE_LIGHTNING] && !(d.isMonster && d.resistances[DAMAGE_LIGHTNING] >= 100)) {
+        NativeFixedElementalMath.Result reference = NativeMitigationReference.resolve(raw, 256,
+            !d.isMonster, a.isPlayer && d.isPlayer, DAMAGE_LIGHTNING,
+            d.resistances[DAMAGE_LIGHTNING], d.maxResistances[DAMAGE_LIGHTNING],
+            a.elementalPierce[DAMAGE_LIGHTNING], d.magicDamageReduced, 0,
+            d.absorbPercent[DAMAGE_LIGHTNING], d.absorbFlat[DAMAGE_LIGHTNING], false);
+        expected.elementalDamage[DAMAGE_LIGHTNING] = reference.damageFixed;
+        expected.absorbedLife = NativeMitigationReference.clamp((long) expected.absorbedLife + reference.absorbedLifeFixed);
+      }
       NativeFixedElementalMath.lightningDamage(actual, raw, a.isPlayer, d.isPlayer, d.isMonster,
           d.immuneElemental[DAMAGE_LIGHTNING], d.resistances[DAMAGE_LIGHTNING],
           d.maxResistances[DAMAGE_LIGHTNING], a.elementalPierce[DAMAGE_LIGHTNING],

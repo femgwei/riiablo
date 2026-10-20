@@ -17,6 +17,29 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class DamagePresentationBoundaryTest extends RiiabloTest {
+  @Test void absorbOnlySettlementDoesNotInventImpactAudioOrElementalEffects() {
+    Audio audio = mock(Audio.class);
+    RecordingOverlays overlays = new RecordingOverlays();
+    World world = world(audio, overlays);
+    try {
+      for (float initial : new float[] {20f, 40f}) {
+        int victim = unit(world);
+        Attributes attrs = world.getMapper(AttributesWrapper.class).get(victim).attrs;
+        attrs.base().put(Stat.maxhp, 40f);
+        attrs.base().put(Stat.hitpoints, initial);
+        attrs.reset();
+        DamageEvent hit = DamageEvent.obtainMelee(-1, victim, 0f, 0f);
+        hit.absorbedLife = 10f;
+        DamageSettlement.commit(world, hit);
+        DamageSettlement.commit(world, hit);
+        assertEquals(Math.min(40f, initial + 10f), attrs.get(Stat.hitpoints).asFixed());
+        assertEquals(initial < 40f ? 10f : 0f, hit.lifeAbsorbed);
+      }
+      verifyNoInteractions(audio);
+      assertEquals(0, overlays.shown.size);
+    } finally { world.dispose(); }
+  }
+
   @Test void leechCueTargetsAttackerAndIsIndependentOfMissileElementalSuppression() {
     Audio audio = mock(Audio.class);
     RecordingOverlays overlays = new RecordingOverlays();

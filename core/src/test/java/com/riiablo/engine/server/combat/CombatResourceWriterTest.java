@@ -7,23 +7,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CombatResourceWriterTest extends RiiabloTest {
-  @Test void migratedAbsorbEntrypointsPreserveWholeUnitsAndCap() throws Exception {
-    String[] classes = {"com.riiablo.engine.server.AssassinTrapSystem",
-        "com.riiablo.engine.server.StateUpdater",
-        "com.riiablo.engine.server.object.NativeTrapFireSystem"};
-    for (String name : classes) {
-      java.lang.reflect.Method method = Class.forName(name).getDeclaredMethod(
-          name.endsWith("StateUpdater") ? "applyElementalAbsorb" : "applyAbsorb",
-          Attributes.class, int.class);
-      method.setAccessible(true);
-      for (int current : new int[] {0, 1, 80, 100, 120}) {
-        Attributes attrs = attributes(current, 100);
-        float expected = Math.max(0f, Math.min(30f, 100f - current));
-        assertEquals(expected, (Float) method.invoke(null, attrs, 30));
-        assertEquals(current + expected, attrs.get(Stat.hitpoints).asFixed());
-      }
-      assertEquals(0f, (Float) method.invoke(null, null, 30));
+  @Test void resourcePrimitivePreservesWholeUnitsAndCap() {
+    for (int current : new int[] {0, 1, 80, 100, 120}) {
+      Attributes attrs = attributes(current, 100);
+      float expected = Math.max(0f, Math.min(30f, 100f - current));
+      assertEquals(expected, CombatResourceWriter.restore(attrs, Stat.hitpoints, Stat.maxhp, 30));
+      assertEquals(current + expected, attrs.get(Stat.hitpoints).asFixed());
     }
+    assertEquals(0f, CombatResourceWriter.restore(null, Stat.hitpoints, Stat.maxhp, 30));
   }
 
   @Test void missingMaximumAndNegativeRequestDoNotWrite() {

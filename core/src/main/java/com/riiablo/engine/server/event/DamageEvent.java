@@ -9,6 +9,8 @@ public class DamageEvent implements Event {
   /** Settlement bookkeeping; one request may be committed/publish death only once. */
   public boolean prepared, committed, rejected, lethal, deathPublished;
   public float appliedDamage;
+  /** Post-mitigation absorb healing; applied once, after leech and before life loss. */
+  public float absorbedLife, lifeAbsorbed;
   /** Skill percentages join item/state leech before native truncation and difficulty scaling. */
   public int extraLifeLeechPercent, extraManaLeechPercent;
   public float lifeLeeched, manaLeeched;
@@ -132,6 +134,7 @@ public class DamageEvent implements Event {
   public DamageEvent withElementalDamage(CombatSystem.CombatResult result, float scale) {
     if (result == null) return this;
     float appliedScale = Math.max(0f, scale);
+    absorbedLife = Math.max(0f, result.absorbedLifeHp() * appliedScale);
     fixedMonsterDrain = result.fixedMonsterDrain;
     lifeDrainFixed = (int) (result.lifeDrainFixed * appliedScale);
     manaDrainFixed = (int) (result.manaDrainFixed * appliedScale);

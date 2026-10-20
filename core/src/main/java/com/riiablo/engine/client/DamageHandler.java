@@ -115,7 +115,7 @@ public class DamageHandler extends PassiveSystem {
     // DamageEvent may also represent melee, DOT, or a server-side effect;
     // retain the legacy generic impact for those paths only.  An empty
     // missile HitSound is native silence, not a request for a blunt sample.
-    if (event.kind != DamageEvent.MISSILE
+    if (event.damage > 0f && event.kind != DamageEvent.MISSILE
         && event.kind != DamageEvent.DAMAGE_OVER_TIME) {
       String sound = event.hitSound;
       if (sound == null || sound.isEmpty()) sound = "impact_blunt_1";

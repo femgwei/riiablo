@@ -9,12 +9,14 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.DamageAppliedEvent;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.state.StateId;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
 /**
  * Authoritative life-loss boundary. Mirrors SUnitDmg's unit-event, resource-write
  * and death phases without mixing hit rolls, action modes or client effects.
- * Callers retain their native absorb/state/shatter ordering between phases.
+ * Absorb belongs to this boundary, after leech and before life loss. Callers
+ * retain source-specific state/shatter ordering between phases.
  */
 public final class DamageSettlement {
   private DamageSettlement() {}
@@ -46,7 +48,7 @@ public final class DamageSettlement {
   }
 
   public static float commit(World world, DamageEvent hit) {
-    return commit(world, hit, false);
+    return commit(world, hit, hit.kind != DamageEvent.DAMAGE_OVER_TIME);
   }
 
   /** The native direct/missile paths can snap a positive-damage survivor below one HP. */
@@ -64,6 +66,15 @@ public final class DamageSettlement {
     float damage = Float.isFinite(hit.damage) ? Math.max(0f, hit.damage) : 0f;
     hit.damage = damage;
     LeechSettlement.apply(world, hit, before);
+    UnitStates states = world.getMapper(UnitStates.class).get(hit.victim);
+    if (Float.isFinite(hit.absorbedLife) && hit.absorbedLife > 0f
+        && (states == null || states.stateList == null
+            || !states.stateList.hasState(StateId.DEATH_DELAY))) {
+      AttributesWrapper wrapper = world.getMapper(AttributesWrapper.class).get(hit.victim);
+      hit.lifeAbsorbed = CombatResourceWriter.restore(
+          wrapper.attrs, Stat.hitpoints, Stat.maxhp, hit.absorbedLife);
+    }
+    before = life.asFixed();
     if (damage > 0f) life.sub(damage);
     if (life.asFixed() < 0f || (snapBelowOne && damage > 0f && life.asFixed() < 1f)) {
       life.set(0f);

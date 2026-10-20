@@ -8,8 +8,8 @@ public final class NativeLeechMath {
     if (physical <= 0 || lifeBefore <= 0 || percent <= 0 || drain <= 0) return 0;
     long scaled = (long) percent * 64;
     if (divisor > 0) scaled /= divisor;
-    long amount = Math.min(physical, lifeBefore) * scaled / 100;
-    amount = amount * drain / 100;
+    long amount = NativePhysicalDamageMath.percentage(Math.min(physical, lifeBefore), scaled);
+    if (drain != 100) amount = NativePhysicalDamageMath.percentage(amount, drain);
     return (int) Math.min(Integer.MAX_VALUE, amount / 64);
   }
 }

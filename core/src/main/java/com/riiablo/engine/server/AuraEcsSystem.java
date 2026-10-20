@@ -363,12 +363,12 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     CombatSystem.CombatResult combat = combatSystemResolver.calculateFixedElementalDamage(
         target, isPlayerAligned(targetId), isPlayerAligned(casterId),
         damageType, raw, 0, targetStates, nativeDifficultyContext());
-    restoreAbsorb(target, combat.absorbedLife);
-    if (combat.totalDamage <= 0) return;
+    if (combat.totalDamage <= 0 && combat.absorbedLife <= 0) return;
     DamageEvent event = DamageEvent.obtain(casterId, targetId, combat.totalDamage);
+    event.withElementalDamage(combat, 1f);
     DamageSettlement.prepare(world, event);
     StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
-    if (hp == null || event.damage <= 0f) return;
+    if (hp == null) return;
     DamageSettlement.commit(world, event);
     if (hp.asFixed() <= 0f) {
       hp.set(0f);
@@ -546,12 +546,4 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     }
   }
 
-  private static void restoreAbsorb(Attributes attributes, int absorbed) {
-    if (attributes == null || absorbed <= 0) return;
-    StatRef hp = attributes.get(Stat.hitpoints, StatRef.obtain());
-    StatRef max = attributes.get(Stat.maxhp, StatRef.obtain());
-    if (hp != null && max != null && hp.asFixed() > 0f) {
-      hp.add(Math.min(absorbed, Math.max(0f, max.asFixed() - hp.asFixed())));
-    }
-  }
 }

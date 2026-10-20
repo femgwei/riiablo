@@ -58,7 +58,7 @@ class SorceressTelekinesisIntegrationTest extends RiiabloTest {
       assertEquals(expected, test.hp(target), .0001f);
       assertEquals(expected == 0f ? 1 : 0, test.damage.deaths);
       assertEquals(1, test.damage.count);
-      assertEquals(absorb ? 10f : 20f, test.damage.lightning, .0001f);
+      assertEquals(absorb ? 12f : 20f, test.damage.lightning, .0001f);
       if (expected == 0f) {
         test.cast(caster, target);
         assertEquals(1, test.damage.deaths);
@@ -67,11 +67,11 @@ class SorceressTelekinesisIntegrationTest extends RiiabloTest {
     }
   }
 
-  @Test void delayedFullAbsorbDoesNotHeal() { absorbBoundary(true, 100, 50f, 0); }
-  @Test void delayedPartialAbsorbStillTakesDamage() { absorbBoundary(true, 0, 40f, 1); }
-  @Test void livingFullAbsorbStillHeals() { absorbBoundary(false, 100, 70f, 0); }
+  @Test void delayedFullAbsorbDoesNotHeal() { absorbBoundary(true, 100, 50f); }
+  @Test void delayedPartialAbsorbStillTakesDamage() { absorbBoundary(true, 0, 38f); }
+  @Test void livingFullAbsorbStillHeals() { absorbBoundary(false, 100, 70f); }
 
-  private static void absorbBoundary(boolean delayed, int flat, float expected, int events) {
+  private static void absorbBoundary(boolean delayed, int flat, float expected) {
     try (Harness test = new Harness()) {
       int caster = test.player(0, 0, 20, 0);
       int target = test.monster(1, 0, 50, 100, 0);
@@ -82,8 +82,10 @@ class SorceressTelekinesisIntegrationTest extends RiiabloTest {
           .addState(com.riiablo.engine.server.state.StateId.DEATH_DELAY, 100, 1, caster);
       test.cast(caster, target);
       assertEquals(expected, test.hp(target), .0001f);
-      assertEquals(events, test.damage.count);
-      if (events > 0) assertEquals(10f, test.damage.lightning, .0001f);
+      assertEquals(1, test.damage.count, "absorb-only packets also settle once");
+      // Native percent absorption caps at 40%: 20 - 8 = 12, before flat absorb.
+      assertEquals(flat > 0 ? 0f : 12f, test.damage.lightning, .0001f);
+      assertEquals(delayed ? 0f : 20f, test.damage.absorbed, .0001f);
     }
   }
 
@@ -121,7 +123,7 @@ class SorceressTelekinesisIntegrationTest extends RiiabloTest {
 
       assertEquals(90f, test.hp(resisted), 0.001f);
       assertEquals(100f, test.hp(immune), 0.001f);
-      assertEquals(50f, test.hp(absorbing), 0.001f);
+      assertEquals(46f, test.hp(absorbing), 0.001f); // 50 + 8 healed - 12 damage.
     }
   }
 
@@ -252,6 +254,11 @@ class SorceressTelekinesisIntegrationTest extends RiiabloTest {
     byte kind;
     float physical;
     float lightning;
+    float absorbed;
+
+    @Subscribe public void onApplied(com.riiablo.engine.server.event.DamageAppliedEvent event) {
+      absorbed = event.lifeAbsorbed;
+    }
 
     @Subscribe public void onDamage(DamageEvent event) {
       count++;

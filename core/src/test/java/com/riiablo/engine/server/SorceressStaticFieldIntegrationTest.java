@@ -41,7 +41,7 @@ import org.junit.jupiter.api.Test;
 class SorceressStaticFieldIntegrationTest extends RiiabloTest {
   @Test void deathDelayPreventsFullAbsorbHealing() { delayedAbsorb(true, 100, 50f); }
   @Test void deathDelayPreventsPartialAbsorbHealingButStillTakesDamage() {
-    delayedAbsorb(true, 0, 44f);
+    delayedAbsorb(true, 0, 42.796875f); // 12hp - floor(3072*40%)/256; no heal in death delay.
   }
   @Test void livingTargetStillReceivesFullAbsorbHealing() { delayedAbsorb(false, 100, 62f); }
 
@@ -100,11 +100,26 @@ class SorceressStaticFieldIntegrationTest extends RiiabloTest {
       assertEquals(75f, test.hp(negative), 0.01f,
           "native negative-resistance compensation prevents amplified Static Field damage");
       assertEquals(100f, test.hp(immune), 0.001f);
-      assertEquals(50f, test.hp(absorbing), 0.001f,
-          "50% absorb heals the same amount as the reduced packet removes");
+      assertEquals(47.59375f, test.hp(absorbing), 0.001f,
+          "native percent absorb caps at 40% before damage and healing");
       assertEquals(0, test.world.getAspectSubscriptionManager()
           .get(Aspect.all(Missile.class)).getEntities().size(),
           "SrvDo020 is immediate damage and must not create a missile entity");
+    }
+  }
+
+  @Test void staticFieldCompensationThenPierceUsesOrdinaryResistanceAndCannotBreakImmunity() {
+    try (Harness test = new Harness(0)) {
+      int caster = test.player(0, 0, true);
+      test.attrs(caster).base().put(Stat.passive_ltng_pierce, 25);
+      test.attrs(caster).reset();
+      int resistant = test.monster(2, 0, 100, 50);
+      int negative = test.monster(2, 1, 100, -50);
+      int immune = test.monster(2, -1, 100, 100);
+      test.cast(caster);
+      assertEquals(81.25f, test.hp(resistant)); // 25hp * (1-(50-25)%).
+      assertEquals(70.83984375f, test.hp(negative)); // floor(6400*100/150)*175% = 7465 fixed.
+      assertEquals(100f, test.hp(immune));
     }
   }
 
@@ -194,6 +209,16 @@ class SorceressStaticFieldIntegrationTest extends RiiabloTest {
 
       assertEquals(95.75f, test.hp(hostile), 0.001f);
       assertEquals(100f, test.hp(neutral), 0.001f);
+    }
+  }
+
+  @Test void hellPlayerPenaltyIsAppliedAfterTheStaticFieldStatCompensation() {
+    try (Harness test = new Harness(2)) {
+      int caster = test.player(0, 0, true);
+      int hostile = test.player(2, 0, true);
+      assertTrue(test.parties.declareHostility(caster, hostile));
+      test.cast(caster);
+      assertEquals(91.5f, test.hp(hostile)); // 25hp *17% *200%; raw stat resistance was zero.
     }
   }
 

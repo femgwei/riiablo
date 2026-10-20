@@ -5,15 +5,15 @@ import org.junit.jupiter.api.Test;
 
 class NativeDirectDamageMathTest {
   @Test
-  void physicalPoliciesKeepDifferentReductionOrderCapsAndMinimum() {
+  void reflectionUsesTheSameNativeReductionOrderCapsAndZeroAsDirect() {
     assertEquals(45, NativeDirectDamageMath.nativePhysicalDamage(100, true, 50, 10));
-    assertEquals(40, NativeDirectDamageMath.reflectedPhysicalDamage(100, true, false, 50, 10));
+    assertEquals(45, NativeDirectDamageMath.reflectedPhysicalDamage(100, true, false, 50, 10));
     assertEquals(0, NativeDirectDamageMath.nativePhysicalDamage(100, false, 0, 100));
-    assertEquals(1, NativeDirectDamageMath.reflectedPhysicalDamage(100, false, false, 0, 100));
+    assertEquals(0, NativeDirectDamageMath.reflectedPhysicalDamage(100, false, false, 0, 100));
     assertEquals(50, NativeDirectDamageMath.nativePhysicalDamage(100, true, 100, 0));
-    assertEquals(0, NativeDirectDamageMath.reflectedPhysicalDamage(100, true, false, 100, 0));
+    assertEquals(50, NativeDirectDamageMath.reflectedPhysicalDamage(100, true, false, 100, 0));
     assertEquals(135, NativeDirectDamageMath.nativePhysicalDamage(100, false, -50, 10));
-    assertEquals(6, NativeDirectDamageMath.reflectedPhysicalDamage(100, true, true, 50, 10));
+    assertEquals(3, NativeDirectDamageMath.reflectedPhysicalDamage(100, true, true, 50, 10)); // (17 - 10) / 2
     assertEquals(Integer.MAX_VALUE, NativeDirectDamageMath.nativePhysicalDamage(Integer.MAX_VALUE, false, -100, 0));
   }
 
@@ -40,7 +40,7 @@ class NativeDirectDamageMathTest {
     assertEquals(100, out.hitChance);
     assertEquals(0, out.totalDamage);
     NativeDirectDamageMath.elementalDamage(out, 4, 100, 0, true, true, 50, 75, 100, 0, 0, true);
-    assertEquals(8, out.totalDamage); // Poison 50, then existing 17% PvP truncation.
+    assertEquals(8, out.totalDamage); // PvP 17, then poison resistance 50%; no MDR.
     NativeDirectDamageMath.elementalDamage(out, 1, 100, 0, false, false, 99, 75, 0, 0, 0, true);
     assertEquals(1, out.totalDamage);
   }

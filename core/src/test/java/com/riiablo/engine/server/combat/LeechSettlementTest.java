@@ -20,6 +20,23 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LeechSettlementTest extends RiiabloTest {
+  @Test void overkillLeechCapsToLifeBeforeAbsorbNotTheHealedPool() {
+    World world = world();
+    try {
+      int source = unit(world, 10f), victim = monster(world, 5f, 100);
+      world.getMapper(Player.class).create(source);
+      world.process();
+      DamageEvent hit = DamageEvent.obtainMelee(source, victim, 20, 100);
+      hit.absorbedLife = 30;
+      DamageSettlement.commit(world, hit);
+      assertEquals(.5f, hit.lifeLeeched); // 5hp*10%, not (5+30)*10%.
+      assertEquals(.25f, hit.manaLeeched);
+      assertEquals(15f, attrs(world, victim).get(Stat.hitpoints).asFixed());
+      DamageSettlement.commit(world, hit);
+      assertEquals(10.5f, attrs(world, source).get(Stat.hitpoints).asFixed());
+      assertEquals(15f, attrs(world, victim).get(Stat.hitpoints).asFixed());
+    } finally { world.dispose(); }
+  }
   @Test void fixedDrainUsesVictimPoolsForHealingButSubtractsFullResourcePacketOnce() {
     World world = world();
     try {
@@ -130,7 +147,7 @@ class LeechSettlementTest extends RiiabloTest {
       hit.extraLifeLeechPercent = 20;
       DamageSettlement.commit(world, hit);
       assertEquals(100f, attrs(world, attacker).get(Stat.hitpoints).asFixed());
-      assertEquals(2f, attrs(world, attacker).get(Stat.mana).asFixed());
+      assertEquals(3f, attrs(world, attacker).get(Stat.mana).asFixed()); // hirelings use the percentage branch too
       assertEquals(.5f, hit.lifeLeeched);
       int player = unit(world, 10f);
       world.getMapper(Player.class).create(player);
