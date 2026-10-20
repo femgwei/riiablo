@@ -56,9 +56,10 @@ class DruidShapeShiftTest extends RiiabloTest {
     assertNotNull(state);
     assertEquals(StateId.BEAR, state.stateId);
     assertEquals(2500, state.duration);
-    assertEquals(71, state.damageModifier);
-    assertEquals(37, state.defenseModifier);
-    assertEquals(100, state.maxLifeModifier);
+    // 1.10f: ln12=50+2*7, ln34=25+2*5; life=50+(20+5).
+    assertEquals(64, state.damageModifier);
+    assertEquals(35, state.defenseModifier);
+    assertEquals(75, state.maxLifeModifier);
   }
 
   @Test

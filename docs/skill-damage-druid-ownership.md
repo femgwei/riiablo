@@ -6,13 +6,18 @@
 
 机器可检查的逐项证据见 `skill-damage-druid-ownership.tsv`。
 
+2026-10-20 更正：下文为 DMG-03B 阶段的审计范围，本次只复核并关闭 Shock Wave
+的误判，不代表重新验收了其他历史缺口。震波依据目标级 NextHit/NextDelay 去重，
+不是施法级共享永久命中集；详见 [七职业收尾记录](player-combat-followup-2026-10-20.md)。
+
 ## 结论
 
 - 30/30 项均已确认原版所有者和 D2MOO 路径。
 - 24 项会直接产生或修改伤害；Shape Shifting、Oak Sage、Cycle of Life、Cyclone Armor、
   Vines 等 5 项不产生独立伤害包，Wearwolf 只修改命中/攻速，另有召唤辅助语义。
-- 7 项为确认的 riiablo 实现缺口：Molten Boulder、Arctic Blast、Cyclone Armor、Twister、
-  Shock Wave、Tornado、Spirit of Barbs。
+- 原列 7 项实现缺口中，Shock Wave 为错误断言导致的误判，现已关闭。
+  其余 6 项历史登记为 Molten Boulder、Arctic Blast、Cyclone Armor、Twister、
+  Tornado、Spirit of Barbs；本次未重新审计这些条目。
 - 7 项为聚焦测试缺口：Raven、Plague Poppy、Summon Spirit Wolf、Heart of Wolverine、
   Summon Fenris、Hunger、Summon Grizzly。它们已有主要生产路径，但尚未通过最终伤害消费
   用例锁定攻击包、毒素、增伤或吸取只结算一次。
@@ -60,8 +65,10 @@ Holy Shield，Cyclone Armor 会落空。伤害审计必须保留该缺口，避�
 2. **Arctic Blast**：没有 SrvSt11 的持续状态和 `SKILLS_DoInferno` tick/range 语义。
 3. **Cyclone Armor**：没有状态安装、剩余吸收量和 incoming elemental 消耗路径。
 4. **Twister / Tornado**：没有 SrvDo118 多枚初始化、Twister stun 和 Tornado SrvDo27 路径。
-5. **Shock Wave**：5 枚导弹创建时传入 `null sharedHitTargets`；现有专项测试稳定失败，
-   因而一次施法缺少原版的单目标共享命中门禁。
+5. **Shock Wave（已更正并关闭）**：原测试错误要求非空 `sharedHitTargets`。
+   D2MOO SrvDo008 创建独立弹道，MissMode 在目标上安装 JUSTHIT，
+   本地 1.10f NextDelay=4。现有生产门控正确，新增回归覆盖跨施法冷却、到期、
+   命中/眩晕/死亡及客户端同步；不能将空共享集解释为缺失原版去重。
 6. **Spirit of Barbs**：光环值没有进入 `Stat.thorns_percent`，反伤消费者读不到它。
 
 这些缺口本轮只登记，不在尚未建立逐等级黄金值前直接修改生产技能逻辑。

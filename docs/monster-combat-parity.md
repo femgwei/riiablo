@@ -2,6 +2,10 @@
 
 ## 运行入口
 
+七职业技能与结算/客户端同步的扩大回归另使用 `:core:playerCombatRegression`，
+原版表值核验与适用范围见 [七职业收尾记录](player-combat-followup-2026-10-20.md)。
+该任务与下述怪物聚合互相补充，均不代表全 core 或完整原版等价。
+
 数值层无需安装目录，不启动 MPQ、ECS 或客户端：
 
 ```powershell

@@ -161,6 +161,31 @@ test {
   }
 }
 
+// Reproducible seven-class combat gate, including the production settlement
+// boundary and server/client resource synchronization. Not full native parity.
+task playerCombatRegression(type: Test) {
+  group = 'verification'
+  description = 'Seven-class skills, damage settlement, presentation and combat synchronization.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform { excludeTags 'visual' }
+  filter {
+    ['*GoldenDamageTest', '*Sorceress*', '*Necromancer*', '*Amazon*', '*Assassin*',
+     '*Druid*', '*Paladin*', '*Barbarian*', '*Aura*', '*Trap*', '*Vitals*',
+     '*BlessedHammer*', '*NativePlayerCombat110fAuditTest', '*DamagePresentationBoundaryTest',
+     '*ServerClientCombatSyncEcsScenarioTest', 'com.riiablo.engine.server.combat.*',
+     'com.riiablo.architecture.*'].each { includeTestsMatching it }
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
+
 // One gate for session isolation, loading/navigation, resources and representative server behavior.
 task subsystemRegression(type: Test) {
   group = 'verification'

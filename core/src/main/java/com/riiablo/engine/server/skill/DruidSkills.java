@@ -305,8 +305,8 @@ public final class DruidSkills {
    * @return 伤害加成百分比
    */
   public static int calculateWerebearDamageBonus(int skillLevel) {
-    // Skills.txt ln12: 55 + 8/level.
-    return 55 + (Math.max(1, skillLevel) - 1) * 8;
+    // 1.10f Skills.txt AuraStatCalc1=ln12, Param1=50, Param2=7.
+    return 50 + (Math.max(1, skillLevel) - 1) * 7;
   }
 
   /**
@@ -316,8 +316,8 @@ public final class DruidSkills {
    * @return 防御加成百分比
    */
   public static int calculateWerebearDefenseBonus(int skillLevel) {
-    // Skills.txt ln34: 25 + 6/level.
-    return 25 + (Math.max(1, skillLevel) - 1) * 6;
+    // 1.10f Skills.txt AuraStatCalc2=ln34, Param3=25, Param4=5.
+    return 25 + (Math.max(1, skillLevel) - 1) * 5;
   }
 
   public static boolean isFeralRageOrMaul(Skills.Entry skill) {

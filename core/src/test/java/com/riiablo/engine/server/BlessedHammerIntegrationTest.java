@@ -151,7 +151,7 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
   }
 
   @Test
-  void targetBonusPrecedesMagicResistanceAbsorbAndPvpScalar() {
+  void targetBonusPrecedesPvpThenMagicResistanceAndAbsorb() {
     Attributes attacker = attributes(1, 1000);
     attacker.base().put(Stat.magicmindam, 100);
     attacker.base().put(Stat.magicmaxdam, 100);
@@ -165,11 +165,12 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
         attacker, defender, true, true, true,
         0, 0, 0, true, null, null, 0, 0,
         null, null, false, null, 0, 50);
-    // 100 + 50% target bonus = 150; 50% resist = 75; 20% absorb = 15;
-    // PvP scalar then reduces the remaining 60 to 10 (integer arithmetic).
+    // SrvDmg05 target bonus: 100 + 50% = 150. CalculateTotalDamage applies
+    // PvP first: 150 * 17/100 = 25; 50% resist = 12; 20% absorb = 2;
+    // the remaining packet is 10 (integer HP projection, not an 8.8 packet).
     assertEquals(10, result.elementalDamage[CombatSystem.DAMAGE_MAGIC]);
     assertEquals(10, result.totalDamage);
-    assertEquals(15, result.absorbedLife);
+    assertEquals(2, result.absorbedLife);
   }
 
   @Test

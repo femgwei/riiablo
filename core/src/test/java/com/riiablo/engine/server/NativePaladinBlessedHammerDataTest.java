@@ -52,6 +52,6 @@ class NativePaladinBlessedHammerDataTest extends RiiabloTest {
     assertEquals(0, missile.pSrvHitFunc);
     assertEquals(5, missile.pSrvDmgFunc);
     assertEquals("Blessed Hammer", missile.Skill);
-    assertArrayEquals(new int[] {50, 50}, missile.dParam);
+    assertArrayEquals(new int[] {50, 0}, missile.dParam);
   }
 }
