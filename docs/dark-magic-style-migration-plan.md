@@ -50,11 +50,15 @@ M1-B 本批依赖迁移：允许同步修改 `EntityFactory` 的地图端口能�
 
 M1-A/M8-C 本批依赖迁移：允许将输入、物品、网络结果和世界标签的具体 screen/widget 访问委托给 `presentation/ClientGameplayContext`，新增 UI 查询/意图端口，并同步修改 `GameScreen` 的消息输出绑定及 dedicated server/竞技场的装配配方，删除无调用者的 UI 系统注册。保留现有 UI 行为、权威结果路由优先级、系统相对顺序和 D2MOO 规则；不修改战斗结算或协议。
 
+M1-A/M8-C NPC/世界 UI 迁移：将客户端 NPC、菜单/对话、任务对话和指示器、世界/怪物标签及区域提示归入 `presentation`，将 `MenuWrapper` 移出 shared；同步更新客户端装配、widget、screen、viewer 工具和相应测试的类型引用。NPC 使用所属 world/context 获取服务，保留原有交互、任务提交、资源释放和标签布局行为；不更改服务端 NPC、任务规则或战斗代码。
+
+本批 viewer 依赖补充：扩展编译发现 Map Viewer 的 `Map.injectBuilders` 和 Skill Viewer 的 `Map.setEntityFactory` 旧入口已在 M1-B 删除，Skill Viewer 还引用旧包的 `CofDirtyComponents`；允许改为既有 `MapRuntimeBindings` host 绑定、当前 shared 组件类型及工具所属的 factory/context 注册，不改地图生成器、战斗或数据规则。
+
 这组子项把前期结构审计中发现的反向依赖和多代实现单独登记，避免它们被“表现层剥离”或“网络收敛”一句话掩盖。这里的状态表示改造状态，不表示问题已经解决。
 
 | 子项 | 审计对象 | 目标边界 | 当前状态 | 完成判定 |
 |---|---|---|---|---|
-| M1-A 机制/表现依赖审计 | `engine/client` 对 `screen/widget` 的反向 import；客户端 NPC、对话、标签和区域提示 | `engine` 只发布快照/语义事件，`presentation` 负责 widget、音频和渲染资源 | 进行中（UI host 端口已落地，剩余表现依赖 72 条） | 架构检查禁止 engine/server 引入 UI、音频设备或渲染对象；现有调用均有 owner 和删除条件 |
+| M1-A 机制/表现依赖审计 | `engine/client` 对 `screen/widget` 的反向 import；客户端 NPC、对话、标签和区域提示 | `engine` 只发布快照/语义事件，`presentation` 负责 widget、音频和渲染资源 | 进行中（直接 screen/widget 违规已为 0；剩余音频 40 条、图形 10 条） | 架构检查禁止 engine/server 引入 UI、音频设备或渲染对象；现有调用均有 owner 和删除条件 |
 | M1-B 地图/实体边界 | `map`、`MapBuilder` 直接引用 `EntityFactory`、服务端组件和 `NativeDataTables` | 地图只产布局、碰撞、warp 和对象描述；实体创建由 population/assembly 系统完成 | 已完成 | A1–A5 真实 MPQ/headless 布局验收通过；生成层 ECS/工厂/socket 违规为 0，实体创建统一由装配适配器负责 |
 | M1-C 网络实现盘点 | `server/netty` 中 `net`、`nnet`、`onet`，以及 `d2gs`、`d2gs_netty`、`d2gs_test` 并存 | 明确 protocol、transport、authoritative session 的唯一 owner，测试实现与生产实现隔离 | 已完成（盘点阶段；M8-D 收敛未开始） | 每个消息/会话路径只有一套生产入口；旧实现删除或标记为仅测试适配器 |
 | M7-B 地图代际收敛 | `map`、`map2`、`map5`、`map/d2moo`、`D2MOO_JAVA` 并存 | 保留主地图链和 D2MOO bridge，过渡实现不再被新规则依赖 | 未开始 | Act 1 关键地图在主链上通过真实 MPQ/headless 验收；过渡目录无生产调用者 |
@@ -73,7 +77,7 @@ M1-A/M8-C 本批依赖迁移：允许将输入、物品、网络结果和世界�
 | 机制/策略分离 | 数据表和若干 policy 已存在，但大量 D2 公式仍直接位于 engine/server system | 部分属实 | M7-A |
 | Mod 内容包与运行时锁定 | 当前没有完整 Mod/package digest/namespace/session lock；计划明确不引入 Lua/Go | 属实（暂不迁移） | M4-B（暂停） |
 | 服务端直接播放音频 | 历史审计记录 83 处；声音事件迁移后服务端不再直接播放，当前仅剩 3 处客户端表现层 `MonsterAudio` 兼容调用 | 已完成主项，仍有表现收口 | M8-B、M8-C |
-| engine/client ↔ screen/widget 反向依赖 | `ClientGameplayContext`、`ClientNpc`、对话/标签/区域提示类仍直接 import UI 类型 | 属实 | M1-A、M8-C |
+| engine/client ↔ screen/widget 反向依赖 | NPC、菜单/对话、标签/区域提示已迁至 presentation；engine/client 扫描的直接 screen/widget 违规为 0，音频/图形仍有 50 条，客户端仍经由表现适配器调用 UI | UI 直接依赖已迁移，完整表现边界未完成 | M1-A、M8-C |
 | map ↔ engine/server 反向依赖 | M1-B 已删除生成层的 ECS/工厂/socket 依赖；`MapManager`、`Box2DPhysics`、`RenderSystem` 的 58 条运行时适配依赖有独立基线，规则策略位置和地图代际仍待收敛 | 生成边界已完成，适配/策略债务仍有登记 | M1-B（已完成）、M7-A、M7-B、M8-C |
 | 网络和地图多代并存 | `server/netty` 与 `server/d2gs` 同时存在，且 `net/nnet/onet`、`d2gs_netty/d2gs_test` 并存；`map/map2/map5` 也仍存在 | 属实 | M1-C、M7-B、M8-D |
 
@@ -151,7 +155,7 @@ D2MOO 依据：沿用 `D2MOO_JAVA/.../drlg/DrlgDrlg.java::allocDrlg`、`DrlgOutP
 
 结果：UI 回归 111 项、架构回归 6 项、服务端装配/竞技场测试 19 项全部通过，失败/错误/跳过均为 0；core、desktop、D2GS、Netty 编译通过。表现依赖由 83 条降至 72 条，基线只删除消失的 11 条；新增违规为 0。修正既有装配断言遗漏的 `SoundEventSystem`，以及标签测试与既有紧凑纵向间距不一致的问题，未改变生产布局。
 
-真实资源：否；命令显式指定 1.10F 路径，但本批 136 项用例均为无 GL 的单元/装配测试，不启动真实 MPQ 客户端或完整竞技场；此前 M1-B 的真实资源验收仍以对应记录为准。
+真实资源：是；更正原记录，任务指示器与共享控件生命周期测试继承 `RiiabloTest`，会加载真实 MPQ 数据表和字符串；控件/设备仍使用测试替身，不启动真实 GL 客户端或完整竞技场。此前 M1-B 地图资源验收仍以对应记录为准。
 
 D2MOO 依据：本批保留既有 1.10f 实现，只移动 host/UI 调用边界；物品拾取、佣兵药剂、NPC/交易结果和权威 Tick/数值规则均未改写，不宣称新增 D2 全行为等价性。
 
@@ -160,6 +164,32 @@ D2MOO 依据：本批保留既有 1.10f 实现，只移动 host/UI 调用边界�
 下一迁移：M1-A/M8-C 的 NPC/menu/dialog 与标签/区域提示表现依赖，沿现有 session 和端口继续收口。
 
 详细记录：`docs/dark-magic-m8c-ui-host-ports-2026-10-22.md`。
+
+### M1-A/M8-C NPC 与世界 UI 迁移记录（2026-10-22）
+
+本批完成日期：2026-10-22；M1-A/M8-C 整体仍为进行中。
+
+提交：`7722a22a8`（NPC/世界 UI 表现归属、会话绑定、viewer 适配与回归门禁）。
+
+实现：NPC、菜单/对话、任务指示器、标签/区域提示及名称解析等 10 个类归入 `presentation`，`MenuWrapper` 迁至 `presentation/component`；删除旧位置，不保留双入口。客户端装配、screen/widget 和 viewer 改用新类型，装配相对顺序不变。NPC 改用所属 world/context 的玩家、角色、音频和数据绑定；怪物标签在注入后创建控件。两个 viewer 改用 M1-B 的现有 host 绑定入口。
+
+验证命令：
+
+```text
+./gradlew.bat :core:clientUiBoundaryRegression :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.MonsterAiArenaTest :desktop:compileJava :server:netty:compileJava :tools:map-viewer:compileJava :tools:skill-viewer:compileJava "-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F" --no-daemon
+```
+
+结果：UI 回归 115 项、架构回归 8 项、服务端装配/竞技场 19 项，共 142 项通过，失败/错误/跳过均为 0；core、desktop、D2GS、Netty、Map Viewer、Skill Viewer 编译通过。表现扫描由 72 条降至 50 条（音频 40、图形 10），直接 screen/widget 违规为 0；只从基线删除消失的 22 条，未增加允许项。M1-B 生成层仍为 0，运行时适配器 58 条，无漂移。
+
+真实资源：是；headless 用例通过 `RiiabloTest` 加载 1.10F MPQ 数据表/字符串，保留任务标记、Corpsefire 名称解析与控件生命周期验收；没有运行实际 GL/音频设备或完整竞技场。
+
+D2MOO 依据：沿用原 NPC healer 的 1.10f 声音事件 10/声音 2673（`shrine_refill`）、问候回退及商店/复活语义；任务对话仍在打开时提交原消息，标签保留原间距、数量上限和有限避让。服务端 NPC/任务规则和战斗代码未改动。
+
+剩余问题：音频 40 条、图形 10 条仍由 M1-A/M8-C 收敛；现有客户端系统还可经由适配器依赖表现，widget 内部仍有兼容全局资源读取，尚未达到仅订阅事件/快照的目标。
+
+下一迁移：集中收口 M1-A/M8-C 的剩余音频播放、环境/天气、渲染资源依赖。
+
+详细记录：`docs/dark-magic-m8c-npc-world-ui-2026-10-22.md`。
 
 ### M0 完成记录（2026-10-21）
 

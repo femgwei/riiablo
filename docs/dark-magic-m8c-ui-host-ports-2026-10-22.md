@@ -25,7 +25,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-cli
 
 扫描结果：`M1-A findings: 72`，`M1-A boundary drift: none`。同一构建内 M1-B 生成层仍为 0 条，运行时适配器 58 条，无漂移。
 
-命令指定 1.10F 路径，但本批测试不加载真实 MPQ、不启动 GL 或完整竞技场；本次通过不等于真实客户端视觉验收。真实资源地图验收沿用 M1-B 的单独记录。
+真实资源说明更正：命令指定 1.10F 路径，任务指示器和共享控件生命周期测试继承 `RiiabloTest`，会加载真实 MPQ 数据表与字符串；实际控件/设备仍使用测试替身，不启动真实 GL 客户端或完整竞技场。本次通过不等于真实客户端视觉验收，地图资源验收沿用 M1-B 的单独记录。
+
+后续迁移已继续完成 NPC/世界 UI 的表现归属，当前状态见 `dark-magic-m8c-npc-world-ui-2026-10-22.md`；本记录中的 72 条为本批完成时的历史值。
 
 ## D2MOO 与后续范围
 
