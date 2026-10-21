@@ -10,7 +10,7 @@ foreach($root in $roots){
 }
 New-Item -ItemType Directory -Force (Split-Path $Output) | Out-Null
 $rows | Set-Content $Output
-$testMain=@($rows | Where-Object {$_ -match '^d2gs_test`t'})
+$testMain=@($rows | Where-Object {$_.StartsWith('d2gs_test')})
 Write-Output "entries=$($rows.Count-1) d2gs_test_main_entries=$($testMain.Count)"
 if($testMain.Count -gt 0){Write-Output 'KNOWN_DEBT: d2gs_test is currently under server/netty/src/main/java'}
 
