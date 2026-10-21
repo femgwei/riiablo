@@ -40,7 +40,7 @@
 | M4-B 内容/Mod 分层 | dark-magic 的内容包、digest、版本锁和命名空间 | 当前不引入 Lua/Go Mod；保留可选的 data-pack/version/digest 接口，避免未来内容污染核心规则 | 暂停 | 只有在 Mod 成为目标后启动；启动前先定义包签名、版本兼容和多人会话锁定 |
 | M8-A 回放与检查点 | `simulation/replay.go`、`ecs/snapshot.go`、校验和/恢复 | 记录命令、权威 Tick、随机 stream 状态和快照摘要；支持断线恢复与离线回放 | 未开始 | 录制→恢复→继续运行结果一致；检查点校验失败可定位到 Tick/实体/字段 |
 | M8-B 声音语义事件 | 服务端只发语义，客户端负责资源和设备表现 | `SoundEvent`、客户端 `SoundEventSystem`、D2GS `SoundP`，含可见性和发声坐标 | 已完成 | 服务端无 `MonsterAudio` 调用；本地和 D2GS 远程声音测试通过；实体同 Tick 删除仍可按坐标播放 |
-| M8-C 表现层剥离 | `internal/presentation` 与仿真分离 | 继续收口 `ClientGameplayContext`、NPC/UI、标签、渲染和音频资源依赖；表现只能订阅事件/快照 | 未开始 | engine/server 不依赖 UI/音频设备；客户端表现替换不改变权威 Tick/结果 |
+| M8-C 表现层剥离 | `internal/presentation` 与仿真分离 | 继续收口 `ClientGameplayContext`、NPC/UI、标签、渲染和音频资源依赖；表现只能订阅事件/快照 | 进行中 | engine/server 不依赖 UI/音频设备；客户端表现替换不改变权威 Tick/结果 |
 | M8-D 网络三层收敛 | protocol / transport / authoritative session | 收敛 FlatBuffers、Netty、D2GS session 和旧网络实现；禁止规则系统直接操作 socket | 未开始 | 协议、传输、会话各有唯一 owner；重连、快照和命令路径不再存在多套权威实现 |
 | M7-A 机制/策略分离 | Go ECS 保持通用机制，Lua/D2 规则作为策略 | Java 中先把可参数化的 AI、技能、掉落和任务公式移入 policy/data，不进行一次性脚本化 | 未开始 | 规则策略可由纯数据/策略测试替换；通用 ECS 机制不读取具体 D2 表行 |
 
@@ -48,11 +48,13 @@
 
 M1-B 本批依赖迁移：允许同步修改 `EntityFactory` 的地图端口能力、客户端/服务端 host 的地图装配绑定，以及 `NativeDataTables` 对共享纯数据访问器的委托；不改变战斗、任务数值或协议。`MapManager`（实体装配）、`Box2DPhysics`（物理适配）、`RenderSystem`（表现适配）保留唯一 owner，不能被地图 builder 反向调用。D2 规则策略与地图代际的整体搬迁分别属于 M7-A/M7-B。
 
+M1-A/M8-C 本批依赖迁移：允许将输入、物品、网络结果和世界标签的具体 screen/widget 访问委托给 `presentation/ClientGameplayContext`，新增 UI 查询/意图端口，并同步修改 `GameScreen` 的消息输出绑定及 dedicated server/竞技场的装配配方，删除无调用者的 UI 系统注册。保留现有 UI 行为、权威结果路由优先级、系统相对顺序和 D2MOO 规则；不修改战斗结算或协议。
+
 这组子项把前期结构审计中发现的反向依赖和多代实现单独登记，避免它们被“表现层剥离”或“网络收敛”一句话掩盖。这里的状态表示改造状态，不表示问题已经解决。
 
 | 子项 | 审计对象 | 目标边界 | 当前状态 | 完成判定 |
 |---|---|---|---|---|
-| M1-A 机制/表现依赖审计 | `engine/client` 对 `screen/widget` 的反向 import；客户端 NPC、对话、标签和区域提示 | `engine` 只发布快照/语义事件，`presentation` 负责 widget、音频和渲染资源 | 进行中（问题已登记，M8-C 尚未迁移） | 架构检查禁止 engine/server 引入 UI、音频设备或渲染对象；现有调用均有 owner 和删除条件 |
+| M1-A 机制/表现依赖审计 | `engine/client` 对 `screen/widget` 的反向 import；客户端 NPC、对话、标签和区域提示 | `engine` 只发布快照/语义事件，`presentation` 负责 widget、音频和渲染资源 | 进行中（UI host 端口已落地，剩余表现依赖 72 条） | 架构检查禁止 engine/server 引入 UI、音频设备或渲染对象；现有调用均有 owner 和删除条件 |
 | M1-B 地图/实体边界 | `map`、`MapBuilder` 直接引用 `EntityFactory`、服务端组件和 `NativeDataTables` | 地图只产布局、碰撞、warp 和对象描述；实体创建由 population/assembly 系统完成 | 已完成 | A1–A5 真实 MPQ/headless 布局验收通过；生成层 ECS/工厂/socket 违规为 0，实体创建统一由装配适配器负责 |
 | M1-C 网络实现盘点 | `server/netty` 中 `net`、`nnet`、`onet`，以及 `d2gs`、`d2gs_netty`、`d2gs_test` 并存 | 明确 protocol、transport、authoritative session 的唯一 owner，测试实现与生产实现隔离 | 已完成（盘点阶段；M8-D 收敛未开始） | 每个消息/会话路径只有一套生产入口；旧实现删除或标记为仅测试适配器 |
 | M7-B 地图代际收敛 | `map`、`map2`、`map5`、`map/d2moo`、`D2MOO_JAVA` 并存 | 保留主地图链和 D2MOO bridge，过渡实现不再被新规则依赖 | 未开始 | Act 1 关键地图在主链上通过真实 MPQ/headless 验收；过渡目录无生产调用者 |
@@ -132,6 +134,32 @@ D2MOO 依据：沿用 `D2MOO_JAVA/.../drlg/DrlgDrlg.java::allocDrlg`、`DrlgOutP
 下一迁移：M1-A/M8-C 的剩余表现依赖收口；M1-C 盘点已完成，网络实现收敛仍属于 M8-D。
 
 详细记录：`docs/dark-magic-m1b-closeout-2026-10-22.md`。
+
+### M1-A/M8-C UI host 端口迁移记录（2026-10-22）
+
+本批完成日期：2026-10-22；M1-A/M8-C 整体仍为进行中。
+
+提交：`f7961320d`（UI host 端口、客户端消费者迁移、dedicated 装配及回归门禁）。
+
+实现：`ClientUiServices` 提供输入和物品所需的 UI 查询/意图；具体 panel、世界标签创建/更新和旧网络结果回调统一留在表现适配器。网络消息输出改为 host 注入的 `Consumer<String>`。D2GS 和怪物竞技场不再安装 `MenuManager`/`DialogManager`。
+
+验证命令：
+
+```text
+./gradlew.bat :core:clientUiBoundaryRegression :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.MonsterAiArenaTest :desktop:compileJava :server:netty:compileJava "-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F" --no-daemon
+```
+
+结果：UI 回归 111 项、架构回归 6 项、服务端装配/竞技场测试 19 项全部通过，失败/错误/跳过均为 0；core、desktop、D2GS、Netty 编译通过。表现依赖由 83 条降至 72 条，基线只删除消失的 11 条；新增违规为 0。修正既有装配断言遗漏的 `SoundEventSystem`，以及标签测试与既有紧凑纵向间距不一致的问题，未改变生产布局。
+
+真实资源：否；命令显式指定 1.10F 路径，但本批 136 项用例均为无 GL 的单元/装配测试，不启动真实 MPQ 客户端或完整竞技场；此前 M1-B 的真实资源验收仍以对应记录为准。
+
+D2MOO 依据：本批保留既有 1.10f 实现，只移动 host/UI 调用边界；物品拾取、佣兵药剂、NPC/交易结果和权威 Tick/数值规则均未改写，不宣称新增 D2 全行为等价性。
+
+剩余问题：NPC/menu/dialog、标签显示与区域提示、渲染/音频适配仍待迁移；当前端口仍经由兼容 context 访问，尚未达到表现仅订阅事件/快照的出口条件。M1/M8-C 整体尚未完成。
+
+下一迁移：M1-A/M8-C 的 NPC/menu/dialog 与标签/区域提示表现依赖，沿现有 session 和端口继续收口。
+
+详细记录：`docs/dark-magic-m8c-ui-host-ports-2026-10-22.md`。
 
 ### M0 完成记录（2026-10-21）
 
