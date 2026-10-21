@@ -12,7 +12,7 @@ import com.riiablo.Files;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.EntityFactory;
+
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.NativeObjectState;
@@ -32,7 +32,7 @@ public class MapManager extends PassiveSystem {
   protected Map map;
 
   @Wire(name = "factory")
-  protected EntityFactory factory;
+  protected MapPopulationPort factory;
 
   @Wire(name = "serverContext", failOnNull = false)
   protected ServerGameplayContext serverContext;
@@ -619,3 +619,4 @@ public class MapManager extends PassiveSystem {
     return out.set(waypoint);
   }
 }
+

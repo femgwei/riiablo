@@ -9,7 +9,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
-import com.riiablo.engine.EntityFactory;
+
 import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
 import com.riiablo.map.Map.Preset;
@@ -40,7 +40,7 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
   protected static final int DIR_EAST = 3;
 
   // 这些字段在子类中会被 @Wire 注入
-  protected EntityFactory factory;
+  protected MapPopulationPort factory;
   protected com.badlogic.gdx.net.Socket socket;
 
   /**
@@ -570,3 +570,4 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
     }
   }
 }
+

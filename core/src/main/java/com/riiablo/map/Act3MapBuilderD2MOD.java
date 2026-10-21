@@ -11,7 +11,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.LvlWarp;
 import com.riiablo.engine.server.NativeDataTables;
-import com.riiablo.engine.EntityFactory;
+
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 import com.riiablo.map.d2moo.Act3D2MOOLayoutBridge;
@@ -99,7 +99,7 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
   };
 
   @Wire(name = "factory")
-  protected EntityFactory factory;
+  protected MapPopulationPort factory;
 
   @Wire(name = "client.socket", failOnNull = false)
   protected com.badlogic.gdx.net.Socket socket;
@@ -1060,3 +1060,4 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
     }
   }
 }
+

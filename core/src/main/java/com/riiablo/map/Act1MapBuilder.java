@@ -11,7 +11,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
-import com.riiablo.engine.EntityFactory;
+
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 
@@ -25,7 +25,7 @@ public final class Act1MapBuilder extends MapBuilderResources implements MapBuil
   private static final boolean DEBUG_BUILD = DEBUG && false;
 
   @Wire(name = "factory")
-  protected EntityFactory factory;
+  protected MapPopulationPort factory;
 
   @Wire(name = "client.socket", failOnNull = false)
   protected Socket socket;
@@ -144,3 +144,4 @@ public final class Act1MapBuilder extends MapBuilderResources implements MapBuil
     zone.setWarp(Map.ID.VIS_0_03, Map.ID.VIS_5_42);
   }
 }
+

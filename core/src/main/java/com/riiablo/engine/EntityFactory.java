@@ -23,7 +23,7 @@ import com.riiablo.engine.server.quest.QuestWarp;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
-public abstract class EntityFactory extends PassiveSystem {
+public abstract class EntityFactory extends PassiveSystem implements com.riiablo.map.MapPopulationPort {
   private static final String TAG = "EntityFactory";
 
   protected ComponentMapper<Class> mClass;
@@ -257,3 +257,4 @@ public abstract class EntityFactory extends PassiveSystem {
     return createMissile(missileId, angle, position);
   }
 }
+

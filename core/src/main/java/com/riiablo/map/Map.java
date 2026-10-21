@@ -32,7 +32,7 @@ import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.LvlTypes;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.EntityFactory;
+
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.pfa.AStarPathFinder;
 import com.riiablo.map.pfa.Point2;
@@ -333,7 +333,7 @@ public class Map implements Disposable {
   final Array<Zone> zones = new Array<>(); // TODO: replace with R-tree? https://en.wikipedia.org/wiki/R-tree
 
   ComponentMapper<Warp> mWarp;
-  EntityFactory factory;
+  MapPopulationPort factory;
 
   public Map(int seed, int diff) {
     this(seed, diff, null);
@@ -419,7 +419,7 @@ public class Map implements Disposable {
   }
 
   /** Binds the ECS entity factory used by zone generation. */
-  public void setEntityFactory(EntityFactory factory) {
+  public void setEntityFactory(MapPopulationPort factory) {
     this.factory = factory;
   }
 
@@ -3571,3 +3571,4 @@ public class Map implements Disposable {
     }
   }
 }
+

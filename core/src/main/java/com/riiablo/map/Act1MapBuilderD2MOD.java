@@ -34,7 +34,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.engine.server.NativeDataTables;
-import com.riiablo.engine.EntityFactory;
+
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
 import com.riiablo.drlg.DrlgContext;
 import com.riiablo.drlg.DrlgLevel;
@@ -202,7 +202,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
   }
 
   @Wire(name = "factory")
-  protected EntityFactory factory;
+  protected MapPopulationPort factory;
 
   @Wire(name = "client.socket", failOnNull = false)
   protected com.badlogic.gdx.net.Socket socket;
@@ -2029,7 +2029,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     // Map itself.  Act1MapBuilderD2MOD is a singleton, but GameScreen injects
     // the legacy builder, so its own @Wire field is not guaranteed to be set.
     // Ordinary D2MOO monsters already use zone.map.factory for this reason.
-    EntityFactory spawnFactory = resolveQuestSpawnFactory(zone, factory);
+    MapPopulationPort spawnFactory = resolveQuestSpawnFactory(zone, factory);
     if (spawnFactory == null) {
       Gdx.app.error(TAG, String.format(
           "[BLOODRAVEN_SPAWN] phase=failed reason=factory_unavailable level=%s(%d)",
@@ -2089,7 +2089,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
   }
 
   /** Selects the same authoritative factory used by ordinary zone spawns. */
-  static EntityFactory resolveQuestSpawnFactory(Zone zone, EntityFactory fallback) {
+  static MapPopulationPort resolveQuestSpawnFactory(Zone zone, MapPopulationPort fallback) {
     return zone != null && zone.map != null && zone.map.factory != null
         ? zone.map.factory : fallback;
   }
@@ -4976,4 +4976,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     return zone != null && zone.dt1s != null ? zone.dt1s.get(id) : null;
   }
 }
+
+
+
 
