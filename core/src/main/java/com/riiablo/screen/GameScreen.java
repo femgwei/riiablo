@@ -64,6 +64,7 @@ import com.riiablo.presentation.CofLayerLoader;
 import com.riiablo.presentation.CofLoader;
 import com.riiablo.presentation.CofResolver;
 import com.riiablo.engine.client.CursorMovementSystem;
+import com.riiablo.engine.client.TouchpadMovementSystem;
 import com.riiablo.presentation.DeathHandler;
 import com.riiablo.presentation.DialogManager;
 import com.riiablo.presentation.MenuManager;
@@ -1023,26 +1024,21 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           rawDelta, delta));
     }
 
-    // TODO: move to a separate system TouchpadMovementSystem
-    if (touchpad != null && (hireMercenaryPanel == null || !hireMercenaryPanel.isVisible())) {
-      tmpVec2.set(touchpad.getKnobPercentX(), touchpad.getKnobPercentY()).nor();
-      if (tmpVec2.isZero()) {
-        Velocity velocity = engine.getMapper(Velocity.class).get(player);
-        velocity.velocity.setZero();
-      } else {
-        Vector2 position = engine.getMapper(Position.class).get(player).position;
-        iso.toScreen(tmpVec2b.set(position)).add(tmpVec2);
-        iso.toWorld(tmpVec2b).sub(position);
-
-        Angle angle = engine.getMapper(Angle.class).get(player);
-        angle.target.set(tmpVec2b).nor();
-
-        Velocity velocity = engine.getMapper(Velocity.class).get(player);
-        velocity.velocity.set(tmpVec2b);
-
-        engine.getSystem(DialogManager.class).setDialog(null);
-        engine.getSystem(MenuManager.class).setMenu(null, Engine.INVALID_ENTITY);
+    TouchpadMovementSystem touchMovement = engine.getSystem(TouchpadMovementSystem.class);
+    if (touchMovement != null) {
+      tmpVec2b.setZero();
+      if (touchpad != null && player >= 0 && engine.getMapper(Position.class).has(player)
+          && !clientGameplayContext.movementBlocked()) {
+        tmpVec2.set(touchpad.getKnobPercentX(), touchpad.getKnobPercentY()).nor();
+        if (!tmpVec2.isZero()) {
+          Vector2 position = engine.getMapper(Position.class).get(player).position;
+          iso.toScreen(tmpVec2b.set(position)).add(tmpVec2);
+          iso.toWorld(tmpVec2b).sub(position).nor();
+          engine.getSystem(DialogManager.class).setDialog(null);
+          engine.getSystem(MenuManager.class).setMenu(null, Engine.INVALID_ENTITY);
+        }
       }
+      touchMovement.capture(tmpVec2b.x, tmpVec2b.y);
     }
 
     // 检测持续按键：automap 缩放和平移（按住键持续操作）

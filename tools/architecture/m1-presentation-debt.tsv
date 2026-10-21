@@ -1,6 +1,5 @@
 file	target	count	owner	migration	remove_when
 core/src/main/java/com/riiablo/engine/client/ActTransitionSystem.java	com.riiablo.presentation.ClientGameplayContext	1	client-act-adapter	M8-C	Replace context act-transition callback with an accepted transition event consumed by the host
-core/src/main/java/com/riiablo/engine/client/AuthoritativeInterpolationSystem.java	com.riiablo.presentation.component.AnimationWrapper	1	client-render-interpolation	M2/M8-C	Render transforms from presentation state without borrowing or temporarily writing authoritative components
 core/src/main/java/com/riiablo/engine/client/AutoInteracter.java	com.riiablo.presentation.ClientGameplayContext	1	client-interaction-adapter	M2/M8-C	Submit interaction intent using session data and publish presentation effects as events
 core/src/main/java/com/riiablo/engine/client/ClientItemManager.java	com.riiablo.presentation.ClientGameplayContext	1	client-inventory-adapter	M2/M6/M8-C	Inventory transactions publish committed changes consumed by item effects and label presentation
 core/src/main/java/com/riiablo/engine/client/ClientItemManager.java	com.riiablo.presentation.ItemEffectManager	1	client-inventory-adapter	M2/M6/M8-C	Inventory transactions publish committed changes consumed by item effects and label presentation

@@ -35,6 +35,7 @@ import com.riiablo.presentation.automap.AutomapVisibility;
 import com.riiablo.presentation.automap.AutomapViewport;
 import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
+import com.riiablo.engine.client.ClientTransformView;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Corpse;
@@ -71,6 +72,9 @@ public class AutomapRenderer extends BaseSystem {
   private static final String TAG = "AutomapRenderer";
   
   protected RenderSystem renderer;
+
+  private final com.badlogic.gdx.math.Vector2 markerPosition = new com.badlogic.gdx.math.Vector2();
+  private final com.badlogic.gdx.math.Vector2 markerPlayer = new com.badlogic.gdx.math.Vector2();
 
   @com.artemis.annotations.Wire(name = "clientContext")
   protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
@@ -421,8 +425,9 @@ public class AutomapRenderer extends BaseSystem {
       Position position = mPosition.get(id);
       Class clazz = mClass.get(id);
       if (position == null || clazz == null) continue;
-      Map.Zone entityZone = map == null ? null : map.getZone(position.position.x, position.position.y);
-      if (!AutomapVisibility.isEntityVisible(entityZone, position.position.x, position.position.y)) continue;
+      com.badlogic.gdx.math.Vector2 rendered = ClientTransformView.position(world, id, markerPosition);
+      Map.Zone entityZone = map == null ? null : map.getZone(rendered.x, rendered.y);
+      if (!AutomapVisibility.isEntityVisible(entityZone, rendered.x, rendered.y)) continue;
       String name = null;
       // Hirelings also retain Monster/Class components for animation and
       // combat. Handle them before the generic monster branch; otherwise
@@ -430,19 +435,19 @@ public class AutomapRenderer extends BaseSystem {
       // and the dedicated mercenary marker is never added.
       if (mMercenary != null && mMercenary.has(id)) {
         String mercName = clientContext.charData() == null ? null : clientContext.charData().getMerc().getName();
-        automapManager.addMercenaryMarker(id, position.position.x, position.position.y, mercName);
+        automapManager.addMercenaryMarker(id, rendered.x, rendered.y, mercName);
       } else if (show(Cvars.Client.Automap.ShowCorpses) && mCorpse != null && mCorpse.has(id)) {
         Monster monster = mMonster != null && mMonster.has(id) ? mMonster.get(id) : null;
         name = monster == null || monster.monstats == null ? null : monster.monstats.NameStr;
         automapManager.addEntityMarker(id, AutomapIconType.CORPSE,
-            position.position.x, position.position.y, name,
+            rendered.x, rendered.y, name,
             AutomapManager.COLOR_CORPSE, 4);
       } else if (show(Cvars.Client.Automap.ShowMissiles)
           && mMissile != null && mMissile.has(id)) {
         Missile missile = mMissile.get(id);
         name = missile == null || missile.missile == null ? null : missile.missile.Missile;
         automapManager.addEntityMarker(id, AutomapIconType.MISSILE,
-            position.position.x, position.position.y, name,
+            rendered.x, rendered.y, name,
             AutomapManager.COLOR_MISSILE, 3);
       } else if (show(Cvars.Client.Automap.ShowItems)
           && automapManager.isHackMapEnabled()
@@ -454,7 +459,7 @@ public class AutomapRenderer extends BaseSystem {
         if (item == null || !shouldDisplayItemMarker(item.item)) continue;
         name = item == null || item.item == null ? null : item.item.getNameString();
         automapManager.addEntityMarker(id, AutomapIconType.ITEM,
-            position.position.x, position.position.y, name,
+            rendered.x, rendered.y, name,
             AutomapManager.COLOR_ITEM, 4);
       } else if (mWarp != null && mWarp.has(id)
           && mWarp.get(id).townPortalOwner >= 0) {
@@ -462,7 +467,7 @@ public class AutomapRenderer extends BaseSystem {
         // object entity for the animated visual.  The logical endpoint is the
         // authoritative automap marker; add it before the visual object and
         // let AutomapManager coalesce the two at the same location.
-        automapManager.addPortalMarker(id, position.position.x, position.position.y, null);
+        automapManager.addPortalMarker(id, rendered.x, rendered.y, null);
       } else if (mMonster != null && mMonster.has(id) && mMonster.get(id).monstats != null) {
         Monster monster = mMonster.get(id);
         name = monster.monstats.NameStr;
@@ -472,13 +477,13 @@ public class AutomapRenderer extends BaseSystem {
         }
         boolean interactable = mInteractable != null && mInteractable.has(id);
         if (npc && (!AutomapMarkerPolicy.shouldDisplayNpc(monster.monstats, interactable)
-            || !isNpcWithinRange(position.position.x, position.position.y))) continue;
+            || !isNpcWithinRange(rendered.x, rendered.y))) continue;
         if (!AutomapMarkerPolicy.shouldDisplayMonster(
             monster.monstats, monster.monstats2, npc)) continue;
         int cell = monster.monstats2 == null ? -1 : AutomapEntityCells.monsterCell(monster.monstats2);
         int type = npc ? AutomapIconType.NPC : show(Cvars.Client.Automap.ShowMonsterRanks)
             ? AutomapMarkerPolicy.monsterType(monster.rank) : AutomapIconType.MONSTER;
-        automapManager.addNativeEntityMarker(id, type, position.position.x, position.position.y,
+        automapManager.addNativeEntityMarker(id, type, rendered.x, rendered.y,
             name, npc ? AutomapManager.COLOR_NPC : monsterColor(type),
             npc ? 5 : 4, cell);
       } else if (mObject != null && mObject.has(id) && mObject.get(id).base != null) {
@@ -492,7 +497,7 @@ public class AutomapRenderer extends BaseSystem {
             : show(Cvars.Client.Automap.ShowQuestIndicators)
                 ? AutomapMarkerPolicy.objectType(object.base) : AutomapIconType.OBJECT;
         if (portal) {
-          automapManager.addPortalMarker(id, position.position.x, position.position.y, null);
+          automapManager.addPortalMarker(id, rendered.x, rendered.y, null);
           continue;
         }
         // AutoMap=0 means this object has no Automap representation. Ordinary
@@ -507,18 +512,18 @@ public class AutomapRenderer extends BaseSystem {
         if (cell >= 0 && entityZone != null
             && !AutomapMarkerPolicy.requiresColorOverlay(type)
             && automapManager.hasNearbyTerrainCell(entityZone.levelId(), cell,
-                position.position.x, position.position.y, 16f)) {
+                rendered.x, rendered.y, 16f)) {
           continue;
         }
         automapManager.addNativeEntityMarker(id, type,
-            position.position.x, position.position.y, object.base.Name,
+            rendered.x, rendered.y, object.base.Name,
             objectColor(type), type == AutomapIconType.OBJECT ? 4 : 6, cell);
       } else if (clazz.type == Class.Type.PLR) {
         if (id == clientContext.playerId()) {
-          automapManager.addPlayerMarker(id, position.position.x, position.position.y,
+          automapManager.addPlayerMarker(id, rendered.x, rendered.y,
               clientContext.charData() == null ? null : clientContext.charData().name);
         } else if (isPartyMember(id)) {
-          automapManager.addPartyMarker(id, position.position.x, position.position.y,
+          automapManager.addPartyMarker(id, rendered.x, rendered.y,
               partyMemberName(id));
         }
       }
@@ -535,9 +540,10 @@ public class AutomapRenderer extends BaseSystem {
     int playerId = clientContext.playerId();
     if (playerId == Engine.INVALID_ENTITY || !mPosition.has(playerId)) return false;
     Position player = mPosition.get(playerId);
-    return player != null && player.position != null
-        && AutomapMarkerPolicy.isNpcWithinScreenRange(
-            player.position.x, player.position.y, npcX, npcY,
+    if (player == null || player.position == null) return false;
+    ClientTransformView.position(world, playerId, markerPlayer);
+    return AutomapMarkerPolicy.isNpcWithinScreenRange(
+            markerPlayer.x, markerPlayer.y, npcX, npcY,
             Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
   }
 

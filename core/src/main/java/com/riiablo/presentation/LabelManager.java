@@ -129,7 +129,7 @@ public class LabelManager extends IteratingSystem {
       return;
     }
 
-    tmpVec2.set(mPosition.get(entityId).position);
+    renderer.copyPosition(entityId, tmpVec2);
     iso.toScreen(tmpVec2);
 
     Label label = mLabel.get(entityId);

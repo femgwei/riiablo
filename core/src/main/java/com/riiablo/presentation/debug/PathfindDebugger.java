@@ -52,8 +52,7 @@ public class PathfindDebugger extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     if (!mPathfind.has(entityId)) return;
-    Position position = mPosition.get(entityId);
-    if (!renderer.withinRadius(position.position)) return;
+    if (!renderer.withinRadius(renderer.copyPosition(entityId, tmpVec2a))) return;
     Pathfind pathfind = mPathfind.get(entityId);
     drawDebugPath(pathfind.path, Color.PURPLE, true);
   }

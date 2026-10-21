@@ -190,6 +190,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private final EntitySync sync = new EntitySync();
   private final AuthoritativeSnapshotTimeline snapshotTimeline =
       new AuthoritativeSnapshotTimeline();
+  private final AuthoritativeTransformState authoritativeTransforms =
+      new AuthoritativeTransformState();
   /** Last authoritative deletion tick per server entity.  Deletion packets
    * can be duplicated or arrive after a RoomEx re-entry; retaining this
    * watermark prevents an old delete from removing a newly rebuilt entity
@@ -218,6 +220,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   public ClientNetworkReceiver() {
     super(null, SimulationClock.STEP_SECONDS);
+  }
+
+  /** Last committed wire transform; prediction and rendering cannot edit it. */
+  public AuthoritativeTransformState.Snapshot authoritativeTransform(int entityId) {
+    return authoritativeTransforms.get(entityId);
+  }
+
+  private void removeTransform(int entityId) {
+    authoritativeTransforms.remove(entityId);
+    if (interpolation != null) interpolation.remove(entityId);
   }
 
   /** Latest accepted authoritative tick, or zero before the first snapshot. */
@@ -1012,7 +1024,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       serverEntityLevels.remove(entityData.entityId(), -1);
       if (entityId != Engine.INVALID_ENTITY) {
         pendingMercenaryOwners.remove(entityId, Engine.INVALID_ENTITY);
-        interpolation.remove(entityId);
+        removeTransform(entityId);
         world.delete(entityId);
       }
 
@@ -1062,7 +1074,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
     Class.Type entityType = Class.Type.valueOf(entityData.type());
     boolean movingEntity = entityType == Class.Type.PLR || entityType == Class.Type.MON
         || entityType == Class.Type.MIS;
-    if (!localPlayer && movingEntity && entityData.tick() != 0L) {
+    // Commit the wire value before prediction replays unacknowledged inputs.
+    // Mutable client Position/Velocity/Angle are replicas, not server authority.
+    if (movingEntity && !authoritativeTransforms.commit(entityId, entityData)) return;
+    if (!localPlayer && movingEntity && interpolation != null) {
       PositionP position = findTable(entityData, ComponentP.PositionP, new PositionP());
       AngleP angle = findTable(entityData, ComponentP.AngleP, new AngleP());
       StateP states = findTable(entityData, ComponentP.StateP, new StateP());
@@ -1357,7 +1372,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           && (player() < 0 || localEntityId != player())) {
         staleServerIds.add(entry.key);
         pendingMercenaryOwners.remove(localEntityId, Engine.INVALID_ENTITY);
-        if (interpolation != null) interpolation.remove(localEntityId);
+        removeTransform(localEntityId);
         world.delete(localEntityId);
       }
     }
@@ -1402,6 +1417,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       lastDeletedServerTicks.clear();
       deferredServerEntities.clear();
       if (interpolation != null) interpolation.clear();
+      authoritativeTransforms.clear();
       Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=begin request=" + marker.requestId()
           + " baseline=" + marker.baselineId() + " tick=" + marker.serverTick()
           + " entities=" + marker.entityCount());
@@ -1748,7 +1764,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       serverEntityLevels.remove(result.groundEntityId(), -1);
       deferredServerEntities.remove(result.groundEntityId());
       if (localEntityId != Engine.INVALID_ENTITY) {
-        if (interpolation != null) interpolation.remove(localEntityId);
+        removeTransform(localEntityId);
         world.delete(localEntityId);
       }
       Gdx.app.log(TAG, "[ITEM_MOVE_GROUND] phase=authoritative_remove serverEntity="

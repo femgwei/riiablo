@@ -131,6 +131,7 @@ public final class ClientSimulationAssembly {
       builder.with(new CursorMovementSystem());
       builder.with(new KeyboardMovementSystem()); // 键盘方向键移动支持
     }
+    builder.with(new TouchpadMovementSystem());
     builder
         // Explicit native 25 Hz order: state/stat decay, missile movement and
         // collision, then unit/AI behavior and death processing.

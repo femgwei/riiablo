@@ -30,6 +30,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
@@ -48,6 +49,8 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.util.BBox;
 import com.riiablo.engine.Direction;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.client.ClientTransformView;
+import com.riiablo.engine.client.AuthoritativeInterpolationSystem;
 import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.presentation.component.BBoxWrapper;
 import com.riiablo.engine.client.component.Hovered;
@@ -240,8 +243,8 @@ public class RenderSystem extends BaseEntitySystem {
       boolean corpse2 = mCorpse != null && mCorpse.has(e2);
       if (corpse1 != corpse2) return corpse1 ? -1 : 1;
 
-      Vector2 pos1 = mPosition.get(e1).position;
-      Vector2 pos2 = mPosition.get(e2).position;
+      Vector2 pos1 = renderPosition(e1);
+      Vector2 pos2 = renderPosition(e2);
       int i = Float.compare(pos1.y, pos2.y);
       return i == 0 ? Float.compare(pos1.x, pos2.x): i;
     }
@@ -281,6 +284,8 @@ public class RenderSystem extends BaseEntitySystem {
   protected EnvironmentCycle environment;
 
   private final Vector2 tmpVec2 = new Vector2();
+  private final Vector2 renderAngle = new Vector2();
+  private final IntMap<Vector2> renderPositions = new IntMap<>();
   private final Color ambientLight = new Color(Color.WHITE);
   private int ambientIntensity = 255;
   private final float[] localLights =
@@ -416,17 +421,46 @@ public class RenderSystem extends BaseEntitySystem {
   protected void removed(int entityId) {
     spatialIndex.remove(entityId);
     invisibleBodies.remove(entityId);
+    renderPositions.remove(entityId);
   }
 
   @Override
   protected void dispose() {
     spatialIndex.clear();
     invisibleBodies.clear();
+    renderPositions.clear();
     debugEntitites = null;
   }
 
   public Map getMap() {
     return map;
+  }
+
+  /** Copy-only render view for sprites, lighting, camera, markers and labels. */
+  public Vector2 copyPosition(int entityId, Vector2 out) {
+    return ClientTransformView.position(world, entityId, out);
+  }
+
+  private Vector2 renderPosition(int entityId) {
+    Vector2 out = renderPositions.get(entityId);
+    if (out == null) {
+      out = new Vector2();
+      renderPositions.put(entityId, out);
+    }
+    return copyPosition(entityId, out);
+  }
+
+  private int applyRenderDirection(int entityId, Animation animation) {
+    int original = animation.getDirection();
+    AuthoritativeInterpolationSystem interpolation =
+        world.getSystem(AuthoritativeInterpolationSystem.class);
+    if (animation.getNumDirections() > 0 && interpolation != null
+        && interpolation.hasRenderAngle(entityId)) {
+      interpolation.angle(entityId, renderAngle);
+      animation.setDirection(Direction.radiansToDirection(
+          renderAngle.angleRad(), animation.getNumDirections()));
+    }
+    return original;
   }
 
   public int getSrc() {
@@ -556,7 +590,7 @@ public class RenderSystem extends BaseEntitySystem {
    */
   public void updatePosition(boolean force) {
     if (src == -1) return;
-    Vector2 pos = mPosition.get(src).position;
+    Vector2 pos = renderPosition(src);
     iso.set(pos);
     iso.update();
     if (pos.epsilonEquals(currentPos) && !force && !dirty) return;
@@ -674,7 +708,7 @@ public class RenderSystem extends BaseEntitySystem {
   private void prepareLighting() {
     Map.Zone zone = src >= 0 && mMapWrapper.has(src) ? mMapWrapper.get(src).zone : null;
     if (zone == null && src >= 0 && mPosition.has(src)) {
-      zone = map.getZone(mPosition.get(src).position);
+      zone = map.getZone(renderPosition(src));
     }
     if (zone == null || zone.level == null) {
       batch.resetLighting();
@@ -704,7 +738,7 @@ public class RenderSystem extends BaseEntitySystem {
     float focusX = 0f;
     float focusY = 0f;
     if (src >= 0 && mPosition.has(src)) {
-      Vector2 player = iso.toScreen(tmpVec2.set(mPosition.get(src).position));
+      Vector2 player = iso.toScreen(tmpVec2.set(renderPosition(src)));
       focusX = player.x;
       focusY = player.y;
       int radius = playerLightRadius(lightRadiusModifier(src));
@@ -726,7 +760,7 @@ public class RenderSystem extends BaseEntitySystem {
       float radius = missileLightRadius(
           entry.Light, entry.Flicker, nativeFrame, lightSeed);
       if (radius <= 0f) continue;
-      Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
+      Vector2 light = iso.toScreen(tmpVec2.set(renderPosition(id)));
       float radiusX = radius * Tile.SUBTILE_WIDTH;
       float radiusY = radius * Tile.SUBTILE_HEIGHT;
       if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
@@ -746,7 +780,7 @@ public class RenderSystem extends BaseEntitySystem {
       com.riiablo.engine.server.component.Monster monster = mMonster.get(id);
       int diameter = monsterLightRadius(mCofComponents.get(id).component);
       if (diameter <= 0) continue;
-      Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
+      Vector2 light = iso.toScreen(tmpVec2.set(renderPosition(id)));
       float radius = objectLightRadius(diameter);
       float radiusX = radius * Tile.SUBTILE_WIDTH;
       float radiusY = radius * Tile.SUBTILE_HEIGHT;
@@ -777,7 +811,7 @@ public class RenderSystem extends BaseEntitySystem {
         float radius = overlayLightRadius(
             entry.InitRadius, entry.Radius, overlay.animation.getFrame());
         if (radius <= 0f) continue;
-        Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
+        Vector2 light = iso.toScreen(tmpVec2.set(renderPosition(id)));
         float radiusX = radius * Tile.SUBTILE_WIDTH;
         float radiusY = radius * Tile.SUBTILE_HEIGHT;
         if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
@@ -802,7 +836,7 @@ public class RenderSystem extends BaseEntitySystem {
       if (mode < 0 || mode >= object.base.Lit.length) mode = 0;
       float radius = objectLightRadius(object.base.Lit[mode]);
       if (radius <= 0) continue;
-      Vector2 light = iso.toScreen(tmpVec2.set(mPosition.get(id).position));
+      Vector2 light = iso.toScreen(tmpVec2.set(renderPosition(id)));
       float radiusX = radius * Tile.SUBTILE_WIDTH;
       float radiusY = radius * Tile.SUBTILE_HEIGHT;
       if (light.x + radiusX < renderMinX || light.x - radiusX > renderMaxX
@@ -1010,12 +1044,13 @@ public class RenderSystem extends BaseEntitySystem {
       return;
     }
 
+    Vector2 rendered = renderPosition(entityId);
     MapWrapper mapping = mMapWrapper.get(entityId);
     if (mapping != null && mapping.map != null && mapping.map != map) {
       spatialIndex.remove(entityId);
       return;
     }
-    Map.Zone zone = mapping != null ? mapping.zone : map.getZone(position.position);
+    Map.Zone zone = mapping != null ? mapping.zone : map.getZone(rendered);
     // RoomEx interest is a useful streaming hint for map objects, but it must
     // not be a hard visibility gate for live monsters.  AI/combat can cross a
     // RoomEx boundary before the native near-room list and camera interest
@@ -1039,10 +1074,10 @@ public class RenderSystem extends BaseEntitySystem {
     } else {
       interested = mapping != null && mapping.roomId >= 0
           ? renderInterest.contains(zone, mapping.roomId)
-          : renderInterest.contains(zone, position.position.x, position.position.y);
+          : renderInterest.contains(zone, rendered.x, rendered.y);
     }
     if (interested) {
-      spatialIndex.update(entityId, position.position.x, position.position.y);
+      spatialIndex.update(entityId, rendered.x, rendered.y);
     } else {
       spatialIndex.remove(entityId);
     }
@@ -1055,7 +1090,7 @@ public class RenderSystem extends BaseEntitySystem {
     int orderFlag;
     for (int i = 0, size = entities.size; i < size; i++) {
       int id = entities.get(i);
-      Vector2 pos = mPosition.get(id).position;
+      Vector2 pos = renderPosition(id);
       Object objectComponent = mObject.get(id);
       if (objectComponent != null) {
         CofReference reference = mCofReference.get(id);
@@ -1287,7 +1322,7 @@ public class RenderSystem extends BaseEntitySystem {
 //      if (cofComponent != null && cofComponent.load != Dirty.NONE) return;
 
       // TODO: create EntityRenderer class to encapsulate the following code:
-      Vector2 pos = mPosition.get(entity).position;
+      Vector2 pos = renderPosition(entity);
       Vector2 tmp = iso.toScreen(tmpVec2.set(pos));
 
       Overlay overlay = mOverlay.get(entity);
@@ -1306,8 +1341,13 @@ public class RenderSystem extends BaseEntitySystem {
             region == null ? "null" : region.getTexture().getTextureObjectHandle(),
             region == null ? "null" : region.getRegionWidth() + "x" + region.getRegionHeight()));
       }
-      animation.draw(batch, tmp.x, tmp.y);
-      diagnoseInvisibleBody(entity, animation, pos);
+      int originalDirection = applyRenderDirection(entity, animation);
+      try {
+        animation.draw(batch, tmp.x, tmp.y);
+        diagnoseInvisibleBody(entity, animation, pos);
+      } finally {
+        if (animation.getNumDirections() > 0) animation.setDirection(originalDirection);
+      }
 
       drawOverlayLayers(overlay, tmp.x, tmp.y, false);
   }
@@ -1431,9 +1471,14 @@ public class RenderSystem extends BaseEntitySystem {
         // monsters, NPCs, and scenery retain their normal shadows.
         if (isPortalObject(entity)) continue;
         Animation animation = mAnimationWrapper.get(entity).animation;
-        Vector2 pos = mPosition.get(entity).position;
+        Vector2 pos = renderPosition(entity);
         Vector2 tmp = iso.toScreen(tmpVec2.set(pos));
-        animation.drawShadow(batch, tmp.x, tmp.y, false);
+        int originalDirection = applyRenderDirection(entity, animation);
+        try {
+          animation.drawShadow(batch, tmp.x, tmp.y, false);
+        } finally {
+          if (animation.getNumDirections() > 0) animation.setDirection(originalDirection);
+        }
       }
     }
     batch.resetBlendMode();
@@ -1507,7 +1552,7 @@ public class RenderSystem extends BaseEntitySystem {
       resetWallTransition();
       return 1f;
     }
-    Vector2 player = mPosition.get(src).position;
+    Vector2 player = renderPosition(src);
     float playerLocalX = player.x - zone.x;
     float playerLocalY = player.y - zone.y;
     int playerX = MathUtils.floor((player.x - zone.x) / Tile.SUBTILE_SIZE);
@@ -2378,7 +2423,7 @@ public class RenderSystem extends BaseEntitySystem {
         IntBag entities = debugEntitites.getEntities();
         for (int i = 0, numEntities = entities.size(); i < numEntities; i++) {
           int id = entities.get(i);
-          Vector2 position = mPosition.get(id).position;
+          Vector2 position = renderPosition(id);
           if ((stx <= position.x && position.x < stx + Tile.SUBTILE_SIZE)
            && (sty <= position.y && position.y < sty + Tile.SUBTILE_SIZE)) {
             Vector2 tmp = iso.agg(tmpVec2.set(position)).toScreen().ret();
@@ -2427,7 +2472,7 @@ public class RenderSystem extends BaseEntitySystem {
         IntBag entities = debugEntitites.getEntities();
         for (int i = 0, numEntities = entities.size(); i < numEntities; i++) {
           int id = entities.get(i);
-          Vector2 position = mPosition.get(id).position;
+          Vector2 position = renderPosition(id);
           if ((stx <= position.x && position.x < stx + Tile.SUBTILE_SIZE)
            && (sty <= position.y && position.y < sty + Tile.SUBTILE_SIZE)) {
             builder.setLength(0);
@@ -3567,7 +3612,7 @@ public class RenderSystem extends BaseEntitySystem {
       if (!mPosition.has(entityId)) continue;
 
       // 使用世界坐标
-      Vector2 worldPos = mPosition.get(entityId).position;
+      Vector2 worldPos = renderPosition(entityId);
       
       // 将世界坐标转换为等距坐标，再映射到automap窗口
       float entityIsoX = (worldPos.x - worldPos.y) * AUTOMAP_ISO_X_SCALE;
@@ -3839,7 +3884,7 @@ public class RenderSystem extends BaseEntitySystem {
       if (!isNpc) continue;
       
       // 使用世界坐标
-      Vector2 worldPos = mPosition.get(entityId).position;
+      Vector2 worldPos = renderPosition(entityId);
       
       // 检查实体是否在显示范围内
       if (worldPos.x < viewMinX || worldPos.x > viewMaxX ||
@@ -3931,8 +3976,8 @@ public class RenderSystem extends BaseEntitySystem {
     int rawDirection = Direction.DOWN; // Default direction
     float radians = 0;
     if (mAngle.has(entityId)) {
-      Angle angle = mAngle.get(entityId);
-      radians = MathUtils.atan2(angle.angle.y, angle.angle.x);
+      ClientTransformView.angle(world, entityId, renderAngle);
+      radians = MathUtils.atan2(renderAngle.y, renderAngle.x);
       rawDirection = Direction.radiansToDirection(radians, 8);
     }
     
@@ -4226,8 +4271,8 @@ public class RenderSystem extends BaseEntitySystem {
     
     int direction = Direction.SOUTH;
     if (mAngle.has(entityId)) {
-      Angle angle = mAngle.get(entityId);
-      float radians = MathUtils.atan2(angle.angle.y, angle.angle.x);
+      ClientTransformView.angle(world, entityId, renderAngle);
+      float radians = MathUtils.atan2(renderAngle.y, renderAngle.x);
       direction = Direction.radiansToDirection(radians, 8);
     }
     

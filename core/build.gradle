@@ -682,3 +682,35 @@ task clientUiBoundaryRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M2 player/unit transform authority, prediction and render-copy gate.
+task clientTransformRegression(type: Test) {
+  group = 'verification'
+  description = 'M2 immutable wire transforms, prediction isolation, native precision and render consumers.'
+  dependsOn testClasses, clientUiBoundaryRegression
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform { excludeTags 'visual' }
+  filter {
+    ['com.riiablo.engine.client.Authoritative*Test',
+     'com.riiablo.engine.client.ClientTransform*Test',
+     'com.riiablo.engine.client.ClientPredictionBufferTest',
+     'com.riiablo.engine.client.TouchpadMovementSystemTest',
+     'com.riiablo.engine.client.HoveredManagerTest',
+     'com.riiablo.engine.client.Snapshot*Test',
+     'com.riiablo.engine.client.ClientRenderSystemRunnerTest',
+     'com.riiablo.engine.client.FixedStepAccumulatorTest',
+     'com.riiablo.engine.server.NativePlayerMovementTest',
+     'com.riiablo.engine.server.NativeMonsterMovementTest',
+     'com.riiablo.engine.server.PositionRelocationPrecisionTest',
+     'com.riiablo.engine.server.component.serializer.PositionSerializerTest',
+     'com.riiablo.net.*Movement*Test'].each { includeTestsMatching it }
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

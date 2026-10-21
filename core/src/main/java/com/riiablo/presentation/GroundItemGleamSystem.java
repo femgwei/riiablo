@@ -16,6 +16,7 @@ import com.riiablo.codec.Animation;
 import com.riiablo.codec.DCC;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.client.ClientTransformView;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.profiler.GpuSystem;
@@ -124,7 +125,7 @@ public final class GroundItemGleamSystem extends BaseEntitySystem {
       state.animation.act(delta);
       Position position = mPosition.get(entityId);
       if (position != null) {
-        iso.toScreen(screen.set(position.position));
+        iso.toScreen(ClientTransformView.position(world, entityId, screen));
         state.animation.draw(batch, screen.x, screen.y);
       }
       if (state.animation.isFinished()) state.playing = false;

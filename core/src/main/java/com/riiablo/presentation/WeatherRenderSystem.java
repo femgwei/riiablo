@@ -16,6 +16,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 
@@ -94,6 +95,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   private final Matrix4 projection = new Matrix4();
+  private final Vector2 renderPosition = new Vector2();
   private final ParticleField particles = new ParticleField(RANDOM_SEED);
   private final RainRippleField ripples = new RainRippleField(RANDOM_SEED ^ 0x4D2A7B19L);
   private WeatherCycles weatherCycles;
@@ -106,7 +108,7 @@ public final class WeatherRenderSystem extends BaseSystem {
     int src = renderer.getSrc();
     Map.Zone zone = src >= 0 && mMapWrapper.has(src) ? mMapWrapper.get(src).zone : null;
     if (zone == null && worldMap != null && src >= 0 && mPosition.has(src)) {
-      zone = worldMap.getZone(mPosition.get(src).position);
+      zone = worldMap.getZone(renderer.copyPosition(src, renderPosition));
     }
     Levels.Entry level = zone == null ? null : zone.level;
     Mode eligibleMode = modeFor(level);
@@ -478,7 +480,7 @@ public final class WeatherRenderSystem extends BaseSystem {
         }
       }
 
-      player.set(mPosition.get(source).position);
+      renderer.copyPosition(source, player);
       // Keep the native-looking emission deterministic at the 25 Hz clock.
       // ClientFn=2 runs considerably denser than the old material sampler,
       // but its density remains in a fixed ratio to the actual screen rain.

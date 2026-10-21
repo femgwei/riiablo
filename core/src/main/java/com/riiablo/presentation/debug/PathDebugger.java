@@ -49,7 +49,7 @@ public class PathDebugger extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
-    Vector2 position = mPosition.get(entityId).position;
+    Vector2 position = renderer.copyPosition(entityId, tmpVec2a);
     if (!renderer.withinRadius(position)) return;
     PathWrapper pathWrapper = mPathWrapper.get(entityId);
     shapes.setProjectionMatrix(iso.combined);

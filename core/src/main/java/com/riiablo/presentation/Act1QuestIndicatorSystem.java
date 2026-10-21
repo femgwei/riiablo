@@ -101,7 +101,7 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
     if (data == null || npc.monstats == null || !hasQuestMarker(
         com.riiablo.engine.server.quest.QuestPlayerView.npcType(npc.monstats), data, levelId)) return;
 
-    Vector2 screen = new Vector2(mPosition.get(entityId).position);
+    Vector2 screen = renderer.copyPosition(entityId, new Vector2());
     iso.toScreen(screen);
     if (clientContext.files() == null || clientContext.files().monstats2 == null) return;
     MonStats2.Entry visual = clientContext.files().monstats2.get(npc.monstats.MonStatsEx);
