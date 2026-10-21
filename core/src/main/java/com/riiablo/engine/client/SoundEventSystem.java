@@ -7,6 +7,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SoundEvent;
+import com.riiablo.presentation.ClientSpatialAudioServices;
 import java.util.Objects;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -22,9 +23,9 @@ public final class SoundEventSystem extends PassiveSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
 
-  private final ClientAudioSession session;
+  private final ClientSpatialAudioServices session;
 
-  public SoundEventSystem(ClientAudioSession session) {
+  public SoundEventSystem(ClientSpatialAudioServices session) {
     this.session = Objects.requireNonNull(session, "session");
   }
 
@@ -59,3 +60,4 @@ public final class SoundEventSystem extends PassiveSystem {
     return sourceMap.zone == listenerMap.zone;
   }
 }
+

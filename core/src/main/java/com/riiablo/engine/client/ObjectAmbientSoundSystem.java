@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SoundEmitter;
 import com.riiablo.drlg.TileGrid;
 import com.riiablo.map.DT1;
+import com.riiablo.presentation.ClientEnvironmentAudioServices;
 import java.util.Objects;
 
 /** Creates distance-attenuated environmental loops for native map sound markers. */
@@ -52,13 +53,13 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<SoundEmitter> mSoundEmitter;
 
-  private final ClientAudioSession session;
+  private final ClientEnvironmentAudioServices session;
 
   private boolean riverMarkerAudible;
   private boolean missingRiverSoundLogged;
   private Audio.Instance terrainRiver;
 
-  public ObjectAmbientSoundSystem(ClientAudioSession session) {
+  public ObjectAmbientSoundSystem(ClientEnvironmentAudioServices session) {
     this.session = Objects.requireNonNull(session, "session");
   }
 
@@ -311,3 +312,4 @@ public final class ObjectAmbientSoundSystem extends IteratingSystem {
     stopTerrainRiver();
   }
 }
+
