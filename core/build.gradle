@@ -579,6 +579,26 @@ task clientPresentationBoundaryCheck(type: Exec) {
 
 architectureRegression.dependsOn clientPresentationBoundaryCheck
 
+// M1's final gate records exact legacy client bridges, including LibGDX
+// devices that the original riiablo-package-only report did not see.
+task migrationBoundaryCheck(type: Exec) {
+  group = 'verification'
+  description = 'Rejects new presentation bridges and production dependencies on test harnesses.'
+  workingDir rootProject.projectDir
+  commandLine 'python', rootProject.file('tools/architecture/migration_boundaries.py').absolutePath
+}
+
+task migrationBoundaryToolTest(type: Exec) {
+  group = 'verification'
+  description = 'Checks boundary scanner rejection cases against isolated source fixtures.'
+  workingDir rootProject.projectDir
+  commandLine 'python', '-m', 'unittest', 'discover', '-s', 'tools/architecture',
+      '-p', 'test_migration_boundaries.py'
+}
+
+migrationBoundaryCheck.dependsOn migrationBoundaryToolTest
+architectureRegression.dependsOn migrationBoundaryCheck
+
 
 task mapEntityBoundaryCheck(type: Exec) {
   group = 'verification'

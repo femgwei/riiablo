@@ -76,7 +76,7 @@ tasks.register('verifyModuleBoundaries') {
         def text = file.getText('UTF-8').replaceAll(/(?s)\/\*.*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"/, ' ')
         def forbidden = [
             /\b(?:com\.)?riiablo\.engine\.client\b/,
-            /\bcom\.riiablo\.(?:screen|widget|graphics|audio)\b/,
+            /\bcom\.riiablo\.(?:presentation|screen|widget|graphics|audio)\b/,
             /\bcom\.badlogic\.gdx\.(?:graphics|scenes|audio|backends)\b/,
             /\bRiiablo\s*\./,
             /\bcom\.riiablo\.(?:Riiablo|Files)\b/,
