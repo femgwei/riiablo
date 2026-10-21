@@ -11,6 +11,8 @@ public interface ClientPresentationServices {
   Supplier<GameScreen> gameSupplier();
   Audio audio();
   PaletteIndexedBatch batch();
+  void playEntitySound(int entityId, String sound, boolean loop);
 }
+
 
 

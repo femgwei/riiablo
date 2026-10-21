@@ -4,7 +4,8 @@ import com.artemis.ComponentMapper;
 import com.artemis.BaseEntitySystem;
 import com.artemis.annotations.All;
 import com.badlogic.gdx.utils.IntSet;
-import com.riiablo.audio.MonsterAudio;
+import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.presentation.ClientPresentationServices;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.event.ModeChangeEvent;
@@ -15,6 +16,9 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 public class ObjectBreakSoundEmitter extends BaseEntitySystem {
   protected ComponentMapper<Object> mObject;
   private final IntSet present = new IntSet();
+
+  @com.artemis.annotations.Wire(name = "clientContext")
+  protected ClientPresentationServices clientContext = ClientGameplayContext.fromGlobals();
 
   @Override protected void inserted(int entityId) { present.add(entityId); }
   @Override protected void removed(int entityId) { present.remove(entityId); }
@@ -32,7 +36,7 @@ public class ObjectBreakSoundEmitter extends BaseEntitySystem {
   }
 
   protected void play(int entityId, String sound) {
-    MonsterAudio.play(entityId, sound, true);
+    clientContext.playEntitySound(entityId, sound, true);
   }
 
   static String breakSound(int objectId) {
@@ -118,3 +122,4 @@ public class ObjectBreakSoundEmitter extends BaseEntitySystem {
     }
   }
 }
+

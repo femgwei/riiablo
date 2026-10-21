@@ -105,6 +105,9 @@ public final class ClientGameplayContext implements ClientPresentationServices {
   public com.riiablo.Cursor cursor() { return cursor; }
   public Files files() { return files; }
   @Override public PaletteIndexedBatch batch() { return batch; }
+  @Override public void playEntitySound(int entityId, String sound, boolean loop) {
+    com.riiablo.audio.MonsterAudio.play(entityId, sound, loop);
+  }
   public Fonts fonts() { return fonts; }
   public Colors colors() { return colors; }
   public StringTBLs strings() { return strings; }
@@ -134,6 +137,7 @@ public final class ClientGameplayContext implements ClientPresentationServices {
         Riiablo.palettes);
   }
 }
+
 
 
 
