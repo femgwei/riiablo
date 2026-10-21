@@ -5,7 +5,6 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LosslessTxtTable;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
-import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.server.monster.MonsterAffix;
 import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.mpq.MPQFileHandleResolver;
@@ -46,11 +45,11 @@ final class NativeMonsterEliteRules {
   }
 
   static int bossMin(Levels.Entry level, int difficulty) {
-    return NativeDataTables.value(level.MonUMin, difficulty, 0);
+    return MapDataPort.value(level.MonUMin, difficulty, 0);
   }
 
   static int bossMax(Levels.Entry level, int difficulty) {
-    return NativeDataTables.value(level.MonUMax, difficulty, 0);
+    return MapDataPort.value(level.MonUMax, difficulty, 0);
   }
 
   Roll roll(MonStats.Entry monster, MonStats2.Entry stats, int difficulty, Random random) {

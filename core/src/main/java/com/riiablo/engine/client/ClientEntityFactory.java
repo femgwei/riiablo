@@ -52,6 +52,8 @@ import com.riiablo.engine.server.pet.PetType;
 public class ClientEntityFactory extends ServerEntityFactory {
   private static final String TAG = "ClientEntityFactory";
 
+  @Override public boolean hasClientPresentation() { return true; }
+
   protected ComponentMapper<CofComponentDescriptors> mCofComponentDescriptors;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<BBoxWrapper> mBBoxWrapper;

@@ -582,7 +582,7 @@ architectureRegression.dependsOn clientPresentationBoundaryCheck
 
 task mapEntityBoundaryCheck(type: Exec) {
   group = 'verification'
-  description = 'Rejects new map-to-entity/rules reverse dependency findings against the M1-B baseline.'
+  description = 'Requires zero generation-to-ECS/transport dependencies and rejects new map adapter debt.'
   workingDir rootProject.projectDir
   commandLine 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
       rootProject.file('tools/architecture/check-map-entity-boundary.ps1').absolutePath,
@@ -590,3 +590,35 @@ task mapEntityBoundaryCheck(type: Exec) {
 }
 
 architectureRegression.dependsOn mapEntityBoundaryCheck
+
+task mapBoundaryRegression(type: Test) {
+  group = 'verification'
+  description = 'M1-B headless layout, data, population assembly and warp regressions.'
+  dependsOn testClasses, architectureRegression
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform { excludeTags 'visual' }
+  filter {
+    ['com.riiablo.map.MapPopulationBoundaryTest',
+     'com.riiablo.map.MapHeadlessLayoutResourceTest',
+     'com.riiablo.map.MapBuilderIsolationTest',
+     'com.riiablo.map.MapManagerWaypointTest',
+     'com.riiablo.map.Act1MapBuilderD2MooLayersTest',
+     'com.riiablo.map.ZoneCoordinateAlignmentTest',
+     'com.riiablo.map.RoomExAdjacencyTest',
+     'com.riiablo.map.NativeMonsterEliteRulesTest',
+     'com.riiablo.map.NativeRoomMonsterPopulationResourceTest',
+     'com.riiablo.map.NativeWaypointResourceTest',
+     'com.riiablo.map.Act2Act3TownNpcEntityProjectionTest',
+     'com.riiablo.map.Act4TownNpcEntityProjectionTest',
+     'com.riiablo.map.Act5TownNpcEntityProjectionTest',
+     'com.riiablo.engine.server.NativeDataTablesTest'].each { includeTestsMatching it }
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

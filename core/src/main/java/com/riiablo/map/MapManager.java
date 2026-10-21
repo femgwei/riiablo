@@ -27,6 +27,30 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 public class MapManager extends PassiveSystem {
   private static final String TAG = "MapManager";
   private final NativeObjectPopulation nativeObjectPopulation = new NativeObjectPopulation();
+  private MapPopulationPlan assembledPlan;
+  private int nextPlannedMonster;
+
+  @Wire(name = "client.socket", failOnNull = false)
+  protected com.badlogic.gdx.net.Socket socket;
+
+  @Override protected void initialize() {
+    com.riiablo.engine.MapRuntimeBindings.bind(map, world, factory, socket != null);
+  }
+
+  /** Materializes each generation placement once; room-owned entries stay deferred. */
+  public void createPlannedMonsters() {
+    if (map.isRemoteClient()) return;
+    MapPopulationPlan plan = map.populationPlan();
+    if (plan != assembledPlan) {
+      assembledPlan = plan;
+      nextPlannedMonster = 0;
+    }
+    while (nextPlannedMonster < plan.monsters().size()) {
+      MapPopulationPlan.Monster placement = plan.monsters().get(nextPlannedMonster);
+      factory.createMonster(placement.monsterId, placement.x, placement.y);
+      nextPlannedMonster++;
+    }
+  }
 
   @Wire(name = "map")
   protected Map map;
@@ -52,6 +76,7 @@ public class MapManager extends PassiveSystem {
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
 
   public void createEntities() {
+    createPlannedMonsters();
     for (Map.Zone zone : new Array.ArrayIterator<>(map.zones)) {
       createWarps(zone);
       createEntities(zone);
@@ -309,7 +334,7 @@ public class MapManager extends PassiveSystem {
       boolean clientRiverPresentation = shouldMaterializeSpawnedObject(objectId,
           object.spawned,
           clientPresentationOnly
-              || factory instanceof com.riiablo.engine.client.ClientEntityFactory);
+              || factory.hasClientPresentation());
       if (clientPresentationOnly && !clientRiverPresentation) {
         // Network clients receive ordinary objects from D2Game. Leave their
         // status untouched so this presentation pass cannot claim or suppress

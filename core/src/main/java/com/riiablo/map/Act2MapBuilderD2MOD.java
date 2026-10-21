@@ -1,6 +1,5 @@
 package com.riiablo.map;
 
-import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -10,7 +9,6 @@ import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
-import com.riiablo.engine.server.NativeDataTables;
 
 import com.riiablo.engine.server.quest.Act2TombSelection;
 import com.riiablo.map.Map.Preset;
@@ -93,12 +91,6 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
       // continuation of Valley of Snakes and must be reachable in riiablo.
       {LEVEL_VALLEYOFSNAKES, LEVEL_CANYONOFTHEMAGI}
   };
-
-  @Wire(name = "factory")
-  protected MapPopulationPort factory;
-
-  @Wire(name = "client.socket", failOnNull = false)
-  protected com.badlogic.gdx.net.Socket socket;
 
   /**
    * D2MOD: sub_6FD81B30 - 处理 ROCKYWASTE 的放置
@@ -194,8 +186,8 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
         Gdx.app.error(TAG, "Level not found: " + act2Links[i].level);
         continue;
       }
-      int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
-      int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+      int sizeX = MapDataPort.levelSizeX(level, diff, 1);
+      int sizeY = MapDataPort.levelSizeY(level, diff, 1);
       linkData.coords[i].width = sizeX * 5;  // tile to sub-tile
       linkData.coords[i].height = sizeY * 5;
     }
@@ -299,8 +291,6 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
         }
 
         BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
-        base.factory = factory;
-        base.socket = socket;
 
         int finalX = linkData.coords[i].x + offsetX;
         int finalY = linkData.coords[i].y + offsetY;
@@ -356,9 +346,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
       
       Zone zone;
       BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
-      base.factory = factory;
-      base.socket = socket;
-      
+
       int finalX = linkData.coords[i].x + offsetX;
       int finalY = linkData.coords[i].y + offsetY;
       
@@ -389,7 +377,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
       }
       
       // 设置怪物生成器
-      zone.generator = base.createMonsterGenerator(socket);
+      zone.generator = base.createMonsterGenerator(map.isRemoteClient());
     }
     
     // 处理 CANYONOFTHEMAGI。它不是一个脱离主链的固定坐标区域：
@@ -413,8 +401,6 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
           int selectIndex = MathUtils.random(numFiles - 1);
           int select = fileId[selectIndex];
           BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
-          base.factory = factory;
-          base.socket = socket;
 
           // linkData[5] is Valley of Snakes, the final outdoor link in
           // gAct2OutdoorDrlgLink.  Use its post-layout coordinate and append
@@ -434,7 +420,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
           Zone canyonZone = base.createZoneWithPreset(map, canyonLevel, canyonPreset,
               select, canyonX, canyonY, false);
           if (canyonZone != null) {
-            canyonZone.generator = base.createMonsterGenerator(socket);
+            canyonZone.generator = base.createMonsterGenerator(map.isRemoteClient());
             placeCanyonTombEntries(canyonZone);
           }
 
@@ -711,10 +697,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
               direction.nativeRotation(), direction.branchPresetDef(),
               direction.summonerPresetDef()));
         }
-        zone.generator = new BaseMapBuilderD2MOD(resources) {{
-          factory = Act2MapBuilderD2MOD.this.factory;
-          socket = Act2MapBuilderD2MOD.this.socket;
-        }}.createMonsterGenerator(socket);
+        zone.generator = new BaseMapBuilderD2MOD(resources).createMonsterGenerator(map.isRemoteClient());
         if (target.Id == LEVEL_ARCANESANCTUARY) {
           Act2ArcaneD2MOOLayoutBridge.populateZone(map.d2mooContext(), seed, diff, zone);
         }
@@ -747,10 +730,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
       anchor = createLinkedDungeonZone(map, canyon, diff, seed,
           placement[0], placement[1]);
       if (anchor != null) {
-        anchor.generator = new BaseMapBuilderD2MOD(resources) {{
-          factory = Act2MapBuilderD2MOD.this.factory;
-          socket = Act2MapBuilderD2MOD.this.socket;
-        }}.createMonsterGenerator(socket);
+        anchor.generator = new BaseMapBuilderD2MOD(resources).createMonsterGenerator(map.isRemoteClient());
         generated.add(LEVEL_CANYONOFTHEMAGI);
         queue.add(LEVEL_CANYONOFTHEMAGI);
         created++;
@@ -791,10 +771,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
         Zone zone = createLinkedDungeonZone(map, tomb, diff, seed,
             placement[0], placement[1]);
         if (zone == null) continue;
-        zone.generator = new BaseMapBuilderD2MOD(resources) {{
-          factory = Act2MapBuilderD2MOD.this.factory;
-          socket = Act2MapBuilderD2MOD.this.socket;
-        }}.createMonsterGenerator(socket);
+        zone.generator = new BaseMapBuilderD2MOD(resources).createMonsterGenerator(map.isRemoteClient());
         if (tombId == LEVEL_ARCANESANCTUARY) {
           Act2ArcaneD2MOOLayoutBridge.populateZone(map.d2mooContext(), seed, diff, zone);
         }
@@ -853,10 +830,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
   private Zone createLinkedDungeonZone(Map map, Levels.Entry level, int diff, int seed,
       int x, int y) {
     LvlPrest.Entry preset = findPreset(level.Id);
-    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {{
-      factory = Act2MapBuilderD2MOD.this.factory;
-      socket = Act2MapBuilderD2MOD.this.socket;
-    }};
+    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources);
 
     final boolean presetLevel = level.DrlgType == 2 && preset != null;
     Zone zone;
@@ -876,8 +850,8 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
       }
       zone = base.createZoneWithPreset(map, level, preset, select, x, y, false);
     } else {
-      int tilesX = Math.max(1, NativeDataTables.levelSizeX(level, diff, 1));
-      int tilesY = Math.max(1, NativeDataTables.levelSizeY(level, diff, 1));
+      int tilesX = Math.max(1, MapDataPort.levelSizeX(level, diff, 1));
+      int tilesY = Math.max(1, MapDataPort.levelSizeY(level, diff, 1));
       int gridSizeX = nativeGridSize(tilesX);
       int gridSizeY = nativeGridSize(tilesY);
       // Keep the native dimensions exact.  The ordinary outdoor helper uses
@@ -929,9 +903,9 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
 
   private static int[] findDungeonPlacement(Map map, Zone source, Levels.Entry target,
       int mainIndex) {
-    int targetWidth = Math.max(1, NativeDataTables.levelSizeX(target, source.diff, 1))
+    int targetWidth = Math.max(1, MapDataPort.levelSizeX(target, source.diff, 1))
         * DT1.Tile.SUBTILE_SIZE;
-    int targetHeight = Math.max(1, NativeDataTables.levelSizeY(target, source.diff, 1))
+    int targetHeight = Math.max(1, MapDataPort.levelSizeY(target, source.diff, 1))
         * DT1.Tile.SUBTILE_SIZE;
 
     // The LvlWarp record owns the actual orientation; mainIndex is stable for

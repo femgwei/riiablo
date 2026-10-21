@@ -3,8 +3,6 @@ package com.riiablo.map;
 import java.util.Arrays;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-import com.artemis.ComponentMapper;
-
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.ai.pfa.SmoothableGraphPath;
@@ -28,12 +26,9 @@ import com.badlogic.gdx.utils.Pools;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.COFD2;
 import com.riiablo.codec.excel.Levels;
-import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.LvlTypes;
-import com.riiablo.engine.Engine;
 
-import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.pfa.AStarPathFinder;
 import com.riiablo.map.pfa.Point2;
 import com.riiablo.drlg.TileGrid;
@@ -332,8 +327,10 @@ public class Map implements Disposable {
   final IntMap<DT1s> dt1s = new IntMap<>();
   final Array<Zone> zones = new Array<>(); // TODO: replace with R-tree? https://en.wikipedia.org/wiki/R-tree
 
-  ComponentMapper<Warp> mWarp;
-  MapPopulationPort factory;
+  private boolean remoteClient;
+  private boolean clientPresentation;
+  private MapPopulationPlan populationPlan = new MapPopulationPlan();
+  private java.util.function.IntUnaryOperator warpIndex = entityId -> Integer.MIN_VALUE;
 
   public Map(int seed, int diff) {
     this(seed, diff, null);
@@ -361,10 +358,19 @@ public class Map implements Disposable {
   public Act4MapBuilderD2MOD act4Builder() { return (Act4MapBuilderD2MOD) nativeBuilders[3]; }
   public Act5MapBuilderD2MOD act5Builder() { return (Act5MapBuilderD2MOD) nativeBuilders[4]; }
 
-  /** Wire only this map's builders; never overwrite another session's factory/socket. */
-  public void injectBuilders(com.artemis.World world) {
-    for (MapBuilder builder : nativeBuilders) world.inject(builder);
-    for (MapBuilder builder : legacyBuilders) world.inject(builder);
+  /** Session capabilities supplied by the host, without an ECS world or socket. */
+  public void configureGeneration(boolean remoteClient, boolean clientPresentation) {
+    this.remoteClient = remoteClient;
+    this.clientPresentation = clientPresentation;
+  }
+
+  public boolean isRemoteClient() { return remoteClient; }
+  public boolean hasClientPresentation() { return clientPresentation; }
+  public MapPopulationPlan populationPlan() { return populationPlan; }
+
+  /** Runtime metadata lookup owned and installed by the assembly adapter. */
+  public void bindWarpIndex(java.util.function.IntUnaryOperator warpIndex) {
+    this.warpIndex = java.util.Objects.requireNonNull(warpIndex, "warpIndex");
   }
 
   public com.riiablo.Files files() {
@@ -416,11 +422,6 @@ public class Map implements Disposable {
   /** Returns the game difficulty used to build this map (Normal..Hell). */
   public int getDifficulty() {
     return MathUtils.clamp(diff, 0, 2);
-  }
-
-  /** Binds the ECS entity factory used by zone generation. */
-  public void setEntityFactory(MapPopulationPort factory) {
-    this.factory = factory;
   }
 
   public void setAct(int act) {
@@ -597,6 +598,7 @@ public class Map implements Disposable {
 
   @Override
   public void dispose() {
+    populationPlan = new MapPopulationPlan();
     try (Disposal cleanup = new Disposal()) {
       for (Zone zone : zones) cleanup.run(() -> Zone.free(zone));
       zones.clear();
@@ -1164,8 +1166,8 @@ public class Map implements Disposable {
   Zone addZone(Levels.Entry level, LvlPrest.Entry preset, int ds1) {
     assert preset.LevelId != 0 : "presets should have an assigned level id";
     Zone zone = addZone(level,
-        NativeDataTables.levelSizeX(level, diff, 1),
-        NativeDataTables.levelSizeY(level, diff, 1));
+        MapDataPort.levelSizeX(level, diff, 1),
+        MapDataPort.levelSizeY(level, diff, 1));
     zone.presets[0][0] = Preset.of(preset, ds1);
     return zone;
   }
@@ -1487,7 +1489,7 @@ public class Map implements Disposable {
     public String levelTypeName() { return type == null ? null : type.Name; }
     /** D2MOO AutoMap.txt LevelName (for example, "1 Wilderness"). */
     public String automapLevelName() {
-      return com.riiablo.engine.client.automap.AutomapLevelNames.resolve(levelAct(),
+      return MapLevelNames.resolve(levelAct(),
           type == null ? null : type.Name, level != null && level.IsInside);
     }
 
@@ -1535,8 +1537,8 @@ public class Map implements Disposable {
 
     Zone set(Map map, Levels.Entry level, int diff, int gridSizeX, int gridSizeY) {
       setInternal(map, level, diff, gridSizeX, gridSizeY);
-      tilesX   = NativeDataTables.levelSizeX(level, diff, 1);
-      tilesY   = NativeDataTables.levelSizeY(level, diff, 1);
+      tilesX   = MapDataPort.levelSizeX(level, diff, 1);
+      tilesY   = MapDataPort.levelSizeY(level, diff, 1);
       width    = tilesX * DT1.Tile.SUBTILE_SIZE;
       height   = tilesY * DT1.Tile.SUBTILE_SIZE;
       gridsX   = tilesX / gridSizeX;
@@ -2275,9 +2277,14 @@ public class Map implements Disposable {
     /** Should not be accessed directly. Managed by {@link com.riiablo.map.MapManager} */
     @Deprecated
     void addEntity(int entityId) {
-      if (entityId == Engine.INVALID_ENTITY) return;
+      if (entityId == -1) return;
       if (entities == EMPTY_ENTITY_ARRAY) entities = new IntArray();
       entities.add(entityId);
+    }
+
+    /** Records an eager compatibility/quest spawn without allocating an entity. */
+    void queueMonster(int monsterId, float x, float y) {
+      if (!map.remoteClient) map.populationPlan.addMonster(this, monsterId, x, y);
     }
 
     /** Adds a dynamically-created entity to this zone's render/collision index. */
@@ -2285,24 +2292,9 @@ public class Map implements Disposable {
       addEntity(entityId);
     }
 
-    /** Should not be accessed directly. Managed by {@link com.riiablo.map.MapManager} */
-    @Deprecated
-    void addWarp(int index, int warpX, int warpY) {
-      final int x = this.x + (warpX * DT1.Tile.SUBTILE_SIZE);
-      final int y = this.y + (warpY * DT1.Tile.SUBTILE_SIZE);
-      if (entities == EMPTY_ENTITY_ARRAY) entities = new IntArray();
-      int entity = map.factory.createWarp(index, x, y);
-      if (entity != Engine.INVALID_ENTITY) {
-        entities.add(entity);
-        if (warpEntities == EMPTY_ENTITY_ARRAY) warpEntities = new IntArray();
-        if (!warpEntities.contains(entity)) warpEntities.add(entity);
-      }
-    }
-
     public void addWarp(int entityId) {
-      assert map.mWarp.has(entityId);
       addEntity(entityId);
-      if (entityId != Engine.INVALID_ENTITY) {
+      if (entityId != -1) {
         if (warpEntities == EMPTY_ENTITY_ARRAY) warpEntities = new IntArray();
         if (!warpEntities.contains(entityId)) warpEntities.add(entityId);
       }
@@ -2310,7 +2302,7 @@ public class Map implements Disposable {
 
     /** Removes a dynamic Warp from this zone without touching the ECS entity. */
     public void removeWarp(int entityId) {
-      if (entityId == Engine.INVALID_ENTITY) return;
+      if (entityId == -1) return;
       if (warpEntities != EMPTY_ENTITY_ARRAY) warpEntities.removeValue(entityId);
       if (entities != EMPTY_ENTITY_ARRAY) entities.removeValue(entityId);
     }
@@ -2327,14 +2319,13 @@ public class Map implements Disposable {
     public int findWarp(int id) {
       for (int i = 0, size = warpEntities.size; i < size; i++) {
         int entityId = warpEntities.get(i);
-        if (!map.mWarp.has(entityId)) continue;
-        Warp warp = map.mWarp.get(entityId);
-        if (warp != null && warp.index == id) {
+        int index = map.warpIndex.applyAsInt(entityId);
+        if (index != Integer.MIN_VALUE && index == id) {
           return entityId;
         }
       }
 
-      return Engine.INVALID_ENTITY;
+      return -1;
     }
 
     public int getLocalTX(int tx) { return tx - this.tx; }
@@ -3335,7 +3326,6 @@ public class Map implements Disposable {
       copyFloors (zone, Map.FLOOR_OFFSET,  tx, ty);
       copyWalls  (zone, Map.WALL_OFFSET,   tx, ty);
       copyShadows(zone, Map.SHADOW_OFFSET, tx, ty);
-      //copyObjects(zone, tx, ty);
     }
 
     void copyFloors(Zone zone, int layer, int tx, int ty) {
@@ -3413,7 +3403,6 @@ public class Map implements Disposable {
                       y * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE + preset.PopPad);
                 zone.putCell(layer, tx, ty, cell);
               } else if (ID.WARPS.contains(cell.id) && cell.subIndex != 1) {
-                //zone.addWarp(cell.id, tx, ty);
                 zone.putCell(layer, tx, ty, cell);
               }
             }
@@ -3487,18 +3476,6 @@ public class Map implements Disposable {
             zone.tiles[layer][zone.tileIndex(tx, ty)] = zone.dt1s.get(cell);
           }
         }
-      }
-    }
-
-    /** Should not be accessed directly. Managed by {@link com.riiablo.map.MapManager} */
-    @Deprecated
-    void copyObjects(Zone zone, int tx, int ty) {
-      final int x = zone.x + (tx * DT1.Tile.SUBTILE_SIZE);
-      final int y = zone.y + (ty * DT1.Tile.SUBTILE_SIZE);
-      for (int i = 0; i < ds1.numObjects; i++) {
-        DS1.Object obj = ds1.objects[i];
-        int entityId = zone.map.factory.createObject(this, obj, x + obj.x, y + obj.y);
-        zone.addEntity(entityId); // FIXME: waypoints are placed correctly when adding 0.25f to ds1 object position -- is this consistent with others?
       }
     }
 

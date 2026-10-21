@@ -1,6 +1,4 @@
- package com.riiablo.map;
-
-import com.artemis.annotations.Wire;
+package com.riiablo.map;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
@@ -33,7 +31,6 @@ import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.SuperUniques;
-import com.riiablo.engine.server.NativeDataTables;
 
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
 import com.riiablo.drlg.DrlgContext;
@@ -163,15 +160,15 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     if (stony == null || cold == null || blood == null || town == null || burial == null
         || black == null || tamoe == null || dark == null || underground == null) return null;
 
-    int sw = NativeDataTables.levelSizeX(stony, diff, 1), sh = NativeDataTables.levelSizeY(stony, diff, 1);
-    int cw = NativeDataTables.levelSizeX(cold, diff, 1), ch = NativeDataTables.levelSizeY(cold, diff, 1);
+    int sw = MapDataPort.levelSizeX(stony, diff, 1), sh = MapDataPort.levelSizeY(stony, diff, 1);
+    int cw = MapDataPort.levelSizeX(cold, diff, 1), ch = MapDataPort.levelSizeY(cold, diff, 1);
     int bw = 56, bh = 96; // Blood Moor 固定 56x96
-    int tw = NativeDataTables.levelSizeX(town, diff, 1), th = NativeDataTables.levelSizeY(town, diff, 1);
-    int burw = NativeDataTables.levelSizeX(burial, diff, 1), burh = NativeDataTables.levelSizeY(burial, diff, 1);
-    int blw = NativeDataTables.levelSizeX(black, diff, 1), blh = NativeDataTables.levelSizeY(black, diff, 1);
-    int taw = NativeDataTables.levelSizeX(tamoe, diff, 1), tah = NativeDataTables.levelSizeY(tamoe, diff, 1);
-    int daw = NativeDataTables.levelSizeX(dark, diff, 1), dah = NativeDataTables.levelSizeY(dark, diff, 1);
-    int unw = NativeDataTables.levelSizeX(underground, diff, 1), unh = NativeDataTables.levelSizeY(underground, diff, 1);
+    int tw = MapDataPort.levelSizeX(town, diff, 1), th = MapDataPort.levelSizeY(town, diff, 1);
+    int burw = MapDataPort.levelSizeX(burial, diff, 1), burh = MapDataPort.levelSizeY(burial, diff, 1);
+    int blw = MapDataPort.levelSizeX(black, diff, 1), blh = MapDataPort.levelSizeY(black, diff, 1);
+    int taw = MapDataPort.levelSizeX(tamoe, diff, 1), tah = MapDataPort.levelSizeY(tamoe, diff, 1);
+    int daw = MapDataPort.levelSizeX(dark, diff, 1), dah = MapDataPort.levelSizeY(dark, diff, 1);
+    int unw = MapDataPort.levelSizeX(underground, diff, 1), unh = MapDataPort.levelSizeY(underground, diff, 1);
 
     // The fallback only covers the original nine-map outdoor bootstrap; the
     // native bridge extends its default result with the monastery mainline.
@@ -200,12 +197,6 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     r.townDirection = 3; // 出口朝东(Blood)
     return r;
   }
-
-  @Wire(name = "factory")
-  protected MapPopulationPort factory;
-
-  @Wire(name = "client.socket", failOnNull = false)
-  protected com.badlogic.gdx.net.Socket socket;
 
   // 简化版 DRLG 上下文与 Level 映射，仅用于调试和后续 DRLGOUTDOORS 移植。
   private DrlgContext drlgContext;
@@ -262,7 +253,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
 
     // 完全采用 D2MOO_JAVA createLevelConnections 生成布局；失败时使用 Levels.txt 的简单回退布局
     boolean clientPresentation =
-        factory instanceof com.riiablo.engine.client.ClientEntityFactory;
+        map.hasClientPresentation();
     LayoutAndDrlg layoutAndDrlg = Act1D2MOOLayoutBridge.getLayoutAndDrlg(
         seed, diff, burialGroundsId, clientPresentation);
     Act1LayoutResult result;
@@ -336,8 +327,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           // 理论上城镇应当是 PRESET；若数据不一致，则退回到随机生成，防止读图错乱
           int gridSizeX = OutdoorGrid.GRID_SIZE_TILES;
           int gridSizeY = OutdoorGrid.GRID_SIZE_TILES;
-          int tilesX = NativeDataTables.levelSizeX(level, diff, 1);
-          int tilesY = NativeDataTables.levelSizeY(level, diff, 1);
+          int tilesX = MapDataPort.levelSizeX(level, diff, 1);
+          int tilesY = MapDataPort.levelSizeY(level, diff, 1);
           int gridsX = tilesX / gridSizeX;
           int gridsY = tilesY / gridSizeY;
           townZone = map.addZone(level, gridSizeX, gridSizeY, gridsX, gridsY);
@@ -523,8 +514,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
       }
       
       // 为野外区域设置怪物生成器
-      // 将 socket 和 seed 作为 final 变量传递给匿名类，确保能正确访问
-      final com.badlogic.gdx.net.Socket finalSocket = socket;
+      // Capture session capabilities and seed for this map only.
+      final boolean remoteClient = map.isRemoteClient();
       final int finalSeed = seed;
       zone.generator = new Zone.Generator() {
         // D2MOO compares each 0..99999 game-seed roll directly with MonDen.
@@ -544,9 +535,9 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
             monsters = new MonStats.Entry[0];
             Gdx.app.log(TAG, String.format(
                 "[MONSTER_SPAWN] phase=generator_init level=%s(%d) candidates=0 "
-                    + "clientSocket=%s factory=%s reason=no_level_monsters",
-                zone.level.LevelName, zone.level.Id, finalSocket != null,
-                zone.map.factory != null));
+                    + "remoteClient=%s populationEnabled=%s reason=no_level_monsters",
+                zone.level.LevelName, zone.level.Id, remoteClient,
+                !zone.map.isRemoteClient()));
             return;
           }
 
@@ -581,9 +572,9 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
             monsters = new MonStats.Entry[0];
             Gdx.app.log(TAG, String.format(
                 "[MONSTER_SPAWN] phase=generator_init level=%s(%d) candidates=0 "
-                    + "clientSocket=%s factory=%s reason=no_weighted_monsters",
-                zone.level.LevelName, zone.level.Id, finalSocket != null,
-                zone.map.factory != null));
+                    + "remoteClient=%s populationEnabled=%s reason=no_weighted_monsters",
+                zone.level.LevelName, zone.level.Id, remoteClient,
+                !zone.map.isRemoteClient()));
             return;
           }
 
@@ -598,9 +589,9 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           }
           Gdx.app.log(TAG, String.format(
               "[MONSTER_SPAWN] phase=generator_init level=%s(%d) candidates=%d "
-                  + "clientSocket=%s factory=%s",
+                  + "remoteClient=%s populationEnabled=%s",
               zone.level.LevelName, zone.level.Id, monsters.length,
-              finalSocket != null, zone.map.factory != null));
+              remoteClient, !zone.map.isRemoteClient()));
         }
 
         @Override
@@ -734,8 +725,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
                 continue;
               }
               
-              // 生成怪物（仅在客户端）
-              if (finalSocket == null && zone.map.factory != null && monsters != null && monsters.length > 0) {
+              // Record authoritative compatibility placements; network clients receive replicas.
+              if (!remoteClient && monsters != null && monsters.length > 0) {
                 int populationTile = x * gridSize + y;
                 int populationAttempts =
                     NativeMonsterRegion.populationAttemptsForGameTile(populationTile);
@@ -748,8 +739,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
                   if (monster == null) continue;
                   if (!NativeMonsterRegion.sparsePopulationRoll(
                       monster.sparsePopulate, MathUtils.random(99))) continue;
-                  int minGroup = NativeDataTables.minGroup(monster);
-                  int maxGroup = NativeDataTables.maxGroup(monster);
+                  int minGroup = MapDataPort.minGroup(monster);
+                  int maxGroup = MapDataPort.maxGroup(monster);
                   if (NativeMonsterRegion.isSingleMemberNormalGroup(
                       monster.BaseId, monster.Id)) {
                     minGroup = 1;
@@ -769,7 +760,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
                     if (renderD2MooExport) {
                       queueMonsterSpawn(zone.level.Id, monster, px, py, packId, false);
                     } else {
-                      zone.map.factory.createMonster(monster, px, py);
+                      zone.queueMonster(monster.hcIdx, px, py);
                     }
                   }
 
@@ -798,7 +789,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
                     if (renderD2MooExport) {
                       queueMonsterSpawn(zone.level.Id, minion, mx, my, packId, true);
                     } else {
-                      zone.map.factory.createMonster(minion, mx, my);
+                      zone.queueMonster(minion.hcIdx, mx, my);
                     }
                   }
                 }
@@ -1959,9 +1950,9 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     Array<PendingMonsterSpawn> pending = pendingMonsterSpawns.remove(zone.level.Id);
     if (pending == null || pending.size == 0) {
       Gdx.app.log(TAG, String.format(
-          "[MONSTER_SPAWN] phase=pending_flush level=%s(%d) queued=%d factory=%s action=skip",
+          "[MONSTER_SPAWN] phase=pending_flush level=%s(%d) queued=%d populationEnabled=%s action=skip",
           zone.level.LevelName, zone.level.Id, pending == null ? 0 : pending.size,
-          zone.map.factory != null));
+          !zone.map.isRemoteClient()));
       return;
     }
 
@@ -2001,8 +1992,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
         room.addMonsterSpawn(candidate.monsterId, spawnX, spawnY,
             candidate.packId, candidate.minion);
         deferred++;
-      } else if (zone.map.factory != null) {
-        zone.map.factory.createMonster(candidate.monsterId, spawnX, spawnY);
+      } else if (!zone.map.isRemoteClient()) {
+        zone.queueMonster(candidate.monsterId, spawnX, spawnY);
         spawned++;
       } else {
         rejected++;
@@ -2025,17 +2016,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
   private void spawnBloodRaven(Zone zone) {
     if (zone == null || zone.level == null || zone.level.Id != burialGroundsId) return;
 
-    // Map generation is driven through Map.Zone and the factory is injected on
-    // Map itself.  Act1MapBuilderD2MOD is a singleton, but GameScreen injects
-    // the legacy builder, so its own @Wire field is not guaranteed to be set.
-    // Ordinary D2MOO monsters already use zone.map.factory for this reason.
-    MapPopulationPort spawnFactory = resolveQuestSpawnFactory(zone, factory);
-    if (spawnFactory == null) {
-      Gdx.app.error(TAG, String.format(
-          "[BLOODRAVEN_SPAWN] phase=failed reason=factory_unavailable level=%s(%d)",
-          zone.level.LevelName, zone.level.Id));
-      return;
-    }
+    if (zone.map.isRemoteClient()) return;
     if (!questBossSpawned.add(zone.level.Id)) return;
 
     MonStats.Entry bloodRaven = files().monstats.get("bloodraven");
@@ -2081,17 +2062,11 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
 
     float worldX = zone.x() + spawnX;
     float worldY = zone.y() + spawnY;
-    int entityId = spawnFactory.createMonster(bloodRaven, worldX, worldY);
+    zone.queueMonster(bloodRaven.hcIdx, worldX, worldY);
     Gdx.app.log(TAG, String.format(
-        "[BLOODRAVEN_SPAWN] phase=%s level=%s(%d) monster=%s entity=%d local=(%d,%d) world=(%.1f,%.1f) centerWalkable=%s",
-        entityId >= 0 ? "created" : "failed", zone.level.LevelName, zone.level.Id,
-        bloodRaven.Id, entityId, spawnX, spawnY, worldX, worldY, centerWalkable));
-  }
-
-  /** Selects the same authoritative factory used by ordinary zone spawns. */
-  static MapPopulationPort resolveQuestSpawnFactory(Zone zone, MapPopulationPort fallback) {
-    return zone != null && zone.map != null && zone.map.factory != null
-        ? zone.map.factory : fallback;
+        "[BLOODRAVEN_SPAWN] phase=planned level=%s(%d) monster=%s local=(%d,%d) world=(%.1f,%.1f) centerWalkable=%s",
+        zone.level.LevelName, zone.level.Id,
+        bloodRaven.Id, spawnX, spawnY, worldX, worldY, centerWalkable));
   }
 
   static WalkableRegion largestWalkableRegion(
@@ -4976,7 +4951,4 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     return zone != null && zone.dt1s != null ? zone.dt1s.get(id) : null;
   }
 }
-
-
-
 

@@ -6218,9 +6218,7 @@ public class D2GS extends ApplicationAdapter {
       }
     });
 
-    world.inject(map);
-    map.setEntityFactory(factory);
-    map.injectBuilders(world);
+    com.riiablo.engine.MapRuntimeBindings.bind(map, world, factory, false);
 
     map.generate();
     mapManager.createEntities();

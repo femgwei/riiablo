@@ -247,8 +247,7 @@ public class Main extends ApplicationAdapter {
         ;
     Riiablo.engine = world = new World(config);
 
-    world.inject(map);
-    map.injectBuilders(world);
+    com.riiablo.engine.MapRuntimeBindings.bind(map, world, factory, false);
     world.inject(packetProcessor);
 
     map.generate();

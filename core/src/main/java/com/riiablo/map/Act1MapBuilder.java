@@ -1,14 +1,10 @@
 package com.riiablo.map;
 
-import com.artemis.annotations.Wire;
-
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.net.Socket;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
-import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
 
@@ -23,12 +19,6 @@ public final class Act1MapBuilder extends MapBuilderResources implements MapBuil
   private static final String TAG = "Act1MapBuilder";
   private static final boolean DEBUG       = true;
   private static final boolean DEBUG_BUILD = DEBUG && false;
-
-  @Wire(name = "factory")
-  protected MapPopulationPort factory;
-
-  @Wire(name = "client.socket", failOnNull = false)
-  protected Socket socket;
 
   @Override
   public void generate(Map map, int seed, int diff) {
@@ -115,9 +105,9 @@ public final class Act1MapBuilder extends MapBuilderResources implements MapBuil
           for (int y = 0; y < zone.gridSizeY; y++, ty++) {
             // TODO: Zone.index() can be replaced with incrementer
             zone.getLayer(Map.FLOOR_OFFSET)[Zone.index(zone.tilesX, tx, ty)] = dt1s.get(0);
-            if (socket != null) continue;
+            if (zone.map.isRemoteClient()) continue;
             if (MathUtils.randomBoolean(SPAWN_MULT
-                * NativeDataTables.value(zone.level.MonDen, zone.diff, 0) / 100000f)) {
+                * MapDataPort.value(zone.level.MonDen, zone.diff, 0) / 100000f)) {
               int i = MathUtils.random(monsters.length - 1);
               MonStats.Entry monster = monsters[i];
               int count = monster.MinGrp == monster.MaxGrp
@@ -126,7 +116,7 @@ public final class Act1MapBuilder extends MapBuilderResources implements MapBuil
               for (i = 0; i < count; i++) {
                 float px = zone.getGlobalX(tx * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
                 float py = zone.getGlobalY(ty * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-                factory.createMonster(monster, px, py);
+                zone.queueMonster(monster.hcIdx, px, py);
               }
             }
           }

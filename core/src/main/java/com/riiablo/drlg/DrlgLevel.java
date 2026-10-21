@@ -1,7 +1,7 @@
 package com.riiablo.drlg;
 
 import com.riiablo.codec.excel.Levels;
-import com.riiablo.engine.server.NativeDataTables;
+import com.riiablo.map.MapDataPort;
 
 /**
  * 单个关卡的 DRLG 视图（简化版），对应 D2MOO 的 D2DrlgLevelStrc。
@@ -32,8 +32,8 @@ public class DrlgLevel {
 
   public DrlgLevel(Levels.Entry entry, int diff) {
     this(entry, diff,
-        NativeDataTables.levelSizeX(entry, diff, 1),
-        NativeDataTables.levelSizeY(entry, diff, 1));
+        MapDataPort.levelSizeX(entry, diff, 1),
+        MapDataPort.levelSizeY(entry, diff, 1));
   }
 
   /**

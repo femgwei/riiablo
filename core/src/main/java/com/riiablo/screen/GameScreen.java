@@ -826,10 +826,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         SimulationClock.TICKS_PER_SECOND, SimulationClock.STEP_SECONDS,
         MAX_SIMULATION_STEPS_PER_RENDER, renderSystemRunner.size()));
 
-    // hacked until I can rewrite into proper system
-    engine.inject(map);
-    map.setEntityFactory(factory);
-    map.injectBuilders(engine);
+    // Bind session capabilities and runtime metadata outside map generation.
+    com.riiablo.engine.MapRuntimeBindings.bind(map, engine, factory, socket != null);
 
     if (mobileControls != null) engine.inject(mobileControls);
 

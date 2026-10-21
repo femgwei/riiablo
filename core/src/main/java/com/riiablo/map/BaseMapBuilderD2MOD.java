@@ -1,6 +1,5 @@
 package com.riiablo.map;
 
-import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
@@ -10,7 +9,6 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
 
-import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
@@ -38,10 +36,6 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
   protected static final int DIR_WEST = 1;
   protected static final int DIR_NORTH = 2;
   protected static final int DIR_EAST = 3;
-
-  // 这些字段在子类中会被 @Wire 注入
-  protected MapPopulationPort factory;
-  protected com.badlogic.gdx.net.Socket socket;
 
   /**
    * D2MOD: sub_6FD81850 - 根据方向计算区域坐标偏移（用于城镇等）
@@ -207,8 +201,8 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
     int gridSizeY = OutdoorGrid.GRID_SIZE_TILES;  // 每个网格 8 tiles
     
     // 计算网格数量
-    int tilesX = Math.max(gridSizeX, NativeDataTables.levelSizeX(level, diff, 1));
-    int tilesY = Math.max(gridSizeY, NativeDataTables.levelSizeY(level, diff, 1));
+    int tilesX = Math.max(gridSizeX, MapDataPort.levelSizeX(level, diff, 1));
+    int tilesY = Math.max(gridSizeY, MapDataPort.levelSizeY(level, diff, 1));
     int gridsX = Math.max(1, (tilesX + gridSizeX - 1) / gridSizeX);
     int gridsY = Math.max(1, (tilesY + gridSizeY - 1) / gridSizeY);
     
@@ -236,7 +230,7 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
   /**
    * 创建通用的怪物生成器
    */
-  protected Zone.Generator createMonsterGenerator(final com.badlogic.gdx.net.Socket finalSocket) {
+  protected Zone.Generator createMonsterGenerator(final boolean remoteClient) {
     return new Zone.Generator() {
       MonStats.Entry[] monsters;
       boolean nativePopulationQueued;
@@ -342,8 +336,8 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
               }
             }
             
-            // 生成怪物（仅在客户端）
-            if (finalSocket == null && zone.map.factory != null && monsters != null && monsters.length > 0) {
+            // Record authoritative compatibility placements; network clients receive replicas.
+            if (!remoteClient && monsters != null && monsters.length > 0) {
               int populationTile = x * gridSize + y;
               int populationAttempts =
                   NativeMonsterRegion.populationAttemptsForGameTile(populationTile);
@@ -355,8 +349,8 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
                 if (selectedMonster == null) continue;
                 if (!NativeMonsterRegion.sparsePopulationRoll(
                     selectedMonster.sparsePopulate, MathUtils.random(99))) continue;
-                int minGroup = NativeDataTables.minGroup(selectedMonster);
-                int maxGroup = NativeDataTables.maxGroup(selectedMonster);
+                int minGroup = MapDataPort.minGroup(selectedMonster);
+                int maxGroup = MapDataPort.maxGroup(selectedMonster);
                 if (NativeMonsterRegion.isSingleMemberNormalGroup(
                     selectedMonster.BaseId, selectedMonster.Id)) {
                   minGroup = 1;
@@ -367,7 +361,7 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
                 for (int j = 0; j < count; j++) {
                   float px = zone.getGlobalX((currentTx - zone.tx) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
                   float py = zone.getGlobalY((currentTy - zone.ty) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-                  zone.map.factory.createMonster(selectedMonster, px, py);
+                  zone.queueMonster(selectedMonster.hcIdx, px, py);
                 }
               }
             }
@@ -378,7 +372,7 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
       @Override
       public void finish(Zone zone) {
         if (zone.nativeTileGrid() == null || !zone.hasNativeRoomTopology()
-            || zone.isTown() || finalSocket != null || nativePopulationQueued) return;
+            || zone.isTown() || remoteClient || nativePopulationQueued) return;
         java.util.Random rng = new java.util.Random(NativeLevelSeed.forLevel(zone.map.seed(), zone.level.Id));
         int packId = 0;
         int uniqueCount = 0, populationRooms = 0, visitedRooms = 0;
@@ -426,7 +420,7 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
               }
               if (monster == null || !NativeMonsterRegion.sparsePopulationRoll(
                   monster.sparsePopulate, rng.nextInt(100))) continue;
-              int min = NativeDataTables.minGroup(monster), max = NativeDataTables.maxGroup(monster);
+              int min = MapDataPort.minGroup(monster), max = MapDataPort.maxGroup(monster);
               if (NativeMonsterRegion.isSingleMemberNormalGroup(monster.BaseId, monster.Id)) min = max = 1;
               int count = min == max ? max : min + rng.nextInt(max - min + 1);
               NativeRoomMonsterPopulation.addGroup(zone, room, monster, count, packId++, rng);

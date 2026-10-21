@@ -1,6 +1,5 @@
 package com.riiablo.map;
 
-import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -10,7 +9,6 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.LvlWarp;
-import com.riiablo.engine.server.NativeDataTables;
 
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
@@ -98,12 +96,6 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
       {LEVEL_KURASTCAUSEWAY, LEVEL_TRAVINCAL}
   };
 
-  @Wire(name = "factory")
-  protected MapPopulationPort factory;
-
-  @Wire(name = "client.socket", failOnNull = false)
-  protected com.badlogic.gdx.net.Socket socket;
-
   @Override
   public void generate(Map map, int seed, int diff) {
     // 重要：设置随机种子，确保多人游戏中所有客户端生成相同的地图
@@ -139,8 +131,7 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
     int select = fileId[selectIndex];
 
     BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
-    base.factory = factory;
-    base.socket = socket;
+
     Zone townZone = base.createZoneWithPreset(map, townLevel, townPreset, select, 
         townLevel.OffsetX, townLevel.OffsetY, true);
 
@@ -153,13 +144,13 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
       Levels.Entry level = files().Levels.get(levelId);
       if (level == null) continue;
 
-    int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
-    int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+    int sizeX = MapDataPort.levelSizeX(level, diff, 1);
+    int sizeY = MapDataPort.levelSizeY(level, diff, 1);
       posY -= sizeY * 5; // tile to sub-tile
 
       int posX = (townZone.width / 2 + townZone.x) - (sizeX * 5 / 2);
       Zone zone = base.createZoneWithGenerator(map, level, diff, posX, posY + townZone.y);
-      zone.generator = base.createMonsterGenerator(socket);
+      zone.generator = base.createMonsterGenerator(map.isRemoteClient());
     }
 
     // 3. 创建 Kurast 区域（LOWERKURAST, KURASTBAZAAR, UPPERKURAST）
@@ -190,12 +181,12 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
               level.OffsetX, level.OffsetY, false);
         }
       } else {
-        int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
-        int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+        int sizeX = MapDataPort.levelSizeX(level, diff, 1);
+        int sizeY = MapDataPort.levelSizeY(level, diff, 1);
         int posX = (townZone.width / 2 + townZone.x) - (sizeX * 5 / 2);
         posY -= sizeY * 5;
         Zone zone = base.createZoneWithGenerator(map, level, diff, posX, posY + townZone.y);
-        zone.generator = base.createMonsterGenerator(socket);
+        zone.generator = base.createMonsterGenerator(map.isRemoteClient());
       }
     }
 
@@ -215,13 +206,13 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
     for (int levelId : tailLevels) {
       Levels.Entry level = files().Levels.get(levelId);
       if (level == null || findZone(map, levelId) != null) continue;
-      int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
-      int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+      int sizeX = MapDataPort.levelSizeX(level, diff, 1);
+      int sizeY = MapDataPort.levelSizeY(level, diff, 1);
       int posX = (townZone.width / 2 + townZone.x) - (sizeX * 5 / 2);
       posY -= sizeY * 5;
       Zone zone = base.createZoneWithGenerator(map, level, diff, posX,
           posY + townZone.y);
-      zone.generator = base.createMonsterGenerator(socket);
+      zone.generator = base.createMonsterGenerator(map.isRemoteClient());
       if (DEBUG_BUILD) {
         Gdx.app.debug(TAG, String.format(
             "Placed native tail fallback %s (id=%d) at (%d, %d)",
@@ -238,13 +229,13 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
     for (int levelId : ACT3_UNDERGROUND_PRIMARY) {
       Levels.Entry level = files().Levels.get(levelId);
       if (level == null || findZone(map, levelId) != null) continue;
-      int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
-      int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+      int sizeX = MapDataPort.levelSizeX(level, diff, 1);
+      int sizeY = MapDataPort.levelSizeY(level, diff, 1);
       int posX = (townZone.width / 2 + townZone.x) - (sizeX * 5 / 2);
       undergroundY -= sizeY * 5;
       Zone zone = base.createZoneWithGenerator(map, level, diff, posX,
           undergroundY + townZone.y);
-      zone.generator = base.createMonsterGenerator(socket);
+      zone.generator = base.createMonsterGenerator(map.isRemoteClient());
       if (DEBUG_BUILD) {
         Gdx.app.debug(TAG, String.format(
             "Placed Act3 underground fallback %s (id=%d) at (%d, %d)",
@@ -254,13 +245,13 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
     for (int levelId : ACT3_UNDERGROUND_SECONDARY) {
       Levels.Entry level = files().Levels.get(levelId);
       if (level == null || findZone(map, levelId) != null) continue;
-      int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
-      int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+      int sizeX = MapDataPort.levelSizeX(level, diff, 1);
+      int sizeY = MapDataPort.levelSizeY(level, diff, 1);
       int posX = (townZone.width / 2 + townZone.x) - (sizeX * 5 / 2);
       undergroundY -= sizeY * 5;
       Zone zone = base.createZoneWithGenerator(map, level, diff, posX,
           undergroundY + townZone.y);
-      zone.generator = base.createMonsterGenerator(socket);
+      zone.generator = base.createMonsterGenerator(map.isRemoteClient());
       if (DEBUG_BUILD) {
         Gdx.app.debug(TAG, String.format(
             "Placed Act3 underground fallback %s (id=%d) at (%d, %d)",

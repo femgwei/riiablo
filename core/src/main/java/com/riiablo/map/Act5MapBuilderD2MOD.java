@@ -1,6 +1,5 @@
 package com.riiablo.map;
 
-import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -8,7 +7,6 @@ import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
-import com.riiablo.engine.server.NativeDataTables;
 
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.map.Map.Preset;
@@ -100,12 +98,6 @@ public final class Act5MapBuilderD2MOD extends MapBuilderResources implements Ma
       {LEVEL_THRONEOFDESTRUCTION, LEVEL_WORLDSTONECHAMBER}
   };
 
-  @Wire(name = "factory")
-  protected MapPopulationPort factory;
-
-  @Wire(name = "client.socket", failOnNull = false)
-  protected com.badlogic.gdx.net.Socket socket;
-
   @Override
   public void generate(Map map, int seed, int diff) {
     // 重要：设置随机种子，确保多人游戏中所有客户端生成相同的地图
@@ -133,9 +125,9 @@ public final class Act5MapBuilderD2MOD extends MapBuilderResources implements Ma
       // one-grid footprint used by BaseMapBuilderD2MOD instead of collapsing
       // several levels onto the same origin.
       int sizeX = Math.max(OutdoorGrid.GRID_SIZE_TILES,
-          NativeDataTables.levelSizeX(level, diff, 1));
+          MapDataPort.levelSizeX(level, diff, 1));
       int sizeY = Math.max(OutdoorGrid.GRID_SIZE_TILES,
-          NativeDataTables.levelSizeY(level, diff, 1));
+          MapDataPort.levelSizeY(level, diff, 1));
       linkData.coords[i].width = sizeX * 5;
       linkData.coords[i].height = sizeY * 5;
     }
@@ -190,8 +182,6 @@ public final class Act5MapBuilderD2MOD extends MapBuilderResources implements Ma
     
     // 创建区域
     BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
-    base.factory = factory;
-    base.socket = socket;
 
     for (int i = 0; i < act5Links.length && act5Links[i] != null; i++) {
       Levels.Entry level = files().Levels.get(act5Links[i].level);
@@ -220,13 +210,13 @@ public final class Act5MapBuilderD2MOD extends MapBuilderResources implements Ma
           Zone zone = base.createZoneWithPreset(map, level, preset, select, finalX, finalY, 
               act5Links[i].level == LEVEL_HARROGATH);
           if (act5Links[i].level != LEVEL_HARROGATH) {
-            zone.generator = base.createMonsterGenerator(socket);
+            zone.generator = base.createMonsterGenerator(map.isRemoteClient());
           }
         }
       } else {
         Zone zone = base.createZoneWithGenerator(map, level, diff, finalX, finalY);
         if (act5Links[i].level != LEVEL_HARROGATH) {
-          zone.generator = base.createMonsterGenerator(socket);
+          zone.generator = base.createMonsterGenerator(map.isRemoteClient());
         }
       }
     }
@@ -244,7 +234,7 @@ public final class Act5MapBuilderD2MOD extends MapBuilderResources implements Ma
       Levels.Entry level = files().Levels.get(levelId);
       if (level == null || map.findZone(level) != null) continue;
       Zone branch = base.createZoneWithGenerator(map, level, diff, branchX, 0);
-      branch.generator = base.createMonsterGenerator(socket);
+      branch.generator = base.createMonsterGenerator(map.isRemoteClient());
       branchX += branch.width() + 32;
     }
 
@@ -285,7 +275,7 @@ public final class Act5MapBuilderD2MOD extends MapBuilderResources implements Ma
         continue;
       }
       Zone zone = base.createZoneWithGenerator(map, level, diff, cursor, 0);
-      zone.generator = base.createMonsterGenerator(socket);
+      zone.generator = base.createMonsterGenerator(map.isRemoteClient());
       cursor += zone.width() + 32;
       Gdx.app.debug(TAG, "A5Q4 quest zone placed: level=" + levelId
           + " x=" + zone.x() + " width=" + zone.width());

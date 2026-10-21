@@ -6,30 +6,24 @@ import static org.mockito.Mockito.*;
 import com.riiablo.Files;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
-import com.riiablo.engine.EntityFactory;
-import com.riiablo.engine.server.ServerGameplayContext;
-import com.riiablo.engine.server.ServerSystemHarness;
 import org.junit.jupiter.api.Test;
 
 class MapBuilderIsolationTest {
-  @Test void builderInjectionNeverRebindsTheOtherMapsFactoryOrData() throws Exception {
+  @Test void generationCapabilitiesNeverRebindTheOtherMapsData() {
     Files previous = Riiablo.files;
     Files a = mock(Files.class), b = mock(Files.class);
     Map first = new Map(1, 0, new MapResources(a, null, null));
     Map second = new Map(2, 0, new MapResources(b, null, null));
-    EntityFactory firstFactory = mock(EntityFactory.class);
-    EntityFactory secondFactory = mock(EntityFactory.class);
-    try (ServerSystemHarness firstWorld = new ServerSystemHarness(
-            new ServerGameplayContext(a, 1), first, firstFactory);
-         ServerSystemHarness secondWorld = new ServerSystemHarness(
-            new ServerGameplayContext(b, 2), second, secondFactory)) {
-      first.injectBuilders(firstWorld.world());
-      second.injectBuilders(secondWorld.world());
+    try {
+      first.configureGeneration(false, false);
+      second.configureGeneration(true, true);
       Riiablo.files = null;
       assertSame(a, first.act1Builder().files());
       assertSame(b, second.act1Builder().files());
-      assertSame(firstFactory, first.act1Builder().factory);
-      assertSame(secondFactory, second.act1Builder().factory);
+      assertFalse(first.isRemoteClient());
+      assertFalse(first.hasClientPresentation());
+      assertTrue(second.isRemoteClient());
+      assertTrue(second.hasClientPresentation());
       assertNotSame(first.act1Builder(), second.act1Builder());
       assertNotSame(first.act2Builder(), second.act2Builder());
       assertNotSame(first.act3Builder(), second.act3Builder());

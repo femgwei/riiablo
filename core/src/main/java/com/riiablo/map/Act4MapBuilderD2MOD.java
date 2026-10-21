@@ -1,12 +1,10 @@
 package com.riiablo.map;
 
-import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
-import com.riiablo.engine.server.NativeDataTables;
 
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.map.Map.Preset;
@@ -39,12 +37,6 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
       LEVEL_THEPANDEMONIUMFORTRESS, LEVEL_OUTERSTEPPES, LEVEL_PLAINSOFDESPAIR,
       LEVEL_CITYOFTHEDAMNED, LEVEL_RIVEROFFLAME, LEVEL_CHAOSSANCTUM
   };
-
-  @Wire(name = "factory")
-  protected MapPopulationPort factory;
-
-  @Wire(name = "client.socket", failOnNull = false)
-  protected com.badlogic.gdx.net.Socket socket;
 
   /**
    * D2MOD: sub_6FD81CA0 - 处理 OUTERSTEPPES 的放置
@@ -93,8 +85,8 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
         Gdx.app.error(TAG, "Level not found: " + act4Links[i].level);
         continue;
       }
-      int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
-      int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+      int sizeX = MapDataPort.levelSizeX(level, diff, 1);
+      int sizeY = MapDataPort.levelSizeY(level, diff, 1);
       linkData.coords[i].width = sizeX * 5;
       linkData.coords[i].height = sizeY * 5;
     }
@@ -181,9 +173,7 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
     
     // 创建区域
     BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
-    base.factory = factory;
-    base.socket = socket;
-    
+
     for (int i = 0; i < act4Links.length && act4Links[i] != null; i++) {
       Levels.Entry level = files().Levels.get(act4Links[i].level);
       if (level == null) continue;
@@ -211,13 +201,13 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
           Zone zone = base.createZoneWithPreset(map, level, preset, select, finalX, finalY, 
               act4Links[i].level == LEVEL_THEPANDEMONIUMFORTRESS);
           if (act4Links[i].level != LEVEL_THEPANDEMONIUMFORTRESS) {
-            zone.generator = base.createMonsterGenerator(socket);
+            zone.generator = base.createMonsterGenerator(map.isRemoteClient());
           }
         }
       } else {
         Zone zone = base.createZoneWithGenerator(map, level, diff, finalX, finalY);
         if (act4Links[i].level != LEVEL_THEPANDEMONIUMFORTRESS) {
-          zone.generator = base.createMonsterGenerator(socket);
+          zone.generator = base.createMonsterGenerator(map.isRemoteClient());
         }
       }
     }
@@ -396,11 +386,11 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
       if (findZone(map, levelId) != null) continue;
       Levels.Entry level = map.files().Levels.get(levelId);
       if (level == null) continue;
-      int width = NativeDataTables.levelSizeX(level, diff, 1) * 5;
-      int height = NativeDataTables.levelSizeY(level, diff, 1) * 5;
+      int width = MapDataPort.levelSizeX(level, diff, 1) * 5;
+      int height = MapDataPort.levelSizeY(level, diff, 1) * 5;
       Zone zone = base.createZoneWithGenerator(map, level, diff,
           fallbackX + i * Math.max(width, 256), fallbackY);
-      zone.generator = base.createMonsterGenerator(base.socket);
+      zone.generator = base.createMonsterGenerator(map.isRemoteClient());
       Gdx.app.log(TAG, "Act4 fallback Zone materialized: level=" + levelId);
     }
   }

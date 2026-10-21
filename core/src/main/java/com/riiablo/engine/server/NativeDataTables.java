@@ -1,9 +1,9 @@
 package com.riiablo.engine.server;
 
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.MonLvl;
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.NativeTableValues;
 
 /**
  * Safe, data-only accessors mirroring the bounds and fallback rules used by
@@ -15,24 +15,19 @@ public final class NativeDataTables {
   private NativeDataTables() {}
 
   public static int difficulty(int difficulty) {
-    return Math.max(Riiablo.NORMAL, Math.min(Riiablo.HELL, difficulty));
+    return NativeTableValues.difficulty(difficulty);
   }
 
   public static int value(int[] values, int difficulty, int fallback) {
-    int index = difficulty(difficulty);
-    if (values == null || values.length == 0) return fallback;
-    // A number of shipped tables only contain the Normal column.  Native
-    // DATATBLS callers use that column for higher difficulties when the
-    // difficulty-specific field is absent; they do not invent a zero value.
-    return values[index < values.length ? index : 0];
+    return NativeTableValues.value(values, difficulty, fallback);
   }
 
   public static int levelSizeX(Levels.Entry level, int difficulty, int fallback) {
-    return Math.max(1, value(level == null ? null : level.SizeX, difficulty, fallback));
+    return NativeTableValues.levelSizeX(level, difficulty, fallback);
   }
 
   public static int levelSizeY(Levels.Entry level, int difficulty, int fallback) {
-    return Math.max(1, value(level == null ? null : level.SizeY, difficulty, fallback));
+    return NativeTableValues.levelSizeY(level, difficulty, fallback);
   }
 
   public static int areaLevel(Levels.Entry level, int difficulty, boolean expansion) {
@@ -47,12 +42,11 @@ public final class NativeDataTables {
   }
 
   public static int minGroup(MonStats.Entry monster) {
-    return monster == null ? 1 : Math.max(1, monster.MinGrp);
+    return NativeTableValues.minGroup(monster);
   }
 
   public static int maxGroup(MonStats.Entry monster) {
-    if (monster == null) return 1;
-    return Math.max(minGroup(monster), monster.MaxGrp);
+    return NativeTableValues.maxGroup(monster);
   }
 
   public static int partyMin(MonStats.Entry monster) {

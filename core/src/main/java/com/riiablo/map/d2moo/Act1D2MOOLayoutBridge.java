@@ -20,7 +20,7 @@ import com.d2moo.common.util.D2MemoryPool;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlTypes;
 import com.riiablo.map.Map;
-import com.riiablo.engine.server.NativeDataTables;
+import com.riiablo.map.MapDataPort;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -545,13 +545,13 @@ public final class Act1D2MOOLayoutBridge {
             bin.setDwSaveMonsters(entry.SaveMonsters ? 1 : 0);
             bin.setDwLOSDraw(entry.LOSDraw ? 1 : 0);
             int[] sx = new int[] {
-                NativeDataTables.levelSizeX(entry, 0, 1),
-                NativeDataTables.levelSizeX(entry, 1, 1),
-                NativeDataTables.levelSizeX(entry, 2, 1) };
+                MapDataPort.levelSizeX(entry, 0, 1),
+                MapDataPort.levelSizeX(entry, 1, 1),
+                MapDataPort.levelSizeX(entry, 2, 1) };
             int[] sy = new int[] {
-                NativeDataTables.levelSizeY(entry, 0, 1),
-                NativeDataTables.levelSizeY(entry, 1, 1),
-                NativeDataTables.levelSizeY(entry, 2, 1) };
+                MapDataPort.levelSizeY(entry, 0, 1),
+                MapDataPort.levelSizeY(entry, 1, 1),
+                MapDataPort.levelSizeY(entry, 2, 1) };
             bin.setDwSizeX(sx);
             bin.setDwSizeY(sy);
             records.add(bin);

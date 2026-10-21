@@ -263,8 +263,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
           .register("townPortalRegistry", new com.riiablo.engine.server.portal.TownPortalRegistry())
           .register("partyManager", new PartyManager())
           .register("combatPositionHistory", new CombatPositionHistory(map)));
-      world.inject(map);
-      map.setEntityFactory(factory);
+      com.riiablo.engine.MapRuntimeBindings.bind(map, world, factory, false);
       world.setDelta(Animation.FRAME_DURATION);
       AuthoritativeSimulation simulation = new AuthoritativeSimulation(world);
 
