@@ -20,10 +20,12 @@ class ClientUiBoundaryTest {
     Path source = repository().resolve("core/src/main/java/com/riiablo/engine/client");
     Pattern ui = Pattern.compile("com\\.riiablo\\.(?:screen|widget)\\.|clientContext\\s*\\.\\s*game\\s*\\(");
     for (String file : Arrays.asList("KeyboardMovementSystem.java", "CursorMovementSystem.java",
-        "ClientItemManager.java", "ClientNetworkReceiver.java", "ClientEntityFactory.java",
-        "NativeShrinePresentationSystem.java")) {
+        "ClientItemManager.java", "ClientNetworkReceiver.java", "ClientEntityFactory.java")) {
       assertFalse(ui.matcher(code(source.resolve(file))).find(), file + " must use a presentation port");
     }
+    assertFalse(ui.matcher(code(repository().resolve(
+        "core/src/main/java/com/riiablo/presentation/NativeShrinePresentationSystem.java"))).find(),
+        "NativeShrinePresentationSystem must use a presentation port");
   }
 
   @Test void dedicatedServerRecipesCannotInstallClientUiSystems() throws IOException {
@@ -96,6 +98,30 @@ class ClientUiBoundaryTest {
         "MonsterSoundEmitter", "MissileImpactPresentationSystem", "DamageHandler", "SoundEventSystem")) {
       assertFalse(globals.matcher(code(source.resolve(type + ".java"))).find(), type);
     }
+  }
+
+  @Test void skillDeathAndStatePresentationHaveOneOwner() throws IOException {
+    Path source = repository().resolve("core/src/main/java/com/riiablo");
+    for (String type : Arrays.asList("SkillCastHandler", "DeathHandler",
+        "ElementalHitPresentationSystem", "NativeShrinePresentationSystem", "StateOverlaySystem",
+        "MonsterTransform", "ShrinePresentation")) {
+      assertTrue(Files.isRegularFile(source.resolve("presentation/" + type + ".java")), type);
+      assertFalse(Files.exists(source.resolve("engine/client/" + type + ".java")),
+          type + " must not regain an engine compatibility copy");
+    }
+    Pattern handlers = Pattern.compile("com\\.riiablo\\.presentation\\.(?:SkillCastHandler|DeathHandler"
+        + "|ElementalHitPresentationSystem|NativeShrinePresentationSystem|StateOverlaySystem"
+        + "|MonsterTransform|ShrinePresentation)\\b");
+    for (String directory : Arrays.asList("engine/server", "engine/shared")) {
+      try (java.util.stream.Stream<Path> paths = Files.walk(source.resolve(directory))) {
+        for (Path path : (Iterable<Path>) paths.filter(p -> p.toString().endsWith(".java"))::iterator) {
+          assertFalse(handlers.matcher(code(path)).find(), path + " cannot own client presentation");
+        }
+      }
+    }
+    String factory = code(source.resolve("engine/client/ClientEntityFactory.java"));
+    assertFalse(Pattern.compile("\\b(?:shrineOverlay|shrineDisplayName)\\s*\\(")
+        .matcher(factory).find(), "shrine display mapping must have one presentation owner");
   }
 
   private static String code(Path file) throws IOException {

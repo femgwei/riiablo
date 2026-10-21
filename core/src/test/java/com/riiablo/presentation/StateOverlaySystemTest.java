@@ -1,9 +1,4 @@
-package com.riiablo.engine.client;
-
-import com.riiablo.presentation.OverlayManager;
-
-
-import com.riiablo.presentation.ClientGameplayContext;
+package com.riiablo.presentation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

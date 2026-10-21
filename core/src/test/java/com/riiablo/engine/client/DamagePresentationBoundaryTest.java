@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ElementalHitPresentationSystem;
+
 import com.riiablo.presentation.DamageHandler;
 import com.riiablo.presentation.OverlayManager;
 

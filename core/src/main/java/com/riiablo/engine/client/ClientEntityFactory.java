@@ -1,5 +1,6 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ShrinePresentation;
 import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.presentation.MissileTravelAudio;
 import com.riiablo.presentation.OverlayManager;
@@ -208,7 +209,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
     int shrineId = resolveClientShrineId(base, x, y);
     if (shrineId < 0 || shrineId >= clientContext.files().Shrines.size()) return null;
     Shrines.Entry shrine = clientContext.files().Shrines.get(shrineId);
-    return shrineDisplayName(clientContext, shrine);
+    return ShrinePresentation.displayName(clientContext, shrine);
   }
 
   private int resolveClientShrineId(Objects.Entry base, float x, float y) {
@@ -218,58 +219,6 @@ public class ClientEntityFactory extends ServerEntityFactory {
     int levelId = zone == null || zone.level == null ? 0 : zone.level.Id;
     return NativeShrineResolver.resolve(clientContext.files().Shrines, base, base.Id,
         levelId, map.seed(), (int) x, (int) y);
-  }
-
-  /** Maps the native Shrines.txt code to its stock overhead icon. */
-  static String shrineOverlay(int shrineId) {
-    return shrineOverlay(ClientGameplayContext.fromGlobals(), shrineId);
-  }
-
-  static String shrineOverlay(ClientGameplayContext context, int shrineId) {
-    if (context == null || context.files() == null || context.files().Shrines == null) return null;
-    Shrines.Entry shrine = context.files().Shrines.get(shrineId);
-    if (shrine == null) return null;
-    switch (shrine.Code) {
-      case 6: return "shrine_armor";
-      case 7: return "shrine_combat";
-      case 8: return "shrine_resist_fire";
-      case 9: return "shrine_resist_cold";
-      case 10: return "shrine_resist_lightning";
-      case 11: return "shrine_resist_poison";
-      case 12: return "shrine_skill";
-      case 13: return "shrine_mana_regen";
-      case 14: return "shrine_stamina";
-      case 15: return "shrine_experience";
-      default: return null;
-    }
-  }
-
-  /**
-   * Resolves the native shrine tooltip name.  Retail Shrines.txt stores
-   * {@code view name} as the placeholder "blah"; the actual localized names
-   * are the string-table keys ShrId0..ShrId22.
-   */
-  static String shrineDisplayName(Shrines.Entry shrine) {
-    return shrineDisplayName(ClientGameplayContext.fromGlobals(), shrine);
-  }
-
-  static String shrineDisplayName(ClientGameplayContext context, Shrines.Entry shrine) {
-    if (shrine == null) return null;
-    String key = "ShrId" + shrine.Code;
-    String localized = context == null || context.strings() == null ? null : context.strings().lookup(key);
-    if (localized != null && !localized.isEmpty()
-        && !localized.regionMatches(true, 0, "ERROR:", 0, 6)) {
-      return localized;
-    }
-
-    String view = shrine.ViewName;
-    if (view != null && !view.isEmpty() && !view.equalsIgnoreCase("blah")) {
-      String resolved = context == null || context.strings() == null ? null : context.strings().lookup(view);
-      if (resolved != null && !resolved.isEmpty()
-          && !resolved.regionMatches(true, 0, "ERROR:", 0, 6)) return resolved;
-      return view;
-    }
-    return com.riiablo.engine.server.object.ShrineType.getName(shrine.Code);
   }
 
   static boolean isInitiallySelectable(Objects.Entry base) {

@@ -121,7 +121,8 @@ class GameScreenAssemblyTest {
         "DamageHandler", "ObjectAmbientSoundSystem", "ObjectBreakSoundEmitter", "SoundEmitterHandler",
         "ItemLoader", "MissileLoader", "SoundEnvironmentSystem", "FootstepEmitter", "SoundEventSystem",
         "MonsterSoundEmitter", "BlockSoundEmitter", "WeatherRenderSystem", "GroundItemGleamSystem",
-        "AutomapRenderer")) {
+        "AutomapRenderer", "SkillCastHandler", "DeathHandler", "ElementalHitPresentationSystem",
+        "NativeShrinePresentationSystem", "StateOverlaySystem")) {
       assertEquals("com.riiablo.presentation." + name, find(systems, name).getClass().getName());
     }
     assertSame(host.session.map(), field(find(systems, "EnvironmentSystem"), "map"));

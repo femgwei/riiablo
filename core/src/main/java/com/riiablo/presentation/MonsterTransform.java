@@ -1,4 +1,4 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
@@ -7,10 +7,10 @@ import com.riiablo.engine.server.component.CofTransforms;
 import com.riiablo.engine.server.component.Monster;
 
 /** Applies a unit's native palette shift or the normal packed transform. */
-final class MonsterTransform {
+public final class MonsterTransform {
   private MonsterTransform() {}
 
-  static void apply(Animation.Layer layer, Monster monster, byte packedTransform) {
+  public static void apply(Animation.Layer layer, Monster monster, byte packedTransform) {
     if (layer == null || Riiablo.colormaps == null) return;
 
     int packed = packedTransform & 0xFF;

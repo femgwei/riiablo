@@ -12,7 +12,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Stat;
-import com.riiablo.engine.client.DeathHandler;
+import com.riiablo.presentation.DeathHandler;
 import com.riiablo.engine.Engine;
 import com.riiablo.CharacterClass;
 import com.riiablo.engine.server.component.AttributesWrapper;
@@ -118,12 +118,20 @@ class PlayerCorpseIntegrationTest extends RiiabloTest {
     }
   }
 
-  /** Map fixture with a deterministic town entry and no generated/rendered zones. */
+  /** Map fixture with a native player spawn and a stable town zone, without generation/rendering. */
   private static final class TestMap extends Map {
+    private final Zone town = new Zone() {
+      @Override public boolean isTown() { return true; }
+    };
+
     TestMap() { super(0, 0); }
 
-    @Override public Vector2 find(int id) {
+    @Override public Vector2 townPlayerSpawn() {
       return new Vector2(99, 101);
+    }
+
+    @Override public Zone getZone(int x, int y) {
+      return x == 99 && y == 101 ? town : null;
     }
   }
 

@@ -1,7 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.DeathHandler;
 import com.riiablo.presentation.PlayerHitSound;
-
 import com.riiablo.presentation.ClientGameplayContext;
 
 import com.google.flatbuffers.Table;

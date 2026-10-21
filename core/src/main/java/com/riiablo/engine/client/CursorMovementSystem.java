@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.DeathHandler;
+
 import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.presentation.MenuManager;
 import com.riiablo.presentation.DialogManager;

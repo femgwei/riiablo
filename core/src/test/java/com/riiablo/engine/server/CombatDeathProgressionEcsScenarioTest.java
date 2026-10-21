@@ -26,7 +26,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
-import com.riiablo.engine.client.DeathHandler;
+import com.riiablo.presentation.DeathHandler;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Class;
@@ -267,8 +267,15 @@ class CombatDeathProgressionEcsScenarioTest extends RiiabloTest {
   }
 
   private static final class TownMap extends Map {
+    private final Zone town = new Zone() {
+      @Override public boolean isTown() { return true; }
+    };
+
     TownMap() { super(0, 0); }
-    @Override public Vector2 find(int id) { return new Vector2(99, 101); }
+    @Override public Vector2 townPlayerSpawn() { return new Vector2(99, 101); }
+    @Override public Zone getZone(int x, int y) {
+      return x == 99 && y == 101 ? town : null;
+    }
   }
 }
 

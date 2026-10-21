@@ -625,7 +625,7 @@ task mapBoundaryRegression(type: Test) {
 
 task clientUiBoundaryRegression(type: Test) {
   group = 'verification'
-  description = 'Client presentation, audio/graphics ownership, input/pickup and resource lifecycles.'
+  description = 'Client skill/death/state and audio/graphics presentation, input/pickup and resource lifecycles.'
   dependsOn testClasses, architectureRegression
   testClassesDirs = sourceSets.test.output.classesDirs
   classpath = sourceSets.test.runtimeClasspath
@@ -639,11 +639,16 @@ task clientUiBoundaryRegression(type: Test) {
      'com.riiablo.engine.client.NetworkedClientItemManager*Test',
      'com.riiablo.engine.client.*Quest*Test',
      'com.riiablo.engine.client.DamagePresentationBoundaryTest',
-     'com.riiablo.engine.client.MonsterSkillPresentationIntegrationTest',
+     'com.riiablo.engine.client.AuthoritativeAreaSkillSnapshotTest',
      'com.riiablo.engine.client.AnimationStepperTest',
      'com.riiablo.engine.client.ObjectBreakAnimationTest',
-     'com.riiablo.engine.client.AmazonEffectDirectionsTest',
-     'com.riiablo.engine.client.StateOverlaySystemTest',
+     'com.riiablo.engine.client.ClientEntityFactory*Test',
+     'com.riiablo.engine.client.CofModeTransitionTest',
+     'com.riiablo.engine.client.NativeCompositeVisibilityTest',
+     'com.riiablo.engine.server.PlayerCorpseIntegrationTest',
+     'com.riiablo.engine.server.CombatDeathProgressionEcsScenarioTest',
+     'com.riiablo.engine.server.BlessedHammerIntegrationTest',
+     'com.riiablo.engine.server.FistOfHeavensIntegrationTest',
      'com.riiablo.map.AutomapRoomProjectionIntegrationTest',
      'com.riiablo.audio.*Test',
      'com.riiablo.presentation.PresentationAssetLifecycleTest',

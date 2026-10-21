@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.MonsterTransform;
+
 import com.artemis.ComponentMapper;
 import com.badlogic.gdx.Gdx;
 import com.riiablo.codec.Animation;

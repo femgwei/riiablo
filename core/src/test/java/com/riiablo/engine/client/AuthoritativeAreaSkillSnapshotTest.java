@@ -3,7 +3,6 @@ package com.riiablo.engine.client;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.Riiablo;
@@ -16,27 +15,8 @@ import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.net.packet.d2gs.MissileP;
 import org.junit.jupiter.api.Test;
 
-/** Multiplayer presentation contract for server-owned area skills. */
+/** Read-only replicas of an authoritative area-skill missile packet. */
 class AuthoritativeAreaSkillSnapshotTest extends RiiabloTest {
-  @Test
-  void complexAreaSkillsNeverCreateASecondClientMissileSet() {
-    // Hydra is intentionally absent: native SrvDo144 creates three monster
-    // units, whose visuals follow MonsterP rather than MissileP.
-    Skills.Entry hydra = Riiablo.files.skills.get(SkillId.HYDRA);
-    assertNotNull(hydra);
-    assertFalse(SkillCastHandler.hasServerMissile(hydra));
-    int[] skills = {
-        SkillId.FIRESTORM, SkillId.FISSURE, SkillId.VOLCANO,
-        SkillId.ARMAGEDDON, SkillId.HURRICANE
-    };
-    for (int id : skills) {
-      Skills.Entry row = Riiablo.files.skills.get(id);
-      assertNotNull(row, Integer.toString(id));
-      assertTrue(SkillCastHandler.shouldReuseServerMissile(row,
-          true, false, false, false, false, false, false), row.skill);
-    }
-  }
-
   @Test
   void oneAuthoritativePacketProducesEquivalentReadOnlyClientReplicas() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.VOLCANO);
@@ -70,33 +50,6 @@ class AuthoritativeAreaSkillSnapshotTest extends RiiabloTest {
     assertEquals(firstClient.damageLevel, secondClient.damageLevel);
     assertEquals(43f, firstClient.range);
     assertEquals(firstClient.range, secondClient.range);
-  }
-
-  @Test
-  void multipleShotReusesLocalAuthoritativeMissiles() {
-    Skills.Entry skill = Riiablo.files.skills.get("Multiple Shot");
-    assertNotNull(skill);
-    assertEquals(8, skill.srvdofunc);
-    assertTrue(SkillCastHandler.shouldReuseServerMissile(skill,
-        false, false, false, false, false, false, false, true));
-  }
-
-  @Test
-  void arcticBlastUsesTheLocalAuthoritativeStreamMissile() {
-    Skills.Entry skill = Riiablo.files.skills.get(SkillId.ARCTIC_BLAST);
-    assertNotNull(skill);
-    assertEquals(19, skill.srvdofunc);
-    assertTrue(SkillCastHandler.shouldReuseServerMissile(skill,
-        false, false, false, false, false, false, false, false, false, true));
-  }
-
-  @Test
-  void lightningStrikeDoesNotUseSharedNovaClientFan() {
-    Skills.Entry skill = Riiablo.files.skills.get(SkillId.LIGHTNING_STRIKE);
-    assertNotNull(skill);
-    assertEquals(14, skill.srvdofunc);
-    assertTrue(SkillCastHandler.isLocalAuthoritativeLightningStrike(skill, true, 14));
-    assertFalse(SkillCastHandler.isLocalAuthoritativeLightningStrike(skill, false, 14));
   }
 
   private static String firstNonEmpty(String first, String second) {

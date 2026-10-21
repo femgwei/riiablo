@@ -1,6 +1,6 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
-import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.engine.client.ClientEntityFactory;
 
 import com.artemis.ComponentMapper;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -10,7 +10,6 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.Gdx;
 
-import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.client.component.AnimationWrapper;

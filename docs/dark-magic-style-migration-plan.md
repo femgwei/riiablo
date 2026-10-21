@@ -56,6 +56,8 @@ M1-A/M8-C NPC/世界 UI 迁移：将客户端 NPC、菜单/对话、任务对话
 
 M1-A/M8-C 音频与图形收口：将声音会话、声音事件/环境/脚步/怪物/格挡/物件播放及衰减、只观察已提交伤害的客户端处理器、天气、overlay/item/missile 资源加载、地面物品光效、automap 绘制及其辅助类型、路径调试绘制归入 `presentation`；将仅被表现类使用、持有播放句柄的 `SoundEmitter` 从 server/component 迁至 presentation/component。客户端实体工厂保留实体职责，飞行音委托表现适配器。允许同步调整 host 装配、viewer、命令、日志配置和测试/门禁引用；空间播放使用所属 world 和 listener，保留原声音键、时序、增益、暂停及资源生命周期。不迁移或修改服务端伤害、AI、任务、数值或协议。
 
+M1-A/M8-C 技能/死亡/状态归属迁移：集中将 `SkillCastHandler`、`DeathHandler`、`ElementalHitPresentationSystem`、`NativeShrinePresentationSystem`、`StateOverlaySystem` 迁入 `presentation`，同步更新客户端装配、输入、网络接收、screen、viewer、日志和回归引用。神殿图标/名称映射从实体工厂提取到 `ShrinePresentation`，`MonsterTransform` 随状态调色板恢复归入表现层，现有 COF 适配器委托同一实现。保留本地/联网权威导弹复用、尸体/复活/装备与 Box2D 生命周期、神殿快照及状态视觉恢复的全部原有行为；不修改服务端结算或协议。`DeathHandler` 仍是混合生命周期适配器，包迁移不代表死亡机制已完成事件/快照解耦。
+
 这组子项把前期结构审计中发现的反向依赖和多代实现单独登记，避免它们被“表现层剥离”或“网络收敛”一句话掩盖。这里的状态表示改造状态，不表示问题已经解决。
 
 | 子项 | 审计对象 | 目标边界 | 当前状态 | 完成判定 |

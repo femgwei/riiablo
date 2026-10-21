@@ -1,8 +1,4 @@
-package com.riiablo.engine.client;
-
-import com.riiablo.presentation.OverlayManager;
-
-import com.riiablo.presentation.ClientGameplayContext;
+package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;

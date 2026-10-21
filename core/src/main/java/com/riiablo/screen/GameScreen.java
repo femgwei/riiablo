@@ -64,7 +64,7 @@ import com.riiablo.engine.client.CofLayerLoader;
 import com.riiablo.engine.client.CofLoader;
 import com.riiablo.engine.client.CofResolver;
 import com.riiablo.engine.client.CursorMovementSystem;
-import com.riiablo.engine.client.DeathHandler;
+import com.riiablo.presentation.DeathHandler;
 import com.riiablo.presentation.DialogManager;
 import com.riiablo.presentation.MenuManager;
 import com.riiablo.engine.client.NetworkedClientItemManager;
@@ -531,7 +531,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           // D2MOD: Priority 1 - Handle player death respawn
           // If player is dead, respawn at town instead of showing menu
           if (Riiablo.game.player >= 0 && engine != null) {
-            com.riiablo.engine.client.DeathHandler deathHandler = engine.getSystem(com.riiablo.engine.client.DeathHandler.class);
+            DeathHandler deathHandler = engine.getSystem(DeathHandler.class);
             if (deathHandler != null && deathHandler.isPlayerDead(Riiablo.game.player)) {
               boolean ready = deathHandler.canRespawnPlayer(Riiablo.game.player);
               Gdx.app.log(TAG, "[PLAYER_REVIVE_INPUT] entity=" + Riiablo.game.player
@@ -1204,7 +1204,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       return;
     }
     
-    com.riiablo.engine.client.DeathHandler deathHandler = engine.getSystem(com.riiablo.engine.client.DeathHandler.class);
+    DeathHandler deathHandler = engine.getSystem(DeathHandler.class);
     if (deathHandler == null) {
       return;
     }

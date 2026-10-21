@@ -1,5 +1,10 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.DeathHandler;
+import com.riiablo.presentation.SkillCastHandler;
+import com.riiablo.presentation.ElementalHitPresentationSystem;
+import com.riiablo.presentation.NativeShrinePresentationSystem;
+import com.riiablo.presentation.StateOverlaySystem;
 import com.riiablo.presentation.AutomapRenderer;
 import com.riiablo.presentation.BlockSoundEmitter;
 import com.riiablo.presentation.ClientAudioSession;
@@ -17,7 +22,6 @@ import com.riiablo.presentation.SoundEmitterHandler;
 import com.riiablo.presentation.SoundEnvironmentSystem;
 import com.riiablo.presentation.SoundEventSystem;
 import com.riiablo.presentation.WeatherRenderSystem;
-
 import com.riiablo.presentation.Act1QuestDialogController;
 import com.riiablo.presentation.Act1QuestIndicatorSystem;
 import com.riiablo.presentation.QuestDialogController;
@@ -122,8 +126,8 @@ public final class ClientSimulationAssembly {
         .with(new SkillCastHandler()) // TODO: move to more appropriate spot in list
         .with(new OverlayManager()) // TODO: move to more appropriate spot in list
         .with(new com.riiablo.presentation.MissileImpactPresentationSystem())
-        .with(new com.riiablo.engine.client.ElementalHitPresentationSystem())
-        .with(new com.riiablo.engine.client.NativeShrinePresentationSystem())
+        .with(new ElementalHitPresentationSystem())
+        .with(new NativeShrinePresentationSystem())
         .with(new OverlayStepper()) // TODO: move to more appropriate spot in list
         .with(new DamageHandler()) // TODO: move to more appropriate spot in list
         .with(new DeathHandler()) // TODO: move to more appropriate spot in list
@@ -188,7 +192,7 @@ public final class ClientSimulationAssembly {
         .with(SimulationSystemGroups.objectCollision())
         // Apply state-driven transforms after COF/layer systems have finished
         // their frame. Otherwise a late layer refresh can overwrite cblu.
-        .with(new com.riiablo.engine.client.StateOverlaySystem());
+        .with(new StateOverlaySystem());
     // Local portal replacement/consumption deletes entities too. Retire their
     // physics bodies in every client mode so invisible obstacles cannot remain.
     builder.with(new Box2DDisposer());

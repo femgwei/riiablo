@@ -1,15 +1,10 @@
-package com.riiablo.engine.client;
-
-import com.riiablo.presentation.OverlayManager;
-
-import com.riiablo.presentation.ClientGameplayContext;
+package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Shrines;
 import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Object;
@@ -99,7 +94,7 @@ public final class NativeShrinePresentationSystem extends IteratingSystem {
     if (clientContext.files() == null || clientContext.files().Shrines == null
         || shrineId < 0 || shrineId >= clientContext.files().Shrines.size()) return null;
     Shrines.Entry shrine = clientContext.files().Shrines.get(shrineId);
-    return shrine == null ? null : ClientEntityFactory.shrineOverlay(clientContext, shrineId);
+    return shrine == null ? null : ShrinePresentation.overlay(clientContext, shrineId);
   }
 
   private void updateLabel(int entityId, int shrineId) {
@@ -108,7 +103,7 @@ public final class NativeShrinePresentationSystem extends IteratingSystem {
         || shrineId < 0 || shrineId >= clientContext.files().Shrines.size()) return;
     Shrines.Entry shrine = clientContext.files().Shrines.get(shrineId);
     if (shrine == null) return;
-    String name = ClientEntityFactory.shrineDisplayName(clientContext, shrine);
+    String name = ShrinePresentation.displayName(clientContext, shrine);
     if (name == null || name.isEmpty()) return;
     clientContext.updateWorldLabel(mLabel.get(entityId).actor, name);
   }
