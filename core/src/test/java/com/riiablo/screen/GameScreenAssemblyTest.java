@@ -25,7 +25,7 @@ import com.riiablo.codec.excel.Sounds;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
 import com.riiablo.presentation.ClientAudioSession;
-import com.riiablo.engine.client.ClientEntityFactory;
+import com.riiablo.presentation.ClientEntityFactory;
 import com.riiablo.engine.client.ClientItemManager;
 import com.riiablo.engine.client.ClientSimulationAssembly;
 import com.riiablo.engine.client.NetworkedClientItemManager;
@@ -122,7 +122,10 @@ class GameScreenAssemblyTest {
         "ItemLoader", "MissileLoader", "SoundEnvironmentSystem", "FootstepEmitter", "SoundEventSystem",
         "MonsterSoundEmitter", "BlockSoundEmitter", "WeatherRenderSystem", "GroundItemGleamSystem",
         "AutomapRenderer", "SkillCastHandler", "DeathHandler", "ElementalHitPresentationSystem",
-        "NativeShrinePresentationSystem", "StateOverlaySystem")) {
+        "NativeShrinePresentationSystem", "StateOverlaySystem", "ClientEntityFactory",
+        "AnimationStepper", "CofAlphaHandler", "CofLayerCacher", "CofLayerLoader", "CofLayerUnloader",
+        "CofLoader", "CofResolver", "CofTransformHandler", "CofUnloader", "DirectionResolver",
+        "OverlayStepper", "ItemEffectManager")) {
       assertEquals("com.riiablo.presentation." + name, find(systems, name).getClass().getName());
     }
     assertSame(host.session.map(), field(find(systems, "EnvironmentSystem"), "map"));

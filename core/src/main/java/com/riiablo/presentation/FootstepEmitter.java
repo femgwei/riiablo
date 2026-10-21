@@ -1,6 +1,5 @@
 package com.riiablo.presentation;
 
-
 import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -12,7 +11,7 @@ import com.riiablo.CharacterClass;
 import com.riiablo.audio.Audio;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;

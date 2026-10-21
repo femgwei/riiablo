@@ -1,5 +1,8 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientEntityFactory;
+import com.riiablo.presentation.ItemEffectManager;
+
 import com.riiablo.presentation.DeathHandler;
 import com.riiablo.presentation.PlayerHitSound;
 import com.riiablo.presentation.ClientGameplayContext;
@@ -50,7 +53,7 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.shared.component.Selectable;
-import com.riiablo.engine.client.component.Label;
+import com.riiablo.presentation.component.Label;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.component.Missile;

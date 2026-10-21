@@ -249,7 +249,7 @@ class StateOverlaySystemTest extends RiiabloTest {
     } finally { world.dispose(); }
   }
 
-  @com.artemis.annotations.All(com.riiablo.engine.client.component.Overlay.class)
+  @com.artemis.annotations.All(com.riiablo.presentation.component.Overlay.class)
   private static final class RecordingOverlayManager extends OverlayManager {
     boolean bladeShieldActive;
     String overlayId;

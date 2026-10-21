@@ -16,7 +16,7 @@ import com.riiablo.engine.server.component.CofTransforms;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.codec.excel.States;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;

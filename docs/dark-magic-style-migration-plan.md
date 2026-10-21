@@ -58,6 +58,8 @@ M1-A/M8-C 音频与图形收口：将声音会话、声音事件/环境/脚步/�
 
 M1-A/M8-C 技能/死亡/状态归属迁移：集中将 `SkillCastHandler`、`DeathHandler`、`ElementalHitPresentationSystem`、`NativeShrinePresentationSystem`、`StateOverlaySystem` 迁入 `presentation`，同步更新客户端装配、输入、网络接收、screen、viewer、日志和回归引用。神殿图标/名称映射从实体工厂提取到 `ShrinePresentation`，`MonsterTransform` 随状态调色板恢复归入表现层，现有 COF 适配器委托同一实现。保留本地/联网权威导弹复用、尸体/复活/装备与 Box2D 生命周期、神殿快照及状态视觉恢复的全部原有行为；不修改服务端结算或协议。`DeathHandler` 仍是混合生命周期适配器，包迁移不代表死亡机制已完成事件/快照解耦。
 
+M1-A/M8-C 实体与 COF/动画归属迁移：集中迁移客户端实体工厂、COF 解析/加载/缓存/卸载、透明度/调色板更新、动画/overlay 步进、方向显示和物品落地表现适配器至 `presentation`，对应仅客户端使用的动画、包围盒、COF 资源、标签与 overlay 组件迁至 `presentation/component`。同步修改 host、输入/网络、viewer、测试及门禁引用；`RenderSystem` 仅将原有 3 条组件依赖更换为新归属，允许项限定到这些具体类型，不放宽整个包。保持资源等待、引用计数、缺失 COF 回退、实体重用及系统相对顺序；工厂继承服务端创建逻辑和客户端适配写入仍作为 M8-C 兼容债务登记，不改权威战斗、地图生成或协议。
+
 这组子项把前期结构审计中发现的反向依赖和多代实现单独登记，避免它们被“表现层剥离”或“网络收敛”一句话掩盖。这里的状态表示改造状态，不表示问题已经解决。
 
 | 子项 | 审计对象 | 目标边界 | 当前状态 | 完成判定 |
@@ -228,6 +230,22 @@ D2MOO 依据：沿用 1.10f Skills/Missiles 客户端回调及权威导弹复用
 剩余问题：包归属已迁移，事件/只读快照出口未完成。客户端实体工厂与 COF/动画资源仍有直接适配调用；技能仍探测本地/联网系统；神殿仍有种类补齐及 COF 写入；死亡处理器仍混合尸体/装备/HP/位置/Box2D 生命周期；状态调色板与 context/widget 仍有全局/host 兼容访问。具体 owner 和删除条件见详细记录，M1 整体尚未完成。
 
 下一迁移：M1-A/M8-C 客户端实体与 COF/动画表现适配，集中处理装配、资源等待/释放和会话依赖；死亡权威职责与事件/快照出口按 M2/M3 依赖收敛。
+
+### M1-A/M8-C 客户端实体与 COF/动画归属记录（2026-10-22）
+
+本批完成日期：2026-10-22；M1-A/M8-C 整体仍为进行中。
+
+提交：待提交（本批）。13 个实体/COF/动画生产适配器和 8 个客户端组件迁入 `presentation`，相关 host、viewer、测试与门禁引用已统一；1.10f COF 回归测试同步迁入新包。
+
+验证：`:core:compileTestJava`、完整 `:core:clientUiBoundaryRegression`、desktop、D2GS 生产/测试、Netty、Map Viewer、Skill Viewer 编译全部通过。客户端共 383 项，382 项通过、1 项可选 automap 样本跳过；架构 12 项、D2GS 定向 20 项通过，合计 414 项通过、1 项跳过，失败/错误均为 0。M1-A 扫描 0、M1-B 生成层 0、运行时适配器 58 且无漂移。
+
+真实资源：是；使用 `G:\BaiduNetdiskDownload\Diablo II 1.10F`，无 GL/音频设备启动。
+
+剩余问题：包归属已迁移，实体/COF/动画仍有兼容性写入和 context 依赖，事件/只读快照出口尚未完成；死亡、技能、神殿和状态的兼容路径仍按 M2/M3/M8-C owner 跟踪。M1 整体尚未完成。
+
+下一迁移：集中收敛客户端实体与表现适配器的事件/只读快照出口，不再按单个表现类拆批。
+
+详细记录：`docs/dark-magic-m8c-entity-cof-animation-2026-10-22.md`。
 
 详细记录：`docs/dark-magic-m8c-skill-death-state-2026-10-22.md`。
 

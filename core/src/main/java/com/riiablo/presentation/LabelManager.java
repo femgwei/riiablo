@@ -21,7 +21,7 @@ import com.badlogic.gdx.utils.Array;
 import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.client.component.Hovered;
-import com.riiablo.engine.client.component.Label;
+import com.riiablo.presentation.component.Label;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Object;

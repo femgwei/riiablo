@@ -7,7 +7,7 @@ import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Position;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.Direction;
 
 /** Applies authoritative transform interpolation only around GPU rendering. */

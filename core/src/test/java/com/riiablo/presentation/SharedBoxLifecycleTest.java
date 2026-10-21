@@ -191,7 +191,7 @@ class SharedBoxLifecycleTest extends RiiabloTest {
   @Test void navigationAndCloseRetainTreeButWorldExitRemovesVisibleChild() {
     MenuManager manager = new MenuManager(); World world = world(manager, new DialogManager());
     int entity = world.create();
-    world.getMapper(com.riiablo.engine.client.component.Label.class).create(entity);
+    world.getMapper(com.riiablo.presentation.component.Label.class).create(entity);
     world.getMapper(Position.class).create(entity);
     NpcMenu root = manager.createMenu(entity, "NPC"), child = root.createSubMenu(1); root.addItem(1, child);
     assets.finishLoading(); world.process();

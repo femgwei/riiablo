@@ -206,13 +206,13 @@ public final class OffscreenCampScreen extends GameScreen {
     // A full-size capture is visual evidence: terrain alone is insufficient.
     // The initial fixed frame budget can expire before the player's DCCs bind.
     if (Gdx.graphics.getBackBufferWidth() > 1) {
-      com.riiablo.engine.client.component.AnimationWrapper wrapper = engine.getMapper(
-          com.riiablo.engine.client.component.AnimationWrapper.class).get(player);
+      com.riiablo.presentation.component.AnimationWrapper wrapper = engine.getMapper(
+          com.riiablo.presentation.component.AnimationWrapper.class).get(player);
       playerDrawableLayers = wrapper == null || wrapper.animation == null ? 0
           : wrapper.animation.getDrawableLayerCount();
       boolean ready = playerDrawableLayers > 0 && Riiablo.assets.getQueuedAssets() == 0
           && !engine.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class).has(player)
-          && !engine.getMapper(com.riiablo.engine.client.component.CofLoadingComponents.class).has(player);
+          && !engine.getMapper(com.riiablo.presentation.component.CofLoadingComponents.class).has(player);
       settledCaptureFrames = ready ? settledCaptureFrames + 1 : 0;
       if (settledCaptureFrames < 3) return;
     }

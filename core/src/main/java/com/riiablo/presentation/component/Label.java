@@ -1,4 +1,4 @@
-package com.riiablo.engine.client.component;
+package com.riiablo.presentation.component;
 
 import com.artemis.PooledComponent;
 import com.artemis.annotations.PooledWeaver;

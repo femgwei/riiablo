@@ -1,7 +1,5 @@
 package com.riiablo.presentation;
 
-import com.riiablo.engine.client.ClientEntityFactory;
-import com.riiablo.engine.client.CofLayerLoader;
 import com.riiablo.engine.client.FixedStepAccumulator;
 
 

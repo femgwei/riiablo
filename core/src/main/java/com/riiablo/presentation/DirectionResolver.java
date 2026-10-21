@@ -1,9 +1,9 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.Direction;

@@ -1,6 +1,5 @@
 package com.riiablo.presentation;
 
-
 import com.badlogic.gdx.Gdx;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -13,8 +12,8 @@ import com.riiablo.codec.Animation;
 import com.riiablo.codec.DCC;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.Direction;
-import com.riiablo.engine.client.component.AnimationWrapper;
-import com.riiablo.engine.client.component.BBoxWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
+import com.riiablo.presentation.component.BBoxWrapper;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.graphics.BlendMode;

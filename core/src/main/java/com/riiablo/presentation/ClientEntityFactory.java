@@ -1,13 +1,4 @@
-package com.riiablo.engine.client;
-
-import com.riiablo.presentation.ShrinePresentation;
-import com.riiablo.presentation.ClientGameplayContext;
-import com.riiablo.presentation.MissileTravelAudio;
-import com.riiablo.presentation.OverlayManager;
-import com.riiablo.presentation.MissileLoader;
-import com.riiablo.presentation.ClientNpc;
-import com.riiablo.presentation.MenuManager;
-import com.riiablo.presentation.DialogManager;
+package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
@@ -31,10 +22,10 @@ import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.Weapons;
 import com.riiablo.codec.util.BBox;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.AnimationWrapper;
-import com.riiablo.engine.client.component.BBoxWrapper;
-import com.riiablo.engine.client.component.CofComponentDescriptors;
-import com.riiablo.engine.client.component.Label;
+import com.riiablo.presentation.component.AnimationWrapper;
+import com.riiablo.presentation.component.BBoxWrapper;
+import com.riiablo.presentation.component.CofComponentDescriptors;
+import com.riiablo.presentation.component.Label;
 import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.server.ServerEntityFactory;
 import com.riiablo.engine.server.CofManager;

@@ -33,7 +33,7 @@ import com.riiablo.widget.Label;
 
 @GpuSystem
 @All({Monster.class, Hovered.class})
-@Exclude(com.riiablo.engine.client.component.Label.class)
+@Exclude(com.riiablo.presentation.component.Label.class)
 public class MonsterLabelManager extends BaseEntitySystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;

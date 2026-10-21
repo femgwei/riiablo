@@ -1,6 +1,5 @@
 package com.riiablo.presentation;
 
-
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
@@ -19,11 +18,11 @@ import com.riiablo.util.AssetReferenceScope;
 import com.riiablo.util.Disposal;
 
 /** Owns independent state and impact layers, including each layer's asset lifetime. */
-@All(com.riiablo.engine.client.component.Overlay.class)
+@All(com.riiablo.presentation.component.Overlay.class)
 public class OverlayManager extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(OverlayManager.class);
   static final int SHRINE_ICON_STATE = Integer.MIN_VALUE + 0x5249;
-  protected ComponentMapper<com.riiablo.engine.client.component.Overlay> mOverlay;
+  protected ComponentMapper<com.riiablo.presentation.component.Overlay> mOverlay;
   @Wire(name = "clientContext")
   protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
   private AssetManager assets;
@@ -31,11 +30,11 @@ public class OverlayManager extends IteratingSystem {
   private boolean disposed;
 
   private static final class OwnedOverlay {
-    final com.riiablo.engine.client.component.Overlay root, component;
+    final com.riiablo.presentation.component.Overlay root, component;
     final AssetDescriptor descriptor;
     final AssetReferenceScope references;
-    OwnedOverlay(com.riiablo.engine.client.component.Overlay root,
-        com.riiablo.engine.client.component.Overlay component, AssetReferenceScope references) {
+    OwnedOverlay(com.riiablo.presentation.component.Overlay root,
+        com.riiablo.presentation.component.Overlay component, AssetReferenceScope references) {
       this.root = root;
       this.component = component;
       descriptor = component.assetDescriptor;
@@ -73,7 +72,7 @@ public class OverlayManager extends IteratingSystem {
     if (effects == null) return;
     for (int i = effects.size - 1; i >= 0; i--) {
       OwnedOverlay effect = effects.get(i);
-      com.riiablo.engine.client.component.Overlay overlay = effect.component;
+      com.riiablo.presentation.component.Overlay overlay = effect.component;
       if (!assets.isLoaded(effect.descriptor)) continue;
       Animation animation = overlay.animation;
       boolean loadedBefore = overlay.isLoaded;
@@ -108,7 +107,7 @@ public class OverlayManager extends IteratingSystem {
     if (overlayId == null || overlayId.isEmpty()) return;
     Array<OwnedOverlay> effects = owned.get(entity);
     if (effects != null) for (OwnedOverlay effect : effects) {
-      com.riiablo.engine.client.component.Overlay current = effect.component;
+      com.riiablo.presentation.component.Overlay current = effect.component;
       if (current.persistent && current.stateId == stateId && current.entry != null
           && same(overlayId, current.entry.overlay)
           && mOverlay.get(entity) == effect.root && current.assetDescriptor == effect.descriptor)
@@ -201,15 +200,15 @@ public class OverlayManager extends IteratingSystem {
     // Same state/overlay refresh is idempotent; each different native overlay gets a layer.
     for (int i = effects.size - 1; i >= 0; i--) {
       OwnedOverlay effect = effects.get(i);
-      com.riiablo.engine.client.component.Overlay current = effect.component;
+      com.riiablo.presentation.component.Overlay current = effect.component;
       if (current.persistent == persistent && current.stateId == stateId
           && current.entry != null && same(current.entry.overlay, entry.overlay)) retire(entity, effect);
     }
     // retire may remove the map entry when replacing the final owned effect.
     owned.put(entity, effects);
-    com.riiablo.engine.client.component.Overlay root = mOverlay.create(entity);
-    com.riiablo.engine.client.component.Overlay component = root.entry == null
-        ? root : new com.riiablo.engine.client.component.Overlay();
+    com.riiablo.presentation.component.Overlay root = mOverlay.create(entity);
+    com.riiablo.presentation.component.Overlay component = root.entry == null
+        ? root : new com.riiablo.presentation.component.Overlay();
     component.set(entry);
     component.persistent = persistent;
     component.stateId = stateId;
@@ -234,7 +233,7 @@ public class OverlayManager extends IteratingSystem {
   }
 
   private void removeEmptyComponent(int entity) {
-    com.riiablo.engine.client.component.Overlay root = mOverlay.get(entity);
+    com.riiablo.presentation.component.Overlay root = mOverlay.get(entity);
     if (root != null && root.entry == null && root.layers.size == 0) mOverlay.remove(entity);
   }
 

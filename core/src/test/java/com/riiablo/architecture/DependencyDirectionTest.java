@@ -168,7 +168,10 @@ class DependencyDirectionTest {
     if (relative.equals("com/riiablo/map/RenderSystem.java")) {
       return imported.startsWith("com.riiablo.engine.client.")
           || imported.equals("com.riiablo.presentation.automap.AutomapOptions")
-          || imported.equals("com.riiablo.presentation.automap.AutomapViewport");
+          || imported.equals("com.riiablo.presentation.automap.AutomapViewport")
+          || imported.equals("com.riiablo.presentation.component.AnimationWrapper")
+          || imported.equals("com.riiablo.presentation.component.BBoxWrapper")
+          || imported.equals("com.riiablo.presentation.component.Overlay");
     }
     return false;
   }

@@ -1,6 +1,4 @@
-package com.riiablo.engine.client;
-
-
+package com.riiablo.presentation;
 
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
@@ -9,7 +7,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.COF;
 import com.riiablo.engine.SimulationClock;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Player;
 import org.junit.jupiter.api.Test;
@@ -28,8 +26,8 @@ class AnimationStepperTest extends RiiabloTest {
       animation.setFrame(1);
       animation.setFrameDelta(256);
       world.getMapper(AnimData.class).create(id).speed = 512;
-      com.riiablo.engine.client.component.CofWrapper cof = world.getMapper(
-          com.riiablo.engine.client.component.CofWrapper.class).create(id);
+      com.riiablo.presentation.component.CofWrapper cof = world.getMapper(
+          com.riiablo.presentation.component.CofWrapper.class).create(id);
       cof.cof = nextCof;
       world.setDelta(SimulationClock.STEP_SECONDS);
       world.process();
@@ -40,10 +38,10 @@ class AnimationStepperTest extends RiiabloTest {
       world.process();
       assertEquals(0, animation.getFrame());
       world.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class).remove(id);
-      world.getMapper(com.riiablo.engine.client.component.CofLoadingComponents.class).create(id);
+      world.getMapper(com.riiablo.presentation.component.CofLoadingComponents.class).create(id);
       world.process();
       assertEquals(0, animation.getFrame(), "pending DCCs must not consume animation time");
-      world.getMapper(com.riiablo.engine.client.component.CofLoadingComponents.class).remove(id);
+      world.getMapper(com.riiablo.presentation.component.CofLoadingComponents.class).remove(id);
       world.process();
       assertEquals(2, animation.getFrame());
       assertEquals(512, animation.getFrameDelta());
@@ -59,8 +57,8 @@ class AnimationStepperTest extends RiiabloTest {
       COF oldCof = COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/DI/COF/DIRNHTH.cof"));
       COF nextCof = COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/DI/COF/DIA2HTH.cof"));
       animation.setCOF(oldCof); animation.setFrame(1);
-      com.riiablo.engine.client.component.CofWrapper cof = world.getMapper(
-          com.riiablo.engine.client.component.CofWrapper.class).create(id);
+      com.riiablo.presentation.component.CofWrapper cof = world.getMapper(
+          com.riiablo.presentation.component.CofWrapper.class).create(id);
       cof.cof = nextCof;
       world.getMapper(com.riiablo.engine.server.component.Sequence.class).create(id).nativeMummy = true;
       world.getMapper(AnimData.class).create(id).frame = 3 << 8;

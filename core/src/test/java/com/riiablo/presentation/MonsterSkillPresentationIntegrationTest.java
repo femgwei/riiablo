@@ -141,7 +141,7 @@ class MonsterSkillPresentationIntegrationTest extends RiiabloTest {
     }
   }
 
-  @All(com.riiablo.engine.client.component.Overlay.class)
+  @All(com.riiablo.presentation.component.Overlay.class)
   private static final class RecordingOverlayManager extends OverlayManager {
     int requests;
     int lastEntity;

@@ -1,11 +1,11 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.badlogic.gdx.Gdx;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.COF;
 import com.riiablo.engine.Dirty;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.CofAlphas;
 import com.riiablo.engine.server.event.AlphaChangeEvent;
 

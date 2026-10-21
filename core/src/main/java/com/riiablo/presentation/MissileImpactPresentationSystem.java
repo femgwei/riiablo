@@ -1,8 +1,5 @@
 package com.riiablo.presentation;
 
-import com.riiablo.engine.client.ClientEntityFactory;
-
-
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
@@ -15,7 +12,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.audio.MonsterAudio;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.map.DT1.Tile;
 import com.riiablo.logger.LogManager;

@@ -124,7 +124,7 @@ class DamagePresentationBoundaryTest extends RiiabloTest {
     return id;
   }
 
-  @com.artemis.annotations.All(com.riiablo.engine.client.component.Overlay.class)
+  @com.artemis.annotations.All(com.riiablo.presentation.component.Overlay.class)
   private static final class RecordingOverlays extends OverlayManager {
     final Array<String> shown = new Array<>();
     int lastEntity;

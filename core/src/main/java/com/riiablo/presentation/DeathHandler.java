@@ -1,7 +1,5 @@
 package com.riiablo.presentation;
 
-import com.riiablo.engine.client.ClientEntityFactory;
-
 import com.artemis.ComponentMapper;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -12,9 +10,9 @@ import com.badlogic.gdx.Gdx;
 
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.shared.component.Selectable;
-import com.riiablo.engine.client.component.AnimationWrapper;
-import com.riiablo.engine.client.component.BBoxWrapper;
-import com.riiablo.engine.client.component.CofComponentDescriptors;
+import com.riiablo.presentation.component.AnimationWrapper;
+import com.riiablo.presentation.component.BBoxWrapper;
+import com.riiablo.presentation.component.CofComponentDescriptors;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.Box2DBody;

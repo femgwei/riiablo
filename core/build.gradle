@@ -625,7 +625,7 @@ task mapBoundaryRegression(type: Test) {
 
 task clientUiBoundaryRegression(type: Test) {
   group = 'verification'
-  description = 'Client skill/death/state and audio/graphics presentation, input/pickup and resource lifecycles.'
+  description = 'Client entity/COF/animation, skill/death/state and audio/graphics presentation, input/pickup and resource lifecycles.'
   dependsOn testClasses, architectureRegression
   testClassesDirs = sourceSets.test.output.classesDirs
   classpath = sourceSets.test.runtimeClasspath
@@ -640,11 +640,10 @@ task clientUiBoundaryRegression(type: Test) {
      'com.riiablo.engine.client.*Quest*Test',
      'com.riiablo.engine.client.DamagePresentationBoundaryTest',
      'com.riiablo.engine.client.AuthoritativeAreaSkillSnapshotTest',
-     'com.riiablo.engine.client.AnimationStepperTest',
-     'com.riiablo.engine.client.ObjectBreakAnimationTest',
-     'com.riiablo.engine.client.ClientEntityFactory*Test',
-     'com.riiablo.engine.client.CofModeTransitionTest',
-     'com.riiablo.engine.client.NativeCompositeVisibilityTest',
+     'com.riiablo.engine.client.ClientObjectSnapshotStateTest',
+     'com.riiablo.engine.client.ClientMercenarySnapshotTest',
+     'com.riiablo.engine.client.NativeBarbarianPresentationTest',
+     'com.riiablo.engine.client.CorpseManagerTest',
      'com.riiablo.engine.server.PlayerCorpseIntegrationTest',
      'com.riiablo.engine.server.CombatDeathProgressionEcsScenarioTest',
      'com.riiablo.engine.server.BlessedHammerIntegrationTest',

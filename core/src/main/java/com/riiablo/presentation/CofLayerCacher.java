@@ -1,6 +1,4 @@
-package com.riiablo.engine.client;
-
-import com.riiablo.presentation.ClientGameplayContext;
+package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -15,11 +13,11 @@ import com.riiablo.codec.DC;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Dirty;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.AnimationWrapper;
-import com.riiablo.engine.client.component.CofComponentDescriptors;
-import com.riiablo.engine.client.component.CofLoadingComponents;
+import com.riiablo.presentation.component.AnimationWrapper;
+import com.riiablo.presentation.component.CofComponentDescriptors;
+import com.riiablo.presentation.component.CofLoadingComponents;
 import com.riiablo.engine.shared.component.CofDirtyComponents;
-import com.riiablo.engine.client.component.CofWrapper;
+import com.riiablo.presentation.component.CofWrapper;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.CofComponents;

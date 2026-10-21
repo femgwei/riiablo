@@ -68,16 +68,16 @@ import com.riiablo.tool.Tool;
 import com.riiablo.util.InstallationFinder;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.camera.IsometricCamera;
-import com.riiablo.engine.client.AnimationStepper;
-import com.riiablo.engine.client.ClientEntityFactory;
-import com.riiablo.engine.client.CofAlphaHandler;
-import com.riiablo.engine.client.CofLayerCacher;
-import com.riiablo.engine.client.CofLayerLoader;
-import com.riiablo.engine.client.CofLayerUnloader;
-import com.riiablo.engine.client.CofLoader;
-import com.riiablo.engine.client.CofResolver;
-import com.riiablo.engine.client.CofTransformHandler;
-import com.riiablo.engine.client.CofUnloader;
+import com.riiablo.presentation.AnimationStepper;
+import com.riiablo.presentation.ClientEntityFactory;
+import com.riiablo.presentation.CofAlphaHandler;
+import com.riiablo.presentation.CofLayerCacher;
+import com.riiablo.presentation.CofLayerLoader;
+import com.riiablo.presentation.CofLayerUnloader;
+import com.riiablo.presentation.CofLoader;
+import com.riiablo.presentation.CofResolver;
+import com.riiablo.presentation.CofTransformHandler;
+import com.riiablo.presentation.CofUnloader;
 import com.riiablo.presentation.MissileLoader;
 import com.riiablo.presentation.MissileImpactPresentationSystem;
 import com.riiablo.presentation.ElementalHitPresentationSystem;
@@ -89,7 +89,7 @@ import com.riiablo.presentation.SkillCastHandler;
 import com.riiablo.presentation.MenuManager;
 import com.riiablo.presentation.DialogManager;
 import com.riiablo.presentation.OverlayManager;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.ServerMonsterCorpseSystem;
@@ -188,7 +188,7 @@ public class SkillViewer extends Tool {
   private ComponentMapper<Angle> angles;
   private ComponentMapper<AnimationWrapper> animations;
   private ComponentMapper<AttributesWrapper> attributes;
-  private ComponentMapper<com.riiablo.engine.client.component.Overlay> overlays;
+  private ComponentMapper<com.riiablo.presentation.component.Overlay> overlays;
   private Stage stage;
   private VisSelectBox<String> classSelect;
   private VisSelectBox<String> skillSelect;
@@ -348,7 +348,7 @@ public class SkillViewer extends Tool {
         .with(new ServerSkillSystem(true))
         .with(new com.riiablo.engine.server.VelocityModeChanger())
         .with(new AngularVelocity())
-        .with(new com.riiablo.engine.client.DirectionResolver())
+        .with(new com.riiablo.presentation.DirectionResolver())
         .with(entityFactory);
     com.artemis.WorldConfiguration worldConfig = config.build()
         .register("map", arenaMap)
@@ -367,7 +367,7 @@ public class SkillViewer extends Tool {
     angles = engine.getMapper(Angle.class);
     animations = engine.getMapper(AnimationWrapper.class);
     attributes = engine.getMapper(AttributesWrapper.class);
-    overlays = engine.getMapper(com.riiablo.engine.client.component.Overlay.class);
+    overlays = engine.getMapper(com.riiablo.presentation.component.Overlay.class);
 
     playerData = CharData.obtain(Riiablo.NORMAL, false, "SkillTester", PRESETS[selectedClass].classId);
     prepareDebugCharacter();
@@ -787,8 +787,8 @@ public class SkillViewer extends Tool {
    */
   private void refreshEntityPresentation(int entity) {
     if (engine == null || entity == Engine.INVALID_ENTITY) return;
-    com.riiablo.engine.client.component.CofDescriptor descriptor =
-        engine.getMapper(com.riiablo.engine.client.component.CofDescriptor.class).get(entity);
+    com.riiablo.presentation.component.CofDescriptor descriptor =
+        engine.getMapper(com.riiablo.presentation.component.CofDescriptor.class).get(entity);
     if (descriptor != null && descriptor.descriptor != null && !assets.isLoaded(descriptor.descriptor)) {
       assets.load(descriptor.descriptor);
       runtimeLog("event=cof_queued entity=" + entity + " path=" + descriptor.descriptor.fileName);
@@ -1058,33 +1058,33 @@ public class SkillViewer extends Tool {
     engine.getSystem(CofManager.class).process();
     engine.getSystem(AnimDataResolver.class).process();
     engine.getSystem(CofResolver.class).process();
-    engine.getSystem(com.riiablo.engine.client.CofLoader.class).process();
+    engine.getSystem(com.riiablo.presentation.CofLoader.class).process();
     engine.getSystem(CofLayerLoader.class).process();
     engine.getSystem(CofLayerCacher.class).process();
   }
 
   private void queuePresentationAsset(int entity) {
     if (!isPresentationEntityActive(entity)) return;
-    com.riiablo.engine.client.component.CofDescriptor descriptor =
-        engine.getMapper(com.riiablo.engine.client.component.CofDescriptor.class).get(entity);
+    com.riiablo.presentation.component.CofDescriptor descriptor =
+        engine.getMapper(com.riiablo.presentation.component.CofDescriptor.class).get(entity);
     if (descriptor == null || descriptor.descriptor == null) return;
     if (assets.isLoaded(descriptor.descriptor)) {
-      com.riiablo.engine.client.component.CofWrapper wrapper =
-          engine.getMapper(com.riiablo.engine.client.component.CofWrapper.class).get(entity);
+      com.riiablo.presentation.component.CofWrapper wrapper =
+          engine.getMapper(com.riiablo.presentation.component.CofWrapper.class).get(entity);
       if (wrapper == null) {
         com.riiablo.codec.COF cof = assets.get(descriptor.descriptor);
         if (cof != null) {
-          engine.getMapper(com.riiablo.engine.client.component.CofWrapper.class).create(entity).cof = cof;
+          engine.getMapper(com.riiablo.presentation.component.CofWrapper.class).create(entity).cof = cof;
           runtimeLog("event=cof_ready entity=" + entity + " path=" + descriptor.descriptor.fileName);
         }
       }
-      if (engine.getMapper(com.riiablo.engine.client.component.CofWrapper.class).has(entity)
+      if (engine.getMapper(com.riiablo.presentation.component.CofWrapper.class).has(entity)
           && animations != null && animations.has(entity)
           && animations.get(entity).animation.getNumFramesPerDir() == 0) {
         engine.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class)
             .create(entity).flags |= com.riiablo.engine.Dirty.ALL;
       }
-      if (engine.getMapper(com.riiablo.engine.client.component.CofWrapper.class).has(entity)
+      if (engine.getMapper(com.riiablo.presentation.component.CofWrapper.class).has(entity)
           && !cofRefreshSent.contains(entity, false)) {
         CofChangeEvent refresh = new CofChangeEvent();
         refresh.entityId = entity;
@@ -1111,14 +1111,14 @@ public class SkillViewer extends Tool {
     com.badlogic.gdx.math.Vector2 screen = iso.toScreen(positions.get(entity).position.cpy());
     screen.add(Gdx.graphics.getWidth() * .5f, Gdx.graphics.getHeight() * .5f);
     if (overlays != null && overlays.has(entity)) {
-      com.riiablo.engine.client.component.Overlay overlay = overlays.get(entity);
+      com.riiablo.presentation.component.Overlay overlay = overlays.get(entity);
       if (overlay != null && overlay.isLoaded && overlay.entry != null && overlay.entry.PreDraw) {
         overlay.animation.draw(batch, screen.x, screen.y);
       }
     }
     animation.draw(batch, screen.x, screen.y);
     if (overlays != null && overlays.has(entity)) {
-      com.riiablo.engine.client.component.Overlay overlay = overlays.get(entity);
+      com.riiablo.presentation.component.Overlay overlay = overlays.get(entity);
       if (overlay != null && overlay.isLoaded && overlay.entry != null && !overlay.entry.PreDraw) {
         overlay.animation.draw(batch, screen.x, screen.y);
       }

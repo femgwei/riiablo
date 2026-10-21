@@ -1,6 +1,4 @@
-package com.riiablo.engine.client;
-
-import com.riiablo.presentation.ClientGameplayContext;
+package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -10,8 +8,8 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.assets.loaders.AssetLoader;
 import com.badlogic.gdx.files.FileHandle;
-import com.riiablo.engine.client.component.CofDescriptor;
-import com.riiablo.engine.client.component.CofWrapper;
+import com.riiablo.presentation.component.CofDescriptor;
+import com.riiablo.presentation.component.CofWrapper;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.codec.COF;
 

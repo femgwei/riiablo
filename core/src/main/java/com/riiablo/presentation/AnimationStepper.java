@@ -1,10 +1,10 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IntervalIteratingSystem;
 import com.riiablo.engine.SimulationClock;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
@@ -19,9 +19,9 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<com.riiablo.engine.server.component.SummonedPet> mSummonedPet;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
-  protected ComponentMapper<com.riiablo.engine.client.component.CofWrapper> mCofWrapper;
+  protected ComponentMapper<com.riiablo.presentation.component.CofWrapper> mCofWrapper;
   protected ComponentMapper<com.riiablo.engine.shared.component.CofDirtyComponents> mCofDirty;
-  protected ComponentMapper<com.riiablo.engine.client.component.CofLoadingComponents> mCofLoading;
+  protected ComponentMapper<com.riiablo.presentation.component.CofLoadingComponents> mCofLoading;
 
   public AnimationStepper() {
     super(null, SimulationClock.STEP_SECONDS);
@@ -35,7 +35,7 @@ public class AnimationStepper extends IntervalIteratingSystem {
     // Mode resolution and DCC publication are asynchronous. Keep every action
     // on its resident frame until the selected composite is ready; otherwise
     // an attack's rate advances the previous walk/idle layers while loading.
-    com.riiablo.engine.client.component.CofWrapper cof = mCofWrapper.get(entityId);
+    com.riiablo.presentation.component.CofWrapper cof = mCofWrapper.get(entityId);
     if (mCofDirty.has(entityId) || mCofLoading.has(entityId)
         || cof != null && cof.cof != wrapper.animation.getCOF()) return;
 

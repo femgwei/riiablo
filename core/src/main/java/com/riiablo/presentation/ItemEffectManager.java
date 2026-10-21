@@ -1,6 +1,4 @@
-package com.riiablo.engine.client;
-
-import com.riiablo.presentation.ClientGameplayContext;
+package com.riiablo.presentation;
 
 import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
@@ -9,7 +7,7 @@ import com.artemis.annotations.Wire;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.Item;
 
 @All({Item.class, AnimationWrapper.class})

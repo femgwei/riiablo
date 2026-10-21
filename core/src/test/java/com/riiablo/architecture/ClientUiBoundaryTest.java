@@ -20,12 +20,15 @@ class ClientUiBoundaryTest {
     Path source = repository().resolve("core/src/main/java/com/riiablo/engine/client");
     Pattern ui = Pattern.compile("com\\.riiablo\\.(?:screen|widget)\\.|clientContext\\s*\\.\\s*game\\s*\\(");
     for (String file : Arrays.asList("KeyboardMovementSystem.java", "CursorMovementSystem.java",
-        "ClientItemManager.java", "ClientNetworkReceiver.java", "ClientEntityFactory.java")) {
+        "ClientItemManager.java", "ClientNetworkReceiver.java")) {
       assertFalse(ui.matcher(code(source.resolve(file))).find(), file + " must use a presentation port");
     }
     assertFalse(ui.matcher(code(repository().resolve(
         "core/src/main/java/com/riiablo/presentation/NativeShrinePresentationSystem.java"))).find(),
         "NativeShrinePresentationSystem must use a presentation port");
+    assertFalse(ui.matcher(code(repository().resolve(
+        "core/src/main/java/com/riiablo/presentation/ClientEntityFactory.java"))).find(),
+        "ClientEntityFactory must use a presentation port");
   }
 
   @Test void dedicatedServerRecipesCannotInstallClientUiSystems() throws IOException {
@@ -119,9 +122,32 @@ class ClientUiBoundaryTest {
         }
       }
     }
-    String factory = code(source.resolve("engine/client/ClientEntityFactory.java"));
+    String factory = code(source.resolve("presentation/ClientEntityFactory.java"));
     assertFalse(Pattern.compile("\\b(?:shrineOverlay|shrineDisplayName)\\s*\\(")
         .matcher(factory).find(), "shrine display mapping must have one presentation owner");
+  }
+
+  @Test void entityCofAndAnimationAdaptersHaveOnePresentationOwner() throws IOException {
+    Path source = repository().resolve("core/src/main/java/com/riiablo");
+    for (String type : Arrays.asList("ClientEntityFactory", "AnimationStepper", "CofAlphaHandler",
+        "CofLayerCacher", "CofLayerLoader", "CofLayerUnloader", "CofLoader", "CofResolver",
+        "CofTransformHandler", "CofUnloader", "DirectionResolver", "OverlayStepper", "ItemEffectManager")) {
+      assertTrue(Files.isRegularFile(source.resolve("presentation/" + type + ".java")), type);
+      assertFalse(Files.exists(source.resolve("engine/client/" + type + ".java")), type);
+    }
+    for (String type : Arrays.asList("AnimationWrapper", "BBoxWrapper", "CofComponentDescriptors",
+        "CofDescriptor", "CofLoadingComponents", "CofWrapper", "Label", "Overlay")) {
+      assertTrue(Files.isRegularFile(source.resolve("presentation/component/" + type + ".java")), type);
+      assertFalse(Files.exists(source.resolve("engine/client/component/" + type + ".java")), type);
+    }
+    Pattern presentation = Pattern.compile("com\\.riiablo\\.presentation\\.");
+    for (String directory : Arrays.asList("engine/server", "engine/shared")) {
+      try (java.util.stream.Stream<Path> paths = Files.walk(source.resolve(directory))) {
+        for (Path path : (Iterable<Path>) paths.filter(p -> p.toString().endsWith(".java"))::iterator) {
+          assertFalse(presentation.matcher(code(path)).find(), path + " must remain headless");
+        }
+      }
+    }
   }
 
   private static String code(Path file) throws IOException {

@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ItemEffectManager;
+
 import com.riiablo.presentation.ClientGameplayContext;
 
 import java.util.HashSet;

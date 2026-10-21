@@ -1,4 +1,4 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
@@ -6,7 +6,7 @@ import com.artemis.annotations.All;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.riiablo.codec.DC;
-import com.riiablo.engine.client.component.CofComponentDescriptors;
+import com.riiablo.presentation.component.CofComponentDescriptors;
 
 @All(CofComponentDescriptors.class)
 public class CofLayerUnloader extends BaseEntitySystem {

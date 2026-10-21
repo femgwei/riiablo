@@ -13,7 +13,7 @@ import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
-import com.riiablo.engine.client.component.Label;
+import com.riiablo.presentation.component.Label;
 import com.riiablo.engine.server.object.NativeObjectOperateTable;
 import com.riiablo.map.Map;
 

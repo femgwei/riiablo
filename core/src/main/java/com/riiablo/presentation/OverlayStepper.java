@@ -1,11 +1,11 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IntervalIteratingSystem;
 
 import com.riiablo.engine.SimulationClock;
-import com.riiablo.engine.client.component.Overlay;
+import com.riiablo.presentation.component.Overlay;
 
 @All(Overlay.class)
 public class OverlayStepper extends IntervalIteratingSystem {

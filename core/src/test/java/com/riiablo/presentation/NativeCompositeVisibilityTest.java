@@ -1,6 +1,4 @@
-package com.riiablo.engine.client;
-
-import com.riiablo.presentation.ClientGameplayContext;
+package com.riiablo.presentation;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -19,7 +17,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.codec.*;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.*;
+import com.riiablo.presentation.component.*;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.*;
 import com.riiablo.engine.server.component.Class;

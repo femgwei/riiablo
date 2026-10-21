@@ -4,7 +4,7 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
 
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.PlayerCorpse;
 import com.riiablo.logger.LogManager;

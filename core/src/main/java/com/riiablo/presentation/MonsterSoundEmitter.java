@@ -1,6 +1,5 @@
 package com.riiablo.presentation;
 
-
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
@@ -12,7 +11,7 @@ import com.riiablo.audio.MonsterAudio;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.excel.MonSounds;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Velocity;

@@ -1,6 +1,5 @@
 package com.riiablo.presentation;
 
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -158,7 +157,7 @@ class PresentationAssetLifecycleTest {
     int entity = world.create(); manager.setShrineIcon(entity, "shrine_mana_regen");
     if (!kind.startsWith("early")) { assets.finishLoading(); world.process(); }
     if (kind.toLowerCase().endsWith("entity")) world.delete(entity);
-    else world.getMapper(com.riiablo.engine.client.component.Overlay.class).remove(entity);
+    else world.getMapper(com.riiablo.presentation.component.Overlay.class).remove(entity);
     world.process();
     assertFalse(assets.contains(SHRINE));
   }
@@ -190,7 +189,7 @@ class PresentationAssetLifecycleTest {
     manager.setPersistent(entity, 2, "shrine_mana_regen");
     assets.finishLoading(); world.process(); world.process();
     assertEquals(1, assets.getReferenceCount(SHRINE));
-    assertTrue(world.getMapper(com.riiablo.engine.client.component.Overlay.class).get(entity).isLoaded);
+    assertTrue(world.getMapper(com.riiablo.presentation.component.Overlay.class).get(entity).isLoaded);
     manager.dispose(); assertFalse(assets.contains(SHRINE));
   }
 
@@ -198,7 +197,7 @@ class PresentationAssetLifecycleTest {
     OverlayManager manager = new OverlayManager(); World world = world(manager);
     int entity = world.create(); manager.setShrineIcon(entity, "shrine_mana_regen");
     assets.finishLoading(); world.process();
-    com.riiablo.engine.client.component.Overlay component = world.getMapper(com.riiablo.engine.client.component.Overlay.class).get(entity);
+    com.riiablo.presentation.component.Overlay component = world.getMapper(com.riiablo.presentation.component.Overlay.class).get(entity);
     Overlay.Entry replacement = new Overlay.Entry(); replacement.Filename = "Other";
     component.set(replacement);
     AssetDescriptor descriptor = component.assetDescriptor;
@@ -225,7 +224,7 @@ class PresentationAssetLifecycleTest {
     int entity = world.create(); manager.setShrineIcon(entity, "shrine_mana_regen"); assets.finishLoading();
     manager.set(entity, "missing"); world.process();
     assertEquals(1, assets.getReferenceCount(SHRINE));
-    assertTrue(world.getMapper(com.riiablo.engine.client.component.Overlay.class).get(entity).persistent);
+    assertTrue(world.getMapper(com.riiablo.presentation.component.Overlay.class).get(entity).persistent);
   }
 
   @Test void transientKeepsExistingHoldFramesThenReleases() {
@@ -246,8 +245,8 @@ class PresentationAssetLifecycleTest {
     manager.setPersistent(entity, 2, "shrine_mana_regen");
     manager.set(entity, "shrine_mana_regen");
     assets.finishLoading(); world.process();
-    com.riiablo.engine.client.component.Overlay root =
-        world.getMapper(com.riiablo.engine.client.component.Overlay.class).get(entity);
+    com.riiablo.presentation.component.Overlay root =
+        world.getMapper(com.riiablo.presentation.component.Overlay.class).get(entity);
     assertEquals(3, root.layers.size);
     assertEquals(3, assets.getReferenceCount(SHRINE));
     assertTrue(root.layers.first().entry.PreDraw);
@@ -262,7 +261,7 @@ class PresentationAssetLifecycleTest {
     assertEquals(2, root.layers.first().stateId);
     manager.clearPersistent(entity, 2); world.process();
     assertFalse(assets.contains(SHRINE));
-    assertFalse(world.getMapper(com.riiablo.engine.client.component.Overlay.class).has(entity));
+    assertFalse(world.getMapper(com.riiablo.presentation.component.Overlay.class).has(entity));
   }
 
   @Test void deletingEntityReleasesEveryLoadedAndQueuedLayer() {
@@ -282,7 +281,7 @@ class PresentationAssetLifecycleTest {
     manager.setShrineIcon(first, "shrine_mana_regen"); manager.setShrineIcon(second, "shrine_mana_regen");
     assets.finishLoading(); world.process();
     AssetManager replacement = mock(AssetManager.class); Riiablo.assets = replacement;
-    Animation animation = world.getMapper(com.riiablo.engine.client.component.Overlay.class).get(first).animation;
+    Animation animation = world.getMapper(com.riiablo.presentation.component.Overlay.class).get(first).animation;
     doThrow(new AssertionError("reset")).when(animation).reset();
     assertThrows(AssertionError.class, manager::dispose);
     assertFalse(assets.contains(SHRINE)); verifyNoInteractions(replacement);
@@ -297,7 +296,7 @@ class PresentationAssetLifecycleTest {
     int entity = world.create();
     assertSame(failure, assertThrows(AssertionError.class,
         () -> manager.setShrineIcon(entity, "shrine_mana_regen")));
-    assertFalse(world.getMapper(com.riiablo.engine.client.component.Overlay.class).has(entity));
+    assertFalse(world.getMapper(com.riiablo.presentation.component.Overlay.class).has(entity));
     manager.dispose(); manager.dispose();
     verify(rejecting, never()).unload(anyString());
   }
