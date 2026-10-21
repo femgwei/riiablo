@@ -54,6 +54,8 @@ M1-A/M8-C NPC/世界 UI 迁移：将客户端 NPC、菜单/对话、任务对话
 
 本批 viewer 依赖补充：扩展编译发现 Map Viewer 的 `Map.injectBuilders` 和 Skill Viewer 的 `Map.setEntityFactory` 旧入口已在 M1-B 删除，Skill Viewer 还引用旧包的 `CofDirtyComponents`；允许改为既有 `MapRuntimeBindings` host 绑定、当前 shared 组件类型及工具所属的 factory/context 注册，不改地图生成器、战斗或数据规则。
 
+M1-A/M8-C 音频与图形收口：将声音会话、声音事件/环境/脚步/怪物/格挡/物件播放及衰减、只观察已提交伤害的客户端处理器、天气、overlay/item/missile 资源加载、地面物品光效、automap 绘制及其辅助类型、路径调试绘制归入 `presentation`；将仅被表现类使用、持有播放句柄的 `SoundEmitter` 从 server/component 迁至 presentation/component。客户端实体工厂保留实体职责，飞行音委托表现适配器。允许同步调整 host 装配、viewer、命令、日志配置和测试/门禁引用；空间播放使用所属 world 和 listener，保留原声音键、时序、增益、暂停及资源生命周期。不迁移或修改服务端伤害、AI、任务、数值或协议。
+
 这组子项把前期结构审计中发现的反向依赖和多代实现单独登记，避免它们被“表现层剥离”或“网络收敛”一句话掩盖。这里的状态表示改造状态，不表示问题已经解决。
 
 | 子项 | 审计对象 | 目标边界 | 当前状态 | 完成判定 |
