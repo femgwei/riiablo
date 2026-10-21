@@ -231,11 +231,13 @@ D2MOO 依据：沿用 1.10f Skills/Missiles 客户端回调及权威导弹复用
 
 下一迁移：M1-A/M8-C 客户端实体与 COF/动画表现适配，集中处理装配、资源等待/释放和会话依赖；死亡权威职责与事件/快照出口按 M2/M3 依赖收敛。
 
+详细记录：`docs/dark-magic-m8c-skill-death-state-2026-10-22.md`。
+
 ### M1-A/M8-C 客户端实体与 COF/动画归属记录（2026-10-22）
 
 本批完成日期：2026-10-22；M1-A/M8-C 整体仍为进行中。
 
-提交：待提交（本批）。13 个实体/COF/动画生产适配器和 8 个客户端组件迁入 `presentation`，相关 host、viewer、测试与门禁引用已统一；1.10f COF 回归测试同步迁入新包。
+提交：`7b5dea102`（客户端实体、COF/动画适配器归属迁移及回归门禁）。13 个实体/COF/动画生产适配器和 8 个客户端组件迁入 `presentation`，相关 host、viewer、测试与门禁引用已统一；1.10f COF 回归测试同步迁入新包。
 
 验证：`:core:compileTestJava`、完整 `:core:clientUiBoundaryRegression`、desktop、D2GS 生产/测试、Netty、Map Viewer、Skill Viewer 编译全部通过。客户端共 383 项，382 项通过、1 项可选 automap 样本跳过；架构 12 项、D2GS 定向 20 项通过，合计 414 项通过、1 项跳过，失败/错误均为 0。M1-A 扫描 0、M1-B 生成层 0、运行时适配器 58 且无漂移。
 
@@ -246,8 +248,6 @@ D2MOO 依据：沿用 1.10f Skills/Missiles 客户端回调及权威导弹复用
 下一迁移：集中收敛客户端实体与表现适配器的事件/只读快照出口，不再按单个表现类拆批。
 
 详细记录：`docs/dark-magic-m8c-entity-cof-animation-2026-10-22.md`。
-
-详细记录：`docs/dark-magic-m8c-skill-death-state-2026-10-22.md`。
 
 ### M0 完成记录（2026-10-21）
 

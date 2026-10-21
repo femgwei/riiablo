@@ -8,7 +8,7 @@
 
 架构门禁覆盖新旧位置唯一归属，禁止 `engine/server` 和 `engine/shared` 引用 presentation；装配测试核对本地/远程及 Desktop/Android/iOS 的新类型归属与原系统顺序。回归任务通过 `presentation.*` 纳入迁移后的所有 COF/动画测试，并补入对象/佣兵快照、原生野蛮人表现和客户端尸体测试。1.10f COF 测试与包内夹具一起迁移，没有扩大辅助方法可见性。
 
-提交：待提交（本批）。
+提交：`7b5dea102`（客户端实体、COF/动画适配器归属迁移及回归门禁）。
 
 验证命令：
 
@@ -18,7 +18,7 @@
 .\gradlew.bat :desktop:compileJava :server:d2gs:compileTestJava :server:netty:compileJava :tools:map-viewer:compileJava :tools:skill-viewer:compileJava :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.MonsterAiArenaTest --tests com.riiablo.server.d2gs.SoundEventTransportTest '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --no-daemon
 ```
 
-结果：完整客户端回归共 383 项，382 项通过、1 项因未配置 `D2_AUTOMAP_FIXTURES` 的可选原版存档样本跳过；架构回归 12 项、D2GS 定向回归 20 项全部通过。合计 414 项通过、1 项跳过，失败/错误均为 0。core 生产/测试、desktop、D2GS 生产/测试、Netty、Map Viewer 和 Skill Viewer 编译通过。M1-A 扫描仍为 0；M1-B 生成层 0、运行时适配器 58，无基线漂移。
+结果：完整客户端回归共 383 项，382 项通过、1 项因未配置 `D2_AUTOMAP_FIXTURES` 的可选原版存档样本跳过；架构回归 12 项、D2GS 定向回归 20 项全部通过。合计 414 项通过、1 项跳过，失败/错误均为 0。core 生产/测试、desktop、D2GS 生产/测试、Netty、Map Viewer 和 Skill Viewer 编译通过。M1-A 扫描仍为 0；M1-B 生成层 0、运行时适配器 58，无基线漂移。暂存差异通过 `git diff --cached --check`。
 
 真实资源：使用 `G:\BaiduNetdiskDownload\Diablo II 1.10F`；相关 headless 测试读取 MPQ COF/DCC、数据表和字符串，GPU 上传/提交使用既有 mock，没有启动 GL 窗口、真实音频设备或完整竞技场。`SoundP.java` 结尾原有空行保留，不属于本批提交。
 
