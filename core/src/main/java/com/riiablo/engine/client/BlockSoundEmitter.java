@@ -1,6 +1,7 @@
 package com.riiablo.engine.client;
 
 import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.presentation.ClientPresentationServices;
 
 import com.badlogic.gdx.math.MathUtils;
 
@@ -21,7 +22,7 @@ public class BlockSoundEmitter extends PassiveSystem {
   protected ComponentMapper<Class> mClass;
 
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientPresentationServices clientContext = ClientGameplayContext.fromGlobals();
 
   @Subscribe
   public void onModeChanged(ModeChangeEvent event) {
@@ -50,4 +51,5 @@ public class BlockSoundEmitter extends PassiveSystem {
     if (instance != null) instance.setVolume(gain);
   }
 }
+
 
