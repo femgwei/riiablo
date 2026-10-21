@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -87,3 +89,4 @@ class NecromancerExplosionPresentationTest extends RiiabloTest {
     @Override public int createItem(Item item, float x, float y) { return Engine.INVALID_ENTITY; }
   }
 }
+

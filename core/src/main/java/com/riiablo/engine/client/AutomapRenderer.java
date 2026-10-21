@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.BaseSystem;
 import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
@@ -838,3 +840,4 @@ public class AutomapRenderer extends BaseSystem {
     return automapCamera;
   }
 }
+

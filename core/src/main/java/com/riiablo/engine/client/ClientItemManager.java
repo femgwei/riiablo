@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -377,3 +379,4 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     if (clientContext.charData() != null) VendorPricing.withdrawGold(clientContext.charData(), amount);
   }
 }
+

@@ -8,7 +8,7 @@ import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.ObjectMap;
 
 import com.riiablo.Riiablo;
-import com.riiablo.engine.client.ClientGameplayContext;
+import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.AutoMap;
 import com.riiablo.codec.util.BBox;
@@ -606,3 +606,4 @@ public class AutomapTileRenderer implements Disposable {
     initialized = false;
   }
 }
+

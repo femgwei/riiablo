@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -280,3 +282,4 @@ class StateOverlaySystemTest extends RiiabloTest {
     @Override public void set(int entityId, String overlayId) {}
   }
 }
+

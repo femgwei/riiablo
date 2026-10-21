@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.badlogic.gdx.Gdx;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -247,3 +249,4 @@ public class MissileLoader extends IteratingSystem {
     return Math.floorMod(hash, frameCount);
   }
 }
+

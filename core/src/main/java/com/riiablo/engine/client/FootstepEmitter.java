@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -155,3 +157,4 @@ public class FootstepEmitter extends BaseEntitySystem {
     return weight + "_" + (running ? "run" : "walk") + "_" + material + "_1";
   }
 }
+

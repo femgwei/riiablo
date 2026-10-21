@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.ComponentMapper;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -679,3 +681,4 @@ public class DeathHandler extends PassiveSystem {
         townZone == null || townZone.level == null ? "null" : townZone.level.LevelName));
   }
 }
+

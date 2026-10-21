@@ -10,7 +10,7 @@ import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.riiablo.Palettes;
 import com.riiablo.Riiablo;
-import com.riiablo.engine.client.ClientGameplayContext;
+import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.Palette;
 import com.riiablo.graphics.PaletteIndexedBatch;
@@ -290,3 +290,4 @@ public final class HackMapIconRenderer implements Disposable {
     }
   }
 }
+

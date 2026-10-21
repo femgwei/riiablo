@@ -77,7 +77,7 @@ import com.riiablo.engine.client.FixedStepAccumulator;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
 import com.riiablo.engine.client.ClientAudioSession;
-import com.riiablo.engine.client.ClientGameplayContext;
+import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.engine.client.ClientSimulationAssembly;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.ServerGameplayContext;
@@ -1890,3 +1890,4 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     return Math.min(sanitizeSimulationDelta(delta), SimulationClock.STEP_SECONDS);
   }
 }
+

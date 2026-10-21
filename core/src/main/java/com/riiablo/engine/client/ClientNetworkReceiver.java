@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.google.flatbuffers.Table;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -1836,3 +1838,4 @@ public class ClientNetworkReceiver extends IntervalSystem {
         : clientContext.playerId();
   }
 }
+

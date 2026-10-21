@@ -319,7 +319,7 @@ class FistOfHeavensIntegrationTest extends RiiabloTest {
     for (com.artemis.BaseSystem system : systems) builder.with(system);
     return new World(builder.with(factory).build()
         .register("factory", factory)
-        .register("clientContext", com.riiablo.engine.client.ClientGameplayContext.fromGlobals())
+        .register("clientContext", com.riiablo.presentation.ClientGameplayContext.fromGlobals())
         .register("map", new com.riiablo.map.Map(0, 0)));
   }
 
@@ -413,3 +413,4 @@ class FistOfHeavensIntegrationTest extends RiiabloTest {
     }
   }
 }
+

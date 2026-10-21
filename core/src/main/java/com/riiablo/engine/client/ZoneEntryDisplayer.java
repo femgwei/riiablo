@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.BaseSystem;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.assets.AssetDescriptor;
@@ -115,3 +117,4 @@ public class ZoneEntryDisplayer extends BaseSystem {
     }
   }
 }
+

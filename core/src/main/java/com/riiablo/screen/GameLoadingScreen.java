@@ -5,7 +5,7 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Array;
-import com.riiablo.engine.client.ClientGameplayContext;
+import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
 import com.riiablo.map.Map;
@@ -153,3 +153,4 @@ public class GameLoadingScreen extends ScreenAdapter {
     Array<AssetDescriptor> getDependencies();
   }
 }
+

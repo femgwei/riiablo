@@ -5,7 +5,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import com.riiablo.Client;
 import com.riiablo.Palettes;
 import com.riiablo.Riiablo;
-import com.riiablo.engine.client.ClientGameplayContext;
+import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -46,3 +46,4 @@ final class LoadingScreenHost {
         screen -> Objects.requireNonNull(client, "client").clearAndSet(screen));
   }
 }
+

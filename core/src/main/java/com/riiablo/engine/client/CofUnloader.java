@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -51,3 +53,4 @@ public class CofUnloader extends BaseEntitySystem {
     mCofDescriptor.remove(entityId);
   }
 }
+

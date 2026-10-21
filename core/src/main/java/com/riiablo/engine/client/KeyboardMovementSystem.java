@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
 
@@ -301,3 +303,4 @@ public class KeyboardMovementSystem extends BaseSystem {
     return wasMoving;
   }
 }
+

@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.google.flatbuffers.FlatBufferBuilder;
 
 import com.artemis.ComponentMapper;
@@ -271,3 +273,4 @@ public class NetworkedClientItemManager extends ClientItemManager {
   @Override public void depositGold(int amount) { sendGold(GoldOperation.DEPOSIT, amount); }
   @Override public void withdrawGold(int amount) { sendGold(GoldOperation.WITHDRAW, amount); }
 }
+

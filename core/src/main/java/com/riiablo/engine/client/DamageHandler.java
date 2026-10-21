@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -123,3 +125,4 @@ public class DamageHandler extends PassiveSystem {
     }
   }
 }
+

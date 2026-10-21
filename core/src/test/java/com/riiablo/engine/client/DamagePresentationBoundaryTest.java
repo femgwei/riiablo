@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.utils.Array;
@@ -123,3 +125,4 @@ class DamagePresentationBoundaryTest extends RiiabloTest {
     @Override public void set(int entity, String overlay) { shown.add(overlay); lastEntity = entity; }
   }
 }
+

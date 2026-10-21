@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.BaseSystem;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
@@ -35,3 +37,4 @@ public final class ClientSystemHarness implements AutoCloseable {
 
   @Override public void close() { world.dispose(); }
 }
+

@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.riiablo.CharacterClass;
 import com.riiablo.Riiablo;
 import com.riiablo.engine.server.component.Player;
@@ -38,3 +40,4 @@ final class PlayerHitSound {
     return true;
   }
 }
+

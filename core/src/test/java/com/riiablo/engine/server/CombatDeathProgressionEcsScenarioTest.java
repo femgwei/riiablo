@@ -71,7 +71,7 @@ class CombatDeathProgressionEcsScenarioTest extends RiiabloTest {
             cofs, death, new PlayerCorpseRetrievalSystem(), factory,
             new MissileCollisionSystem())
         .build()
-        .register("clientContext", com.riiablo.engine.client.ClientGameplayContext.fromGlobals())
+        .register("clientContext", com.riiablo.presentation.ClientGameplayContext.fromGlobals())
         .register("factory", factory)
         .register("map", new TownMap()));
     factory.world = world;
@@ -271,3 +271,4 @@ class CombatDeathProgressionEcsScenarioTest extends RiiabloTest {
     @Override public Vector2 find(int id) { return new Vector2(99, 101); }
   }
 }
+

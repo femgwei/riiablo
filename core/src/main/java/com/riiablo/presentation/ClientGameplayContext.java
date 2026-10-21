@@ -1,4 +1,4 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.files.FileHandle;
@@ -133,3 +133,5 @@ public final class ClientGameplayContext {
         Riiablo.palettes);
   }
 }
+
+

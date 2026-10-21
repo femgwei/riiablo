@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Exclude;
@@ -85,3 +87,4 @@ public class CofLoader extends IteratingSystem {
     if (DEBUG) Gdx.app.debug(TAG, "Loaded " + descriptor.fileName);
   }
 }
+

@@ -18,7 +18,7 @@ import com.riiablo.map.Map;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Orientation;
 import com.riiablo.Riiablo;
-import com.riiablo.engine.client.ClientGameplayContext;
+import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.util.DebugUtils;
 
@@ -1363,3 +1363,4 @@ public class AutomapManager implements Disposable {
     activeLayerId = -1;
   }
 }
+

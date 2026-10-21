@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -408,3 +410,4 @@ public class CofLayerLoader extends IteratingSystem {
     return clientContext.playerId() == entityId;
   }
 }
+

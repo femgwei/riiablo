@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.ComponentMapper;
 import com.artemis.Aspect;
 import com.artemis.EntitySubscription;
@@ -206,3 +208,4 @@ public class HoveredManager extends IteratingSystem {
     if (mOverlay.has(id)) mOverlay.get(id).animation.setHighlighted(b);
   }
 }
+

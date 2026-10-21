@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.Aspect;
 import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
@@ -905,3 +907,4 @@ public class CursorMovementSystem extends BaseSystem {
     return hitpoints.asFixed() <= 0f;
   }
 }
+

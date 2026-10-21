@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.engine.server.component.Monster;
@@ -32,3 +34,4 @@ final class MonsterNameResolver {
     return localized == null || localized.startsWith("ERROR: ") ? key : localized;
   }
 }
+

@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -376,3 +378,4 @@ class PresentationAssetLifecycleTest {
     Field field = target.getClass().getDeclaredField(name); field.setAccessible(true); field.set(target, value);
   }
 }
+

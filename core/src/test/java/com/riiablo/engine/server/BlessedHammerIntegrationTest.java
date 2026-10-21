@@ -182,7 +182,7 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
         .with(new EventSystem(), new ServerSkillSystem(true), new SkillCastHandler(),
             new OverlayManager(), factory)
         .build().register("factory", factory)
-        .register("clientContext", com.riiablo.engine.client.ClientGameplayContext.fromGlobals())
+        .register("clientContext", com.riiablo.presentation.ClientGameplayContext.fromGlobals())
         .register("map", new com.riiablo.map.Map(0, 0)));
     try {
       int paladin = world.create();
@@ -332,3 +332,4 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
     }
   }
 }
+

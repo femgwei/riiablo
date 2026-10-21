@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -135,3 +137,4 @@ class NativeCompositeVisibilityTest extends RiiabloTest {
     verify(batch, atLeastOnce().description(description)).draw(any(TextureRegion.class), anyFloat(), anyFloat());
   }
 }
+

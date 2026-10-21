@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
 import com.riiablo.engine.server.component.Position;
@@ -60,3 +62,4 @@ public class ElementalHitPresentationSystem extends PassiveSystem {
         event.attacker, event.victim, hitClass, overlayId);
   }
 }
+

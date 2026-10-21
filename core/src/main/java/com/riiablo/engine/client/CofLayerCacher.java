@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
@@ -336,3 +338,4 @@ public class CofLayerCacher extends IteratingSystem {
     return CofLayerLoader.objectAnimationRate(object.base, mode, fallback, entityId);
   }
 }
+

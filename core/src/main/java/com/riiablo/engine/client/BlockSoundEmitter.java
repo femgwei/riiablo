@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.badlogic.gdx.math.MathUtils;
 
 import com.riiablo.Riiablo;
@@ -48,3 +50,4 @@ public class BlockSoundEmitter extends PassiveSystem {
     if (instance != null) instance.setVolume(gain);
   }
 }
+

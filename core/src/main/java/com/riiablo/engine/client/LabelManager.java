@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
@@ -359,3 +361,4 @@ public class LabelManager extends IteratingSystem {
     return showGroundItems && groundLabelCount > 1;
   }
 }
+

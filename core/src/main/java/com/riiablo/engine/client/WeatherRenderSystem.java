@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.ClientGameplayContext;
+
 import java.util.HashMap;
 import java.util.Random;
 
@@ -839,3 +841,4 @@ public final class WeatherRenderSystem extends BaseSystem {
     }
   }
 }
+
