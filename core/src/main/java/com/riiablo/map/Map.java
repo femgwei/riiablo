@@ -910,9 +910,20 @@ public class Map implements Disposable {
       if (zone.isTown() && zone.levelAct() == getAct() + 1
           && zone.townPlayerSpawn != null) return zone.townPlayerSpawn.cpy();
     }
-    Vector2 spawn = find(ID.TOWN_ENTRY_1);
-    if (spawn == null) spawn = find(ID.TOWN_ENTRY_2);
-    return spawn;
+    // Compatibility towns may not have a native tile-info export. Resolve
+    // their marker in the actual current-act town zone; Map.find() only
+    // searches the first zone and can return an Act I marker for Acts III-V.
+    for (Zone zone : zones) {
+      if (!zone.isTown() || zone.levelAct() != getAct() + 1) continue;
+      Vector2 local = zone.find(ID.TOWN_ENTRY_1);
+      if (local == null) local = zone.find(ID.TOWN_ENTRY_2);
+      if (local != null) {
+        return local.scl(DT1.Tile.SUBTILE_SIZE)
+            .add(DT1.Tile.SUBTILE_CENTER)
+            .add(zone.x, zone.y);
+      }
+    }
+    return null;
   }
 
   public int flags(Vector2 vec) {

@@ -55,6 +55,12 @@ public final class Act2D2MOOLayoutBridge {
       if (level.getFirstRoomEx() == null) DrlgDrlg.initLevel(level);
       if (level.getFirstRoomEx() == null) return false;
 
+      // Player resurrection uses DUNGEON_FindActSpawnLocationEx with tile
+      // index 0.  Keep the native Lut Gholein anchor just like Acts III-V;
+      // NPC projection alone must not leave Act II on the compatibility
+      // TOWN_ENTRY fallback.
+      NativeTownPortalAnchor.capture(level, town);
+
       return projectTownMonsters(drlg, town, source);
     } catch (Throwable t) {
       if (Gdx.app != null) {
