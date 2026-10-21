@@ -213,6 +213,24 @@ D2MOO 依据：沿用现有 1.10f Sounds/MonSounds、Missiles、Overlay 和 auto
 
 详细记录：`docs/dark-magic-m8c-audio-graphics-2026-10-22.md`。
 
+### M1-A/M8-C 技能、死亡与状态归属记录（2026-10-22）
+
+本批完成日期：2026-10-22；M1-A/M8-C 整体仍为进行中。
+
+提交：`75d749a18`（5 个客户端入口、神殿映射和调色板辅助逻辑迁至 presentation，更新装配、网络/输入/screen/viewer、日志及回归门禁）。
+
+验证：`:core:compileTestJava`、完整 `:core:clientUiBoundaryRegression`、D2GS 的 `D2GSSimulationAssemblyTest`/`MonsterAiArenaTest`/`SoundEventTransportTest`，以及 desktop、D2GS 生产/测试、Netty、Map Viewer、Skill Viewer 编译通过。完整客户端回归 368 项通过、1 项可选原版 automap 存档样本跳过；架构 11 项、D2GS 20 项通过，合计 399 项通过、1 项跳过，失败/错误均为 0。表现扫描仍为 0；M1-B 生成层 0、运行时适配器 58 条无漂移。两份历史尸体夹具补齐当前复活守卫要求的城镇出生点与 zone，保留原有装备、HP、复活及成长/掉落断言。
+
+真实资源：是；`-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F`，相关 headless 测试读取 MPQ 数据表/字符串/动画资源，没有启动实际 GL/音频设备或完整竞技场。
+
+D2MOO 依据：沿用 1.10f Skills/Missiles 客户端回调及权威导弹复用、States/Overlay 视觉恢复、Shrines Code/ShrId、Clients.cpp 城镇玩家出生点。服务端结算、AI、任务、数值、协议和客户端装配相对顺序未改动。
+
+剩余问题：包归属已迁移，事件/只读快照出口未完成。客户端实体工厂与 COF/动画资源仍有直接适配调用；技能仍探测本地/联网系统；神殿仍有种类补齐及 COF 写入；死亡处理器仍混合尸体/装备/HP/位置/Box2D 生命周期；状态调色板与 context/widget 仍有全局/host 兼容访问。具体 owner 和删除条件见详细记录，M1 整体尚未完成。
+
+下一迁移：M1-A/M8-C 客户端实体与 COF/动画表现适配，集中处理装配、资源等待/释放和会话依赖；死亡权威职责与事件/快照出口按 M2/M3 依赖收敛。
+
+详细记录：`docs/dark-magic-m8c-skill-death-state-2026-10-22.md`。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
