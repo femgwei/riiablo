@@ -12,20 +12,23 @@
 - 发现跨行依赖时先更新“依赖迁移”，不得把新职责偷偷放入当前迁移。
 - 迁移期间保持一个权威入口；旧入口迁移完成后删除，避免双重结算。
 - 子项必须注明是“已落地、局部存在还是尚未开始”；已有 `SimulationSystemGroups`、预测缓冲或快照字段不能当作完整 dark-magic 等价实现。
+- M1 按原建议的三项交付验收：依赖整理、架构检查、旧违规登记。M1-A/B/C 是审计对象，不是另起批次编号；历史单类提交不再累计成新批次。完整权威状态、事件/只读快照与网络实现收敛仍按 M2/M3/M8 的依赖推进，不能因提前完成迁包而宣称这些迁移完成。
+- 2026-10-22 M1 第 3/3 批范围：统一核验已有依赖与 owner；补查 engine 的 LibGDX 设备/控件依赖和通过 presentation 适配器形成的旧反向依赖；以逐文件、逐类型和次数预算登记 owner、后续迁移及删除条件并接入架构门禁；修正网络清单/外部引用扫描的 source-set、自产包引用及计数盲点。此批不进行 M2/M3 权威状态或 M8-C 完整快照重写，不修改战斗、地图规则或协议。
+- 本批 M1-C source-set 隔离补缺：将没有外部生产调用者的 `server/netty/.../d2gs_test/Main` 与 `TestClient` 原样移入 `src/test/java`，禁止生产源新增测试 harness 或引用它；既有 `net/nnet/onet/d2gs_netty` 实现的网络语义和启动入口不在本批改写，仍由 M8-D 收敛。
 
 ## 总体迁移表
 
 | 编号 | 迁移名称 | 范围 | 目标 | 主要产物 | 出口条件 | 依赖 | 状态 |
 |---|---|---|---|---|---|---|---|
 | M0 | 约束与基线 | 全仓库架构盘点、模块依赖、现有测试、D2MOO 证据和 dark-magic 对照矩阵 | 固定边界和迁移基线，不改变行为 | ownership 清单、依赖图、反向依赖清单、基线测试报告 | 所有目标目录都有唯一 owner；当前行为、已知失败和架构缺口可复现 | 无 | 已完成 |
-| M1 | 领域边界 | `core`、`server`、`quests`、`server-systems`、`shared` 的依赖整理 | 建立 `mechanism / data / policy / adapter / presentation` 五类边界，并登记旧违规 | 包级依赖规则、架构检查、跨层调用清单 | 新代码不能违反依赖方向；旧违规点有 owner、迁移行和删除条件 | M0 | 进行中 |
+| M1 | 领域边界 | `core`、`server`、`quests`、`server-systems`、`shared` 的依赖整理 | 建立 `mechanism / data / policy / adapter / presentation` 五类边界，并登记旧违规 | 包级依赖规则、架构检查、跨层调用清单 | 新代码不能违反依赖方向；旧违规点有 owner、迁移行和删除条件 | M0 | 已完成 |
 | M2 | 权威状态 | 玩家、怪物、物品、任务、佣兵、地图运行时状态和客户端预测 | 明确唯一权威状态来源，UI 和客户端只能提交意图，不能提交结果 | 状态模型、状态写入接口、快照字段清单、客户端命令边界 | 任一状态变更都能追踪到权威系统；无 UI 直接写状态；预测回滚不改变权威数据 | M1 | 未开始 |
-| M3 | Tick、命令与事件 | 固定 40ms Tick、输入意图、技能、移动、死亡、实体删除、阶段调度和结构屏障 | 统一执行顺序和副作用边界，令渲染帧率不影响仿真 Tick | Command envelope、Event、结构变更队列、固定步进运行时、Tick/phase 调度图 | 固定步进可脱离渲染运行；非法意图被拒绝；阶段末统一冲刷结构变更；普通移动、拾取、一个交互流程通过纯逻辑和 ECS 测试 | M2 | 进行中（已有固定步进与系统组，尚无完整准入/屏障） |
+| M3 | Tick、命令与事件 | 固定 40ms Tick、输入意图、技能、移动、死亡、实体删除、阶段调度和结构屏障 | 统一执行顺序和副作用边界，令渲染帧率不影响仿真 Tick | Command envelope、Event、结构变更队列、固定步进运行时、Tick/phase 调度图 | 固定步进可脱离渲染运行；非法意图被拒绝；阶段末统一冲刷结构变更；普通移动、拾取、一个交互流程通过纯逻辑和 ECS 测试 | M2 | 进行中 |
 | M4 | 数据层 | TXT、MPQ、D2 数据表、固定点数值、RNG/Seed、版本和可选内容包 | 使用不可变记录和显式数据来源，规则层不直接操作解析器；为每个系统/实体建立可复现 RNG 流 | typed record、数据版本、命名 RNG stream、数据审计工具、可选内容包边界 | 缺失数据、版本差异、RNG 消耗都有明确测试；合法数据不走隐式常量回退；同一输入可重放得到相同随机序列 | M1 | 未开始 |
 | M5 | 战斗垂直切片 | 普通攻击或 Fire Bolt 的完整链路 | 验证新边界能够承载真实 D2 行为，并能被快照/回放复核 | 命令→准入→结算→导弹/命中→伤害→快照→表现→回放 | 纯数据、ECS、D2GS、真实 1.10f 资源测试全部通过；旧入口不再结算；关键 Tick 有检查点和校验值 | M2、M3、M4 | 未开始 |
 | M6 | 物品与成长 | 物品生成、装备、背包、库存事务、经验、升级、佣兵成长 | 将交易和属性聚合变成可回滚、可验证的领域事务 | Item domain、Inventory transaction、Progression service、存档字段映射 | 拾取、装备、交易、升级和重连状态无重复提交或双重结算 | M2、M4、M5 | 未开始 |
 | M7 | 世界规则 | 地图生成、碰撞、寻路、怪物 AI、任务、NPC、Warp、对象 | 将 D2 规则从通用地图/ECS 机制中分离 | World policy、AI policy、Quest/NPC command handlers | Act 1 关键链路通过 headless、双客户端和真实 MPQ 验收 | M2、M3、M4、M5、M6 | 未开始 |
-| M8 | 网络、存档与表现收口 | FlatBuffers/Netty、快照、重连、D2S、声音/视觉表现和 LibGDX UI/渲染 | 让客户端成为纯表现层，统一协议、持久化和表现适配边界 | semantic protocol、snapshot/replay/checkpoint、versioned save、presentation adapter、SoundEvent | 重连、回放、存档往返和客户端显示通过；服务端不直接访问音频/渲染；旧直连入口已删除 | M3、M5、M6、M7 | 进行中（声音事件链路已完成） |
+| M8 | 网络、存档与表现收口 | FlatBuffers/Netty、快照、重连、D2S、声音/视觉表现和 LibGDX UI/渲染 | 让客户端成为纯表现层，统一协议、持久化和表现适配边界 | semantic protocol、snapshot/replay/checkpoint、versioned save、presentation adapter、SoundEvent | 重连、回放、存档往返和客户端显示通过；服务端不直接访问音频/渲染；旧直连入口已删除 | M3、M5、M6、M7 | 进行中 |
 
 ## dark-magic 对应子项与补充范围
 
@@ -62,11 +65,13 @@ M1-A/M8-C 实体与 COF/动画归属迁移：集中迁移客户端实体工厂�
 
 这组子项把前期结构审计中发现的反向依赖和多代实现单独登记，避免它们被“表现层剥离”或“网络收敛”一句话掩盖。这里的状态表示改造状态，不表示问题已经解决。
 
+依赖与验收口径：M1 主行的三项交付已验收；M1-A 的完整事件/快照目标依赖 M2/M3/M8-C，M1-C 的唯一生产消息/会话入口依赖 M3/M8-D。两个子项保留原完成判定并记为进行中，不能用盘点完成或迁包完成替代完整改造出口。M1 主行已完成只表示依赖门禁和旧违规登记具备进入 M2 的条件。M3 已有固定步进调用约定和系统组，仍无独立 accumulator 与完整准入/屏障；M8 只有 M8-B 声音事件链路完成。
+
 | 子项 | 审计对象 | 目标边界 | 当前状态 | 完成判定 |
 |---|---|---|---|---|
-| M1-A 机制/表现依赖审计 | `engine/client` 对 `screen/widget` 的反向 import；客户端 NPC、对话、标签和区域提示 | `engine` 只发布快照/语义事件，`presentation` 负责 widget、音频和渲染资源 | 进行中（直接 screen/widget/audio/graphics 违规均为 0；客户端适配器的事件/快照出口仍由 M8-C 收敛） | 架构检查禁止 engine/server 引入 UI、音频设备或渲染对象；现有调用均有 owner 和删除条件 |
+| M1-A 机制/表现依赖审计 | `engine/client` 对 `screen/widget` 的反向 import；客户端 NPC、对话、标签和区域提示 | `engine` 只发布快照/语义事件，`presentation` 负责 widget、音频和渲染资源 | 进行中 | 架构检查禁止 engine/server 引入 UI、音频设备或渲染对象；现有调用均有 owner 和删除条件 |
 | M1-B 地图/实体边界 | `map`、`MapBuilder` 直接引用 `EntityFactory`、服务端组件和 `NativeDataTables` | 地图只产布局、碰撞、warp 和对象描述；实体创建由 population/assembly 系统完成 | 已完成 | A1–A5 真实 MPQ/headless 布局验收通过；生成层 ECS/工厂/socket 违规为 0，实体创建统一由装配适配器负责 |
-| M1-C 网络实现盘点 | `server/netty` 中 `net`、`nnet`、`onet`，以及 `d2gs`、`d2gs_netty`、`d2gs_test` 并存 | 明确 protocol、transport、authoritative session 的唯一 owner，测试实现与生产实现隔离 | 已完成（盘点阶段；M8-D 收敛未开始） | 每个消息/会话路径只有一套生产入口；旧实现删除或标记为仅测试适配器 |
+| M1-C 网络实现盘点 | `server/netty` 中 `net`、`nnet`、`onet`，以及 `d2gs`、`d2gs_netty`、`d2gs_test` 并存 | 明确 protocol、transport、authoritative session 的唯一 owner，测试实现与生产实现隔离 | 进行中 | 每个消息/会话路径只有一套生产入口；旧实现删除或标记为仅测试适配器 |
 | M7-B 地图代际收敛 | `map`、`map2`、`map5`、`map/d2moo`、`D2MOO_JAVA` 并存 | 保留主地图链和 D2MOO bridge，过渡实现不再被新规则依赖 | 未开始 | Act 1 关键地图在主链上通过真实 MPQ/headless 验收；过渡目录无生产调用者 |
 
 ### 前期 dark-magic 对比核对（2026-10-21）
@@ -83,9 +88,9 @@ M1-A/M8-C 实体与 COF/动画归属迁移：集中迁移客户端实体工厂�
 | 机制/策略分离 | 数据表和若干 policy 已存在，但大量 D2 公式仍直接位于 engine/server system | 部分属实 | M7-A |
 | Mod 内容包与运行时锁定 | 当前没有完整 Mod/package digest/namespace/session lock；计划明确不引入 Lua/Go | 属实（暂不迁移） | M4-B（暂停） |
 | 服务端直接播放音频 | 历史审计记录 83 处；声音事件迁移后服务端不再直接播放，当前仅剩 3 处客户端表现层 `MonsterAudio` 兼容调用 | 已完成主项，仍有表现收口 | M8-B、M8-C |
-| engine/client ↔ screen/widget 反向依赖 | NPC、菜单/对话、标签/区域提示、音频/天气、资源加载和 automap 已迁至 presentation；直接 screen/widget/audio/graphics 扫描项均为 0，客户端仍经由表现适配器调用服务 | 直接设备/控件依赖已迁移，完整事件/快照表现边界未完成 | M1-A、M8-C |
+| engine/client ↔ screen/widget 反向依赖 | 原 riiablo screen/widget/audio/graphics 扫描为 0；补扫 LibGDX 控件/图形类型与 presentation 后，15 个文件仍有 76 条文件/类型边、77 次引用，均有 owner 和删除条件 | 原扫描零值不代表设备/控件清零；事件/快照表现边界未完成 | M1-A、M2、M3、M6、M8-C |
 | map ↔ engine/server 反向依赖 | M1-B 已删除生成层的 ECS/工厂/socket 依赖；`MapManager`、`Box2DPhysics`、`RenderSystem` 的 58 条运行时适配依赖有独立基线，规则策略位置和地图代际仍待收敛 | 生成边界已完成，适配/策略债务仍有登记 | M1-B（已完成）、M7-A、M7-B、M8-C |
-| 网络和地图多代并存 | `server/netty` 与 `server/d2gs` 同时存在，且 `net/nnet/onet`、`d2gs_netty/d2gs_test` 并存；`map/map2/map5` 也仍存在 | 属实 | M1-C、M7-B、M8-D |
+| 网络和地图多代并存 | `server/netty` 与 `server/d2gs`、`net/nnet/onet`、`d2gs_netty` 仍在生产 source set；`d2gs_test` 两类已移入测试 source set；`map/map2/map5` 仍存在 | 多代实现未收敛；测试 harness 隔离已完成 | M1-C、M7-B、M8-D |
 
 ### 明确不迁移的部分
 
@@ -249,15 +254,50 @@ D2MOO 依据：沿用 1.10f Skills/Missiles 客户端回调及权威导弹复用
 
 详细记录：`docs/dark-magic-m8c-entity-cof-animation-2026-10-22.md`。
 
+### M1 原定三项交付统一验收（2026-10-22）
+
+阶段：M1/P1；本批为原定第 3/3 项“旧违规登记”，本批完成度 100%。第一项依赖整理、第二项架构检查与第三项旧违规登记已合并核验，不再累计历史单类提交为新批次。前面的逐次记录保留为历史，本节是当前进度口径。
+
+提交：`e82529343`（统一边界门禁、旧债登记、网络扫描修正和 harness 测试源隔离）；本节验收记录随同批次提交。
+
+范围与结果：
+
+- 依赖整理：沿用已有五类 owner、模块 DAG 和 M1-B host/population 端口；关闭 extracted module 仍可导入 `com.riiablo.presentation` 的门禁缺口。
+- 架构检查：新增统一生产 source-root 扫描，补查 LibGDX 类型、`Gdx` 音频/图形设备以及 presentation 反向依赖；逐文件、逐类型、逐次数拒绝新增和增长，减少旧债时要求同步收缩预算。headless 代码不允许通过登记获得表现依赖豁免。扫描器是保守源码检查，Java 编译和现有模块/地图门禁继续作为语义依据。
+- 旧违规登记：`tools/architecture/m1-presentation-debt.tsv` 共 15 个文件、76 条边、77 次引用，逐项有具体 owner、M2/M3/M6/M8 后续归属和可核验删除条件。旧 M1-A 扫描为 0 只覆盖 riiablo 原表现包，不能覆盖 LibGDX 与新 presentation 包；此前“直接设备/控件均清零”的描述不准确。
+- 网络审计与隔离：两份 `d2gs_test` harness 保持内容和包名不变，移入 `server/netty/src/test/java`；生产源码条目 75 → 73，生产 harness 条目和外部生产引用均为 0。两个 PowerShell 脚本修复了表头假制表符、source-set 混扫、整棵旧实现目录跳过与错误计数，并委托统一 Python 扫描。剩余 7 条跨族引用全部指向 `nnet`，仍由 M8-D 收敛，不能把零 harness 引用视为生产入口唯一。
+
+验证命令（两次 Gradle 执行均成功）：
+
+```powershell
+./gradlew.bat :core:architectureRegression :core:clientUiBoundaryRegression :core:mapBoundaryRegression :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.MonsterAiArenaTest --tests com.riiablo.server.d2gs.SoundEventTransportTest :desktop:compileJava :server:netty:compileJava :tools:map-viewer:compileJava :tools:skill-viewer:compileJava '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --no-daemon
+./gradlew.bat :core:architectureRegression :server:netty:compileTestJava '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --no-daemon
+python -m unittest discover -s tools/architecture -p test_migration_boundaries.py
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-network-entrypoints.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-network-implementation-inventory.ps1
+```
+
+结果：架构回归 12 项、客户端回归 383 项（382 通过、1 项可选 automap 样本跳过）、地图 95 项、D2GS 定向 20 项；抽出模块 game-data 2 项、server-domain 295 项、server-systems 2 项、quests 17 项。当前 XML 共 826 项，825 通过、1 跳过，失败/错误为 0；模块任务在最后补验中使用有效的 UP-TO-DATE 结果，统计不表示本批重跑全部仓库测试。另有扫描器拒绝用例 9 项通过。M1-A 原扫描 0；补充门禁 76 条边/77 次引用无漂移；M1-B 生成层 0、运行时适配器 58 条无漂移。Netty 主/测试源均编译通过，生产输出没有 `d2gs_test` class，测试输出包含两份 harness。
+
+真实资源：是，使用 `G:\BaiduNetdiskDownload\Diablo II 1.10F` MPQ/headless 回归；未运行真实 GL/audio 客户端或完整双客户端网络实机。D2MOO 依据：本批只改变依赖门禁、记录和测试源码归属，不修改 D2 规则、战斗、地图或协议；既有 1.10f 行为回归保持通过。
+
+出口判断：M1 主行原定的三项交付已验收；M1-A 完整事件/只读快照目标仍未达到，M1-C 的单一生产消息/会话路径也未达到，两个子项原判定保留并继续记为进行中。它们分别依赖 M2/M3/M8-C 和 M3/M8-D，不作为新增 M1 微批次。M1-B、M8-B 已完成；M2/M4/M5/M6/M7 尚未正式启动，M3 和 M8-C 只有局部实现，M8-A/M8-D 未完成（M4-B 暂停）。
+
+剩余 owner：表现旧债见逐边 TSV；地图 58 条运行时依赖仍由 `MapManager`（装配）、`Box2DPhysics`（物理）、`RenderSystem`（表现）承担，生成层不再反向依赖；网络族 owner/删除条件沿用 `docs/dark-magic-m1c-network-audit-2026-10-21.md`，本次仅消除 harness 生产 source-set 债务。
+
+下一正式迁移：M2，按原计划集中处理玩家/单位权威状态、写入接口与预测/表现边界；物品/任务和佣兵/地图按 M2 原定后续批次处理。M8-C/M8-D 完整改造继续保留其依赖与出口，不在 M1 中提前重写。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
-提交：待提交（本批）
+提交：`3baaf2497`（M0 基线完成记录）
 验证：`:verifyModuleBoundaries`、`:shared:test`、`:game-data:test`、`:server-domain:test`、`:server-systems:test`、`:core:architectureRegression`、`:core:compileJava`、`:server:d2gs:compileJava`、`:desktop:compileJava` 全部通过；详细限制见 `docs/dark-magic-m0-baseline-2026-10-21.md`
 真实资源：否
 D2MOO 依据：本批不改变暗黑规则；D2MOO 作为既有兼容证据保留在依赖/范围记录中
 剩余问题：全量行为测试、真实 MPQ/headless 验收、M1-A/M1-C 反向依赖迁移和 M3/M4/M8 未完成子项
-下一迁移：M1（先 M1-A；M1-C 可并行）`r`n## 每次迁移的固定交付格式
+下一迁移：M1（历史记录；当前进度以上面的统一验收为准）
+
+## 每次迁移的固定交付格式
 
 每个迁移完成后，在本文件对应行补充以下信息：
 
@@ -273,7 +313,7 @@ D2MOO 依据：<源码文件/函数>
 
 ## 迁移批次建议
 
-大迁移不直接对应大提交。每一行建议拆成 2～5 个小批次，每个小批次都提交并推送：
+按原计划的完整交付范围组织批次，每个批次可以包含实现与验收记录提交；单类修补、编译适配和补记 hash 不另计批次。每个完整批次提交并推送：
 
 - M0：2 个批次，分别建立目录清单和测试基线。
 - M1：3 个批次，分别整理依赖、架构检查和旧违规登记。
@@ -283,7 +323,7 @@ D2MOO 依据：<源码文件/函数>
 - M5：5 个以上批次，先完成一个技能族，再扩展普通攻击和其他技能。
 - M6～M8：每行 3～5 个批次，按领域和验收门槛拆分。
 
-因此完整计划预计为 **8 次主要迁移、约 25～35 个小批次**。当前不启动 M5 之前的大规模重写；先从 M0 建立范围记录，确保以后每轮都能知道正在移动什么、为什么移动以及何时算完成。
+因此完整计划预计为 **8 次主要迁移、约 25～35 个完整批次**，不将这一数量全部消耗在 M1。当前 M1 三项交付已验收，下一正式迁移为 M2；已有 M3/M8 局部实现不代表后续迁移已完成。
 
 
 
