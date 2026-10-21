@@ -1,6 +1,7 @@
 package com.riiablo.engine.client;
 
 import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.presentation.ClientPresentationServices;
 
 import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
@@ -40,7 +41,7 @@ public class FootstepEmitter extends BaseEntitySystem {
 
   protected Map map;
   @com.artemis.annotations.Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientPresentationServices clientContext = ClientGameplayContext.fromGlobals();
 
   private int previousFrame = -1;
   private byte previousMode = -1;
@@ -157,4 +158,6 @@ public class FootstepEmitter extends BaseEntitySystem {
     return weight + "_" + (running ? "run" : "walk") + "_" + material + "_1";
   }
 }
+
+
 

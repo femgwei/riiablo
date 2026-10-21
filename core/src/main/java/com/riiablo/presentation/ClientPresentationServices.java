@@ -7,7 +7,10 @@ import java.util.function.Supplier;
 
 /** Narrow presentation services that client systems may consume without host ownership details. */
 public interface ClientPresentationServices {
+  int playerId();
   Supplier<GameScreen> gameSupplier();
   Audio audio();
   PaletteIndexedBatch batch();
 }
+
+
