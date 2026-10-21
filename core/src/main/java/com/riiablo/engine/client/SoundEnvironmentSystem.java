@@ -11,6 +11,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.SimulationClock;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.map.Map;
+import com.riiablo.presentation.ClientEnvironmentAudioServices;
 import java.util.Objects;
 
 /** Plays the ambience and periodic event authored by the player's current level. */
@@ -19,7 +20,7 @@ public final class SoundEnvironmentSystem extends BaseSystem {
 
   protected ComponentMapper<MapWrapper> mMapWrapper;
 
-  private final ClientAudioSession session;
+  private final ClientEnvironmentAudioServices session;
 
   private int environmentId = -1;
   private boolean day = true;
@@ -35,7 +36,7 @@ public final class SoundEnvironmentSystem extends BaseSystem {
   private int eventDurationFrames;
   private boolean eventFading;
 
-  public SoundEnvironmentSystem(ClientAudioSession session) {
+  public SoundEnvironmentSystem(ClientEnvironmentAudioServices session) {
     this.session = Objects.requireNonNull(session, "session");
   }
 
@@ -173,3 +174,4 @@ public final class SoundEnvironmentSystem extends BaseSystem {
     ambienceId = NO_SOUND;
   }
 }
+

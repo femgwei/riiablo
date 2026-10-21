@@ -1,6 +1,7 @@
 package com.riiablo.engine.client;
 
 import com.riiablo.audio.Audio;
+import com.riiablo.presentation.ClientEnvironmentAudioServices;
 import com.riiablo.codec.excel.SoundEnviron;
 import com.riiablo.codec.excel.Sounds;
 import com.riiablo.map.EnvironmentCycle;
@@ -13,7 +14,7 @@ import java.util.function.IntSupplier;
  * Audio may be absent in silent hosts; tables and the clock must always be supplied.
  * This binding does not own or dispose the shared audio service or table resources.
  */
-public final class ClientAudioSession {
+public final class ClientAudioSession implements ClientEnvironmentAudioServices {
   private final EnvironmentCycle environment;
   private final IntSupplier listener;
   private final Audio audio;
@@ -35,3 +36,4 @@ public final class ClientAudioSession {
   public SoundEnviron soundEnviron() { return soundEnviron; }
   public Sounds sounds() { return sounds; }
 }
+
