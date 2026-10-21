@@ -1,6 +1,7 @@
 package com.riiablo.engine.client;
 
 import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.presentation.ClientMonsterAudioServices;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -44,7 +45,7 @@ public class MonsterSoundEmitter extends IteratingSystem {
   protected ComponentMapper<SummonedPet> mSummonedPet;
 
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientMonsterAudioServices clientContext = ClientGameplayContext.fromGlobals();
 
   private final IntMap<State> states = new IntMap<>();
 
@@ -186,4 +187,5 @@ public class MonsterSoundEmitter extends IteratingSystem {
     private boolean tauntPlayed;
   }
 }
+
 
