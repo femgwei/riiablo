@@ -26,7 +26,7 @@ import com.riiablo.command.Parameter;
 import com.riiablo.command.ParameterException;
 import com.riiablo.console.Console;
 import com.riiablo.cvar.Cvar;
-import com.riiablo.engine.client.WeatherRenderSystem;
+import com.riiablo.presentation.WeatherRenderSystem;
 import com.riiablo.key.MappedKey;
 import com.riiablo.logger.Level;
 import com.riiablo.logger.Logger;

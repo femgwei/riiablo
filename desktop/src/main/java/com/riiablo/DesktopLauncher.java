@@ -138,7 +138,7 @@ public class DesktopLauncher {
     LogManager.setLevel("com.riiablo.engine.server.combat.DamageCalculator", Level.WARN);
     LogManager.setLevel("com.riiablo.engine.server.AnimStepper", Level.WARN);
     LogManager.setLevel("com.riiablo.engine.server.SequenceHandler", Level.WARN);
-    LogManager.setLevel("com.riiablo.engine.client.DamageHandler", Level.WARN);
+    LogManager.setLevel("com.riiablo.presentation.DamageHandler", Level.WARN);
     LogManager.setLevel("com.riiablo.engine.client.DeathHandler", Level.WARN);
     LogManager.setLevel("com.riiablo.engine.client.CorpseManager", Level.WARN);
     

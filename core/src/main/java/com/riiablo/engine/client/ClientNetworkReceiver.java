@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.PlayerHitSound;
+
 import com.riiablo.presentation.ClientGameplayContext;
 
 import com.google.flatbuffers.Table;
@@ -1567,7 +1569,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     // signal for the character's class-specific pain voice.  Do not trigger on
     // healing, max-hp changes, or an initial snapshot.
     if (hitpoints < oldHitpoints && mPlayer.has(entityId)) {
-      PlayerHitSound.play(mPlayer.get(entityId));
+      PlayerHitSound.play(clientContext, mPlayer.get(entityId));
     }
     if (oldHitpoints != hitpoints || data.dead()) {
           Gdx.app.log(TAG, String.format(

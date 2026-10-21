@@ -1,6 +1,9 @@
 package com.riiablo.engine.client;
 
 import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.presentation.MissileTravelAudio;
+import com.riiablo.presentation.OverlayManager;
+import com.riiablo.presentation.MissileLoader;
 import com.riiablo.presentation.ClientNpc;
 import com.riiablo.presentation.MenuManager;
 import com.riiablo.presentation.DialogManager;
@@ -10,13 +13,10 @@ import com.artemis.annotations.Wire;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.IntIntMap;
 
 import com.riiablo.Riiablo;
-import com.riiablo.audio.Audio;
-import com.riiablo.audio.MonsterAudio;
 import com.riiablo.codec.DCC;
 import com.riiablo.engine.server.ai.AI;
 import com.riiablo.engine.server.ai.Npc;
@@ -44,7 +44,6 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
-import com.riiablo.engine.server.component.SoundEmitter;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
@@ -62,7 +61,6 @@ public class ClientEntityFactory extends ServerEntityFactory {
   protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
   protected ComponentMapper<Label> mLabel;
   protected ComponentMapper<Selectable> mSelectable;
-  protected ComponentMapper<SoundEmitter> mSoundEmitter;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected CofManager cofs;
 
@@ -725,20 +723,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
       // D2 plays TravelSound once when the missile is created.  Keep the
       // emitter on the missile so the normal distance attenuation applies;
       // MissileCollisionSystem separately emits HitSound on impact.
-      if (clientContext.audio() != null && mSoundEmitter != null) {
-        Audio.Instance travel = clientContext.audio().play(missile.TravelSound, true);
-        if (travel != null) {
-          // Start at the listener-relative gain immediately.  Waiting for
-          // SoundEmitterHandler's first tick briefly played every arrow at
-          // full volume, producing a sudden shot instead of a near-to-far
-          // spatial fade.  Missile travel audio is also room-local, like
-          // monster/NPC sounds, so town cannot hear Flavie's arrows across
-          // the Blood Moor boundary.
-          travel.setVolume(MonsterAudio.spatialGain(id));
-          mSoundEmitter.create(id).set(travel, Interpolation.pow2OutInverse,
-              SoundEmitter.DEFAULT_RADIUS, true);
-        }
-      }
+      MissileTravelAudio.play(world, clientContext, id, missile.TravelSound);
       com.badlogic.gdx.Gdx.app.log(TAG, String.format(
           "[MISSILE_SOUND] phase=travel missileId=%d missile=%s travelSound=%s",
           id, missile.Missile, missile.TravelSound));

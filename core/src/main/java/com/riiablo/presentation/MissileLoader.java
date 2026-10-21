@@ -1,0 +1,251 @@
+package com.riiablo.presentation;
+
+
+import com.badlogic.gdx.Gdx;
+import com.artemis.ComponentMapper;
+import com.artemis.annotations.All;
+import com.artemis.annotations.Exclude;
+import com.artemis.annotations.Wire;
+import com.artemis.systems.IteratingSystem;
+
+import com.riiablo.Riiablo;
+import com.riiablo.codec.Animation;
+import com.riiablo.codec.DCC;
+import com.riiablo.codec.excel.Missiles;
+import com.riiablo.engine.Direction;
+import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.engine.client.component.BBoxWrapper;
+import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.Missile;
+import com.riiablo.graphics.BlendMode;
+
+@All(Missile.class)
+@Exclude({AnimationWrapper.class, BBoxWrapper.class})
+public class MissileLoader extends IteratingSystem {
+  protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
+  protected ComponentMapper<Angle> mAngle;
+
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+
+  @Override
+  protected void process(int entityId) {
+    Missile missile = mMissile.get(entityId);
+    if (clientContext.assets() == null || !clientContext.assets().isLoaded(missile.missileDescriptor)) return;
+    DCC celFile = clientContext.assets().get(missile.missileDescriptor);
+
+    Missiles.Entry entry = missile.missile;
+    // One-shot impact DCCs are created and rendered in the same simulation
+    // tick.  Preload their sole direction here instead of relying on the
+    // lazy Layer.draw path, which can otherwise submit a region before the
+    // GL texture has been created (the entity then expires with no visible
+    // pixels even though the animation and bounds are valid).
+    if (entry != null && "iceexplode".equalsIgnoreCase(entry.Missile)) {
+      celFile.loadDirection(0);
+      com.badlogic.gdx.graphics.Pixmap pixmap = celFile.getPixmap(0, 0);
+      if (pixmap != null) {
+        int firstPixel = pixmap.getPixel(0, 0);
+        int distinct = 0;
+        int minLow = 255;
+        int maxLow = 0;
+        int minHigh = 255;
+        int maxHigh = 0;
+        int previous = Integer.MIN_VALUE;
+        for (int py = 0; py < pixmap.getHeight(); py++) {
+          for (int px = 0; px < pixmap.getWidth(); px++) {
+            int pixel = pixmap.getPixel(px, py);
+            int low = pixel & 0xff;
+            int high = pixel >>> 24;
+            minLow = Math.min(minLow, low);
+            maxLow = Math.max(maxLow, low);
+            minHigh = Math.min(minHigh, high);
+            maxHigh = Math.max(maxHigh, high);
+            if (pixel != previous) distinct++;
+            previous = pixel;
+          }
+        }
+        com.badlogic.gdx.graphics.g2d.TextureRegion region = celFile.getTexture(0, 0);
+        Gdx.app.debug("MissileLoader", String.format(
+            "[MISSILE_DCC] entity=%d size=%dx%d first=0x%08x distinct=%d "
+                + "low=%d..%d high=%d..%d texture=%s",
+            entityId, pixmap.getWidth(), pixmap.getHeight(), firstPixel, distinct,
+            minLow, maxLow, minHigh, maxHigh,
+            region != null ? region.getTexture().getTextureObjectHandle() : "null"));
+      }
+    }
+
+    int blendMode;
+    switch (entry.Trans) {
+      case 0:  blendMode = BlendMode.ID; break;
+      // Ground-fire DCCs use the native luminosity mask. Missiles.txt
+      // Light/Flicker describe the spatial light radius, not sprite alpha.
+      case 1:  blendMode = isPoisonMissile(entry) ? BlendMode.SCREEN
+          : isGroundFire(entry) ? BlendMode.LUMINOSITY : BlendMode.ADDITIVE; break;
+      default: blendMode = BlendMode.ID; break;
+    }
+    // IceArrowExplode.dcc is a fully-coloured impact sprite, but its native
+    // Trans=1 row still uses the same additive missile compositing as
+    // FreezeExplodeCenter/Ejecta. Keep the explicit branch as documentation
+    // because this one-shot layer was previously forced through a different
+    // indexed-alpha fallback while diagnosing the missing animation.
+    if ("iceexplode".equalsIgnoreCase(entry.Missile)) {
+      blendMode = BlendMode.ADDITIVE;
+    }
+
+    Animation animation = mAnimationWrapper.create(entityId).animation;
+    animation.edit()
+        .layer(celFile, blendMode)
+        .build();
+    animation.setMode(entry.LoopAnim > 0 ? Animation.Mode.LOOP : Animation.Mode.CLAMP); // TODO: Some are 2 -- special case?
+    if (entry.SubLoop > 0 && animation.getMode() == Animation.Mode.LOOP) {
+      animation.setSubLoop(entry.SubStart, entry.SubStop);
+    }
+    int initialFrame = entry.RandStart;
+    // PoisonSmokePuff is spawned as a client-only child by the native poison
+    // javelin callback.  Its table RandStart is empty, but D2 seeds each new
+    // puff at a different animation frame; starting every child at frame 0
+    // produces an obvious row of synchronized tiny sparks.  Derive a stable
+    // per-entity phase from the missile seed/position so local and network
+    // clients get varied, reproducible large/small puffs without global RNG.
+    if (isPoisonSmokePuff(entry) && animation.getNumFramesPerDir() > 0) {
+      int phase = poisonPuffPhase(missile, entityId, animation.getNumFramesPerDir());
+      initialFrame += phase;
+      Gdx.app.debug("MissileLoader", String.format(
+          "[MISSILE_ANIM_PHASE] entity=%d missile=%s phase=%d frames=%d initial=%d",
+          entityId, entry.Missile, phase, animation.getNumFramesPerDir(),
+          Math.floorMod(initialFrame, animation.getNumFramesPerDir())));
+    }
+    if (isGroundFire(entry) && animation.getNumFramesPerDir() > 0) {
+      initialFrame += groundFirePhase(missile, animation.getNumFramesPerDir());
+    }
+    if (animation.getNumFramesPerDir() > 0) {
+      animation.setFrame(Math.floorMod(initialFrame, animation.getNumFramesPerDir()));
+    }
+    // D2Common initializes missile wAnimSpeed as
+    //   (animrate << 8) / 1024.
+    // Animation.setFrameDelta uses the same 8.8 fixed-point unit, so keeping
+    // the table value here preserves per-missile impact/child timing instead
+    // of forcing every DCC to 25 frames per second.
+    int nativeFrameDelta = nativeFrameDelta(clientContext, missile);
+    animation.setFrameDelta(Math.max(1, nativeFrameDelta));
+    
+    // Set direction based on Angle component if available
+    if (mAngle.has(entityId)) {
+      float radians = mAngle.get(entityId).angle.angleRad();
+      int direction = Direction.radiansToDirection(radians, animation.getNumDirections());
+      animation.setDirection(direction);
+    } else {
+      animation.setDirection(0);
+    }
+
+    mBBoxWrapper.create(entityId).box = animation.getBox();
+  }
+
+  static int nativeFrameDelta(Missile missile) {
+    return nativeFrameDelta(ClientGameplayContext.fromGlobals(), missile);
+  }
+
+  static int nativeFrameDelta(ClientGameplayContext context, Missile missile) {
+    if (missile.skillId == 308 && missile.missile.Id == 502) {
+      if (context == null || context.files() == null || context.files().skills == null) return 256;
+      int speed = com.riiablo.engine.server.skill.SkillFormula.evaluate(
+          context.files().skills.get(308).calc1, context.files().skills.get(308), missile.damageLevel);
+      if (speed > 0) return speed;
+    }
+    // SKILLS_UpdateInfernoAnimationParameters replaces the ordinary missile
+    // animation rate along with TotalFrames, not just its travel distance.
+    if ((missile.skillId == 178 || missile.skillId == 319 || missile.skillId == 317
+        || missile.skillId == 193)
+        && missile.nativeLifetimeFrames > 0) {
+      return (missile.missile.AnimLen << 8) / missile.nativeLifetimeFrames;
+    }
+    return missile.missile.animrate > 0 ? missile.missile.animrate >> 2 : 256;
+  }
+
+  /**
+   * Loads a newly-created presentation missile immediately when its native
+   * impact event is dispatched during the simulation tick.  Normally Artemis
+   * invokes {@link #process(int)} on the next pass, but one-shot impact DCCs
+   * must be visible in the same render frame in which they are spawned.
+   */
+  public void loadNow(int entityId) {
+    if (!mMissile.has(entityId)) return;
+    // Entity ids are recycled by Artemis. Rebuild an inherited wrapper in
+    // place instead of removing and recreating the component: RenderSystem is
+    // subscribed to AnimationWrapper and a same-tick remove/create can leave
+    // a recycled impact entity out of its render subscription. process()'
+    // Animation.Builder.reset() replaces the old DCC layer, so retaining the
+    // wrapper does not retain the previous missile's animation.
+    process(entityId);
+    Missiles.Entry entry = mMissile.get(entityId).missile;
+    if (entry != null && ("iceexplode".equalsIgnoreCase(entry.Missile)
+        || "fireexplosion2".equalsIgnoreCase(entry.Missile))) {
+      int frames = mAnimationWrapper.has(entityId)
+          ? mAnimationWrapper.get(entityId).animation.getNumFramesPerDir() : 0;
+      Animation loaded = mAnimationWrapper.has(entityId)
+          ? mAnimationWrapper.get(entityId).animation : null;
+      int loadedBlend = loaded != null && loaded.getLayer(0) != null
+          ? loaded.getLayer(0).getBlendMode() : -1;
+      Gdx.app.debug("MissileLoader", String.format(
+          "[MISSILE_ANIM_LOAD] entity=%d missile=%s loaded=%s frames=%d dirs=%d "
+              + "frame=%d dir=%d trans=%d blend=%d box=%s",
+          entityId, entry.Missile, loaded != null, frames,
+          loaded != null ? loaded.getNumDirections() : 0,
+          loaded != null ? loaded.getFrame() : -1,
+          loaded != null ? loaded.getDirection() : -1,
+          entry.Trans, loadedBlend,
+          loaded != null ? loaded.getBox() : null));
+    }
+  }
+
+  /** Ground-fire rows share the native groundFireBig DCC and flicker fields. */
+  static boolean isGroundFire(Missiles.Entry entry) {
+    return entry != null
+        && entry.CelFile != null
+        && "groundFireBig".equalsIgnoreCase(entry.CelFile)
+        && entry.Light > 0
+        && entry.Flicker > 0;
+  }
+
+  static boolean isPoisonSmokePuff(Missiles.Entry entry) {
+    return entry != null && entry.CelFile != null
+        && "PoisonSmokePuff".equalsIgnoreCase(entry.CelFile);
+  }
+
+  static int poisonPuffPhase(Missile missile, int entityId, int frameCount) {
+    if (frameCount <= 0) return 0;
+    int x = missile != null ? Math.round(missile.start.x * 16f) : 0;
+    int y = missile != null ? Math.round(missile.start.y * 16f) : 0;
+    int seed = missile != null ? missile.rngState : 0;
+    int hash = seed ^ entityId * 0x9E3779B9 ^ x * 0x45D9F3B ^ y * 0x27D4EB2D;
+    hash ^= hash >>> 16;
+    hash *= 0x7FEB352D;
+    hash ^= hash >>> 15;
+    return Math.floorMod(hash, frameCount);
+  }
+
+  /** Native poison/plague missiles use PL2 Screen instead of alpha-over. */
+  static boolean isPoisonMissile(Missiles.Entry entry) {
+    if (entry == null) return false;
+    String type = entry.EType;
+    String missile = entry.Missile;
+    String skill = entry.Skill;
+    return "pois".equalsIgnoreCase(type) || "poison".equalsIgnoreCase(type)
+        || missile != null && (missile.toLowerCase(java.util.Locale.ROOT).contains("poison")
+            || missile.toLowerCase(java.util.Locale.ROOT).contains("plague"))
+        || skill != null && (skill.toLowerCase(java.util.Locale.ROOT).contains("poison")
+            || skill.toLowerCase(java.util.Locale.ROOT).contains("plague"));
+  }
+
+  /** Stable world-cell phase, so neighbouring fire cells do not animate in lockstep. */
+  static int groundFirePhase(Missile missile, int frameCount) {
+    if (frameCount <= 0 || missile == null) return 0;
+    int x = Math.round(missile.start.x);
+    int y = Math.round(missile.start.y);
+    int hash = x * 0x45D9F3B ^ y * 0x27D4EB2D;
+    return Math.floorMod(hash, frameCount);
+  }
+}
+

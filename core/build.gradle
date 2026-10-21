@@ -198,7 +198,7 @@ task subsystemRegression(type: Test) {
     includeTestsMatching 'com.riiablo.screen.*'
     includeTestsMatching 'com.riiablo.engine.client.ClientGameplayContextTest'
     includeTestsMatching 'com.riiablo.engine.client.ClientNetworkSessionTest'
-    includeTestsMatching 'com.riiablo.engine.client.ClientAudioSession*'
+    includeTestsMatching 'com.riiablo.presentation.ClientAudioSession*'
     includeTestsMatching 'com.riiablo.engine.server.ServerGameplayContextTest'
     includeTestsMatching 'com.riiablo.engine.server.ServerSystemIsolationTest'
     includeTestsMatching 'com.riiablo.engine.server.AuthoritativeSimulationTest'
@@ -306,7 +306,7 @@ task mapRegression(type: Test) {
     includeTestsMatching 'com.riiablo.map.ZoneCoordinateAlignmentTest'
     includeTestsMatching 'com.riiablo.map.CaveEntranceDs1VisibilityTest'
     includeTestsMatching 'com.riiablo.map.AutomapRoomProjectionIntegrationTest'
-    includeTestsMatching 'com.riiablo.engine.client.automap.NativeWallTileTypeTest'
+    includeTestsMatching 'com.riiablo.presentation.automap.NativeWallTileTypeTest'
     includeTestsMatching 'com.riiablo.map.d2moo.*'
     excludeTestsMatching 'com.riiablo.map.d2moo.Act1*'
     includeTestsMatching 'com.riiablo.engine.server.npc.Act2Act3TownNpcRegistrationTest'
@@ -625,7 +625,7 @@ task mapBoundaryRegression(type: Test) {
 
 task clientUiBoundaryRegression(type: Test) {
   group = 'verification'
-  description = 'Client UI ports, input/pickup behavior, network results and widget lifecycles.'
+  description = 'Client presentation, audio/graphics ownership, input/pickup and resource lifecycles.'
   dependsOn testClasses, architectureRegression
   testClassesDirs = sourceSets.test.output.classesDirs
   classpath = sourceSets.test.runtimeClasspath
@@ -638,8 +638,17 @@ task clientUiBoundaryRegression(type: Test) {
      'com.riiablo.engine.client.ClientItemManager*Test',
      'com.riiablo.engine.client.NetworkedClientItemManager*Test',
      'com.riiablo.engine.client.*Quest*Test',
-     'com.riiablo.engine.client.PresentationAssetLifecycleTest',
+     'com.riiablo.engine.client.DamagePresentationBoundaryTest',
+     'com.riiablo.engine.client.MonsterSkillPresentationIntegrationTest',
+     'com.riiablo.engine.client.AnimationStepperTest',
+     'com.riiablo.engine.client.ObjectBreakAnimationTest',
+     'com.riiablo.engine.client.AmazonEffectDirectionsTest',
+     'com.riiablo.engine.client.StateOverlaySystemTest',
+     'com.riiablo.map.AutomapRoomProjectionIntegrationTest',
+     'com.riiablo.audio.*Test',
+     'com.riiablo.presentation.PresentationAssetLifecycleTest',
      'com.riiablo.screen.GameScreenAssemblyTest'].each { includeTestsMatching it }
+    excludeTestsMatching 'com.riiablo.presentation.automap.AutomapFrameExportIntegrationTest'
   }
   def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
   inputs.property 'd2Home', selectedD2Home

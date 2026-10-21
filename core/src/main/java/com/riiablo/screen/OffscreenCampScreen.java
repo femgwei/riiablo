@@ -23,12 +23,12 @@ import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.map.Map;
 import com.riiablo.map.NativePresetObjectResolver;
-import com.riiablo.engine.client.AutomapRenderer;
-import com.riiablo.engine.client.automap.AutomapLayer;
-import com.riiablo.engine.client.automap.AutomapCellAudit;
-import com.riiablo.engine.client.automap.AutomapCell;
-import com.riiablo.engine.client.automap.AutomapManager;
-import com.riiablo.engine.client.automap.AutomapProjection;
+import com.riiablo.presentation.AutomapRenderer;
+import com.riiablo.presentation.automap.AutomapLayer;
+import com.riiablo.presentation.automap.AutomapCellAudit;
+import com.riiablo.presentation.automap.AutomapCell;
+import com.riiablo.presentation.automap.AutomapManager;
+import com.riiablo.presentation.automap.AutomapProjection;
 
 /**
  * Production {@link GameScreen} smoke test driven by a 1x1 hidden LWJGL
@@ -467,7 +467,7 @@ public final class OffscreenCampScreen extends GameScreen {
     exportAutomapEntityMarkers(manager);
     int visiblePixels = captureNativeAutomap(manager);
     AutomapLayer targetLayer = manager.getLayer(targetLevelId);
-    if (com.riiablo.engine.client.automap.NativeTownAutomap.spritePath(targetLevelId) != null
+    if (com.riiablo.presentation.automap.NativeTownAutomap.spritePath(targetLevelId) != null
         && (targetLayer == null || targetLayer.townCells.size == 0
             || manager.getNativeTownDrawCount() < targetLayer.townCells.size)) {
       throw new IllegalStateException("Native town Automap bitmap pieces were not rendered");
@@ -1487,7 +1487,7 @@ public final class OffscreenCampScreen extends GameScreen {
     appendAutomapCells(csv, "walls", layer.walls, manager);
     appendAutomapCells(csv, "objects", layer.objects, manager);
     appendAutomapCells(csv, "extras", layer.extras, manager);
-    for (com.riiablo.engine.client.automap.AutomapExplorationStore.Cell cell : layer.townCells) {
+    for (com.riiablo.presentation.automap.AutomapExplorationStore.Cell cell : layer.townCells) {
       // Town origins are native pixels, not world-subtile centers.
       csv.append("town,").append(cell.cellNo).append(",,,")
           .append(cell.x).append(',').append(cell.y).append(",,,,,\n");
@@ -1521,7 +1521,7 @@ public final class OffscreenCampScreen extends GameScreen {
     for (int mapLayer = 0; mapLayer < Map.MAX_LAYERS; mapLayer++) {
       com.riiablo.map.DT1.Tile tile = targetZone.get(mapLayer, tx, ty);
       if (tile == null) continue;
-      String tileName = com.riiablo.engine.client.automap.AutomapTileRenderer
+      String tileName = com.riiablo.presentation.automap.AutomapTileRenderer
           .tileNameForOrientation(tile.orientation);
       if (tileName == null) continue;
       int resolved = manager.getTileRenderer().getAutomapCellId(

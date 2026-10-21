@@ -426,9 +426,9 @@ class GameScreenSubscriptionsTest {
   @Test
   void mapIsReleasedAfterSavingWorldAndUiEvenWhenItFails() throws Exception {
     GameScreen screen = screen();
-    com.riiablo.engine.client.AutomapRenderer automap =
-        mock(com.riiablo.engine.client.AutomapRenderer.class);
-    when(screen.engine.getSystem(com.riiablo.engine.client.AutomapRenderer.class)).thenReturn(automap);
+    com.riiablo.presentation.AutomapRenderer automap =
+        mock(com.riiablo.presentation.AutomapRenderer.class);
+    when(screen.engine.getSystem(com.riiablo.presentation.AutomapRenderer.class)).thenReturn(automap);
     RuntimeException failure = new RuntimeException("map cleanup");
     doThrow(failure).when(screen.map).dispose();
     assertSame(failure, assertThrows(RuntimeException.class, screen::dispose));

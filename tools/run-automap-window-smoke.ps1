@@ -6,7 +6,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
 & "$repoRoot\gradlew.bat" :core:test `
-  --tests 'com.riiablo.engine.client.automap.AutomapWindowIntegrationTest' `
+  --tests 'com.riiablo.presentation.automap.AutomapWindowIntegrationTest' `
   -PvisualTests --no-daemon
 if ($LASTEXITCODE -ne 0) {
   throw "Automap window smoke test failed with exit code $LASTEXITCODE"

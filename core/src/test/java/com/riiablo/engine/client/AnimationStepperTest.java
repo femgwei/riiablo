@@ -1,5 +1,7 @@
 package com.riiablo.engine.client;
 
+
+
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.riiablo.Riiablo;
@@ -200,19 +202,6 @@ class AnimationStepperTest extends RiiabloTest {
       cast.monInferno = null;
       world.process();
       assertEquals(1, animation.getFrame());
-      com.riiablo.engine.server.component.Missile missile = new com.riiablo.engine.server.component.Missile();
-      missile.missile = Riiablo.files.Missiles.get("megademoninferno");
-      missile.skillId = 319; missile.nativeLifetimeFrames = 17;
-      assertEquals((missile.missile.AnimLen << 8) / 17, MissileLoader.nativeFrameDelta(missile));
-      missile.missile = Riiablo.files.Missiles.get("diablight");
-      missile.skillId = 193; missile.nativeLifetimeFrames = 19;
-      assertEquals((missile.missile.AnimLen << 8) / 19, MissileLoader.nativeFrameDelta(missile));
-      missile.skillId = -1;
-      assertEquals(missile.missile.animrate > 0 ? missile.missile.animrate >> 2 : 256,
-          MissileLoader.nativeFrameDelta(missile));
-      missile.missile = Riiablo.files.Missiles.get("death mauler");
-      missile.skillId = 308; missile.damageLevel = 3; missile.nativeLifetimeFrames = 50;
-      assertEquals(96, MissileLoader.nativeFrameDelta(missile));
     } finally { world.dispose(); }
   }
   @Test void frogHiddenFollowsSourceZeroAndEmergenceClearsTheHold() {

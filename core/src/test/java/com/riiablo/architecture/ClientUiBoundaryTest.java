@@ -61,6 +61,43 @@ class ClientUiBoundaryTest {
         .matcher(code(file)).find(), "NPC presentation must use injected world/context");
   }
 
+  @Test void audioAndGraphicsHaveOnePresentationOwner() throws IOException {
+    Path source = repository().resolve("core/src/main/java/com/riiablo");
+    for (String type : Arrays.asList("ClientAudioSession", "BlockSoundEmitter", "WeatherRenderSystem",
+        "SoundEventSystem", "SoundEnvironmentSystem", "ObjectAmbientSoundSystem",
+        "MonsterSoundEmitter", "MissileImpactPresentationSystem", "FootstepEmitter", "DamageHandler",
+        "PlayerHitSound", "ObjectBreakSoundEmitter", "SoundEmitterHandler", "OverlayManager",
+        "MissileLoader", "ItemLoader", "GroundItemGleamSystem", "AutomapRenderer",
+        "debug/PathDebugger", "debug/PathfindDebugger")) {
+      assertTrue(Files.isRegularFile(source.resolve("presentation/" + type + ".java")), type);
+      assertFalse(Files.exists(source.resolve("engine/client/" + type + ".java")), type);
+    }
+    try (java.util.stream.Stream<Path> paths = Files.walk(source.resolve("presentation/automap"))) {
+      for (Path path : (Iterable<Path>) paths.filter(p -> p.toString().endsWith(".java"))::iterator) {
+        assertFalse(Files.exists(source.resolve("engine/client/automap/" + path.getFileName())),
+            path + " must have a single presentation owner");
+      }
+    }
+    Pattern devices = Pattern.compile("com\\.riiablo\\.(?:audio|graphics|screen|widget)\\.");
+    assertTrue(Files.isRegularFile(source.resolve("presentation/component/SoundEmitter.java")));
+    assertFalse(Files.exists(source.resolve("engine/server/component/SoundEmitter.java")));
+    try (java.util.stream.Stream<Path> paths = Files.walk(source.resolve("engine"))) {
+      for (Path path : (Iterable<Path>) paths.filter(p -> p.toString().endsWith(".java"))::iterator) {
+        assertFalse(devices.matcher(code(path)).find(), path + " must use presentation adapters");
+      }
+    }
+  }
+
+  @Test void migratedEntityAudioCannotReadTheLiveGlobalSession() throws IOException {
+    Path source = repository().resolve("core/src/main/java/com/riiablo/presentation");
+    Pattern globals = Pattern.compile("Riiablo\\s*\\.\\s*(?:engine|game|audio)\\b"
+        + "|MonsterAudio\\s*\\.\\s*(?:play|isAudible|spatialGain)\\s*\\(\\s*(?:entityId|event\\.)");
+    for (String type : Arrays.asList("SpatialAudio", "MissileTravelAudio", "BlockSoundEmitter",
+        "MonsterSoundEmitter", "MissileImpactPresentationSystem", "DamageHandler", "SoundEventSystem")) {
+      assertFalse(globals.matcher(code(source.resolve(type + ".java"))).find(), type);
+    }
+  }
+
   private static String code(Path file) throws IOException {
     return COMMENTS_AND_STRINGS.matcher(new String(Files.readAllBytes(file), StandardCharsets.UTF_8))
         .replaceAll(" ");

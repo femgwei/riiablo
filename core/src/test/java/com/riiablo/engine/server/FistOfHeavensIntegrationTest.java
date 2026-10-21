@@ -18,7 +18,7 @@ import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
-import com.riiablo.engine.client.OverlayManager;
+import com.riiablo.presentation.OverlayManager;
 import com.riiablo.engine.client.SkillCastHandler;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Missile;

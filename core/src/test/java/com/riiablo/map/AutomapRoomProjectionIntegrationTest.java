@@ -3,8 +3,8 @@ package com.riiablo.map;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.riiablo.engine.client.automap.AutomapLayer;
-import com.riiablo.engine.client.automap.AutomapVisibility;
+import com.riiablo.presentation.automap.AutomapLayer;
+import com.riiablo.presentation.automap.AutomapVisibility;
 
 import org.junit.jupiter.api.Test;
 

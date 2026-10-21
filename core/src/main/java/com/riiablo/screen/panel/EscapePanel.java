@@ -31,7 +31,7 @@ import com.riiablo.audio.Audio;
 import com.riiablo.audio.SoundOptions;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
-import com.riiablo.engine.client.automap.AutomapOptions;
+import com.riiablo.presentation.automap.AutomapOptions;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.graphics.DisplayOptions;
 import com.riiablo.graphics.VideoOptions;

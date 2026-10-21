@@ -1,5 +1,23 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.AutomapRenderer;
+import com.riiablo.presentation.BlockSoundEmitter;
+import com.riiablo.presentation.ClientAudioSession;
+import com.riiablo.presentation.DamageHandler;
+import com.riiablo.presentation.FootstepEmitter;
+import com.riiablo.presentation.GroundItemGleamSystem;
+import com.riiablo.presentation.ItemLoader;
+import com.riiablo.presentation.MissileImpactPresentationSystem;
+import com.riiablo.presentation.MissileLoader;
+import com.riiablo.presentation.MonsterSoundEmitter;
+import com.riiablo.presentation.ObjectAmbientSoundSystem;
+import com.riiablo.presentation.ObjectBreakSoundEmitter;
+import com.riiablo.presentation.OverlayManager;
+import com.riiablo.presentation.SoundEmitterHandler;
+import com.riiablo.presentation.SoundEnvironmentSystem;
+import com.riiablo.presentation.SoundEventSystem;
+import com.riiablo.presentation.WeatherRenderSystem;
+
 import com.riiablo.presentation.Act1QuestDialogController;
 import com.riiablo.presentation.Act1QuestIndicatorSystem;
 import com.riiablo.presentation.QuestDialogController;
@@ -18,8 +36,8 @@ import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
 import com.riiablo.engine.SimulationSystemGroups;
 import com.riiablo.engine.client.debug.Box2DDebugger;
-import com.riiablo.engine.client.debug.PathDebugger;
-import com.riiablo.engine.client.debug.PathfindDebugger;
+import com.riiablo.presentation.debug.PathDebugger;
+import com.riiablo.presentation.debug.PathfindDebugger;
 import com.riiablo.engine.client.debug.RenderSystemDebugger;
 import com.riiablo.engine.server.AngularVelocity;
 import com.riiablo.engine.server.AnimDataResolver;
@@ -103,7 +121,7 @@ public final class ClientSimulationAssembly {
         .with(SimulationSystemGroups.unitLifecycle())
         .with(new SkillCastHandler()) // TODO: move to more appropriate spot in list
         .with(new OverlayManager()) // TODO: move to more appropriate spot in list
-        .with(new com.riiablo.engine.client.MissileImpactPresentationSystem())
+        .with(new com.riiablo.presentation.MissileImpactPresentationSystem())
         .with(new com.riiablo.engine.client.ElementalHitPresentationSystem())
         .with(new com.riiablo.engine.client.NativeShrinePresentationSystem())
         .with(new OverlayStepper()) // TODO: move to more appropriate spot in list

@@ -24,7 +24,7 @@ import com.riiablo.codec.excel.SoundEnviron;
 import com.riiablo.codec.excel.Sounds;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
-import com.riiablo.engine.client.ClientAudioSession;
+import com.riiablo.presentation.ClientAudioSession;
 import com.riiablo.engine.client.ClientEntityFactory;
 import com.riiablo.engine.client.ClientItemManager;
 import com.riiablo.engine.client.ClientSimulationAssembly;
@@ -117,14 +117,18 @@ class GameScreenAssemblyTest {
     assertSame(host.screen.renderer, find(systems, "RenderSystem"));
     for (String name : Arrays.asList("MenuManager", "DialogManager", "Act1QuestDialogController",
         "QuestDialogController", "Act1QuestIndicatorSystem", "ZoneEntryDisplayer",
-        "LabelManager", "MonsterLabelManager")) {
+        "LabelManager", "MonsterLabelManager", "OverlayManager", "MissileImpactPresentationSystem",
+        "DamageHandler", "ObjectAmbientSoundSystem", "ObjectBreakSoundEmitter", "SoundEmitterHandler",
+        "ItemLoader", "MissileLoader", "SoundEnvironmentSystem", "FootstepEmitter", "SoundEventSystem",
+        "MonsterSoundEmitter", "BlockSoundEmitter", "WeatherRenderSystem", "GroundItemGleamSystem",
+        "AutomapRenderer")) {
       assertEquals("com.riiablo.presentation." + name, find(systems, name).getClass().getName());
     }
     assertSame(host.session.map(), field(find(systems, "EnvironmentSystem"), "map"));
     assertSame(host.session.environment(), field(find(systems, "EnvironmentSystem"), "environment"));
     assertSame(host.session.partyManager(), field(find(systems, "ExperienceManager"), "partyManager"));
     for (String name : Arrays.asList("SoundEnvironmentSystem", "ObjectAmbientSoundSystem",
-        "SoundEmitterHandler")) assertSame(host.audio, field(find(systems, name), "session"));
+        "SoundEmitterHandler", "SoundEventSystem")) assertSame(host.audio, field(find(systems, name), "session"));
     boolean local = mode == SimulationMode.LOCAL;
     assertEquals(local, field(find(systems, "DynamicUnitCollisionSystem"), "enabled"));
     assertEquals(true, field(find(systems, "VelocityModeChanger"), "applyLocalRunInput"));

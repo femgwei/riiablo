@@ -29,6 +29,7 @@ class DependencyDirectionTest {
   private static final Pattern IMPORT = Pattern.compile("^\\s*import\\s+(?:static\\s+)?([^;]+);\\s*$");
   private static final String[] OUTWARD = {
       "com.riiablo.engine.client",
+      "com.riiablo.presentation",
       "com.riiablo.screen",
       "com.riiablo.widget"
   };
@@ -165,7 +166,9 @@ class DependencyDirectionTest {
       return imported.startsWith("com.riiablo.widget.");
     }
     if (relative.equals("com/riiablo/map/RenderSystem.java")) {
-      return imported.startsWith("com.riiablo.engine.client.");
+      return imported.startsWith("com.riiablo.engine.client.")
+          || imported.equals("com.riiablo.presentation.automap.AutomapOptions")
+          || imported.equals("com.riiablo.presentation.automap.AutomapViewport");
     }
     return false;
   }
