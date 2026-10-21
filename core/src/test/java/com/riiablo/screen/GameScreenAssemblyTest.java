@@ -234,7 +234,7 @@ class GameScreenAssemblyTest {
         + "Box2DSynchronizerPre Box2DPhysics Box2DSynchronizerPost VelocityModeChanger "
         + "DruidShapeShiftResolver ExperienceManager PlayerCorpseRetrievalSystem ZoneChangeTracker "
         + "ZoneMovementModesChanger NpcVendorSessionSystem ZoneEntryDisplayer SoundEnvironmentSystem "
-        + "FootstepEmitter MonsterSoundEmitter BlockSoundEmitter WarpSubstManager "
+        + "FootstepEmitter SoundEventSystem MonsterSoundEmitter BlockSoundEmitter WarpSubstManager "
         + (local ? "WhirlwindSystem " : "")
         + (platform == Application.ApplicationType.Android ? "AutoInteracter " : "")
         + "PlayerItemHandler AngularVelocity DirectionResolver RenderSystem WeatherRenderSystem "

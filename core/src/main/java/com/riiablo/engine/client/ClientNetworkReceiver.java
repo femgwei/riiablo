@@ -116,7 +116,7 @@ import com.riiablo.engine.server.quest.QuestSnapshot;
 import com.riiablo.util.ArrayUtils;
 import com.riiablo.util.BufferUtils;
 import com.riiablo.util.DebugUtils;
-import com.riiablo.widget.TextArea;
+import java.util.function.Consumer;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
 @All
@@ -170,8 +170,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   @Wire(name = "map")
   protected Map map;
 
-  @Wire(name = "output")
-  protected TextArea output;
+  @Wire(name = "clientMessages", failOnNull = false)
+  protected Consumer<String> output;
 
   protected static final ItemReader itemReader = new ItemReader(); // TODO: inject
 
@@ -389,9 +389,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
     int charClass = connection.charClass();
 
     if (output != null && clientContext.strings() != null) {
-      output.appendText(clientContext.strings().format(3641, charName));
+      output.accept(clientContext.strings().format(3641, charName));
     }
-    output.appendText("\n");
+    if (output != null) output.accept("\n");
 
     Vector2 origin = map.find(Map.ID.TOWN_ENTRY_1);
     if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_2);
@@ -438,9 +438,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
     CharData data = mPlayer.get(entityId).data;
 
     if (output != null && clientContext.strings() != null) {
-      output.appendText(clientContext.strings().format(3642, data.name));
+      output.accept(clientContext.strings().format(3642, data.name));
     }
-    output.appendText("\n");
+    if (output != null) output.accept("\n");
 
     world.delete(entityId);
     Body body = mBox2DBody.get(entityId).body;
@@ -799,10 +799,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (clientSession != null && clientSession.results() != null) {
       clientSession.results().onNpcService(result);
     } else {
-      if (clientContext.game() != null && clientContext.game().hireMercenaryPanel != null)
-        clientContext.game().hireMercenaryPanel.applyNetworkResult(result);
-      if (clientContext.game() != null && clientContext.game().vendorPanel != null)
-        clientContext.game().vendorPanel.applyNetworkResult(result);
+      clientContext.presentNpcServiceResult(result);
     }
     Gdx.app.log(TAG, "[NPC_SERVICE] request=" + result.requestId()
         + " success=" + result.success() + " reason=" + result.reason()
@@ -834,8 +831,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
     tradeState.apply(result);
     if (clientSession != null && clientSession.results() != null) {
       clientSession.results().onTradeState(this);
-    } else if (clientContext.game() != null && clientContext.game().tradePanel != null) {
-      clientContext.game().tradePanel.applyNetworkState(this);
+    } else {
+      clientContext.presentTradeState(this);
     }
     Gdx.app.log(TAG, "[TRADE] request=" + result.requestId()
         + " operation=" + result.operation() + " success=" + result.success()

@@ -622,3 +622,32 @@ task mapBoundaryRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+task clientUiBoundaryRegression(type: Test) {
+  group = 'verification'
+  description = 'Client UI ports, input/pickup behavior, network results and widget lifecycles.'
+  dependsOn testClasses, architectureRegression
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform { excludeTags 'visual' }
+  filter {
+    ['com.riiablo.presentation.*',
+     'com.riiablo.engine.client.ClientGameplayContextTest',
+     'com.riiablo.engine.client.ClientNetworkSessionTest',
+     'com.riiablo.engine.client.CursorMovementSystemTest',
+     'com.riiablo.engine.client.ClientItemManager*Test',
+     'com.riiablo.engine.client.NetworkedClientItemManager*Test',
+     'com.riiablo.engine.client.*Quest*Test',
+     'com.riiablo.engine.client.SharedBoxLifecycleTest',
+     'com.riiablo.engine.client.PresentationAssetLifecycleTest',
+     'com.riiablo.engine.client.LabelManagerTest',
+     'com.riiablo.screen.GameScreenAssemblyTest'].each { includeTestsMatching it }
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

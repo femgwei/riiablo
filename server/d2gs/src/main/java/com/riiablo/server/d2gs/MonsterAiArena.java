@@ -250,7 +250,6 @@ public final class MonsterAiArena extends ApplicationAdapter {
       Probe probe = new Probe(capture);
       scope.world = world = Riiablo.engine = new World(new WorldConfigurationBuilder()
           .with(new EventSystem(), probe, new CofManager())
-          .with(new com.riiablo.engine.client.MenuManager(), new com.riiablo.engine.client.DialogManager())
           .with(new ItemManager(), new ItemGenerator())
           .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
           .with(new StateUpdater(), new MissileCollisionSystem(), new Actioneer())

@@ -108,9 +108,7 @@ public final class NativeShrinePresentationSystem extends IteratingSystem {
     if (shrine == null) return;
     String name = ClientEntityFactory.shrineDisplayName(clientContext, shrine);
     if (name == null || name.isEmpty()) return;
-    if (mLabel.get(entityId).actor instanceof com.riiablo.widget.Label) {
-      ((com.riiablo.widget.Label) mLabel.get(entityId).actor).setText(name);
-    }
+    clientContext.updateWorldLabel(mLabel.get(entityId).actor, name);
   }
 }
 

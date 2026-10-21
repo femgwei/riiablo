@@ -54,10 +54,6 @@ final class D2GSSimulationAssembly {
     SimulationMode mode = session.mode();
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         .with(new EventSystem())
-        // NPC components retain client menu hooks; register inert systems so
-        // Artemis can wire them in headless D2GS without a rendered UI.
-        .with(new com.riiablo.engine.client.MenuManager(),
-            new com.riiablo.engine.client.DialogManager())
         .with(new com.riiablo.engine.server.npc.NpcVendorSessionSystem(npcVendors))
         // Zone changes must invalidate owner-bound missiles and periodic
         // state layers before the next snapshot baseline is serialized.

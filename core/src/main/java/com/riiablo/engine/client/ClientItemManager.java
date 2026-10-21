@@ -124,10 +124,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   }
 
   protected boolean prefersCursorPickup(com.riiablo.item.Item item) {
-    com.riiablo.screen.GameScreen game = clientContext.game();
-    boolean inventoryVisible = game != null
-        && game.inventoryPanel != null && game.inventoryPanel.isVisible();
-    return prefersCursorPickup(item, inventoryVisible);
+    return prefersCursorPickup(item, clientContext.inventoryVisible());
   }
 
   static boolean prefersCursorPickup(com.riiablo.item.Item item, boolean inventoryVisible) {
@@ -241,7 +238,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
   @Override
   public boolean useCursorPotionOnMercenary() {
-    if (clientContext.charData() == null || clientContext.game() == null) {
+    if (clientContext.charData() == null || !clientContext.isGameActive()) {
       log.info("[MERC_POTION] phase=rejected mode=local reason=game_state_missing");
       return false;
     }
@@ -289,7 +286,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
       return;
     }
     if (item == null || item.code == null || clientContext.charData() == null
-        || clientContext.game() == null || clientContext.playerId() < 0) return;
+        || !clientContext.isGameActive() || clientContext.playerId() < 0) return;
     if (!"tsc".equalsIgnoreCase(item.code) && !"tbk".equalsIgnoreCase(item.code)) return;
     int player = clientContext.playerId();
     MapWrapper wrapper = mMapWrapper == null ? null : mMapWrapper.get(player);

@@ -71,7 +71,7 @@ class LabelManagerTest {
   void denseGroundLabelsKeepSeparatingBeyondTheInitialSearchRings() {
     Array<Rectangle> occupied = new Array<>();
     boolean overlapObserved = false;
-    for (int i = 0; i < 18; i++) {
+    for (int i = 0; i < 80; i++) {
       Rectangle placed = LabelManager.findGroundLabelPosition(
           160, 100, 40, 12, occupied, 0, 0, 320, 200);
       for (Rectangle previous : occupied) {
@@ -88,7 +88,8 @@ class LabelManagerTest {
   private static boolean overlapsWithGap(Rectangle a, Rectangle b) {
     return a.x < b.x + b.width + 2
         && a.x + a.width + 2 > b.x
-        && a.y < b.y + b.height + 2
-        && a.y + a.height + 2 > b.y;
+        // The compact native stack shares vertical edges, with a 2px horizontal gap.
+        && a.y < b.y + b.height
+        && a.y + a.height > b.y;
   }
 }

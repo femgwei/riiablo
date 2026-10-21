@@ -233,13 +233,11 @@ public class CursorMovementSystem extends BaseSystem {
   private boolean consumePendingMercenaryPotionDrop() {
     if (!pendingLeftRelease) return false;
     pendingLeftRelease = false;
-    com.riiablo.screen.GameScreen game = clientContext.game();
-    if (game == null || game.mercenaryHud == null || !game.mercenaryHud.isVisible()) return false;
     stage.screenToStageCoordinates(tmpVec2.set(pendingLeftReleaseX, pendingLeftReleaseY));
-    if (!game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)) return false;
+    if (!clientContext.mercenaryPortraitContains(tmpVec2.x, tmpVec2.y)) return false;
     // Keep the UI click consumed even if the item is not a healing potion; the
     // invalid item remains on the cursor instead of being dropped on the map.
-    game.mercenaryHud.useCursorPotion();
+    clientContext.useMercenaryCursorPotion();
     return true;
   }
 
@@ -257,13 +255,10 @@ public class CursorMovementSystem extends BaseSystem {
     // click; it does not dispatch the Scene2D listener because this queue is
     // consumed by the simulation loop.  Route that specific case explicitly
     // before returning from the generic UI-click branch.
-    com.riiablo.screen.GameScreen game = clientContext.game();
-    if (game != null && game.mercenaryHud != null
-        && game.mercenaryHud.isVisible()
-        && game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)
+    if (clientContext.mercenaryPortraitContains(tmpVec2.x, tmpVec2.y)
         && clientContext.cursor() != null && clientContext.cursor().getItem() != null) {
       int itemId = clientContext.cursor().getItem().id;
-      boolean used = game.mercenaryHud.useCursorPotion();
+      boolean used = clientContext.useMercenaryCursorPotion();
       Gdx.app.log(TAG, "[MERC_POTION_UI] phase=queued-click used=" + used
           + " item=" + itemId);
       return true;
@@ -340,21 +335,16 @@ public class CursorMovementSystem extends BaseSystem {
   private boolean consumePendingRightPress(int src) {
     PointerClickQueue.Click click = pendingRightClicks.poll();
     if (click == null) return false;
-    com.riiablo.screen.GameScreen game = clientContext.game();
 
     // Right-click starts a new action even when it lands on the world. Clear
     // any vendor cursor mode before the UI/world handler processes that action.
-    if (game != null) game.cancelVendorTradeMode();
+    clientContext.cancelVendorTradeMode();
 
     stage.screenToStageCoordinates(tmpVec2.set(click.screenX, click.screenY));
-    if (game != null && game.mercenaryHud != null
-        && game.mercenaryHud.isVisible()
-        && game.mercenaryHud.containsStagePoint(tmpVec2.x, tmpVec2.y)) {
+    if (clientContext.mercenaryPortraitContains(tmpVec2.x, tmpVec2.y)) {
       // The simulation-side pointer queue can consume the click before
       // Scene2D's ClickListener sees it. Route the portrait action here too.
-      if (game.hirelingPanel != null) {
-        game.setLeftPanel(game.hirelingPanel);
-      }
+      clientContext.showHirelingPanel();
       return true;
     }
     Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
@@ -560,7 +550,7 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private void closeTradePanelsForMovement() {
-    if (clientContext.game() != null) clientContext.game().closeTradePanelsForMovement();
+    clientContext.closeTradePanelsForMovement();
   }
 
   static boolean shouldRefreshHeldGroundPath(

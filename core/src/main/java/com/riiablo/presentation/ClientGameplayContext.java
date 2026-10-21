@@ -27,7 +27,8 @@ import java.util.function.Supplier;
  * so a later screen cannot leak into an older world. The {@link #fromGlobals()}
  * factory exists for legacy tests that construct systems outside Artemis.
  */
-public final class ClientGameplayContext implements ClientPresentationServices, ClientMonsterAudioServices {
+public final class ClientGameplayContext implements ClientPresentationServices, ClientMonsterAudioServices,
+    ClientUiServices {
   private final CharData charData;
   private final IntSupplier playerId;
   private final Supplier<GameScreen> game;
@@ -100,6 +101,60 @@ public final class ClientGameplayContext implements ClientPresentationServices, 
   public int playerId() { return playerId.getAsInt(); }
   @Override public Supplier<GameScreen> gameSupplier() { return game; }
   public GameScreen game() { return game.get(); }
+  @Override public boolean isGameActive() { return game() != null; }
+  @Override public boolean inventoryVisible() {
+    GameScreen screen = game();
+    return screen != null && screen.inventoryPanel != null && screen.inventoryPanel.isVisible();
+  }
+  @Override public boolean movementBlocked() {
+    GameScreen screen = game();
+    return screen != null && screen.hireMercenaryPanel != null
+        && screen.hireMercenaryPanel.isVisible();
+  }
+  @Override public boolean mercenaryPortraitContains(float stageX, float stageY) {
+    GameScreen screen = game();
+    return screen != null && screen.mercenaryHud != null && screen.mercenaryHud.isVisible()
+        && screen.mercenaryHud.containsStagePoint(stageX, stageY);
+  }
+  @Override public boolean useMercenaryCursorPotion() {
+    GameScreen screen = game();
+    return screen != null && screen.mercenaryHud != null && screen.mercenaryHud.useCursorPotion();
+  }
+  @Override public void showHirelingPanel() {
+    GameScreen screen = game();
+    if (screen != null && screen.hirelingPanel != null) screen.setLeftPanel(screen.hirelingPanel);
+  }
+  @Override public void cancelVendorTradeMode() {
+    GameScreen screen = game();
+    if (screen != null) screen.cancelVendorTradeMode();
+  }
+  @Override public void closeTradePanelsForMovement() {
+    GameScreen screen = game();
+    if (screen != null) screen.closeTradePanelsForMovement();
+  }
+
+  /** Legacy result routes for callers that do not install a ClientNetworkSession router. */
+  public void presentNpcServiceResult(com.riiablo.net.packet.d2gs.NpcServiceResult result) {
+    GameScreen screen = game();
+    if (screen == null) return;
+    if (screen.hireMercenaryPanel != null) screen.hireMercenaryPanel.applyNetworkResult(result);
+    if (screen.vendorPanel != null) screen.vendorPanel.applyNetworkResult(result);
+  }
+  public void presentTradeState(com.riiablo.engine.client.ClientNetworkReceiver receiver) {
+    GameScreen screen = game();
+    if (screen != null && screen.tradePanel != null) screen.tradePanel.applyNetworkState(receiver);
+  }
+
+  public com.badlogic.gdx.scenes.scene2d.Actor createWorldLabel(String text) {
+    com.riiablo.widget.Label label = new com.riiablo.widget.Label(fonts().font16);
+    label.setAlignment(com.badlogic.gdx.utils.Align.center);
+    label.getStyle().background = com.riiablo.widget.Label.MODAL;
+    label.setText(text);
+    return label;
+  }
+  public void updateWorldLabel(com.badlogic.gdx.scenes.scene2d.Actor actor, String text) {
+    if (actor instanceof com.riiablo.widget.Label) ((com.riiablo.widget.Label) actor).setText(text);
+  }
   public AssetManager assets() { return assets; }
   @Override public int listener() { return playerId(); }
   @Override public Audio audio() { return audio; }

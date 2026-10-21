@@ -816,6 +816,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .register("scaledStage", scaledStage)
         .register("input", input)
         .register("output", output)
+        .register("clientMessages", (java.util.function.Consumer<String>) output::appendText)
         ;
     if (socket != null) config.register("client.socket", socket);
     engine = Riiablo.engine = new World(config);

@@ -769,12 +769,8 @@ public class ClientEntityFactory extends ServerEntityFactory {
     return id;
   }
 
-  private com.riiablo.widget.Label createLabel(String text) {
-    com.riiablo.widget.Label label = new com.riiablo.widget.Label(clientContext.fonts().font16);
-    label.setAlignment(Align.center);
-    label.getStyle().background = com.riiablo.widget.Label.MODAL;
-    label.setText(text);
-    return label;
+  private com.badlogic.gdx.scenes.scene2d.Actor createLabel(String text) {
+    return clientContext.createWorldLabel(text);
   }
 }
 
