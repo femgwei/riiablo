@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  * so a later screen cannot leak into an older world. The {@link #fromGlobals()}
  * factory exists for legacy tests that construct systems outside Artemis.
  */
-public final class ClientGameplayContext {
+public final class ClientGameplayContext implements ClientPresentationServices {
   private final CharData charData;
   private final IntSupplier playerId;
   private final Supplier<GameScreen> game;
@@ -98,12 +98,13 @@ public final class ClientGameplayContext {
 
   public CharData charData() { return charData; }
   public int playerId() { return playerId.getAsInt(); }
+  @Override public Supplier<GameScreen> gameSupplier() { return game; }
   public GameScreen game() { return game.get(); }
   public AssetManager assets() { return assets; }
-  public Audio audio() { return audio; }
+  @Override public Audio audio() { return audio; }
   public com.riiablo.Cursor cursor() { return cursor; }
   public Files files() { return files; }
-  public PaletteIndexedBatch batch() { return batch; }
+  @Override public PaletteIndexedBatch batch() { return batch; }
   public Fonts fonts() { return fonts; }
   public Colors colors() { return colors; }
   public StringTBLs strings() { return strings; }
@@ -133,5 +134,7 @@ public final class ClientGameplayContext {
         Riiablo.palettes);
   }
 }
+
+
 
 
