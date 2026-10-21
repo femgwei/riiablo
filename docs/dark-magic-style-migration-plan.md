@@ -60,7 +60,7 @@ M1-A/M8-C 音频与图形收口：将声音会话、声音事件/环境/脚步/�
 
 | 子项 | 审计对象 | 目标边界 | 当前状态 | 完成判定 |
 |---|---|---|---|---|
-| M1-A 机制/表现依赖审计 | `engine/client` 对 `screen/widget` 的反向 import；客户端 NPC、对话、标签和区域提示 | `engine` 只发布快照/语义事件，`presentation` 负责 widget、音频和渲染资源 | 进行中（直接 screen/widget 违规已为 0；剩余音频 40 条、图形 10 条） | 架构检查禁止 engine/server 引入 UI、音频设备或渲染对象；现有调用均有 owner 和删除条件 |
+| M1-A 机制/表现依赖审计 | `engine/client` 对 `screen/widget` 的反向 import；客户端 NPC、对话、标签和区域提示 | `engine` 只发布快照/语义事件，`presentation` 负责 widget、音频和渲染资源 | 进行中（直接 screen/widget/audio/graphics 违规均为 0；客户端适配器的事件/快照出口仍由 M8-C 收敛） | 架构检查禁止 engine/server 引入 UI、音频设备或渲染对象；现有调用均有 owner 和删除条件 |
 | M1-B 地图/实体边界 | `map`、`MapBuilder` 直接引用 `EntityFactory`、服务端组件和 `NativeDataTables` | 地图只产布局、碰撞、warp 和对象描述；实体创建由 population/assembly 系统完成 | 已完成 | A1–A5 真实 MPQ/headless 布局验收通过；生成层 ECS/工厂/socket 违规为 0，实体创建统一由装配适配器负责 |
 | M1-C 网络实现盘点 | `server/netty` 中 `net`、`nnet`、`onet`，以及 `d2gs`、`d2gs_netty`、`d2gs_test` 并存 | 明确 protocol、transport、authoritative session 的唯一 owner，测试实现与生产实现隔离 | 已完成（盘点阶段；M8-D 收敛未开始） | 每个消息/会话路径只有一套生产入口；旧实现删除或标记为仅测试适配器 |
 | M7-B 地图代际收敛 | `map`、`map2`、`map5`、`map/d2moo`、`D2MOO_JAVA` 并存 | 保留主地图链和 D2MOO bridge，过渡实现不再被新规则依赖 | 未开始 | Act 1 关键地图在主链上通过真实 MPQ/headless 验收；过渡目录无生产调用者 |
@@ -79,7 +79,7 @@ M1-A/M8-C 音频与图形收口：将声音会话、声音事件/环境/脚步/�
 | 机制/策略分离 | 数据表和若干 policy 已存在，但大量 D2 公式仍直接位于 engine/server system | 部分属实 | M7-A |
 | Mod 内容包与运行时锁定 | 当前没有完整 Mod/package digest/namespace/session lock；计划明确不引入 Lua/Go | 属实（暂不迁移） | M4-B（暂停） |
 | 服务端直接播放音频 | 历史审计记录 83 处；声音事件迁移后服务端不再直接播放，当前仅剩 3 处客户端表现层 `MonsterAudio` 兼容调用 | 已完成主项，仍有表现收口 | M8-B、M8-C |
-| engine/client ↔ screen/widget 反向依赖 | NPC、菜单/对话、标签/区域提示已迁至 presentation；engine/client 扫描的直接 screen/widget 违规为 0，音频/图形仍有 50 条，客户端仍经由表现适配器调用 UI | UI 直接依赖已迁移，完整表现边界未完成 | M1-A、M8-C |
+| engine/client ↔ screen/widget 反向依赖 | NPC、菜单/对话、标签/区域提示、音频/天气、资源加载和 automap 已迁至 presentation；直接 screen/widget/audio/graphics 扫描项均为 0，客户端仍经由表现适配器调用服务 | 直接设备/控件依赖已迁移，完整事件/快照表现边界未完成 | M1-A、M8-C |
 | map ↔ engine/server 反向依赖 | M1-B 已删除生成层的 ECS/工厂/socket 依赖；`MapManager`、`Box2DPhysics`、`RenderSystem` 的 58 条运行时适配依赖有独立基线，规则策略位置和地图代际仍待收敛 | 生成边界已完成，适配/策略债务仍有登记 | M1-B（已完成）、M7-A、M7-B、M8-C |
 | 网络和地图多代并存 | `server/netty` 与 `server/d2gs` 同时存在，且 `net/nnet/onet`、`d2gs_netty/d2gs_test` 并存；`map/map2/map5` 也仍存在 | 属实 | M1-C、M7-B、M8-D |
 
@@ -192,6 +192,24 @@ D2MOO 依据：沿用原 NPC healer 的 1.10f 声音事件 10/声音 2673（`shr
 下一迁移：集中收口 M1-A/M8-C 的剩余音频播放、环境/天气、渲染资源依赖。
 
 详细记录：`docs/dark-magic-m8c-npc-world-ui-2026-10-22.md`。
+
+### M1-A/M8-C 音频与图形收口记录（2026-10-22）
+
+本批完成日期：2026-10-22；M1-A/M8-C 整体仍为进行中。
+
+提交：`13ec540f3`（音频/图形归属、会话空间播放、SoundEmitter 组件迁移及回归门禁）；`d8ae4a045` 为首份验收记录。
+
+验证：`:core:clientUiBoundaryRegression`、`:server:d2gs:test` 的 `D2GSSimulationAssemblyTest`/`MonsterAiArenaTest`/`SoundEventTransportTest`，以及 desktop、Netty、Map Viewer、Skill Viewer 编译通过，均显式使用 `-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F`。表现回归 331 项通过、1 项可选原版 automap 存档样本跳过，架构 10 项和 D2GS 20 项通过，共 361 项通过、1 项跳过，失败/错误均为 0。直接表现扫描 50 → 0；M1-B 生成层 0，运行时适配器 58 条无漂移。
+
+真实资源：是；相关 headless 用例读取 1.10F MPQ 数据表/字符串，没有运行真实音频设备或完整 GL 客户端。
+
+D2MOO 依据：沿用现有 1.10f Sounds/MonSounds、Missiles、Overlay 和 automap 规则，仅改变归属及会话绑定；声音键、时序、半径/增益、暂停、资源生命周期和客户端装配相对顺序保留，服务端数值/任务/协议未改动。
+
+剩余问题：直接依赖清零不等于仅订阅事件/快照。客户端实体工厂、技能/死亡/状态及 COF/动画适配器、context/widget 兼容调用仍由 M8-C 负责；具体 owner、删除条件和可选验收限制已登记在详细记录中。
+
+下一迁移：集中收敛 M1-A/M8-C 的客户端实体、技能/死亡/状态表现事件/快照出口，不再按单个表现类拆批。
+
+详细记录：`docs/dark-magic-m8c-audio-graphics-2026-10-22.md`。
 
 ### M0 完成记录（2026-10-21）
 
