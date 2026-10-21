@@ -1,0 +1,125 @@
+file`tcategory`tline`ttext
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	58	import com.riiablo.engine.server.component.AIWrapper;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	59	import com.riiablo.engine.server.component.Angle;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	60	import com.riiablo.engine.server.component.AnimData;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	61	import com.riiablo.engine.server.component.AttributesWrapper;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	62	import com.riiablo.engine.server.component.Class;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	63	import com.riiablo.engine.server.component.Classname;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	64	import com.riiablo.engine.server.component.CofReference;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	65	import com.riiablo.engine.server.component.CofComponents;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	66	import com.riiablo.engine.server.component.Item;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	67	import com.riiablo.engine.server.component.MapWrapper;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	68	import com.riiablo.engine.server.component.Networked;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	69	import com.riiablo.engine.server.component.Mercenary;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	70	import com.riiablo.engine.server.component.Object;
+core/src/main/java/com/riiablo/map\RenderSystem.java	server-component	71	import com.riiablo.engine.server.component.Position;
+core/src/main/java/com/riiablo/map\NativeMonsterEliteRules.java	rules-data	8	import com.riiablo.engine.server.NativeDataTables;
+core/src/main/java/com/riiablo/map\NativeMonsterEliteRules.java	rules-data	49	return NativeDataTables.value(level.MonUMin, difficulty, 0);
+core/src/main/java/com/riiablo/map\NativeMonsterEliteRules.java	rules-data	53	return NativeDataTables.value(level.MonUMax, difficulty, 0);
+core/src/main/java/com/riiablo/map\MapManager.java	entity-population	15	import com.riiablo.engine.EntityFactory;
+core/src/main/java/com/riiablo/map\MapManager.java	server-component	16	import com.riiablo.engine.server.component.CofReference;
+core/src/main/java/com/riiablo/map\MapManager.java	server-component	17	import com.riiablo.engine.server.component.MapWrapper;
+core/src/main/java/com/riiablo/map\MapManager.java	server-component	18	import com.riiablo.engine.server.component.NativeObjectState;
+core/src/main/java/com/riiablo/map\MapManager.java	server-component	21	import com.riiablo.engine.server.component.Object;
+core/src/main/java/com/riiablo/map\MapManager.java	server-component	22	import com.riiablo.engine.server.component.Position;
+core/src/main/java/com/riiablo/map\MapManager.java	entity-population	35	protected EntityFactory factory;
+core/src/main/java/com/riiablo/map\MapManager.java	entity-population	114	int id = factory.createWarp(zone, cell.id, x, y);
+core/src/main/java/com/riiablo/map\MapManager.java	entity-population	122	if (zone.contains(inwardX, y)) id = factory.createWarp(zone, cell.id, inwardX, y);
+core/src/main/java/com/riiablo/map\MapManager.java	entity-population	124	id = factory.createWarp(zone, cell.id, x, inwardY);
+core/src/main/java/com/riiablo/map\MapManager.java	entity-population	136	id = factory.createWarp(zone, cell.id, centerX, centerY);
+core/src/main/java/com/riiablo/map\MapManager.java	entity-population	207	int id = factory.createMonster(nativeMonster.monsterId,
+core/src/main/java/com/riiablo/map\MapManager.java	entity-population	356	? factory.createObject(objectAct, DS1.Object.STATIC_TYPE, object.presetIndex,
+core/src/main/java/com/riiablo/map\MapManager.java	entity-population	358	: factory.createStaticObjectByClassId(
+core/src/main/java/com/riiablo/map\MapManager.java	entity-population	485	int id = factory.createObject(preset, object, x + object.x, y + object.y);
+core/src/main/java/com/riiablo/map\Map.java	rules-data	31	import com.riiablo.engine.server.NativeDataTables;
+core/src/main/java/com/riiablo/map\Map.java	entity-population	35	import com.riiablo.engine.EntityFactory;
+core/src/main/java/com/riiablo/map\Map.java	server-component	36	import com.riiablo.engine.server.component.Warp;
+core/src/main/java/com/riiablo/map\Map.java	entity-population	336	EntityFactory factory;
+core/src/main/java/com/riiablo/map\Map.java	entity-population	422	public void setEntityFactory(EntityFactory factory) {
+core/src/main/java/com/riiablo/map\Map.java	rules-data	1167	NativeDataTables.levelSizeX(level, diff, 1),
+core/src/main/java/com/riiablo/map\Map.java	rules-data	1168	NativeDataTables.levelSizeY(level, diff, 1));
+core/src/main/java/com/riiablo/map\Map.java	rules-data	1538	tilesX   = NativeDataTables.levelSizeX(level, diff, 1);
+core/src/main/java/com/riiablo/map\Map.java	rules-data	1539	tilesY   = NativeDataTables.levelSizeY(level, diff, 1);
+core/src/main/java/com/riiablo/map\Map.java	entity-population	2294	int entity = map.factory.createWarp(index, x, y);
+core/src/main/java/com/riiablo/map\Map.java	entity-population	3500	int entityId = zone.map.factory.createObject(this, obj, x + obj.x, y + obj.y);
+core/src/main/java/com/riiablo/map\d2moo\Act1D2MOOLayoutBridge.java	rules-data	23	import com.riiablo.engine.server.NativeDataTables;
+core/src/main/java/com/riiablo/map\d2moo\Act1D2MOOLayoutBridge.java	rules-data	548	NativeDataTables.levelSizeX(entry, 0, 1),
+core/src/main/java/com/riiablo/map\d2moo\Act1D2MOOLayoutBridge.java	rules-data	549	NativeDataTables.levelSizeX(entry, 1, 1),
+core/src/main/java/com/riiablo/map\d2moo\Act1D2MOOLayoutBridge.java	rules-data	550	NativeDataTables.levelSizeX(entry, 2, 1) };
+core/src/main/java/com/riiablo/map\d2moo\Act1D2MOOLayoutBridge.java	rules-data	552	NativeDataTables.levelSizeY(entry, 0, 1),
+core/src/main/java/com/riiablo/map\d2moo\Act1D2MOOLayoutBridge.java	rules-data	553	NativeDataTables.levelSizeY(entry, 1, 1),
+core/src/main/java/com/riiablo/map\d2moo\Act1D2MOOLayoutBridge.java	rules-data	554	NativeDataTables.levelSizeY(entry, 2, 1) };
+core/src/main/java/com/riiablo/map\Box2DPhysics.java	server-component	27	import com.riiablo.engine.server.component.Box2DBody;
+core/src/main/java/com/riiablo/map\Box2DPhysics.java	server-component	28	import com.riiablo.engine.server.component.Class;
+core/src/main/java/com/riiablo/map\Box2DPhysics.java	server-component	29	import com.riiablo.engine.server.component.Object;
+core/src/main/java/com/riiablo/map\Box2DPhysics.java	server-component	30	import com.riiablo.engine.server.component.Position;
+core/src/main/java/com/riiablo/map\Box2DPhysics.java	server-component	31	import com.riiablo.engine.server.component.Size;
+core/src/main/java/com/riiablo/map\Box2DPhysics.java	server-component	32	import com.riiablo.engine.server.component.Monster;
+core/src/main/java/com/riiablo/map\BaseMapBuilderD2MOD.java	entity-population	12	import com.riiablo.engine.EntityFactory;
+core/src/main/java/com/riiablo/map\BaseMapBuilderD2MOD.java	rules-data	13	import com.riiablo.engine.server.NativeDataTables;
+core/src/main/java/com/riiablo/map\BaseMapBuilderD2MOD.java	entity-population	43	protected EntityFactory factory;
+core/src/main/java/com/riiablo/map\BaseMapBuilderD2MOD.java	rules-data	210	int tilesX = Math.max(gridSizeX, NativeDataTables.levelSizeX(level, diff, 1));
+core/src/main/java/com/riiablo/map\BaseMapBuilderD2MOD.java	rules-data	211	int tilesY = Math.max(gridSizeY, NativeDataTables.levelSizeY(level, diff, 1));
+core/src/main/java/com/riiablo/map\BaseMapBuilderD2MOD.java	rules-data	358	int minGroup = NativeDataTables.minGroup(selectedMonster);
+core/src/main/java/com/riiablo/map\BaseMapBuilderD2MOD.java	rules-data	359	int maxGroup = NativeDataTables.maxGroup(selectedMonster);
+core/src/main/java/com/riiablo/map\BaseMapBuilderD2MOD.java	entity-population	370	zone.map.factory.createMonster(selectedMonster, px, py);
+core/src/main/java/com/riiablo/map\BaseMapBuilderD2MOD.java	rules-data	429	int min = NativeDataTables.minGroup(monster), max = NativeDataTables.maxGroup(monster);
+core/src/main/java/com/riiablo/map\Act5MapBuilderD2MOD.java	rules-data	11	import com.riiablo.engine.server.NativeDataTables;
+core/src/main/java/com/riiablo/map\Act5MapBuilderD2MOD.java	entity-population	12	import com.riiablo.engine.EntityFactory;
+core/src/main/java/com/riiablo/map\Act5MapBuilderD2MOD.java	entity-population	104	protected EntityFactory factory;
+core/src/main/java/com/riiablo/map\Act5MapBuilderD2MOD.java	rules-data	136	NativeDataTables.levelSizeX(level, diff, 1));
+core/src/main/java/com/riiablo/map\Act5MapBuilderD2MOD.java	rules-data	138	NativeDataTables.levelSizeY(level, diff, 1));
+core/src/main/java/com/riiablo/map\Act4MapBuilderD2MOD.java	rules-data	9	import com.riiablo.engine.server.NativeDataTables;
+core/src/main/java/com/riiablo/map\Act4MapBuilderD2MOD.java	entity-population	10	import com.riiablo.engine.EntityFactory;
+core/src/main/java/com/riiablo/map\Act4MapBuilderD2MOD.java	entity-population	44	protected EntityFactory factory;
+core/src/main/java/com/riiablo/map\Act4MapBuilderD2MOD.java	rules-data	96	int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act4MapBuilderD2MOD.java	rules-data	97	int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act4MapBuilderD2MOD.java	rules-data	399	int width = NativeDataTables.levelSizeX(level, diff, 1) * 5;
+core/src/main/java/com/riiablo/map\Act4MapBuilderD2MOD.java	rules-data	400	int height = NativeDataTables.levelSizeY(level, diff, 1) * 5;
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	13	import com.riiablo.engine.server.NativeDataTables;
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	entity-population	14	import com.riiablo.engine.EntityFactory;
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	entity-population	102	protected EntityFactory factory;
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	156	int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	157	int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	193	int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	194	int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	218	int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	219	int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	241	int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	242	int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	257	int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act3MapBuilderD2MOD.java	rules-data	258	int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act2MapBuilderD2MOD.java	rules-data	13	import com.riiablo.engine.server.NativeDataTables;
+core/src/main/java/com/riiablo/map\Act2MapBuilderD2MOD.java	entity-population	14	import com.riiablo.engine.EntityFactory;
+core/src/main/java/com/riiablo/map\Act2MapBuilderD2MOD.java	entity-population	98	protected EntityFactory factory;
+core/src/main/java/com/riiablo/map\Act2MapBuilderD2MOD.java	rules-data	196	int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act2MapBuilderD2MOD.java	rules-data	197	int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act2MapBuilderD2MOD.java	rules-data	875	int tilesX = Math.max(1, NativeDataTables.levelSizeX(level, diff, 1));
+core/src/main/java/com/riiablo/map\Act2MapBuilderD2MOD.java	rules-data	876	int tilesY = Math.max(1, NativeDataTables.levelSizeY(level, diff, 1));
+core/src/main/java/com/riiablo/map\Act2MapBuilderD2MOD.java	rules-data	928	int targetWidth = Math.max(1, NativeDataTables.levelSizeX(target, source.diff, 1))
+core/src/main/java/com/riiablo/map\Act2MapBuilderD2MOD.java	rules-data	930	int targetHeight = Math.max(1, NativeDataTables.levelSizeY(target, source.diff, 1))
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	36	import com.riiablo.engine.server.NativeDataTables;
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	entity-population	37	import com.riiablo.engine.EntityFactory;
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	166	int sw = NativeDataTables.levelSizeX(stony, diff, 1), sh = NativeDataTables.levelSizeY(stony, diff, 1);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	167	int cw = NativeDataTables.levelSizeX(cold, diff, 1), ch = NativeDataTables.levelSizeY(cold, diff, 1);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	169	int tw = NativeDataTables.levelSizeX(town, diff, 1), th = NativeDataTables.levelSizeY(town, diff, 1);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	170	int burw = NativeDataTables.levelSizeX(burial, diff, 1), burh = NativeDataTables.levelSizeY(burial, diff, 1);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	171	int blw = NativeDataTables.levelSizeX(black, diff, 1), blh = NativeDataTables.levelSizeY(black, diff, 1);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	172	int taw = NativeDataTables.levelSizeX(tamoe, diff, 1), tah = NativeDataTables.levelSizeY(tamoe, diff, 1);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	173	int daw = NativeDataTables.levelSizeX(dark, diff, 1), dah = NativeDataTables.levelSizeY(dark, diff, 1);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	174	int unw = NativeDataTables.levelSizeX(underground, diff, 1), unh = NativeDataTables.levelSizeY(underground, diff, 1);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	entity-population	205	protected EntityFactory factory;
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	339	int tilesX = NativeDataTables.levelSizeX(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	340	int tilesY = NativeDataTables.levelSizeY(level, diff, 1);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	751	int minGroup = NativeDataTables.minGroup(monster);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	rules-data	752	int maxGroup = NativeDataTables.maxGroup(monster);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	entity-population	772	zone.map.factory.createMonster(monster, px, py);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	entity-population	801	zone.map.factory.createMonster(minion, mx, my);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	entity-population	2005	zone.map.factory.createMonster(candidate.monsterId, spawnX, spawnY);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	entity-population	2032	EntityFactory spawnFactory = resolveQuestSpawnFactory(zone, factory);
+core/src/main/java/com/riiablo/map\Act1MapBuilderD2MOD.java	entity-population	2092	static EntityFactory resolveQuestSpawnFactory(Zone zone, EntityFactory fallback) {
+core/src/main/java/com/riiablo/map\Act1MapBuilder.java	rules-data	11	import com.riiablo.engine.server.NativeDataTables;
+core/src/main/java/com/riiablo/map\Act1MapBuilder.java	entity-population	14	import com.riiablo.engine.EntityFactory;
+core/src/main/java/com/riiablo/map\Act1MapBuilder.java	entity-population	28	protected EntityFactory factory;
+core/src/main/java/com/riiablo/map\Act1MapBuilder.java	rules-data	120	* NativeDataTables.value(zone.level.MonDen, zone.diff, 0) / 100000f)) {
+core/src/main/java/com/riiablo/map\Act1MapBuilder.java	entity-population	129	factory.createMonster(monster, px, py);

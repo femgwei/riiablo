@@ -579,3 +579,14 @@ task clientPresentationBoundaryCheck(type: Exec) {
 
 architectureRegression.dependsOn clientPresentationBoundaryCheck
 
+
+task mapEntityBoundaryCheck(type: Exec) {
+  group = 'verification'
+  description = 'Rejects new map-to-entity/rules reverse dependency findings against the M1-B baseline.'
+  workingDir rootProject.projectDir
+  commandLine 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+      rootProject.file('tools/architecture/check-map-entity-boundary.ps1').absolutePath,
+      '-FailOnDrift'
+}
+
+architectureRegression.dependsOn mapEntityBoundaryCheck
