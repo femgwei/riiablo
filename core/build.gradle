@@ -567,3 +567,15 @@ public final class ${versionClassName} {
 //  options.compilerArgs << '-Xlint:unchecked'
 //  options.deprecation = true
 //}
+
+task clientPresentationBoundaryCheck(type: Exec) {
+  group = 'verification'
+  description = 'Rejects new engine/client presentation dependency findings against the M1-A baseline.'
+  workingDir rootProject.projectDir
+  commandLine 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+      rootProject.file('tools/architecture/check-client-presentation-boundary.ps1').absolutePath,
+      '-FailOnDrift'
+}
+
+architectureRegression.dependsOn clientPresentationBoundaryCheck
+

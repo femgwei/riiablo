@@ -1,7 +1,8 @@
 param(
   [string]$Root = 'core/src/main/java/com/riiablo/engine/client',
   [string]$Output = 'build/reports/m1a-client-presentation-boundary.tsv',
-  [switch]$FailOnFindings
+  [string]$Baseline = 'tools/architecture/m1a-client-presentation-boundary-baseline.tsv',
+  [switch]$FailOnDrift
 )
 $patterns = @(
   'com\.riiablo\.screen', 'com\.riiablo\.widget',
@@ -24,5 +25,12 @@ foreach ($file in $files) {
 }
 New-Item -ItemType Directory -Force (Split-Path $Output) | Out-Null
 $rows | Set-Content $Output
-Write-Output "M1-A findings: $($rows.Count - 1)"
-if ($FailOnFindings -and $rows.Count -gt 1) { exit 1 }
+$currentKeys = @($rows | Select-Object -Skip 1 | ForEach-Object { $p = $_ -split "`t",4; "$($p[0])`t$($p[1])`t$($p[3])" })
+Write-Output "M1-A findings: $($currentKeys.Count)"
+if ($FailOnDrift) {
+  if (!(Test-Path $Baseline)) { Write-Error "Missing baseline: $Baseline"; exit 2 }
+  $baselineKeys = @(Get-Content $Baseline | Select-Object -Skip 1 | ForEach-Object { $p = $_ -split "`t",4; "$($p[0])`t$($p[1])`t$($p[3])" })
+  $added = @($currentKeys | Where-Object { $_ -notin $baselineKeys })
+  if ($added.Count -gt 0) { Write-Error ("M1-A boundary drift: {0} new findings`n{1}" -f $added.Count, ($added -join "`n")); exit 1 }
+  Write-Output 'M1-A boundary drift: none'
+}
