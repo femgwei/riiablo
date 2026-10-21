@@ -1,4 +1,4 @@
-package com.riiablo.engine.shared.component;
+package com.riiablo.presentation.component;
 
 import com.artemis.Component;
 import com.artemis.annotations.PooledWeaver;
@@ -6,9 +6,8 @@ import com.artemis.annotations.Transient;
 import com.riiablo.widget.NpcMenu;
 
 /**
- * Presentation-owned menu state attached to an entity.  The component lives
- * in the shared layer so server entity composition does not import the client
- * package merely to expose an ECS slot.
+ * Presentation-owned menu tree attached only to client entities. Dedicated
+ * entity composition does not create or depend on this transient UI state.
  */
 @Transient
 @PooledWeaver

@@ -86,8 +86,8 @@ import com.riiablo.engine.client.StateOverlaySystem;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.AnimStepper;
 import com.riiablo.engine.client.SkillCastHandler;
-import com.riiablo.engine.client.MenuManager;
-import com.riiablo.engine.client.DialogManager;
+import com.riiablo.presentation.MenuManager;
+import com.riiablo.presentation.DialogManager;
 import com.riiablo.engine.client.OverlayManager;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.CofManager;
@@ -353,6 +353,7 @@ public class SkillViewer extends Tool {
     com.artemis.WorldConfiguration worldConfig = config.build()
         .register("map", arenaMap)
         .register("factory", entityFactory)
+        .register("clientContext", com.riiablo.presentation.ClientGameplayContext.fromGlobals())
         .register("batch", batch)
         .register("iso", iso)
         .register("stage", stage)
@@ -360,8 +361,7 @@ public class SkillViewer extends Tool {
         .register("partyManager", new PartyManager())
         .register("combatPositionHistory", new CombatPositionHistory(arenaMap));
     engine = Riiablo.engine = new World(worldConfig);
-    engine.inject(arenaMap);
-    arenaMap.setEntityFactory(entityFactory);
+    com.riiablo.engine.MapRuntimeBindings.bind(arenaMap, engine, entityFactory, false);
     positions = engine.getMapper(Position.class);
     velocities = engine.getMapper(Velocity.class);
     angles = engine.getMapper(Angle.class);
@@ -511,7 +511,7 @@ public class SkillViewer extends Tool {
     if (!components.has(playerEntity)) return;
     int[] values = components.get(playerEntity).component;
     java.util.Arrays.fill(values, com.riiablo.engine.server.component.CofComponents.COMPONENT_LIT);
-    engine.getMapper(com.riiablo.engine.client.component.CofDirtyComponents.class)
+    engine.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class)
         .create(playerEntity).flags |= com.riiablo.engine.Dirty.ALL;
     runtimeLog("event=player_composite_initialized entity=" + playerEntity + " components=LIT");
   }
@@ -1081,7 +1081,7 @@ public class SkillViewer extends Tool {
       if (engine.getMapper(com.riiablo.engine.client.component.CofWrapper.class).has(entity)
           && animations != null && animations.has(entity)
           && animations.get(entity).animation.getNumFramesPerDir() == 0) {
-        engine.getMapper(com.riiablo.engine.client.component.CofDirtyComponents.class)
+        engine.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class)
             .create(entity).flags |= com.riiablo.engine.Dirty.ALL;
       }
       if (engine.getMapper(com.riiablo.engine.client.component.CofWrapper.class).has(entity)

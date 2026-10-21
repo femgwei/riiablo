@@ -638,9 +638,7 @@ task clientUiBoundaryRegression(type: Test) {
      'com.riiablo.engine.client.ClientItemManager*Test',
      'com.riiablo.engine.client.NetworkedClientItemManager*Test',
      'com.riiablo.engine.client.*Quest*Test',
-     'com.riiablo.engine.client.SharedBoxLifecycleTest',
      'com.riiablo.engine.client.PresentationAssetLifecycleTest',
-     'com.riiablo.engine.client.LabelManagerTest',
      'com.riiablo.screen.GameScreenAssemblyTest'].each { includeTestsMatching it }
   }
   def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''

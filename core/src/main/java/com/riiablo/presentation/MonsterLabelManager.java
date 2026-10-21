@@ -1,4 +1,4 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.riiablo.presentation.ClientGameplayContext;
 
@@ -48,7 +48,13 @@ public class MonsterLabelManager extends BaseEntitySystem {
   protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
   private final Vector2 tmpVec2 = new Vector2();
-  private final MonsterLabel monsterLabel = new MonsterLabel();
+  private MonsterLabel monsterLabel;
+
+  @Override
+  protected void initialize() {
+    // Artemis injects the owning context before acquiring fonts and colors.
+    monsterLabel = new MonsterLabel();
+  }
 
   @Override
   protected void begin() {

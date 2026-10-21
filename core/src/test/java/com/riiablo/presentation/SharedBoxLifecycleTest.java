@@ -1,4 +1,4 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -32,7 +32,7 @@ import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.FontTBL;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.shared.component.MenuWrapper;
+import com.riiablo.presentation.component.MenuWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.graphics.BorderedPaletteIndexedDrawable;
 import com.riiablo.graphics.PaletteIndexedBatch;

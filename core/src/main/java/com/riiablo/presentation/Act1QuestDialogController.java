@@ -1,4 +1,7 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
+
+import com.riiablo.engine.client.Act1QuestPresentation;
+import com.riiablo.engine.client.ClientNetworkSynchronizer;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;

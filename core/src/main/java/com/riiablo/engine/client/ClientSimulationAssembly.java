@@ -1,5 +1,14 @@
 package com.riiablo.engine.client;
 
+import com.riiablo.presentation.Act1QuestDialogController;
+import com.riiablo.presentation.Act1QuestIndicatorSystem;
+import com.riiablo.presentation.QuestDialogController;
+import com.riiablo.presentation.DialogManager;
+import com.riiablo.presentation.MenuManager;
+import com.riiablo.presentation.LabelManager;
+import com.riiablo.presentation.MonsterLabelManager;
+import com.riiablo.presentation.ZoneEntryDisplayer;
+
 import com.artemis.WorldConfigurationBuilder;
 import com.artemis.managers.TagManager;
 import com.riiablo.attributes.ExperienceManager;

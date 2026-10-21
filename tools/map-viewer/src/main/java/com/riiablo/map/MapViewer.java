@@ -56,12 +56,12 @@ import com.riiablo.engine.client.CofLoader;
 import com.riiablo.engine.client.CofResolver;
 import com.riiablo.engine.client.CofTransformHandler;
 import com.riiablo.engine.client.CofUnloader;
-import com.riiablo.engine.client.DialogManager;
+import com.riiablo.presentation.DialogManager;
 import com.riiablo.engine.client.DirectionResolver;
 import com.riiablo.engine.client.HoveredManager;
-import com.riiablo.engine.client.LabelManager;
-import com.riiablo.engine.client.MenuManager;
-import com.riiablo.engine.client.MonsterLabelManager;
+import com.riiablo.presentation.LabelManager;
+import com.riiablo.presentation.MenuManager;
+import com.riiablo.presentation.MonsterLabelManager;
 import com.riiablo.engine.client.SelectableManager;
 import com.riiablo.engine.client.WarpSubstManager;
 import com.riiablo.engine.client.debug.Box2DDebugger;
@@ -310,6 +310,7 @@ public class MapViewer extends Tool {
     mapRenderer = new RenderSystem(batch, map);
     mapRenderer.resize();
 
+    ClientEntityFactory factory = new ClientEntityFactory();
     WorldConfiguration config = new WorldConfigurationBuilder()
         .with(new EventSystem())
         .with(new TagManager())
@@ -327,7 +328,7 @@ public class MapViewer extends Tool {
         .with(box2DPhysics = new Box2DPhysics(1 / 60f))
         .with(new Pathfinder())
 
-        .with(new ClientEntityFactory())
+        .with(factory)
         .with(new AnimDataResolver())
         .with(new AnimStepper())
         .with(new CofUnloader(), new CofResolver(), new CofLoader())
@@ -352,6 +353,8 @@ public class MapViewer extends Tool {
         .build()
         .register("iso", mapRenderer.iso)
         .register("map", map)
+        .register("factory", factory)
+        .register("clientContext", com.riiablo.presentation.ClientGameplayContext.fromGlobals())
         .register("serverContext", new com.riiablo.engine.server.ServerGameplayContext(
             Riiablo.files, map.seed(), Riiablo.charData, Riiablo.anim))
         .register("batch", Riiablo.batch)
@@ -362,8 +365,7 @@ public class MapViewer extends Tool {
     Riiablo.engine = engine = new World(config);
     mPosition = engine.getMapper(Position.class);
 
-    engine.inject(map);
-    map.injectBuilders(engine);
+    com.riiablo.engine.MapRuntimeBindings.bind(map, engine, factory, false);
 
     map.setAct(act);
     map.load();

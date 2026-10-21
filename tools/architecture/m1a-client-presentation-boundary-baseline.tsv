@@ -1,13 +1,4 @@
 file`tcategory`tline`ttext
-core/src/main/java/com/riiablo/engine/client\Act1QuestDialogController.java	ui	25	import com.riiablo.widget.NpcDialogBox;
-core/src/main/java/com/riiablo/engine/client\ClientNpc.java	audio	25	import com.riiablo.audio.Audio;
-core/src/main/java/com/riiablo/engine/client\ClientNpc.java	ui	48	import com.riiablo.screen.panel.VendorPanel;
-core/src/main/java/com/riiablo/engine/client\ClientNpc.java	ui	49	import com.riiablo.widget.NpcDialogBox;
-core/src/main/java/com/riiablo/engine/client\ClientNpc.java	ui	50	import com.riiablo.widget.NpcMenu;
-core/src/main/java/com/riiablo/engine/client\ClientNpc.java	ui	241	String name = com.riiablo.screen.panel.MercenaryHud.resolveMercenaryName(mercType, nameId);
-core/src/main/java/com/riiablo/engine/client\ClientNpc.java	audio	321	Riiablo.audio.play("shrine_refill", true);
-core/src/main/java/com/riiablo/engine/client\ClientNpc.java	audio	328	Audio.Instance instance = Riiablo.audio.play(id, false);
-core/src/main/java/com/riiablo/engine/client\ClientNpc.java	audio	331	Riiablo.audio.play(id, false);
 core/src/main/java/com/riiablo/engine/client\ClientEntityFactory.java	audio	15	import com.riiablo.audio.Audio;
 core/src/main/java/com/riiablo/engine/client\ClientEntityFactory.java	audio	16	import com.riiablo.audio.MonsterAudio;
 core/src/main/java/com/riiablo/engine/client\ClientEntityFactory.java	audio	724	Audio.Instance travel = clientContext.audio().play(missile.TravelSound, true);
@@ -16,8 +7,6 @@ core/src/main/java/com/riiablo/engine/client\ClientAudioSession.java	audio	3	imp
 core/src/main/java/com/riiablo/engine/client\BlockSoundEmitter.java	audio	9	import com.riiablo.audio.MonsterAudio;
 core/src/main/java/com/riiablo/engine/client\BlockSoundEmitter.java	audio	47	float gain = MonsterAudio.spatialGain(event.entityId);
 core/src/main/java/com/riiablo/engine/client\BlockSoundEmitter.java	audio	49	com.riiablo.audio.Audio.Instance instance =
-core/src/main/java/com/riiablo/engine/client\ZoneEntryDisplayer.java	graphics	17	import com.riiablo.graphics.BlendMode;
-core/src/main/java/com/riiablo/engine/client\ZoneEntryDisplayer.java	ui	20	import com.riiablo.widget.DCWrapper;
 core/src/main/java/com/riiablo/engine/client\WeatherRenderSystem.java	audio	22	import com.riiablo.audio.Audio;
 core/src/main/java/com/riiablo/engine/client\WeatherRenderSystem.java	audio	100	private Audio.Instance rainAmbience;
 core/src/main/java/com/riiablo/engine/client\WeatherRenderSystem.java	audio	152	if (audio == null || audio.isBackgroundPaused()) return;
@@ -32,7 +21,6 @@ core/src/main/java/com/riiablo/engine/client\SoundEnvironmentSystem.java	audio	3
 core/src/main/java/com/riiablo/engine/client\SoundEnvironmentSystem.java	audio	46	if (audio == null || audio.isBackgroundPaused()) return;
 core/src/main/java/com/riiablo/engine/client\SoundEnvironmentSystem.java	audio	90	: session.audio().play(ambienceSound, true, Audio.Channel.ENVIRONMENT);
 core/src/main/java/com/riiablo/engine/client\SoundEnvironmentSystem.java	audio	100	: session.audio().play(eventSound, true, Audio.Channel.ENVIRONMENT);
-core/src/main/java/com/riiablo/engine/client\QuestDialogController.java	ui	13	import com.riiablo.widget.NpcDialogBox;
 core/src/main/java/com/riiablo/engine/client\OverlayManager.java	graphics	16	import com.riiablo.graphics.BlendMode;
 core/src/main/java/com/riiablo/engine/client\ObjectAmbientSoundSystem.java	audio	10	import com.riiablo.audio.Audio;
 core/src/main/java/com/riiablo/engine/client\ObjectAmbientSoundSystem.java	audio	60	private Audio.Instance terrainRiver;
@@ -45,27 +33,17 @@ core/src/main/java/com/riiablo/engine/client\MonsterSoundEmitter.java	audio	68	|
 core/src/main/java/com/riiablo/engine/client\MonsterSoundEmitter.java	audio	157	return MonsterAudio.isAudible(distance2, sameZone);
 core/src/main/java/com/riiablo/engine/client\MonsterSoundEmitter.java	audio	177	float gain = MonsterAudio.spatialGain(entityId);
 core/src/main/java/com/riiablo/engine/client\MonsterSoundEmitter.java	audio	179	com.riiablo.audio.Audio.Instance instance = clientContext.audio().play(sound, true);
-core/src/main/java/com/riiablo/engine/client\MonsterLabelManager.java	graphics	29	import com.riiablo.graphics.PaletteIndexedBatch;
-core/src/main/java/com/riiablo/engine/client\MonsterLabelManager.java	graphics	30	import com.riiablo.graphics.PaletteIndexedColorDrawable;
-core/src/main/java/com/riiablo/engine/client\MonsterLabelManager.java	ui	32	import com.riiablo.widget.Label;
-core/src/main/java/com/riiablo/engine/client\MonsterLabelManager.java	ui	102	label.add(name = new com.riiablo.widget.Label(clientContext.fonts().font16));
 core/src/main/java/com/riiablo/engine/client\MissileLoader.java	graphics	21	import com.riiablo.graphics.BlendMode;
 core/src/main/java/com/riiablo/engine/client\MissileImpactPresentationSystem.java	audio	16	import com.riiablo.audio.MonsterAudio;
 core/src/main/java/com/riiablo/engine/client\MissileImpactPresentationSystem.java	audio	540	float gain = MonsterAudio.spatialGain(listener.dst2(event.x, event.y), true);
 core/src/main/java/com/riiablo/engine/client\MissileImpactPresentationSystem.java	audio	542	com.riiablo.audio.Audio.Instance instance = clientContext.audio().play(sound, true);
 core/src/main/java/com/riiablo/engine/client\MissileImpactPresentationSystem.java	audio	546	MonsterAudio.play(event.targetEntityId, sound, true);
-core/src/main/java/com/riiablo/engine/client\MenuManager.java	ui	18	import com.riiablo.widget.NpcMenu;
-core/src/main/java/com/riiablo/engine/client\LabelManager.java	graphics	29	import com.riiablo.graphics.PaletteIndexedColorDrawable;
 core/src/main/java/com/riiablo/engine/client\ItemLoader.java	graphics	20	import com.riiablo.graphics.BlendMode;
 core/src/main/java/com/riiablo/engine/client\GroundItemGleamSystem.java	graphics	20	import com.riiablo.graphics.BlendMode;
 core/src/main/java/com/riiablo/engine/client\GroundItemGleamSystem.java	graphics	21	import com.riiablo.graphics.PaletteIndexedBatch;
 core/src/main/java/com/riiablo/engine/client\FootstepEmitter.java	audio	14	import com.riiablo.audio.Audio;
 core/src/main/java/com/riiablo/engine/client\FootstepEmitter.java	audio	98	Audio.Instance playback = clientContext.audio() == null ? null : clientContext.audio().play(sound, true);
-core/src/main/java/com/riiablo/engine/client\DialogManager.java	ui	12	import com.riiablo.widget.NpcDialogBox;
-core/src/main/java/com/riiablo/engine/client\DialogManager.java	ui	13	import com.riiablo.widget.NpcMenu;
 core/src/main/java/com/riiablo/engine/client\DamageHandler.java	audio	113	com.riiablo.audio.MonsterAudio.play(event.victim, monster.monstats.MonSound + "_hit_1", true);
-core/src/main/java/com/riiablo/engine/client\Act1QuestIndicatorSystem.java	graphics	35	import com.riiablo.graphics.BlendMode;
-core/src/main/java/com/riiablo/engine/client\Act1QuestIndicatorSystem.java	ui	36	import com.riiablo.widget.Label;
 core/src/main/java/com/riiablo/engine/client\automap\HackMapIconRenderer.java	graphics	16	import com.riiablo.graphics.PaletteIndexedBatch;
 core/src/main/java/com/riiablo/engine/client\automap\AutomapTileRenderer.java	graphics	15	import com.riiablo.graphics.PaletteIndexedBatch;
 core/src/main/java/com/riiablo/engine/client\automap\AutomapManager.java	graphics	16	import com.riiablo.graphics.PaletteIndexedBatch;

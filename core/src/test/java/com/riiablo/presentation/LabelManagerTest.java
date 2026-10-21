@@ -1,4 +1,4 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;

@@ -323,17 +323,17 @@ public final class OffscreenSessionLifecycleScreen extends ScreenAdapter {
     }
     // Exercise actual dialog replacement, explicit close, and World-owned final teardown.
     // These add their own border references on top of the already-live NPC/panel consumers.
-    com.riiablo.engine.client.DialogManager dialogs =
-        screen.engine.getSystem(com.riiablo.engine.client.DialogManager.class);
+    com.riiablo.presentation.DialogManager dialogs =
+        screen.engine.getSystem(com.riiablo.presentation.DialogManager.class);
     String speech = "akara_act1_intro";
     require(Riiablo.files.speech.get(speech) != null, "real speech fixture");
     int boxReferencesWhileLive = references("data/global/ui/MENU/boxpieces.DC6");
     Array<com.riiablo.widget.NpcMenu> sessionMenus = new Array<>();
     com.artemis.utils.IntBag menuOwners = screen.engine.getAspectSubscriptionManager()
-        .get(com.artemis.Aspect.all(com.riiablo.engine.shared.component.MenuWrapper.class)).getEntities();
+        .get(com.artemis.Aspect.all(com.riiablo.presentation.component.MenuWrapper.class)).getEntities();
     for (int i = 0; i < menuOwners.size(); i++) {
       com.riiablo.widget.NpcMenu menu = screen.engine
-        .getMapper(com.riiablo.engine.shared.component.MenuWrapper.class).get(menuOwners.get(i)).menu;
+        .getMapper(com.riiablo.presentation.component.MenuWrapper.class).get(menuOwners.get(i)).menu;
       require(menu != null, "live NPC root menu");
       collectMenus(menu, sessionMenus);
     }

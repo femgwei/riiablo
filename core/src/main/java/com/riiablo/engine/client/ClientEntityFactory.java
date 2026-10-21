@@ -1,6 +1,9 @@
 package com.riiablo.engine.client;
 
 import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.presentation.ClientNpc;
+import com.riiablo.presentation.MenuManager;
+import com.riiablo.presentation.DialogManager;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;

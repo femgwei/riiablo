@@ -1,4 +1,4 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;

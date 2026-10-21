@@ -115,6 +115,11 @@ class GameScreenAssemblyTest {
         mode == SimulationMode.LOCAL ? "ClientItemManager" : "NetworkedClientItemManager"));
     assertSame(host.screen.factory, find(systems, "ClientEntityFactory"));
     assertSame(host.screen.renderer, find(systems, "RenderSystem"));
+    for (String name : Arrays.asList("MenuManager", "DialogManager", "Act1QuestDialogController",
+        "QuestDialogController", "Act1QuestIndicatorSystem", "ZoneEntryDisplayer",
+        "LabelManager", "MonsterLabelManager")) {
+      assertEquals("com.riiablo.presentation." + name, find(systems, name).getClass().getName());
+    }
     assertSame(host.session.map(), field(find(systems, "EnvironmentSystem"), "map"));
     assertSame(host.session.environment(), field(find(systems, "EnvironmentSystem"), "environment"));
     assertSame(host.session.partyManager(), field(find(systems, "ExperienceManager"), "partyManager"));

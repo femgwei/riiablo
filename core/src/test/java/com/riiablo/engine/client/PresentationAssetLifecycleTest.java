@@ -1,6 +1,8 @@
 package com.riiablo.engine.client;
 
 import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.presentation.Act1QuestIndicatorSystem;
+import com.riiablo.presentation.ZoneEntryDisplayer;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -126,7 +128,7 @@ class PresentationAssetLifecycleTest {
 
   @Test void questMarkerQueuedSharedReferenceReturnsOnRepeatedDispose() {
     assets.load(MARKER, DCC.class);
-    Act1QuestIndicatorSystem system = new Act1QuestIndicatorSystem();
+    MarkerHarness system = new MarkerHarness();
     system.initialize(); system.begin(); system.begin();
     system.dispose(); system.dispose(); system.begin(); system.end();
     assertEquals(1, assets.getReferenceCount(MARKER));
@@ -136,7 +138,7 @@ class PresentationAssetLifecycleTest {
 
   @Test void renderSystemsReleaseOnlyTheirOriginalManager() {
     GroundItemGleamSystem gleam = new GroundItemGleamSystem(); gleam.initialize();
-    Act1QuestIndicatorSystem marker = new Act1QuestIndicatorSystem(); marker.initialize();
+    MarkerHarness marker = new MarkerHarness(); marker.initialize();
     AssetManager replacement = mock(AssetManager.class);
     Riiablo.assets = replacement;
     gleam.begin(); marker.begin(); assets.finishLoading(); marker.begin();
@@ -148,7 +150,7 @@ class PresentationAssetLifecycleTest {
 
   @Test void neverStartedRenderSystemsDoNotAcquireAssets() {
     GroundItemGleamSystem gleam = new GroundItemGleamSystem(); gleam.initialize();
-    Act1QuestIndicatorSystem marker = new Act1QuestIndicatorSystem(); marker.initialize();
+    MarkerHarness marker = new MarkerHarness(); marker.initialize();
     gleam.dispose(); marker.dispose(); gleam.begin(); marker.begin();
     assertEquals(0, assets.getQueuedAssets()); assertEquals(0, assets.getLoadedAssets());
   }
@@ -306,7 +308,7 @@ class PresentationAssetLifecycleTest {
   @Test void initiallyMissingHostBindsFirstAvailableManagerOnly() {
     Riiablo.assets = null;
     GroundItemGleamSystem gleam = new GroundItemGleamSystem(); gleam.initialize(); gleam.begin();
-    Act1QuestIndicatorSystem marker = new Act1QuestIndicatorSystem(); marker.initialize(); marker.begin();
+    MarkerHarness marker = new MarkerHarness(); marker.initialize(); marker.begin();
     assertEquals(0, assets.getQueuedAssets());
     Riiablo.assets = assets; gleam.begin(); marker.begin();
     Riiablo.assets = mock(AssetManager.class);
@@ -315,22 +317,22 @@ class PresentationAssetLifecycleTest {
   }
 
   @Test void zoneReplacementClearsOldDrawableAndQueuedReferenceAndFinalActor() throws Exception {
-    ZoneEntryDisplayer system = zone();
+    ZoneHarness system = zone();
     String old = "data/local/ui/eng/act1/A1L1.dc6", next = "data/local/ui/eng/act1/A1Q1.dc6";
     Riiablo.language = null;
     display(system, 1, "A1L1"); assets.finishLoading(); system.processSystem();
     DC6 dc = assets.get(old, DC6.class);
-    DCWrapper image = (DCWrapper) system.stage.getRoot().getChildren().first();
+    DCWrapper image = (DCWrapper) system.stage().getRoot().getChildren().first();
     assertNotNull(((TextureRegionDrawable) image.getDrawable()).getRegion());
     display(system, 8, "ignored");
     assertFalse(assets.contains(old)); verify(dc).dispose();
     assertNull(((TextureRegionDrawable) image.getDrawable()).getRegion());
     system.dispose(); system.dispose(); system.processSystem();
-    assertFalse(assets.contains(next)); assertTrue(system.stage.getRoot().getChildren().isEmpty());
+    assertFalse(assets.contains(next)); assertTrue(system.stage().getRoot().getChildren().isEmpty());
   }
 
   @Test void zoneExitProtectsSharedConsumerAndOriginalManager() throws Exception {
-    ZoneEntryDisplayer system = zone(); Riiablo.language = null;
+    ZoneHarness system = zone(); Riiablo.language = null;
     String path = "data/local/ui/eng/act1/A1L1.dc6";
     assets.load(path, DC6.class); display(system, 1, "A1L1");
     AssetManager replacement = mock(AssetManager.class); Riiablo.assets = replacement;
@@ -339,8 +341,8 @@ class PresentationAssetLifecycleTest {
   }
 
   @Test void zoneNeverDisplayedStillRemovesActor() {
-    ZoneEntryDisplayer system = zone(); system.dispose(); system.dispose();
-    assertTrue(system.stage.getRoot().getChildren().isEmpty()); assertEquals(0, assets.getQueuedAssets());
+    ZoneHarness system = zone(); system.dispose(); system.dispose();
+    assertTrue(system.stage().getRoot().getChildren().isEmpty()); assertEquals(0, assets.getQueuedAssets());
   }
 
   private World world(OverlayManager manager) {
@@ -349,11 +351,28 @@ class PresentationAssetLifecycleTest {
     worlds.add(world); return world;
   }
 
-  private ZoneEntryDisplayer zone() {
-    ZoneEntryDisplayer system = new ZoneEntryDisplayer(); Stage stage = mock(Stage.class); Group root = new Group();
+  private ZoneHarness zone() {
+    ZoneHarness system = new ZoneHarness(); Stage stage = mock(Stage.class); Group root = new Group();
     when(stage.getRoot()).thenReturn(root);
     doAnswer(call -> { root.addActor(call.getArgument(0)); return null; }).when(stage).addActor(any());
-    system.stage = stage; system.initialize(); return system;
+    system.bind(stage); system.initialize(); return system;
+  }
+
+  @com.artemis.annotations.All({com.riiablo.engine.server.component.Monster.class,
+      com.riiablo.engine.server.component.Position.class})
+  private static class MarkerHarness extends Act1QuestIndicatorSystem {
+    @Override public void initialize() { super.initialize(); }
+    @Override public void begin() { super.begin(); }
+    @Override public void end() { super.end(); }
+    @Override public void dispose() { super.dispose(); }
+  }
+
+  private static class ZoneHarness extends ZoneEntryDisplayer {
+    void bind(Stage host) { stage = host; }
+    Stage stage() { return stage; }
+    @Override public void initialize() { super.initialize(); }
+    @Override public void processSystem() { super.processSystem(); }
+    @Override public void dispose() { super.dispose(); }
   }
 
   private static void display(ZoneEntryDisplayer system, int id, String filename) throws Exception {

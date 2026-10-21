@@ -1,49 +1,29 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
 import com.riiablo.engine.server.ai.Npc;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import com.artemis.Aspect;
 import java.util.Locale;
 
-import com.artemis.EntitySubscription;
 import com.artemis.utils.IntBag;
 
-import com.artemis.ComponentMapper;
-import net.mostlyoriginal.api.event.common.EventSystem;
 
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.IntSet;
 
 import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
-import com.riiablo.attributes.Attributes;
-import com.riiablo.attributes.Stat;
-import com.riiablo.attributes.StatRef;
-import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.DialogManager;
-import com.riiablo.engine.client.MenuManager;
 import com.riiablo.engine.client.ClientNetworkSynchronizer;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.pet.MercenaryManager;
-import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Mercenary;
-import com.riiablo.engine.server.component.PathWrapper;
-import com.riiablo.engine.server.component.Pathfind;
-import com.riiablo.engine.server.event.NpcInteractionEvent;
-import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.item.Item;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
-import com.riiablo.map.DS1;
 import com.riiablo.save.CharData;
 import com.riiablo.screen.panel.VendorPanel;
 import com.riiablo.widget.NpcDialogBox;
@@ -51,6 +31,8 @@ import com.riiablo.widget.NpcMenu;
 
 public final class ClientNpc extends Npc {
   private static final Logger log = LogManager.getLogger(ClientNpc.class);
+  @com.artemis.annotations.Wire(name = "clientContext", failOnNull = false)
+  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
   private NpcMenu menu;
   private MenuManager menuManager;
   private DialogManager dialogManager;
@@ -60,7 +42,7 @@ public final class ClientNpc extends Npc {
   public ClientNpc(int entityId) { super(entityId); }
   @Override public void initialize() {
     super.initialize();
-    name = monstats.NameStr.equalsIgnoreCase("dummy") ? monstats.Id : Riiablo.string.lookup(monstats.NameStr);
+    name = monstats.NameStr.equalsIgnoreCase("dummy") ? monstats.Id : clientContext.strings().lookup(monstats.NameStr);
   }
   /** Stable, language-independent prefix used for speech and sound table keys. */
   private String speechPrefix() {
@@ -137,8 +119,8 @@ public final class ClientNpc extends Npc {
     }
 
     if (RESURRECTERS.contains(entType)
-        && hasDeadMercenary(Riiablo.game == null ? Engine.INVALID_ENTITY : Riiablo.game.player)) {
-      menu.addItem(resurrectionLabel(Riiablo.game.player), new ClickListener() {
+        && hasDeadMercenary(clientContext.game() == null ? Engine.INVALID_ENTITY : clientContext.playerId())) {
+      menu.addItem(resurrectionLabel(clientContext.playerId()), new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
           resurrectMercenary(menuManager);
@@ -176,10 +158,10 @@ public final class ClientNpc extends Npc {
   private ClickListener questClick() {
     return new ClickListener() {
       @Override public void clicked(InputEvent event, float x, float y) {
-        QuestDialogController quests = Riiablo.engine.getSystem(QuestDialogController.class);
-        if (quests != null && Riiablo.game != null) {
+        QuestDialogController quests = world.getSystem(QuestDialogController.class);
+        if (quests != null && clientContext.game() != null) {
           menuManager.setMenu(null, Engine.INVALID_ENTITY);
-          quests.openQuestDialog(Riiablo.game.player, entityId);
+          quests.openQuestDialog(clientContext.playerId(), entityId);
         }
       }
     };
@@ -196,11 +178,11 @@ public final class ClientNpc extends Npc {
 
   private boolean hasDeadMercenary(int playerId) {
     if (playerId == Engine.INVALID_ENTITY) return false;
-    NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
-        : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
+    NativeMercenaryRewardSystem rewards = world == null ? null
+        : world.getSystem(NativeMercenaryRewardSystem.class);
     if (rewards != null && rewards.hasDeadMercenary(playerId)) return true;
-    if (Riiablo.charData != null && Riiablo.charData.hasMerc()
-        && (Riiablo.charData.getMerc().flags & MercenaryManager.FLAG_DEAD) != 0) return true;
+    if (clientContext.charData() != null && clientContext.charData().hasMerc()
+        && (clientContext.charData().getMerc().flags & MercenaryManager.FLAG_DEAD) != 0) return true;
     if (mercenaries == null || mMercenary == null || mCorpse == null) return false;
     IntBag entities = mercenaries.getEntities();
     int[] ids = entities.getData();
@@ -227,14 +209,14 @@ public final class ClientNpc extends Npc {
     int mercType = merc == null ? MercenaryManager.MERC_TYPE_ROGUE : merc.mercType;
     int nameId = merc == null ? 0 : merc.nameId;
     int level = merc == null ? 1 : Math.max(1, merc.level);
-    NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
-        : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
+    NativeMercenaryRewardSystem rewards = world == null ? null
+        : world.getSystem(NativeMercenaryRewardSystem.class);
     if (rewards != null) {
       int serviceLevel = rewards.mercenaryLevel(playerId);
       if (serviceLevel > 0) level = serviceLevel;
     }
-    if (merc == null && Riiablo.charData != null && Riiablo.charData.hasMerc()) {
-      CharData.MercData data = Riiablo.charData.getMerc();
+    if (merc == null && clientContext.charData() != null && clientContext.charData().hasMerc()) {
+      CharData.MercData data = clientContext.charData().getMerc();
       mercType = com.riiablo.engine.server.NativeHirelingExperienceTable.mercenaryType(data.type & 0xFFFF);
       nameId = data.name & 0xFFFF;
     }
@@ -248,18 +230,18 @@ public final class ClientNpc extends Npc {
   }
 
   private void hireMercenary(int npcType) {
-    if (Riiablo.game == null) return;
+    if (clientContext.game() == null) return;
     if (menuManager != null) menuManager.setMenu(null, Engine.INVALID_ENTITY);
-    if (Riiablo.game.hireMercenaryPanel != null)
-      Riiablo.game.hireMercenaryPanel.open(entityId, npcType);
+    if (clientContext.game().hireMercenaryPanel != null)
+      clientContext.game().hireMercenaryPanel.open(entityId, npcType);
   }
 
   private void resurrectMercenary(MenuManager menus) {
-    if (Riiablo.game == null) return;
-    int playerId = Riiablo.game.player;
-    if (Riiablo.game.vendorPanel != null && Riiablo.game.vendorPanel.isNetworked()) {
-      ClientNetworkSynchronizer network = Riiablo.engine == null ? null
-          : Riiablo.engine.getSystem(ClientNetworkSynchronizer.class);
+    if (clientContext.game() == null) return;
+    int playerId = clientContext.playerId();
+    if (clientContext.game().vendorPanel != null && clientContext.game().vendorPanel.isNetworked()) {
+      ClientNetworkSynchronizer network = world == null ? null
+          : world.getSystem(ClientNetworkSynchronizer.class);
       if (network != null) {
         network.requestNpcService(entityId,
             com.riiablo.net.packet.d2gs.NpcServiceType.RESURRECT,
@@ -267,18 +249,18 @@ public final class ClientNpc extends Npc {
             0, -1, 0);
       }
     } else {
-      NativeMercenaryRewardSystem rewards = Riiablo.engine == null ? null
-          : Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
+      NativeMercenaryRewardSystem rewards = world == null ? null
+          : world.getSystem(NativeMercenaryRewardSystem.class);
       if (rewards != null) rewards.resurrectMercenary(playerId);
     }
     if (menus != null) menus.setMenu(null, Engine.INVALID_ENTITY);
   }
 
   private void openVendor(int flags, byte service) {
-    if (Riiablo.game.vendorPanel.isNetworked()) {
-      Riiablo.game.vendorPanel.configNetwork(
-          flags, entityId, service, Riiablo.files.Npc.get(monstats.Id));
-      Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
+    if (clientContext.game().vendorPanel.isNetworked()) {
+      clientContext.game().vendorPanel.configNetwork(
+          flags, entityId, service, clientContext.files().Npc.get(monstats.Id));
+      clientContext.game().setLeftPanel(clientContext.game().vendorPanel);
       return;
     }
     Array<Item> items;
@@ -288,7 +270,7 @@ public final class ClientNpc extends Npc {
         items = vendors.generateGamble();
       } else {
         if (vendorStock == null || !monstats.Id.equals(vendorStockType)) {
-          int difficulty = Riiablo.charData == null ? Riiablo.NORMAL : Riiablo.charData.diff;
+          int difficulty = clientContext.charData() == null ? Riiablo.NORMAL : clientContext.charData().diff;
           vendorStock = vendors.generate(monstats.Id, difficulty);
           vendorStockType = monstats.Id;
         }
@@ -299,9 +281,9 @@ public final class ClientNpc extends Npc {
       log.error("Failed to generate vendor items: entityId={}, monsterId={}, error={}",
           entityId, monstats.Id, ExceptionUtils.getRootCauseMessage(t), t);
     }
-    Riiablo.game.vendorPanel.config(
-        flags, items, Riiablo.files.Npc.get(monstats.Id), service, vendors);
-    Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
+    clientContext.game().vendorPanel.config(
+        flags, items, clientContext.files().Npc.get(monstats.Id), service, vendors);
+    clientContext.game().setLeftPanel(clientContext.game().vendorPanel);
   }
 
   /** Called when the last player leaves the town and native vendor stock rerolls. */
@@ -317,25 +299,27 @@ public final class ClientNpc extends Npc {
     // Keep this client-side trigger unconditional for healer NPCs: the authoritative
     // stat update may already be reflected in the client snapshot by the time
     // this interaction callback runs.
-    if (isHealer(monstats == null ? -1 : monstats.hcIdx) && Riiablo.audio != null) {
-      Riiablo.audio.play("shrine_refill", true);
+    if (isHealer(monstats == null ? -1 : monstats.hcIdx) && clientContext.audio() != null) {
+      clientContext.audio().play("shrine_refill", true);
     }
 
     // TODO: need some kind of static method that can take in some state params, e.g., character
     //       class, player mode and spit out the proper file index.
     //       I.e., akara_act1_intro -> akara_act1_intro_sor automatically if it exists
     String id = speechPrefix() + "_greeting_1";
-    Audio.Instance instance = Riiablo.audio.play(id, false);
-    if (instance == null) {
-      id = speechPrefix() + "_greeting_inactive_1";
-      Riiablo.audio.play(id, false);
+    if (clientContext.audio() != null) {
+      Audio.Instance instance = clientContext.audio().play(id, false);
+      if (instance == null) {
+        id = speechPrefix() + "_greeting_inactive_1";
+        clientContext.audio().play(id, false);
+      }
     }
 
     refreshHirelingMenu();
   }
   @Override protected void faceNearbyPlayer() {
-    if (Riiablo.game == null) return;
-    int player = Riiablo.game.player;
+    if (clientContext.game() == null) return;
+    int player = clientContext.playerId();
     if (mPosition.has(player) && mPosition.get(entityId).position.dst(mPosition.get(player).position) <= 8) lookAt(player);
   }
 }
