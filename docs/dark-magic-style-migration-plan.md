@@ -438,6 +438,31 @@ git diff --check
 
 剩余问题：当前旧 UI/网络入口仍有兼容队列，完整命令准入、事件生命周期、所有结构变更迁移以及 M8 回放/网络三层仍未完成。下一迁移为 M3 第 2/4 批，集中处理输入意图和网络结果的 Tick 准入；不得把类级修补、验收记录或补记 hash 另计批次。
 
+### M3 第 2/4 批：客户端意图 Tick 准入适配（2026-10-23）
+
+完成日期：2026-10-23；本批完成度 100%，M3 计划四个批次中的第 2 批。既有物品、任务和商店 UI 意图在存在固定 Tick coordinator 时提交 `SimulationCommandEnvelope`，由 `COMMANDS` 阶段执行；离线测试 harness 保留兼容队列路径。没有增加 D2GS 字段或改变本地/服务端规则。
+
+实现与边界：
+
+- `ClientItemIntentSystem`、`ClientQuestIntentSystem`、`ClientVendorSystem` 增加 coordinator 适配。意图继续捕获稳定 item/entity identity，并在 Tick 执行时重新验证角色、死亡、实体复用和网络副本条件。
+- `GameScreen` 将 coordinator 的命令处理器绑定到 envelope payload，保证 UI 意图先于既有 ECS 系统处理；旧 `processSystem` 队列只在没有 coordinator 的测试/兼容装配中运行。
+- 网络 cast、技能点、属性点和 skill selection 的 FlatBuffer 发送格式保持不变；本批只统一客户端 Tick 准入，不提前实现 M8 网络三层或 M3 完整 envelope 传输。
+
+提交：`30635cb1c`（客户端 item/quest/vendor 意图接入 Tick command envelope）。
+
+验证命令与结果：
+
+```powershell
+./gradlew.bat :core:m3TickCommandRegression --no-daemon
+./gradlew.bat :core:test --tests com.riiablo.engine.client.ClientItemIntentSystemTest --tests com.riiablo.engine.client.ClientQuestIntentSystemTest --tests com.riiablo.engine.client.ClientVendorSystemTest --tests com.riiablo.engine.SimulationTickCoordinatorTest --no-daemon
+python -m unittest discover -s tools/architecture -p test_migration_boundaries.py
+git diff --check
+```
+
+结果：M3 门禁 14 项通过（固定步进/时钟 8、coordinator 3、item/quest/vendor 意图 3）；模块边界 unittest 9 项通过；core 编译通过。真实资源未用于纯意图准入门禁，未启动真实客户端。剩余完整命令准入、网络结果事件统一出口、结构变更全量迁移和 M8 replay/network 三层仍留后续批次。
+
+剩余问题：部分移动/技能输入仍由旧入口直接捕获，网络反馈仍走现有 D2GS 结果路由；下一迁移为 M3 第 3/4 批，集中处理移动/技能命令和网络结果事件的统一 Tick 出口；不得把后续修补拆成新的微批次。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
