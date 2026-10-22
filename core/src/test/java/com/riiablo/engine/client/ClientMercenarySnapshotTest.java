@@ -67,6 +67,26 @@ class ClientMercenarySnapshotTest extends RiiabloTest {
     } finally { world.dispose(); Riiablo.game = previous; }
   }
 
+  @Test void staleSnapshotCannotOverwriteCommittedEcsReplica() {
+    com.riiablo.screen.GameScreen previous = Riiablo.game;
+    Riiablo.game = null;
+    World world = new World(new WorldConfigurationBuilder().with(new NetworkIdManager()).build());
+    try {
+      Harness receiver = new Harness();
+      receiver.attach(world);
+      int entity = world.create();
+      FlatBufferBuilder newer = new FlatBufferBuilder(128);
+      newer.finish(MercenaryP.createMercenaryP(newer, 900, 1, 11, 80, 123, 2, 2000, 4));
+      receiver.applyMercenarySnapshot(entity, MercenaryP.getRootAsMercenaryP(newer.dataBuffer()), 20, 2000);
+      FlatBufferBuilder older = new FlatBufferBuilder(128);
+      older.finish(MercenaryP.createMercenaryP(older, 900, 1, 11, 80, 999, 2, 1000, 1));
+      receiver.applyMercenarySnapshot(entity, MercenaryP.getRootAsMercenaryP(older.dataBuffer()), 19, 2100);
+      assertEquals(123, world.getMapper(Mercenary.class).get(entity).seed);
+      assertEquals(2000, world.getMapper(Mercenary.class).get(entity).experience);
+      assertEquals(20, receiver.authoritativeMercenary(entity).tick);
+    } finally { world.dispose(); Riiablo.game = previous; }
+  }
+
   @com.artemis.annotations.All
   private static class Harness extends ClientNetworkReceiver {
     void attach(World attached) {

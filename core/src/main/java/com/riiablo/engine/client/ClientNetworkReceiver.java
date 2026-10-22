@@ -182,6 +182,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
       new AuthoritativeQuestState();
   private final AuthoritativePlayerItemState authoritativePlayerItems = new AuthoritativePlayerItemState();
   private final AuthoritativeGroundItemState authoritativeGroundItems = new AuthoritativeGroundItemState();
+  private final AuthoritativeMercenaryState authoritativeMercenaries =
+      new AuthoritativeMercenaryState();
+  private final AuthoritativeMapState authoritativeMaps = new AuthoritativeMapState();
   /** Last authoritative deletion tick per server entity.  Deletion packets
    * can be duplicated or arrive after a RoomEx re-entry; retaining this
    * watermark prevents an old delete from removing a newly rebuilt entity
@@ -224,9 +227,17 @@ public class ClientNetworkReceiver extends IntervalSystem {
   public AuthoritativeQuestState.Snapshot authoritativeQuests() { return authoritativeQuests.snapshot(); }
   public AuthoritativePlayerItemState.Snapshot authoritativePlayerItems() { return authoritativePlayerItems.snapshot(); }
   public AuthoritativeGroundItemState.Snapshot authoritativeGroundItem(int entity) { return authoritativeGroundItems.get(entity); }
+  public AuthoritativeMercenaryState.Snapshot authoritativeMercenary(int entity) {
+    return authoritativeMercenaries.get(entity);
+  }
+  public AuthoritativeMapState.Snapshot authoritativeMap(int entity) {
+    return authoritativeMaps.get(entity);
+  }
 
   private void removeTransform(int entityId) {
     authoritativeGroundItems.remove(entityId);
+    authoritativeMercenaries.remove(entityId);
+    authoritativeMaps.remove(entityId);
     authoritativeLifecycles.remove(entityId);
     authoritativeTransforms.remove(entityId);
     if (interpolation != null) interpolation.remove(entityId);
@@ -239,6 +250,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
     authoritativeQuests.clear();
     authoritativePlayerItems.clear();
     authoritativeGroundItems.clear();
+    authoritativeMercenaries.clear();
+    authoritativeMaps.clear();
     if (interpolation != null) interpolation.clear();
     super.dispose();
   }
@@ -628,9 +641,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
   }
 
   private void attachNetworkZone(int entityId, int levelId) {
-    if (entityId == Engine.INVALID_ENTITY || !mMapWrapper.has(entityId)) return;
-    Map.Zone zone = zoneForLevel(levelId);
-    if (zone != null) mMapWrapper.get(entityId).set(map, zone);
+    applyMapSnapshot(entityId, levelId, 0L, 0L);
+  }
+
+  private void applyMapSnapshot(int entityId, int levelId, long tick, long serverTimeMillis) {
+    if (entityId == Engine.INVALID_ENTITY || levelId < 0 || mMapWrapper == null || map == null) return;
+    if (!authoritativeMaps.accepts(entityId, tick, serverTimeMillis)) return;
+    AuthoritativeMapState.Snapshot snapshot =
+        AuthoritativeMapState.capture(levelId, tick, serverTimeMillis);
+    if (ClientMapSnapshotWriter.apply(mMapWrapper, map, entityId, snapshot,
+        this::zoneForLevel)) authoritativeMaps.commit(entityId, snapshot);
   }
 
 
@@ -1039,6 +1059,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       }
       syncIds.put(entityData.entityId(), entityId);
     }
+    applyMapSnapshot(entityId, packetLevelId, entityData.tick(), entityData.serverTimeMillis());
 
     boolean localPlayer = player() >= 0 && entityId == player();
     if (localPlayer) {
@@ -1173,7 +1194,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
         }
         case ComponentP.MercenaryP: {
           applyMercenarySnapshot(entityId, (com.riiablo.net.packet.d2gs.MercenaryP)
-              entityData.component(new com.riiablo.net.packet.d2gs.MercenaryP(), i));
+              entityData.component(new com.riiablo.net.packet.d2gs.MercenaryP(), i),
+              entityData.tick(), entityData.serverTimeMillis());
           break;
         }
         case ComponentP.StateP: {
@@ -1296,12 +1318,19 @@ public class ClientNetworkReceiver extends IntervalSystem {
   }
 
   void applyMercenarySnapshot(int entityId, com.riiablo.net.packet.d2gs.MercenaryP data) {
+    applyMercenarySnapshot(entityId, data, 0L, 0L);
+  }
+
+  void applyMercenarySnapshot(int entityId,
+      com.riiablo.net.packet.d2gs.MercenaryP data, long tick, long serverTimeMillis) {
     if (data == null) return;
     int owner = syncIds.get(data.ownerId());
-    com.riiablo.engine.server.component.Mercenary merc = mMercenary.create(entityId);
-    if (merc.seed != data.seed()) merc.set(owner, data.mercType(), data.level(), data.seed(), data.nameId());
-    merc.ownerId = owner; merc.mercType = data.mercType(); merc.hirelingId = data.hirelingId();
-    merc.level = data.level(); merc.experience = data.experience(); merc.flags = (int) data.flags();
+    if (!authoritativeMercenaries.accepts(entityId, tick, serverTimeMillis)) return;
+    AuthoritativeMercenaryState.Snapshot snapshot =
+        AuthoritativeMercenaryState.capture(data.ownerId(), tick, serverTimeMillis, data);
+    if (!ClientMercenarySnapshotWriter.apply(mMercenary, entityId, owner, snapshot)) return;
+    authoritativeMercenaries.commit(entityId, snapshot);
+    com.riiablo.engine.server.component.Mercenary merc = mMercenary.get(entityId);
     if (mLabel.has(entityId)) mLabel.remove(entityId);
     if (mSelectable.has(entityId)) mSelectable.remove(entityId);
     world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).remove(entityId);
@@ -1403,6 +1432,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       lastResyncObservedTick = marker.serverTick();
       lastDeletedServerTicks.clear();
       deferredServerEntities.clear();
+      pendingMercenaryOwners.clear();
       if (interpolation != null) interpolation.clear();
       authoritativeTransforms.clear();
       authoritativeLifecycles.clear();
@@ -1410,6 +1440,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
       authoritativeQuests.clear();
       authoritativePlayerItems.clear();
       authoritativeGroundItems.clear();
+      authoritativeMercenaries.clear();
+      authoritativeMaps.clear();
       authoritativeInventory.baseline(marker.inventoryRevision());
       NetworkedClientItemManager baselineItems = world.getSystem(NetworkedClientItemManager.class);
       if (baselineItems != null) baselineItems.resetInventoryRevision(marker.inventoryRevision());
