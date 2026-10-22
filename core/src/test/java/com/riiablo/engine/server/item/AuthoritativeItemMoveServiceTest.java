@@ -393,12 +393,16 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   }
 
   @Test
-  void inventoryTownPortalRejectsNonPortalMiscItems() {
+  void inventoryUseAcceptsPotionsAndRejectsIdentifyScrolls() {
     CharData character = character();
     Item potion = item("hp1", 262);
     assertTrue(character.getItems().addToInventory(potion));
     ItemMoveIntent use = intent(ItemMoveOperation.USE_INVENTORY_ITEM, potion.id, -1, -1, -1);
-    assertEquals(ItemMoveFailure.INVALID_ITEM, ItemMoveValidator.validate(character, use));
+    assertEquals(ItemMoveFailure.NONE, ItemMoveValidator.validate(character, use));
+    Item scroll = item("isc", 263);
+    assertTrue(character.getItems().addToInventory(scroll));
+    assertEquals(ItemMoveFailure.INVALID_ITEM, ItemMoveValidator.validate(character,
+        intent(ItemMoveOperation.USE_INVENTORY_ITEM, scroll.id, -1, -1, -1)));
   }
 
   private static CharData character() {

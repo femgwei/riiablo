@@ -35,7 +35,6 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.Actioneer;
-import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Box2DBody;
@@ -57,14 +56,11 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.engine.server.event.SoundEvent;
-import com.riiablo.io.ByteInput;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
 import com.riiablo.map.EnvironmentCycle;
 import com.riiablo.map.Map;
 import com.riiablo.net.packet.d2gs.AngleP;
-import com.riiablo.net.packet.d2gs.BeltToCursor;
-import com.riiablo.net.packet.d2gs.BodyToCursor;
 import com.riiablo.net.packet.d2gs.ClassP;
 import com.riiablo.net.packet.d2gs.CofAlphasP;
 import com.riiablo.net.packet.d2gs.CofComponentsP;
@@ -72,17 +68,12 @@ import com.riiablo.net.packet.d2gs.CofTransformsP;
 import com.riiablo.net.packet.d2gs.CofReferenceP;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.Connection;
-import com.riiablo.net.packet.d2gs.CursorToBelt;
-import com.riiablo.net.packet.d2gs.CursorToBody;
-import com.riiablo.net.packet.d2gs.CursorToGround;
-import com.riiablo.net.packet.d2gs.CursorToStore;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.DS1ObjectWrapperP;
 import com.riiablo.net.packet.d2gs.Disconnect;
 import com.riiablo.net.packet.d2gs.EntityFlags;
 import com.riiablo.net.packet.d2gs.EntitySync;
-import com.riiablo.net.packet.d2gs.GroundToCursor;
 import com.riiablo.net.packet.d2gs.GoldResult;
 import com.riiablo.net.packet.d2gs.ItemP;
 import com.riiablo.net.packet.d2gs.MonsterP;
@@ -98,10 +89,6 @@ import com.riiablo.net.packet.d2gs.CastSkillResult;
 import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
 import com.riiablo.net.packet.d2gs.SpendStatPointResult;
 import com.riiablo.net.packet.d2gs.PositionP;
-import com.riiablo.net.packet.d2gs.StoreToCursor;
-import com.riiablo.net.packet.d2gs.SwapBeltItem;
-import com.riiablo.net.packet.d2gs.SwapBodyItem;
-import com.riiablo.net.packet.d2gs.SwapStoreItem;
 import com.riiablo.net.packet.d2gs.ItemMoveResult;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.VitalsP;
@@ -116,7 +103,6 @@ import com.riiablo.net.SizePrefixedPacketAccumulator;
 import com.riiablo.save.CharData;
 import com.riiablo.engine.server.quest.QuestSnapshot;
 import com.riiablo.util.ArrayUtils;
-import com.riiablo.util.BufferUtils;
 import com.riiablo.util.DebugUtils;
 import java.util.function.Consumer;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -152,7 +138,6 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   protected CofManager cofs;
   protected NetworkIdManager syncIds;
-  protected ItemManager items;
   protected Pinger pinger;
   protected EventSystem events;
   protected AuthoritativeInterpolationSystem interpolation;
@@ -191,6 +176,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
       new AuthoritativeTransformState();
   private final AuthoritativeUnitLifecycleState authoritativeLifecycles =
       new AuthoritativeUnitLifecycleState();
+  private final AuthoritativeInventoryState authoritativeInventory =
+      new AuthoritativeInventoryState();
+  private final AuthoritativeQuestState authoritativeQuests =
+      new AuthoritativeQuestState();
+  private final AuthoritativePlayerItemState authoritativePlayerItems = new AuthoritativePlayerItemState();
+  private final AuthoritativeGroundItemState authoritativeGroundItems = new AuthoritativeGroundItemState();
   /** Last authoritative deletion tick per server entity.  Deletion packets
    * can be duplicated or arrive after a RoomEx re-entry; retaining this
    * watermark prevents an old delete from removing a newly rebuilt entity
@@ -211,7 +202,6 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private long lastResyncRequestMillis;
   private long lastResyncObservedTick;
   private long baselineBeginTick;
-  private long baselineQuestRevision = -1L;
   private final SnapshotBaselineTransaction baselineTransaction =
       new SnapshotBaselineTransaction();
   /** Current level of the local player; -1 until the first authoritative snapshot. */
@@ -230,7 +220,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
     return authoritativeLifecycles.get(entityId);
   }
 
+  public AuthoritativeInventoryState.Snapshot authoritativeInventory() { return authoritativeInventory.snapshot(); }
+  public AuthoritativeQuestState.Snapshot authoritativeQuests() { return authoritativeQuests.snapshot(); }
+  public AuthoritativePlayerItemState.Snapshot authoritativePlayerItems() { return authoritativePlayerItems.snapshot(); }
+  public AuthoritativeGroundItemState.Snapshot authoritativeGroundItem(int entity) { return authoritativeGroundItems.get(entity); }
+
   private void removeTransform(int entityId) {
+    authoritativeGroundItems.remove(entityId);
     authoritativeLifecycles.remove(entityId);
     authoritativeTransforms.remove(entityId);
     if (interpolation != null) interpolation.remove(entityId);
@@ -239,6 +235,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
   @Override protected void dispose() {
     authoritativeTransforms.clear();
     authoritativeLifecycles.clear();
+    authoritativeInventory.clear();
+    authoritativeQuests.clear();
+    authoritativePlayerItems.clear();
+    authoritativeGroundItems.clear();
     if (interpolation != null) interpolation.clear();
     super.dispose();
   }
@@ -252,6 +252,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   @Override
   protected void processSystem() {
+    if (snapshotResyncPending && !snapshotResyncInProgress) {
+      requestSnapshotResync(lastResyncObservedTick, "snapshot_retry");
+    }
     if (!snapshotResyncInProgress && latestServerTick > 0L
         && TimeUtils.millis() - latestServerTickReceiptMillis > 3000L) {
       requestSnapshotResync(snapshotTimeline.tick(), "snapshot_silence");
@@ -347,37 +350,18 @@ public class ClientNetworkReceiver extends IntervalSystem {
         CastSkillResult(packet);
         break;
       case D2GSData.GroundToCursor:
-        GroundToCursor(packet);
-        break;
       case D2GSData.CursorToGround:
-        CursorToGround(packet);
-        break;
       case D2GSData.StoreToCursor:
-        StoreToCursor(packet);
-        break;
       case D2GSData.CursorToStore:
-        CursorToStore(packet);
-        break;
       case D2GSData.SwapStoreItem:
-        SwapStoreItem(packet);
-        break;
       case D2GSData.BodyToCursor:
-        BodyToCursor(packet);
-        break;
       case D2GSData.CursorToBody:
-        CursorToBody(packet);
-        break;
       case D2GSData.SwapBodyItem:
-        SwapBodyItem(packet);
-        break;
       case D2GSData.BeltToCursor:
-        BeltToCursor(packet);
-        break;
       case D2GSData.CursorToBelt:
-        CursorToBelt(packet);
-        break;
       case D2GSData.SwapBeltItem:
-        SwapBeltItem(packet);
+        // Legacy echoes describe an action, not a complete ownership result.
+        requestSnapshotResync(snapshotTimeline.tick(), "legacy_inventory_echo");
         break;
       case D2GSData.NpcServiceResult:
         NpcServiceResult(packet);
@@ -578,17 +562,20 @@ public class ClientNetworkReceiver extends IntervalSystem {
       case ITM: {
         ItemP item = findTable(sync, ComponentP.ItemP, new ItemP());
         PositionP position = findTable(sync, ComponentP.PositionP, new PositionP());
-        byte[] bytes = BufferUtils.readRemaining(item.dataAsByteBuffer());
-        ByteInput byteInput = ByteInput.wrap(bytes);
-        Item itemObj = itemReader.readItem(byteInput);
-        // Ground item moves address the authoritative server entity and the
-        // server uses that same value as the item id.  Older snapshots may
-        // carry a pre-entity item id in the serialized payload; normalize it
-        // before the replica can issue a pickup request.
-        itemObj.id = sync.entityId();
+        if (item == null || position == null) return Engine.INVALID_ENTITY;
+        AuthoritativeGroundItemState.Snapshot snapshot = AuthoritativeGroundItemState.capture(
+            sync.entityId(), sync.tick(), sync.serverTimeMillis(), item);
+        final Item itemObj;
+        try {
+          itemObj = ClientGroundItemSnapshotWriter.decode(snapshot, itemReader, null);
+        } catch (RuntimeException | AssertionError invalid) {
+          requestSnapshotResync(sync.tick(), "ground_decode_failed");
+          return Engine.INVALID_ENTITY;
+        }
         int entityId = factory.createItem(itemObj, position.x(), position.y());
         if (entityId != Engine.INVALID_ENTITY && mItem.has(entityId)) {
-          applyGroundItemMetadata(mItem.get(entityId), item);
+          ClientGroundItemSnapshotWriter.apply(mItem.get(entityId), itemObj, snapshot);
+          authoritativeGroundItems.commit(entityId, snapshot);
         }
         return entityId;
       }
@@ -673,7 +660,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
         || destination == 103 || destination == 109;
   }
 
-  private void applyPlayerSnapshot(int entityId, PlayerP data) {
+  private void applyPlayerSnapshot(int entityId, PlayerP data, long tick, long serverTimeMillis) {
     if (character() == null || player() < 0 || entityId != player()) {
       return;
     }
@@ -685,30 +672,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
     int level = Math.max(1, data.level());
     int skillPoints = data.skillPoints();
     int statPoints = data.statPoints();
-    if (data.walletPresent()) {
-      com.riiablo.item.VendorPricing.setGoldSnapshot(character(),
-          (int) Math.min(Integer.MAX_VALUE, data.gold()),
-          (int) Math.min(Integer.MAX_VALUE, data.goldBank()));
-    }
-    if (data.ammoPresent()) {
-      com.riiablo.item.Item ammo = character().getItems().findItemById(data.ammoItemId());
-      if (ammo == null) ammo = character().getItems().getEquippedRangedAmmo();
-      if (ammo == null) ammo = character().getItems().getEquippedThrowableWeapon();
-      if (ammo != null && ammo.attrs != null) {
-        int quantity = data.ammoQuantity();
-        ammo.attrs.base().put(Stat.quantity, quantity);
-        ammo.attrs.aggregate().put(Stat.quantity, quantity);
-        Gdx.app.log(TAG, "[RANGED_AMMO_SYNC] itemId=" + data.ammoItemId()
-            + " code=" + ammo.code + " quantity=" + quantity);
-      }
-    } else {
-      com.riiablo.save.ItemData items = character().getItems();
-      com.riiablo.item.Item staleQuiver = items.getEquippedRangedAmmo();
-      if (staleQuiver != null && com.riiablo.item.VendorPricing.isQuiver(staleQuiver)) {
-        items.removeOwnedItem(staleQuiver);
-        Gdx.app.log(TAG, "[RANGED_AMMO_SYNC] removed depleted quiver itemId="
-            + staleQuiver.id + " code=" + staleQuiver.code);
-      }
+    if (authoritativePlayerItems.commit(tick, serverTimeMillis, data)) {
+      ClientPlayerItemSnapshotWriter.apply(character(), authoritativePlayerItems.snapshot());
     }
 
     long oldExperience = character().getStats().aggregate()
@@ -737,8 +702,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
     character().synchronizeCurrentResources();
 
     int questCount = data.questRecordsLength();
-    if (questCount > 0 && com.riiablo.engine.server.quest.QuestSnapshot.apply(
-        character(), questCount, data::questRecords)) {
+    if (questCount > 0 && authoritativeQuests.commit(
+        tick, serverTimeMillis, character().diff, data.questRevision(),
+        questCount, data::questRecords)
+        && ClientQuestSnapshotWriter.apply(character(), authoritativeQuests.snapshot())) {
       int currentDifficulty = character().diff;
       // The server serializes all acts for the character's current
       // difficulty; diff is not an act index.
@@ -821,7 +788,6 @@ public class ClientNetworkReceiver extends IntervalSystem {
       com.riiablo.net.packet.d2gs.NpcMercenarySnapshot merc = result.mercenary();
       applyMercenaryHeader(merc.seed(), merc.nameId(), merc.hirelingId(), merc.experience(),
           (int) merc.flags());
-      applyAuthoritativeWallet(result.gold(), result.goldBank());
     }
     if (clientSession != null && clientSession.results() != null) {
       clientSession.results().onNpcService(result);
@@ -948,9 +914,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void QuestResult(D2GS packet) {
     QuestResult result = (QuestResult) packet.data(new QuestResult());
-    if (character() != null && result.questRecordsLength() > 0) {
-      com.riiablo.engine.server.quest.QuestSnapshot.apply(
-          character(), result.questRecordsLength(), result::questRecords);
+    // Quest revision is a content hash. Untimed replies cannot order records
+    // against PlayerP (including newer rewards); refresh via a stamped baseline.
+    AuthoritativeQuestState.Snapshot current = authoritativeQuests.snapshot();
+    if (result.questRecordsLength() > 0
+        && (current == null || current.revision != result.questRevision())) {
+      requestSnapshotResync(snapshotTimeline.tick(), "quest_result");
     }
     Gdx.app.log(TAG, "[QUEST_NET] phase=result request=" + result.requestId()
         + " operation=" + result.operation() + " success=" + result.success()
@@ -1161,7 +1130,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           break;
         case ComponentP.PlayerP: {
           PlayerP data = (PlayerP) entityData.component(new PlayerP(), i);
-          applyPlayerSnapshot(entityId, data);
+          applyPlayerSnapshot(entityId, data, entityData.tick(), entityData.serverTimeMillis());
           break;
         }
         case ComponentP.ObjectP: {
@@ -1181,14 +1150,17 @@ public class ClientNetworkReceiver extends IntervalSystem {
         case ComponentP.ItemP: {
           if (entityType == Class.Type.ITM && mItem.has(entityId)) {
             ItemP data = (ItemP) entityData.component(new ItemP(), i);
-            applyGroundItemMetadata(mItem.get(entityId), data);
-            byte[] encoded = BufferUtils.readRemaining(data.dataAsByteBuffer());
-            if (encoded.length > 0) {
-              try {
-                mItem.get(entityId).item = itemReader.readItem(ByteInput.wrap(encoded));
-              } catch (Throwable t) {
-                Gdx.app.error(TAG, "[ITEM_SYNC] failed to decode item " + entityData.entityId(), t);
-              }
+            if (!authoritativeGroundItems.accepts(entityId, entityData.tick(), entityData.serverTimeMillis())) break;
+            AuthoritativeGroundItemState.Snapshot snapshot = AuthoritativeGroundItemState.capture(
+                entityData.entityId(), entityData.tick(), entityData.serverTimeMillis(), data,
+                authoritativeGroundItems.get(entityId));
+            try {
+              Item decoded = ClientGroundItemSnapshotWriter.decode(snapshot, itemReader, mItem.get(entityId).item);
+              ClientGroundItemSnapshotWriter.apply(mItem.get(entityId), decoded, snapshot);
+              authoritativeGroundItems.commit(entityId, snapshot);
+            } catch (RuntimeException | AssertionError invalid) {
+              Gdx.app.error(TAG, "[ITEM_SYNC] failed to decode item " + entityData.entityId(), invalid);
+              requestSnapshotResync(entityData.tick(), "ground_decode_failed");
             }
           }
           break;
@@ -1297,15 +1269,6 @@ public class ClientNetworkReceiver extends IntervalSystem {
         data.skillId(), 1, false, 0);
     pet.networkReplica = true;
     if (data.unsummonable()) mSelectable.create(entityId);
-  }
-
-  private void applyAuthoritativeWallet(long gold, long bank) {
-    if (character() == null) return;
-    for (short stat : new short[] {Stat.gold, Stat.goldbank}) {
-      int amount = (int) Math.min(Integer.MAX_VALUE, stat == Stat.gold ? gold : bank);
-      character().getStats().base().put(stat, amount);
-      character().getStats().aggregate().put(stat, amount);
-    }
   }
 
   void applyMercenaryHeader(int seed, int nameId, int hirelingId, long xp, int flags) {
@@ -1437,19 +1400,34 @@ public class ClientNetworkReceiver extends IntervalSystem {
       snapshotResyncPending = false;
       snapshotResyncInProgress = true;
       baselineBeginTick = marker.serverTick();
-      baselineQuestRevision = marker.questRevision();
       lastResyncObservedTick = marker.serverTick();
       lastDeletedServerTicks.clear();
       deferredServerEntities.clear();
       if (interpolation != null) interpolation.clear();
       authoritativeTransforms.clear();
       authoritativeLifecycles.clear();
+      authoritativeInventory.clear();
+      authoritativeQuests.clear();
+      authoritativePlayerItems.clear();
+      authoritativeGroundItems.clear();
+      authoritativeInventory.baseline(marker.inventoryRevision());
+      NetworkedClientItemManager baselineItems = world.getSystem(NetworkedClientItemManager.class);
+      if (baselineItems != null) baselineItems.resetInventoryRevision(marker.inventoryRevision());
       Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=begin request=" + marker.requestId()
           + " baseline=" + marker.baselineId() + " tick=" + marker.serverTick()
           + " entities=" + marker.entityCount());
     } else {
+      AuthoritativeInventoryState.Snapshot inventory = authoritativeInventory.snapshot();
+      boolean inventoryComplete = character() == null || inventory != null
+          && inventory.revision == marker.inventoryRevision();
+      long appliedQuestRevision = character() == null ? 0L : QuestSnapshot.revision(QuestSnapshot.records(character()));
+      boolean questsComplete = character() == null || marker.questRevision() == 0L
+          || authoritativeQuests.snapshot() != null
+          && authoritativeQuests.snapshot().revision == marker.questRevision()
+          && appliedQuestRevision == marker.questRevision();
       SnapshotBaselineTransaction.EndResult result = baselineTransaction.end(
-          marker.requestId(), marker.baselineId(), marker.entityCount(), marker.success());
+          marker.requestId(), marker.baselineId(), marker.entityCount(), marker.success(),
+          inventoryComplete && questsComplete);
       if (result == SnapshotBaselineTransaction.EndResult.IGNORED) {
         Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=end_ignored request="
             + marker.requestId() + " baseline=" + marker.baselineId());
@@ -1467,7 +1445,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
         snapshotResyncPending = true;
         Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=end_incomplete request="
             + marker.requestId() + " baseline=" + marker.baselineId()
-            + " expected=" + marker.entityCount());
+            + " expected=" + marker.entityCount()
+            + " inventoryComplete=" + inventoryComplete + " questsComplete=" + questsComplete);
         requestSnapshotResync(lastResyncObservedTick, "baseline_incomplete");
         return;
       }
@@ -1477,15 +1456,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
         world.getSystem(NetworkedClientItemManager.class)
             .resetInventoryRevision(marker.inventoryRevision());
       }
-      if (character() != null && marker.questRevision() != 0L) {
-        long appliedQuestRevision = QuestSnapshot.revision(QuestSnapshot.records(character()));
-        if (appliedQuestRevision != marker.questRevision()) {
-          Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=quest_revision_mismatch expected="
-              + marker.questRevision() + " applied=" + appliedQuestRevision
-              + " begin=" + baselineQuestRevision);
-          requestSnapshotResync(marker.serverTick(), "quest_revision_mismatch");
-        }
-      }
+      authoritativeInventory.baseline(marker.inventoryRevision());
       latestServerTick = marker.serverTick();
       latestServerTickReceiptMillis = TimeUtils.millis();
       lastResyncObservedTick = marker.serverTick();
@@ -1511,9 +1482,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void requestSnapshotResync(long tick, String reason) {
     long now = TimeUtils.millis();
+    snapshotResyncPending = true;
     if (now - lastResyncRequestMillis < 2000L) return;
     lastResyncRequestMillis = now;
-    snapshotResyncPending = true;
     if (networkSynchronizer != null) networkSynchronizer.requestSnapshotResync(tick, reason);
   }
 
@@ -1592,93 +1563,28 @@ public class ClientNetworkReceiver extends IntervalSystem {
     }
   }
 
-  private void GroundToCursor(D2GS packet) {
-    GroundToCursor groundToCursor = (GroundToCursor) packet.data(new GroundToCursor());
-    int entityId = syncIds.get(groundToCursor.itemId());
-    items.groundToCursor(player(), entityId);
-  }
-
-  private void CursorToGround(D2GS packet) {
-    CursorToGround cursorToGround = (CursorToGround) packet.data(new CursorToGround());
-    items.cursorToGround(player());
-  }
-
-  private void StoreToCursor(D2GS packet) {
-    StoreToCursor storeToCursor = (StoreToCursor) packet.data(new StoreToCursor());
-    items.storeToCursor(player(), storeToCursor.itemId());
-  }
-
-  private void CursorToStore(D2GS packet) {
-    CursorToStore cursorToStore = (CursorToStore) packet.data(new CursorToStore());
-    items.cursorToStore(player(), cursorToStore.storeLoc(), cursorToStore.x(), cursorToStore.y());
-  }
-
-  private void SwapStoreItem(D2GS packet) {
-    SwapStoreItem swapStoreItem = (SwapStoreItem) packet.data(new SwapStoreItem());
-    items.swapStoreItem(player(), swapStoreItem.itemId(), swapStoreItem.storeLoc(), swapStoreItem.x(), swapStoreItem.y());
-  }
-
-  private void BodyToCursor(D2GS packet) {
-    BodyToCursor bodyToCursor = (BodyToCursor) packet.data(new BodyToCursor());
-    items.bodyToCursor(player(), bodyToCursor.bodyLoc(), bodyToCursor.merc());
-  }
-
-  private void CursorToBody(D2GS packet) {
-    CursorToBody cursorToBody = (CursorToBody) packet.data(new CursorToBody());
-    items.cursorToBody(player(), cursorToBody.bodyLoc(), cursorToBody.merc());
-  }
-
-  private void SwapBodyItem(D2GS packet) {
-    SwapBodyItem swapBodyItem = (SwapBodyItem) packet.data(new SwapBodyItem());
-    items.swapBodyItem(player(), swapBodyItem.bodyLoc(), swapBodyItem.merc());
-  }
-
-  private void BeltToCursor(D2GS packet) {
-    BeltToCursor beltToCursor = (BeltToCursor) packet.data(new BeltToCursor());
-    items.beltToCursor(player(), beltToCursor.itemId());
-  }
-
-  private void CursorToBelt(D2GS packet) {
-    CursorToBelt cursorToBelt = (CursorToBelt) packet.data(new CursorToBelt());
-    items.cursorToBelt(player(), cursorToBelt.x(), cursorToBelt.y());
-  }
-
-  private void SwapBeltItem(D2GS packet) {
-    SwapBeltItem swapBeltItem = (SwapBeltItem) packet.data(new SwapBeltItem());
-    items.swapBeltItem(player(), swapBeltItem.itemId());
-  }
-
   private void ItemMoveResult(D2GS packet) {
     ItemMoveResult result = (ItemMoveResult) packet.data(new ItemMoveResult());
     NetworkedClientItemManager itemManager = world.getSystem(NetworkedClientItemManager.class);
-    if (itemManager != null && !itemManager.onAuthoritativeResult(result)) {
+    if (character() == null || !authoritativeInventory.accepts(result.revision(), result.requestId())
+        || itemManager != null && result.revision() < itemManager.inventoryRevision()) return;
+    AuthoritativeInventoryState.Snapshot snapshot = AuthoritativeInventoryState.capture(result);
+    final ClientInventorySnapshotWriter.Prepared prepared;
+    try {
+      prepared = ClientInventorySnapshotWriter.prepare(snapshot, itemReader);
+    } catch (RuntimeException | AssertionError invalid) {
+      Gdx.app.error(TAG, "[ITEM_MOVE_SNAPSHOT] rejected complete transaction", invalid);
+      requestSnapshotResync(snapshotTimeline.tick(), "inventory_decode_failed");
       return;
     }
-    if (character() != null) {
-      com.badlogic.gdx.utils.Array<Item> snapshot = new com.badlogic.gdx.utils.Array<>(false,
-          result.snapshotLength(), Item.class);
-      for (int i = 0; i < result.snapshotLength(); i++) {
-        com.riiablo.net.packet.d2gs.ItemMoveSnapshotEntry entry = result.snapshot(i);
-        try {
-          byte[] encoded = new byte[entry.itemDataLength()];
-          for (int j = 0; j < encoded.length; j++) encoded[j] = (byte) entry.itemData(j);
-          Item item = itemReader.readItem(ByteInput.wrap(encoded));
-          item.id = entry.itemId();
-          item.location = com.riiablo.item.Location.valueOf(entry.location());
-          item.storeLoc = com.riiablo.item.StoreLoc.valueOf(entry.storeLoc());
-          item.bodyLoc = com.riiablo.item.BodyLoc.valueOf(entry.bodyLoc());
-          item.gridX = (byte) entry.x();
-          item.gridY = (byte) entry.y();
-          snapshot.add(item);
-        } catch (Throwable t) {
-          Gdx.app.error(TAG, "[ITEM_MOVE_SNAPSHOT] failed to decode item " + entry.itemId(), t);
-        }
-      }
-      character().getItems().replaceFromAuthoritativeSnapshot(snapshot);
+    prepared.apply(character());
+    authoritativeInventory.commit(snapshot);
+    if (itemManager != null) itemManager.onAuthoritativeResult(result);
+    {
       // Artwork is client-only state and must not decide whether an
       // authoritative item exists. Load each icon after ownership has been
       // committed so a missing/bad asset cannot make a picked item disappear.
-      for (Item item : snapshot) {
+      for (Item item : prepared.items) {
         try {
           item.load();
         } catch (Throwable t) {
@@ -1688,47 +1594,47 @@ public class ClientNetworkReceiver extends IntervalSystem {
       }
       Item cursorItem = character().getItems().getCursor();
       if (clientContext.cursor() != null) clientContext.cursor().setItem(cursorItem);
-      if (result.success()
-          && result.operation() == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR
+      if (snapshot.success
+          && snapshot.operation == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR
           && cursorItem == null) {
         ClientItemManager pickupManager = world.getSystem(ClientItemManager.class);
         if (pickupManager != null) pickupManager.playPickupSound();
       }
     }
-    if (result.groundEntityId() >= 0 && result.groundItemDataLength() == 0) {
-      int localEntityId = syncIds.get(result.groundEntityId());
-      serverEntityLevels.remove(result.groundEntityId(), -1);
-      deferredServerEntities.remove(result.groundEntityId());
+    if (snapshot.groundEntityId >= 0 && !snapshot.hasGroundItem()) {
+      int localEntityId = syncIds.get(snapshot.groundEntityId);
+      serverEntityLevels.remove(snapshot.groundEntityId, -1);
+      deferredServerEntities.remove(snapshot.groundEntityId);
       if (localEntityId != Engine.INVALID_ENTITY) {
         removeTransform(localEntityId);
         world.delete(localEntityId);
       }
       Gdx.app.log(TAG, "[ITEM_MOVE_GROUND] phase=authoritative_remove serverEntity="
-          + result.groundEntityId() + " request=" + result.requestId());
-    } else if (result.groundEntityId() >= 0 && result.groundItemDataLength() > 0) {
-      int localEntityId = syncIds.get(result.groundEntityId());
+          + snapshot.groundEntityId + " request=" + snapshot.requestId);
+    } else if (snapshot.groundEntityId >= 0 && snapshot.hasGroundItem()) {
+      int localEntityId = syncIds.get(snapshot.groundEntityId);
       if (localEntityId != Engine.INVALID_ENTITY && mItem.has(localEntityId)) {
         try {
-          byte[] encoded = new byte[result.groundItemDataLength()];
-          for (int i = 0; i < encoded.length; i++) encoded[i] = (byte) result.groundItemData(i);
-          mItem.get(localEntityId).item = itemReader.readItem(ByteInput.wrap(encoded));
+          mItem.get(localEntityId).item = prepared.ground;
           // Ground corrections carry the complete ownership window as well as
           // the serialized item.  Keep the ECS metadata in lock-step so an
           // expired/changed owner cannot leave a stale client-side pickup
           // restriction after a rejected request.
           com.riiablo.engine.server.component.Item local = mItem.get(localEntityId);
-          local.dropOwnerId = result.groundOwnerId();
-          local.dropOwnerUntilMillis = result.groundOwnerUntilMillis();
-          local.dropPartyId = result.groundPartyId();
-          local.dropPartyUntilMillis = result.groundPartyUntilMillis();
-          local.partyShareGold = result.groundPartyShareGold();
+          local.dropOwnerId = snapshot.groundOwnerId;
+          local.dropOwnerUntilMillis = snapshot.groundOwnerUntilMillis;
+          local.dropPartyId = snapshot.groundPartyId;
+          local.dropPartyUntilMillis = snapshot.groundPartyUntilMillis;
+          local.partyShareGold = snapshot.groundPartyShareGold;
+          authoritativeGroundItems.commit(localEntityId, AuthoritativeGroundItemState.correction(
+              snapshot, authoritativeGroundItems.get(localEntityId)));
           if (mPosition.has(localEntityId)) {
             mPosition.get(localEntityId).invalidateNativePrecision();
-            mPosition.get(localEntityId).position.set(result.groundX(), result.groundY());
+            mPosition.get(localEntityId).position.set(snapshot.groundX, snapshot.groundY);
           }
         } catch (Throwable t) {
           Gdx.app.error(TAG, "[ITEM_MOVE_GROUND] failed to apply ground correction "
-              + result.groundEntityId(), t);
+              + snapshot.groundEntityId, t);
         }
       } else {
         // Recreating an item from this compact correction would omit its
@@ -1738,29 +1644,25 @@ public class ClientNetworkReceiver extends IntervalSystem {
         requestSnapshotResync(lastResyncObservedTick, "item_ground_missing");
       }
     }
-    if (!result.success()
-        && result.operation() == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR
-        && result.failure() == com.riiablo.net.packet.d2gs.ItemMoveFailure.INVENTORY_OCCUPIED
-        && result.groundEntityId() >= 0) {
-      int localEntityId = syncIds.get(result.groundEntityId());
+    if (!snapshot.success
+        && snapshot.operation == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR
+        && snapshot.failure == com.riiablo.net.packet.d2gs.ItemMoveFailure.INVENTORY_OCCUPIED
+        && snapshot.groundEntityId >= 0) {
+      int localEntityId = syncIds.get(snapshot.groundEntityId);
       ItemEffectManager effects = world.getSystem(ItemEffectManager.class);
       if (localEntityId != Engine.INVALID_ENTITY && effects != null) {
         effects.replayDrop(localEntityId);
       }
     }
-    if (!result.success()) {
-      Gdx.app.log(TAG, "[ITEM_MOVE_REJECTED] request=" + result.requestId()
-          + " failure=" + result.failure() + " revision=" + result.revision());
+    if (!snapshot.success) {
+      Gdx.app.log(TAG, "[ITEM_MOVE_REJECTED] request=" + snapshot.requestId
+          + " failure=" + snapshot.failure + " revision=" + snapshot.revision);
     }
   }
 
   private void GoldResult(D2GS packet) {
     GoldResult result = (GoldResult) packet.data(new GoldResult());
-    if (result.success() && character() != null) {
-      com.riiablo.item.VendorPricing.setGoldSnapshot(character(),
-          (int) Math.min(Integer.MAX_VALUE, result.gold()),
-          (int) Math.min(Integer.MAX_VALUE, result.goldBank()));
-    }
+    // Untimed acknowledgements are feedback. PlayerP carries the stamped wallet.
     if (result.success() && result.groundEntityId() >= 0) {
       Gdx.app.log(TAG, "[GOLD_DROP] entity=" + result.groundEntityId()
           + " amount=" + result.amount());
@@ -1769,18 +1671,6 @@ public class ClientNetworkReceiver extends IntervalSystem {
       Gdx.app.log(TAG, "[GOLD_OPERATION_REJECTED] request=" + result.requestId()
           + " operation=" + result.operation() + " reason=" + result.reason());
     }
-  }
-
-  /** Applies server-owned pickup-window metadata without granting client authority. */
-  private static void applyGroundItemMetadata(
-      com.riiablo.engine.server.component.Item local,
-      ItemP data) {
-    if (local == null || data == null) return;
-    local.dropOwnerId = data.dropOwnerId();
-    local.dropOwnerUntilMillis = data.dropOwnerUntilMillis();
-    local.dropPartyId = data.dropPartyId();
-    local.dropPartyUntilMillis = data.dropPartyUntilMillis();
-    local.partyShareGold = data.partyShareGold();
   }
 
   private CharData character() {

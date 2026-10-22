@@ -45,8 +45,6 @@ import com.riiablo.net.packet.d2gs.NpcServiceOperation;
 import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.NpcServiceStock;
 import com.riiablo.net.packet.d2gs.NpcServiceType;
-import com.riiablo.engine.server.item.ItemDurabilityManager;
-import com.riiablo.engine.server.npc.NpcRepairService;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
@@ -762,55 +760,21 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   /** Applies an authoritative vendor/repair response to the visible UI. */
   public void applyNetworkResult(NpcServiceResult result) {
     if (!isCurrentSession() || result == null) return;
-    VendorPricing.setGoldSnapshot(character,
-        (int) Math.min(Integer.MAX_VALUE, result.gold()),
-        (int) Math.min(Integer.MAX_VALUE, result.goldBank()));
+    // Ownership, placement, durability and wallet values are committed by the
+    // receiver's inventory/PlayerP ports. This handler updates feedback only.
     if (result.requestId() == pendingRequestId) {
       if (result.success() && pendingOperation == NpcServiceOperation.BUY
           && result.itemDataLength() > 0) {
         Item purchased = decodeItem(result.itemId(), result.itemDataAsByteBuffer(), false);
-        if (purchased != null && !itemData.contains(purchased)) {
-          boolean placed = pendingBuyToCursor
-              ? itemData.addToCursor(purchased)
-              : itemData.addAutoPickup(purchased, character);
-          if (!placed) {
-            Gdx.app.error(TAG, "[VENDOR_BUY] requested destination unavailable; preserving item in inventory");
-            itemData.addToInventory(purchased);
-          } else if (audio != null) {
-            audio.play(purchased.getDropSound(), true);
-          }
-        }
+        if (purchased != null && audio != null) audio.play(purchased.getDropSound(), true);
       } else if (result.success() && pendingOperation == NpcServiceOperation.SELL) {
-        Item sold = pendingItemIndex >= 0 && pendingItemIndex < itemData.getItems().size
-            ? itemData.getItems().get(pendingItemIndex) : null;
-        if (sold != null) {
-          itemData.removeOwnedItem(sold);
-          playSellSounds(sold);
-        }
-      } else if (pendingOperation == NpcServiceOperation.REPAIR_ITEM) {
-        if (result.success()) {
-          Item repaired = findOwnedItem(result.itemId(), pendingItemIndex);
-          if (repaired != null && new ItemDurabilityManager().restoreDurability(repaired)) {
-            itemData.updateStats();
-          }
-        }
-        if (result.success() || "NOTHING_TO_REPAIR".equals(result.reason())) {
-          playRepairSound();
-        }
-      } else if (pendingOperation == NpcServiceOperation.REPAIR_ALL) {
-        if (result.success()) applyRepairAllResult();
-        if (result.success() || "NOTHING_TO_REPAIR".equals(result.reason())) {
-          playRepairSound();
-        }
+        playSellSounds(null);
+      } else if ((pendingOperation == NpcServiceOperation.REPAIR_ITEM
+          || pendingOperation == NpcServiceOperation.REPAIR_ALL)
+          && (result.success() || "NOTHING_TO_REPAIR".equals(result.reason()))) {
+        playRepairSound();
       }
-      if (pendingOperation == NpcServiceOperation.SELL) {
-        Gdx.app.log(TAG, "[VENDOR_SELL] phase=result request=" + result.requestId()
-            + " success=" + result.success() + " reason=" + result.reason()
-            + " itemIndex=" + pendingItemIndex);
-      }
-      pendingRequestId = 0;
-      pendingItemIndex = -1;
-      pendingBuyToCursor = false;
+      clearPendingRequest();
     }
     if (networkFlags == 0) return;
     // REPAIR and early validation failures carry no vendor-stock snapshot.
@@ -930,16 +894,12 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       pendingItemIndex = itemIndex;
       return false;
     }
-    NpcRepairService.Result result = NpcRepairService.repairItem(
-        character, localPricing, itemIndex, item.id);
-    if (!result.success) {
-      if ("NOTHING_TO_REPAIR".equals(result.reason)) playRepairSound();
-      return false;
-    }
-    refreshGold();
-    playRepairSound();
-    Gdx.app.debug(TAG, "Repaired " + item.code + " for " + result.cost + " gold");
-    return true;
+    com.riiablo.engine.client.ClientVendorSystem transactions = vendorTransactions();
+    return transactions != null && transactions.repair(item.id, localPricing,
+        () -> isCurrentSession() && isVisible(), result -> {
+          if (result.success) refreshGold();
+          if (result.success || "NOTHING_TO_REPAIR".equals(result.reason)) playRepairSound();
+        });
   }
 
   private void repairAll() {
@@ -955,35 +915,16 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       pendingItemIndex = -1;
       return;
     }
-    NpcRepairService.Result result = NpcRepairService.repairAll(
-        character, localPricing);
-    if (!result.success) {
-      if ("NOTHING_TO_REPAIR".equals(result.reason)) playRepairSound();
-      return;
-    }
-    refreshGold();
-    playRepairSound();
-    Gdx.app.debug(TAG, "Repaired all equipment for " + result.cost + " gold");
+    com.riiablo.engine.client.ClientVendorSystem transactions = vendorTransactions();
+    if (transactions != null) transactions.repairAll(localPricing,
+        () -> isCurrentSession() && isVisible(), result -> {
+          if (result.success) refreshGold();
+          if (result.success || "NOTHING_TO_REPAIR".equals(result.reason)) playRepairSound();
+        });
   }
 
-  private Item findOwnedItem(int itemId, int fallbackIndex) {
-    if (character == null) return null;
-    Array<Item> items = itemData.getItems();
-    if (itemId != 0) {
-      for (Item item : items) if (item != null && item.id == itemId) return item;
-    }
-    return fallbackIndex >= 0 && fallbackIndex < items.size ? items.get(fallbackIndex) : null;
-  }
-
-  private void applyRepairAllResult() {
-    if (character == null) return;
-    boolean changed = false;
-    for (Item item : itemData.getItems()) {
-      if (item != null && item.location == Location.EQUIPPED) {
-        changed |= new ItemDurabilityManager().restoreDurability(item);
-      }
-    }
-    if (changed) itemData.updateStats();
+  private com.riiablo.engine.client.ClientVendorSystem vendorTransactions() {
+    return world == null ? null : world.getSystem(com.riiablo.engine.client.ClientVendorSystem.class);
   }
 
   private void playRepairSound() {
@@ -1020,40 +961,18 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       // a conflicting STORE_TO_CURSOR request for the same item.
       return true;
     }
-    int value = VendorPricing.sellPrice(item, localPricing, character,
-        character.diff);
-    boolean sold = VendorPricing.sell(character, itemIndex, localPricing,
-        character.diff);
-    if (sold) {
-      if (localStock != null) {
-        // Native D2 adds a vendor copy to the shared trade inventory. Keep the
-        // object out of the player inventory while preserving its id and data
-        // so it can be bought back before the town stock is refreshed.
-        item.flags2 |= Item.ITEMFLAG2_INSTORE;
-        item.location = Location.STORED;
-        item.storeLoc = StoreLoc.NONE;
-        item.gridX = 0;
-        item.gridY = 0;
-        item.vendorPrice = -1;
-        if (addToStock && !VendorPricing.isQuiver(item)
-            && !localStock.contains(item, true)) localStock.insert(0, item);
-      }
-      Gdx.app.debug(TAG, "Sold " + item.code + " for " + value + " gold");
-      Gdx.app.log(TAG, "[VENDOR_SELL] phase=result mode=local success=true item="
-          + item.id + " value=" + value);
-      refreshGold();
-      playSellSounds(item);
-      if (localStock != null) {
-        boolean restoreSelling = selling;
-        boolean restoreRepairing = repairing;
-        config(configuredFlags, localStock, localPricing, serviceType, localVendorGenerator);
-        restoreTradeMode(restoreSelling, restoreRepairing);
-      }
-    } else {
-      Gdx.app.log(TAG, "[VENDOR_SELL] phase=reject mode=local item=" + item.id
-          + " location=" + item.location + " store=" + item.storeLoc);
-    }
-    return sold;
+    com.riiablo.engine.client.ClientVendorSystem transactions = vendorTransactions();
+    Array<Item> stock = localStock;
+    return transactions != null && transactions.sell(item.id, localPricing, stock, addToStock,
+        () -> isCurrentSession() && isVisible() && localStock == stock, sold -> {
+          refreshGold();
+          playSellSounds(sold);
+          if (stock != null) {
+            boolean restoreSelling = selling, restoreRepairing = repairing;
+            config(configuredFlags, stock, localPricing, serviceType, localVendorGenerator);
+            restoreTradeMode(restoreSelling, restoreRepairing);
+          }
+        });
   }
 
   private void playSellSounds(Item item) {
@@ -1103,31 +1022,15 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       pendingBuyToCursor = toCursor;
       return false;
     }
-    int value = isGambling()
-        ? VendorPricing.gamblePrice(item, character)
-        : VendorPricing.buyPrice(item, localPricing, character);
-    boolean bought = isGambling()
-        ? (toCursor
-            ? VendorPricing.gambleToCursor(character, item)
-            : VendorPricing.gamble(character, item))
-        : (toCursor
-            ? VendorPricing.buyToCursor(character, item, localPricing)
-            : VendorPricing.buy(character, item, localPricing));
-    if (bought) {
-      if (localStock != null) {
-        int stockIndex = localStock.indexOf(item, true);
-        Item replacement = !isGambling() && VendorPricing.isInfiniteStockItem(item)
-            && localVendorGenerator != null ? localVendorGenerator.restock(item,
-                character == null ? Riiablo.NORMAL : character.diff) : null;
-        if (replacement != null && stockIndex >= 0) localStock.set(stockIndex, replacement);
-        else localStock.removeValue(item, true);
-        config(configuredFlags, localStock, localPricing, serviceType, localVendorGenerator);
-      }
-      Gdx.app.debug(TAG, "Bought " + item.code + " for " + value + " gold");
-      refreshGold();
-      if (audio != null) audio.play(item.getDropSound(), true);
-    }
-    return bought;
+    com.riiablo.engine.client.ClientVendorSystem transactions = vendorTransactions();
+    Array<Item> stock = localStock;
+    return transactions != null && transactions.buy(item.id, localPricing, stock,
+        isGambling(), toCursor, localVendorGenerator,
+        () -> isCurrentSession() && isVisible() && localStock == stock, bought -> {
+          if (stock != null) config(configuredFlags, stock, localPricing, serviceType, localVendorGenerator);
+          refreshGold();
+          if (audio != null) audio.play(bought.getDropSound(), true);
+        });
   }
 
   private void clearPendingRequest() {

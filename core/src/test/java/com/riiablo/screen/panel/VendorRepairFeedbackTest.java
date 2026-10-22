@@ -25,6 +25,8 @@ class VendorRepairFeedbackTest extends RiiabloTest {
   private CharData previousCharacter;
   private com.riiablo.screen.GameScreen previousGame;
   private VendorPanel panel;
+  private com.artemis.World world;
+  private com.artemis.World previousWorld;
 
   @BeforeEach void prepare() throws Exception {
     previousAudio = Riiablo.audio;
@@ -35,7 +37,12 @@ class VendorRepairFeedbackTest extends RiiabloTest {
         Riiablo.NORMAL, false, "RepairFeedback", Riiablo.AMAZON);
     Riiablo.charData.getStats().base().put(Stat.gold, 1000);
     Riiablo.charData.getStats().aggregate().put(Stat.gold, 1000);
+    previousWorld = Riiablo.engine;
+    world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder().with(
+        new com.riiablo.engine.client.ClientVendorSystem(() -> Riiablo.charData)).build());
+    Riiablo.engine = world;
     panel = mock(VendorPanel.class, CALLS_REAL_METHODS);
+    panel.bindWorld(world);
     set("character", Riiablo.charData); set("itemData", Riiablo.charData.getItems());
     set("assets", Riiablo.assets); set("audio", Riiablo.audio); set("cursor", Riiablo.cursor);
     doReturn(true).when(panel).isVisible();
@@ -44,6 +51,7 @@ class VendorRepairFeedbackTest extends RiiabloTest {
   }
 
   @AfterEach void restore() {
+    world.dispose(); Riiablo.engine = previousWorld;
     Riiablo.audio = previousAudio;
     Riiablo.charData = previousCharacter;
     Riiablo.game = previousGame;
@@ -51,7 +59,9 @@ class VendorRepairFeedbackTest extends RiiabloTest {
 
   @Test void fullDurabilitySingleRepairStillSoundsLocally() {
     addItem(10);
-    assertFalse(panel.repairItem(0));
+    assertTrue(panel.repairItem(0));
+    verifyNoInteractions(Riiablo.audio);
+    world.process();
     verify(Riiablo.audio).play("cursor_repair_item", true);
     assertEquals(1000, Riiablo.charData.getStats().get(Stat.gold).asInt());
   }
@@ -62,11 +72,11 @@ class VendorRepairFeedbackTest extends RiiabloTest {
     verify(Riiablo.audio).play("cursor_repair_item", true);
   }
 
-  @Test void repairAllNetworkResponseRestoresEquipmentAndSoundsOnce() throws Exception {
+  @Test void repairAllNetworkResponseOnlyProvidesFeedback() throws Exception {
     Item item = addItem(3);
     Riiablo.charData.getItems().equipItem(BodyLoc.HEAD, item);
     reply(NpcServiceOperation.REPAIR_ALL, true, null);
-    assertEquals(10, item.attrs.base().get(Stat.durability).asInt());
+    assertEquals(3, item.attrs.base().get(Stat.durability).asInt());
     verify(Riiablo.audio).play("cursor_repair_item", true);
   }
 
@@ -127,6 +137,7 @@ class VendorRepairFeedbackTest extends RiiabloTest {
     java.lang.reflect.Method method = VendorPanel.class.getDeclaredMethod("repairAll");
     method.setAccessible(true);
     method.invoke(panel);
+    world.process();
   }
 
   private void reply(byte operation, boolean success, String reason) throws Exception {

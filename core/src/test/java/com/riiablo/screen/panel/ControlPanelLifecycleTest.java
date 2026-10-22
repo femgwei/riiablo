@@ -215,7 +215,10 @@ class ControlPanelLifecycleTest extends RiiabloTest {
   @Test void questAcknowledgementAndLevelSoundOnlyTrackTheCurrentCharacter() {
     ControlPanel panel = panel(); short[] quests = Riiablo.charData.getQuests(0); quests[0] = 1;
     panel.act(0); assertTrue(panel.btnQuestLog.isVisible()); panel.acknowledgeQuestLog();
-    assertTrue(NativeQuestRecord.has(quests[0], NativeQuestRecord.UPDATE_QUEST_LOG)); assertFalse(panel.btnQuestLog.isVisible());
+    assertEquals(1, quests[0], "UI acknowledgement must not mutate authoritative records");
+    assertFalse(panel.btnQuestLog.isVisible()); panel.act(0); assertFalse(panel.btnQuestLog.isVisible());
+    quests[0] = NativeQuestRecord.set(quests[0], NativeQuestRecord.STARTED);
+    panel.act(0); assertTrue(panel.btnQuestLog.isVisible());
     Sound level = panel.levelUpSound; verify(level, never()).play();
     Riiablo.charData.getStats().aggregate().put(Stat.level, 2); panel.act(0); verify(level).play(); panel.act(0); verifyNoMoreInteractions(level);
   }

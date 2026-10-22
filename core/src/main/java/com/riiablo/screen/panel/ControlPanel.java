@@ -133,6 +133,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   Sound levelUpSound;
   private int observedLevel = Integer.MIN_VALUE;
   private long observedQuestRevision = Long.MIN_VALUE;
+  private long acknowledgedQuestRevision;
+  private boolean questLogAcknowledged;
 
   final AssetDescriptor<DC6> popbeltDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\ctrlpnl_popbelt.DC6", DC6.class);
   TextureRegion popbelt;
@@ -520,25 +522,17 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     return false;
   }
 
-  /**
-   * Persists the native quest-log acknowledgement for every quest currently
-   * present in the journal.  The original client acknowledges quest-log
-   * updates by quest id; opening the journal displays all rows, so marking all
-   * existing rows is the equivalent local operation.  New progress clears
-   * this bit in {@link NativeQuestRecord#set(short, int)} and becomes visible
-   * again on the next update.
-   */
+  /** Acknowledges the displayed revision; only the local Tick owner persists its bit. */
   public void acknowledgeQuestLog() {
     if (!isCurrentSession()) return;
     if (character == null) return;
-    for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
-      short[] quests = character.getQuests(act);
-      if (quests == null) continue;
-      for (int i = 0; i < quests.length; i++) {
-        if (quests[i] != 0) {
-          quests[i] = NativeQuestRecord.set(quests[i], NativeQuestRecord.UPDATE_QUEST_LOG);
-        }
-      }
+    long revision = currentQuestRevision();
+    if (!questLogAcknowledged || acknowledgedQuestRevision != revision) {
+      acknowledgedQuestRevision = revision;
+      questLogAcknowledged = true;
+      com.riiablo.engine.client.ClientQuestIntentSystem intents = world == null ? null
+          : world.getSystem(com.riiablo.engine.client.ClientQuestIntentSystem.class);
+      if (intents != null && game() != null) intents.acknowledgeLog(game().player);
     }
     setQuestPromptVisible(false);
   }
@@ -551,7 +545,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       short[] quests = character.getQuests(act);
       if (quests == null) continue;
       for (short quest : quests) {
-        revision ^= (quest & 0xFFFFL) + ((long) index++ << 16);
+        revision ^= (quest & 0xFFFFL & ~(1L << NativeQuestRecord.UPDATE_QUEST_LOG)) + ((long) index++ << 16);
         revision *= 1099511628211L;
       }
     }
@@ -594,10 +588,10 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     long questRevision = currentQuestRevision();
     if (observedQuestRevision == Long.MIN_VALUE) {
       observedQuestRevision = questRevision;
-      setQuestPromptVisible(hasQuestProgress());
+      setQuestPromptVisible(hasQuestProgress() && (!questLogAcknowledged || acknowledgedQuestRevision != questRevision));
     } else if (questRevision != observedQuestRevision) {
       observedQuestRevision = questRevision;
-      setQuestPromptVisible(hasQuestProgress());
+      setQuestPromptVisible(hasQuestProgress() && (!questLogAcknowledged || acknowledgedQuestRevision != questRevision));
     }
     if (game() != null && game().questsPanel != null
         && game().questsPanel.isVisible()) {

@@ -1,6 +1,6 @@
 package com.riiablo.presentation;
 
-import com.riiablo.engine.client.ClientNetworkSynchronizer;
+import com.riiablo.engine.client.ClientQuestIntentSystem;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
@@ -8,12 +8,9 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.NpcInteractionEvent;
-import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.quest.QuestDialogue;
 import com.riiablo.engine.server.quest.QuestPlayerView;
-import com.riiablo.net.packet.d2gs.QuestOperation;
 import com.riiablo.widget.NpcDialogBox;
-import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -25,8 +22,7 @@ public class QuestDialogController extends PassiveSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected Act1QuestDialogController act1;
   protected DialogManager dialogManager;
-  protected EventSystem events;
-  protected ClientNetworkSynchronizer network;
+  protected ClientQuestIntentSystem questIntents;
 
   @Subscribe public void onNpcInteraction(NpcInteractionEvent event) {
     if (event != null) openQuestDialog(event.entityId, event.npcId, true);
@@ -48,12 +44,7 @@ public class QuestDialogController extends PassiveSystem {
     QuestDialogue.Offer offer = QuestDialogue.select(QuestPlayerView.npcType(npc.monstats),
         new QuestPlayerView(player.data), level);
     if (offer == null || (automatic && !offer.attention)) return false;
-    // Remote clients submit only; they never dispatch authority events locally.
-    if (network != null) {
-      if (network.requestQuest(QuestOperation.NPC_MESSAGE, npcId, offer.message) == 0) return false;
-    } else if (events != null) {
-      events.dispatch(NpcQuestMessageEvent.obtain(playerId, npcId, offer.message));
-    } else return false;
+    if (questIntents == null || !questIntents.npcMessage(playerId, npcId, offer.message)) return false;
     dialogManager.setDialog(new NpcDialogBox(offer.message, dialog -> dialogManager.setDialog(null)));
     return true;
   }

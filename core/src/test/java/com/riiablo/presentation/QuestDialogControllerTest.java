@@ -1,35 +1,31 @@
 package com.riiablo.presentation;
 
-import com.riiablo.engine.client.ClientNetworkSynchronizer;
-
+import com.riiablo.engine.client.ClientQuestIntentSystem;
 import com.artemis.ComponentMapper;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.NpcInteractionEvent;
-import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.quest.Act2RadamentQuest;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.NpcDialogBox;
-import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
 
 class QuestDialogControllerTest {
   @SuppressWarnings("unchecked")
-  private static QuestDialogController controller(short record, ClientNetworkSynchronizer network) {
+  private static QuestDialogController controller(short record, boolean admitted) {
     QuestDialogController controller = new QuestDialogController();
     controller.mPlayer = mock(ComponentMapper.class);
     controller.mMonster = mock(ComponentMapper.class);
     controller.mMapWrapper = mock(ComponentMapper.class);
     controller.dialogManager = mock(DialogManager.class);
-    controller.events = mock(EventSystem.class);
-    controller.network = network;
+    controller.questIntents = mock(ClientQuestIntentSystem.class);
+    when(controller.questIntents.npcMessage(eq(1), eq(2), anyInt())).thenReturn(admitted);
     controller.act1 = mock(Act1QuestDialogController.class);
     Player player = new Player(); player.data = mock(CharData.class);
     for (int act = 0; act < 5; act++) when(player.data.getQuests(act)).thenReturn(new short[8]);
@@ -43,41 +39,36 @@ class QuestDialogControllerTest {
     return controller;
   }
 
-  @Test void localAtmaInteractionDispatchesNativeMessageExactlyOnce() {
-    QuestDialogController c = controller((short) 0, null);
+  @Test void atmaInteractionCapturesOneNativeMessageIntent() {
+    QuestDialogController c = controller((short) 0, true);
     try (MockedConstruction<NpcDialogBox> dialogs = mockConstruction(NpcDialogBox.class,
         (dialog, context) -> assertEquals(304, context.arguments().get(0)))) {
       c.onNpcInteraction(NpcInteractionEvent.obatin(1, 2));
-      verify(c.events).dispatch(argThat((NpcQuestMessageEvent event) ->
-          event.entityId == 1 && event.npcId == 2 && event.messageIndex == 304));
+      verify(c.questIntents).npcMessage(1, 2, 304);
       assertEquals(1, dialogs.constructed().size());
       verify(c.dialogManager).setDialog(dialogs.constructed().get(0));
     }
   }
 
-  @Test void remoteAtmaSubmitsIntentWithoutLocalMutationEvenWhenSendFails() {
-    ClientNetworkSynchronizer network = mock(ClientNetworkSynchronizer.class);
-    QuestDialogController c = controller((short) 0, network);
-    assertFalse(c.openQuestDialog(1, 2));
-    verifyNoInteractions(c.events);
-    when(network.requestQuest(anyByte(), eq(2), eq(304))).thenReturn(12L);
+  @Test void rejectedIntentDoesNotOpenDialogue() {
+    QuestDialogController c = controller((short) 0, false);
     try (MockedConstruction<NpcDialogBox> dialogs = mockConstruction(NpcDialogBox.class)) {
-      assertTrue(c.openQuestDialog(1, 2));
-      assertEquals(1, dialogs.constructed().size());
-      verifyNoInteractions(c.events);
+      assertFalse(c.openQuestDialog(1, 2));
+      assertTrue(dialogs.constructed().isEmpty());
+      verify(c.questIntents).npcMessage(1, 2, 304);
     }
   }
 
-  @Test void earlySpeechRequiresExplicitQuestMenuAndCompletedQuestDoesNotOpen() {
-    QuestDialogController c = controller(Act2RadamentQuest.start((short) 0), null);
+  @Test void earlySpeechRequiresExplicitMenuAndCompletedQuestDoesNotOpen() {
+    QuestDialogController c = controller(Act2RadamentQuest.start((short) 0), true);
     c.onNpcInteraction(NpcInteractionEvent.obatin(1, 2));
-    verifyNoInteractions(c.events);
+    verifyNoInteractions(c.questIntents);
     try (MockedConstruction<NpcDialogBox> dialogs = mockConstruction(NpcDialogBox.class)) {
       assertTrue(c.openQuestDialog(1, 2));
       assertEquals(1, dialogs.constructed().size());
     }
-    c = controller(Act2RadamentQuest.claimReward(Act2RadamentQuest.completeObjective((short) 0)), null);
+    c = controller(Act2RadamentQuest.claimReward(Act2RadamentQuest.completeObjective((short) 0)), true);
     assertFalse(c.openQuestDialog(1, 2));
-    verifyNoInteractions(c.events);
+    verifyNoInteractions(c.questIntents);
   }
 }

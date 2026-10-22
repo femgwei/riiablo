@@ -7,6 +7,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 class SnapshotBaselineTransactionTest {
+  @Test void incompleteDomainStateDoesNotAdvanceCompletedBaseline() {
+    SnapshotBaselineTransaction transaction = new SnapshotBaselineTransaction();
+    assertTrue(transaction.begin(1, 2, 1));
+    transaction.acceptEntity(101);
+    assertEquals(SnapshotBaselineTransaction.EndResult.INCOMPLETE, transaction.end(1, 2, 1, true, false));
+    assertEquals(0, transaction.lastCompletedBaselineId());
+    assertTrue(transaction.begin(1, 2, 1));
+    transaction.acceptEntity(101);
+    assertEquals(SnapshotBaselineTransaction.EndResult.COMPLETE, transaction.end(1, 2, 1, true, true));
+  }
   @Test
   void rejectsOutOfOrderEndAndRequiresEveryUniqueEntity() {
     SnapshotBaselineTransaction transaction = new SnapshotBaselineTransaction();

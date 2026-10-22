@@ -205,7 +205,11 @@ public class Act1QuestSystem extends ContextualQuestSystem {
       return;
     }
 
-    if (event.messageIndex == Act1DenOfEvilQuest.MESSAGE_INIT) {
+    if (event.messageIndex == Act1DenOfEvilQuest.MESSAGE_EARLY_RETURN) {
+      // Legacy message-71 acknowledgement is save state, owned by authority.
+      player.data.setNpcReturnFlag(63);
+      persist(player.data);
+    } else if (event.messageIndex == Act1DenOfEvilQuest.MESSAGE_INIT) {
       updateRecord(player.data, Act1DenOfEvilQuest::start, "akara-init-message");
     } else if (event.messageIndex == Act1CainQuest.MESSAGE_INIT) {
       updateCainRecord(player.data, Act1CainQuest::start, "akara-act1q4-init");

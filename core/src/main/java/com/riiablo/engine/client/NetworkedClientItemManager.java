@@ -248,7 +248,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
   public void useInventoryItem(com.riiablo.item.Item item) {
     if (item == null || item.code == null) return;
     if ("isc".equalsIgnoreCase(item.code) || "ibk".equalsIgnoreCase(item.code)) {
-      if (clientContext.cursor() != null) clientContext.cursor().beginIdentify(item, this);
+      if (clientContext.cursor() != null) clientContext.cursor().beginIdentify(item, intents());
       return;
     }
     if (item.id < 0) return;

@@ -220,7 +220,7 @@ class GameScreenAssemblyTest {
     String recipe = "<reserved> <reserved> <reserved> "
         + "CombatPositionCaptureSystem NetworkIdManager EventSystem TagManager MapManager "
         + (local ? "ClientItemManager " : "NetworkedClientItemManager ")
-        + "ItemManager CofManager EnvironmentSystem ObjectInitializer ObjectInteractor WarpInteractor "
+        + "ClientItemIntentSystem ItemManager ClientQuestIntentSystem ClientVendorSystem CofManager EnvironmentSystem ObjectInitializer ObjectInteractor WarpInteractor "
         + "ItemInteractor MenuManager DialogManager SelectableManager HoveredManager "
         + (platform == Application.ApplicationType.Desktop ? "CursorMovementSystem KeyboardMovementSystem " : "")
         + "TouchpadMovementSystem ClientUnitLifecycleSystem "

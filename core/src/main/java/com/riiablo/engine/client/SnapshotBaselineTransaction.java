@@ -76,6 +76,12 @@ public final class SnapshotBaselineTransaction {
    * is aborted so the receiver can request a fresh transaction.
    */
   public EndResult end(long requestId, long baselineId, long entityCount, boolean success) {
+    return end(requestId, baselineId, entityCount, success, true);
+  }
+
+  /** Domain snapshots must be complete before the baseline watermark advances. */
+  public EndResult end(long requestId, long baselineId, long entityCount, boolean success,
+      boolean domainSnapshotsComplete) {
     if (!active || requestId != activeRequestId || baselineId != activeBaselineId) {
       return EndResult.IGNORED;
     }
@@ -84,7 +90,7 @@ public final class SnapshotBaselineTransaction {
       entityIds.clear();
       return EndResult.FAILED;
     }
-    if (entityCount != expectedEntityCount
+    if (!domainSnapshotsComplete || entityCount != expectedEntityCount
         || entityIds.size() != expectedEntityCount) {
       active = false;
       entityIds.clear();

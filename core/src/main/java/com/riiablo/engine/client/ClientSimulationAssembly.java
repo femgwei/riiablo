@@ -116,7 +116,9 @@ public final class ClientSimulationAssembly {
         .with(new EventSystem())
         .with(new TagManager())
         .with(mapManager)
-        .with(itemController, new ItemManager())
+        .with(itemController, itemController.intents(), new ItemManager())
+        .with(new ClientQuestIntentSystem())
+        .with(new ClientVendorSystem(itemController.clientContext::charData, itemController.clientContext::playerId))
         .with(new CofManager())
         .with(new com.riiablo.engine.server.EnvironmentSystem(
             simulationSession.map(), simulationSession.environment()))

@@ -1,7 +1,7 @@
 package com.riiablo.presentation;
 
 import com.riiablo.engine.client.Act1QuestPresentation;
-import com.riiablo.engine.client.ClientNetworkSynchronizer;
+import com.riiablo.engine.client.ClientQuestIntentSystem;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
@@ -12,8 +12,6 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.NpcInteractionEvent;
-import com.riiablo.engine.server.event.NpcQuestMessageEvent;
-import com.riiablo.engine.server.event.NativeImbueRequestEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.quest.Act1DenOfEvilQuest;
 import com.riiablo.engine.server.quest.Act1BloodRavenQuest;
@@ -24,9 +22,7 @@ import com.riiablo.engine.server.quest.Act1NaviQuest;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.engine.server.quest.Act1WarrivIntroQuest;
 import com.riiablo.save.CharData;
-import com.riiablo.save.D2SWriter;
 import com.riiablo.widget.NpcDialogBox;
-import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -38,8 +34,7 @@ public class Act1QuestDialogController extends PassiveSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected DialogManager dialogManager;
-  protected EventSystem events;
-  protected ClientNetworkSynchronizer network;
+  protected ClientQuestIntentSystem questIntents;
 
   // D2MOO has no persisted A1Q1 message-71 acknowledgement. Keep the marker
   // in an unused high bit of the native 01 77 NPC-return data so it survives
@@ -98,12 +93,6 @@ public class Act1QuestDialogController extends PassiveSystem {
               || !denEarlyReturnShown.add(playerId)) {
             return false;
           }
-          data.setNpcReturnFlag(DEN_EARLY_RETURN_PERSISTED_FLAG);
-          if (data.managed && Riiablo.saves != null
-              && !D2SWriter.INSTANCE.save(data)) {
-            log.warn("[ACT1_QUEST_DIALOG] failed to persist A1Q1 early-return marker for {}",
-                data.name);
-          }
         }
         speech = Act1DenOfEvilQuest.getAkaraSpeech(messageIndex);
       }
@@ -111,10 +100,7 @@ public class Act1QuestDialogController extends PassiveSystem {
       short record = data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
       if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) {
         com.riiablo.item.Item cursor = data.getItems().getCursor();
-        if (cursor != null) {
-          events.dispatch(NativeImbueRequestEvent.obtain(playerId, cursor.id));
-        }
-        return cursor != null;
+        return cursor != null && questIntents != null && questIntents.imbue(playerId, cursor.id);
       }
       int level = data.getStats().aggregate().getValue(Stat.level, 0);
       boolean hasMalus = data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE);
@@ -157,7 +143,7 @@ public class Act1QuestDialogController extends PassiveSystem {
 
     log.info("[ACT1_QUEST_DIALOG] player={} npc={} message={} speech={}",
         playerId, npc.monstats.Id, messageIndex, speech);
-    submitMessage(playerId, npcId, messageIndex);
+    if (!submitMessage(playerId, npcId, messageIndex)) return false;
     String fallback = npc.monstats.hcIdx == MonsterType.NAVI
         ? Riiablo.bundle.get(
             messageIndex < Act1NaviQuest.MESSAGE_AFTER_0
@@ -168,18 +154,9 @@ public class Act1QuestDialogController extends PassiveSystem {
     return true;
   }
 
-  private void submitMessage(int playerId, int npcId, int messageIndex) {
-    if (messageIndex < 0) return;
-    if (network != null) {
-      network.requestQuest(com.riiablo.net.packet.d2gs.QuestOperation.NPC_MESSAGE, npcId, messageIndex);
-      return;
-    }
-    // Offline/single-player worlds retain the local event path.  Dispatch at
-    // dialog open, matching D2: text scrolling is presentation only and must
-    // not delay quest acceptance or reward delivery.
-    if (events != null) {
-      events.dispatch(NpcQuestMessageEvent.obtain(playerId, npcId, messageIndex));
-    }
+  private boolean submitMessage(int playerId, int npcId, int messageIndex) {
+    return messageIndex < 0 || questIntents != null
+        && questIntents.npcMessage(playerId, npcId, messageIndex);
   }
 
 }

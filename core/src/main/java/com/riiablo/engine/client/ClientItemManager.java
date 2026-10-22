@@ -20,6 +20,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.quest.QuestWarp;
 import com.riiablo.engine.server.item.GroundDropPosition;
+import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.BodyLoc;
@@ -31,6 +32,7 @@ import com.riiablo.map.Map;
 import com.riiablo.save.ItemController;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
+import net.mostlyoriginal.api.event.common.EventSystem;
 
 public class ClientItemManager extends PassiveSystem implements ItemController {
   private static final String TAG = "ClientItemManager";
@@ -47,6 +49,13 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   protected TownPortalRegistry townPortalRegistry;
 
   protected final ClientGameplayContext clientContext;
+  @com.artemis.annotations.SkipWire
+  private ClientItemIntentSystem intents;
+
+  public ClientItemIntentSystem intents() {
+    if (intents == null) intents = new ClientItemIntentSystem(this);
+    return intents;
+  }
 
   /** Legacy construction is retained for isolated fixtures; GameScreen supplies a context. */
   public ClientItemManager() {
@@ -95,6 +104,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
       }
       clientContext.charData().groundToCursor(item);
       world.delete(entityId);
+      dispatchQuestPickup(item, entityId);
       log.info("[GROUND_PICKUP] phase=cursor mode=local entity={} item={} code={}",
           entityId, item.id, item.code);
       return;
@@ -111,6 +121,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     }
     world.delete(entityId);
     playPickupSound();
+    dispatchQuestPickup(item, entityId);
     log.info("[GROUND_PICKUP] phase=stored mode=local entity={} item={} location={} store={}",
         entityId, item.id, item.location, item.storeLoc);
   }
@@ -118,6 +129,16 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   protected boolean replayGroundDrop(int entityId) {
     ItemEffectManager effects = world.getSystem(ItemEffectManager.class);
     return effects != null && effects.replayDrop(entityId);
+  }
+
+  /** Quest pickup is a consequence of a successful local mutation, never of UI intent capture. */
+  protected void dispatchQuestPickup(com.riiablo.item.Item item, int entityId) {
+    if (item == null || item.code == null) return;
+    EventSystem events = world.getSystem(EventSystem.class);
+    int player = clientContext.playerId();
+    if (events != null && player >= 0) {
+      events.dispatch(QuestItemPickedUpEvent.obtain(player, entityId, item.code));
+    }
   }
 
   /** Native D2 uses one generic sound when an item is taken by the player. */
@@ -284,11 +305,17 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   public void useInventoryItem(com.riiablo.item.Item item) {
     if ("isc".equalsIgnoreCase(item == null ? null : item.code)
         || "ibk".equalsIgnoreCase(item == null ? null : item.code)) {
-      if (clientContext.cursor() != null) clientContext.cursor().beginIdentify(item, this);
+      if (clientContext.cursor() != null) clientContext.cursor().beginIdentify(item, intents());
       return;
     }
     if (item == null || item.code == null || clientContext.charData() == null
         || !clientContext.isGameActive() || clientContext.playerId() < 0) return;
+    if (item.type != null && item.type.is(com.riiablo.item.Type.POTI)) {
+      if (clientContext.charData().useInventoryPotion(item) && clientContext.audio() != null) {
+        clientContext.audio().play(item.getUseSound(), true);
+      }
+      return;
+    }
     if (!"tsc".equalsIgnoreCase(item.code) && !"tbk".equalsIgnoreCase(item.code)) return;
     int player = clientContext.playerId();
     MapWrapper wrapper = mMapWrapper == null ? null : mMapWrapper.get(player);

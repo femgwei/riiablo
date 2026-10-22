@@ -752,3 +752,40 @@ task clientLifecycleRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M2 batch 3: item/quest snapshot ownership and UI transaction intents.
+task clientInventoryQuestRegression(type: Test) {
+  group = 'verification'
+  description = 'M2 inventory/quest authority, atomic snapshots and tick-admitted UI intents.'
+  dependsOn testClasses, clientLifecycleRegression
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform { excludeTags 'visual' }
+  filter {
+    ['com.riiablo.engine.client.AuthoritativeInventoryStateTest',
+     'com.riiablo.engine.client.AuthoritativeQuestStateTest',
+     'com.riiablo.engine.client.ClientInventoryQuestReceiverTest',
+     'com.riiablo.engine.client.ClientItemIntentSystemTest',
+     'com.riiablo.engine.client.ClientQuestIntentSystemTest',
+     'com.riiablo.engine.client.ClientVendorSystemTest',
+     'com.riiablo.engine.client.NetworkedClientItemManagerTest',
+     'com.riiablo.engine.client.ClientItemManagerGoldPickupTest',
+     'com.riiablo.engine.server.item.*Test',
+     'com.riiablo.engine.server.npc.*Test',
+     'com.riiablo.engine.server.quest.QuestSnapshotTest',
+     'com.riiablo.engine.server.quest.Act1QuestSystemTest',
+     'com.riiablo.engine.server.quest.NativeCharsiImbueSystemTest',
+     'com.riiablo.engine.server.NetworkProgressionSerializationTest',
+     'com.riiablo.screen.panel.VendorRepairFeedbackTest',
+     'com.riiablo.screen.panel.VendorPanelLifecycleTest',
+     'com.riiablo.screen.panel.StoragePanelLifecycleTest',
+     'com.riiablo.save.Act1QuestD2SRoundTripTest'].each { includeTestsMatching it }
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

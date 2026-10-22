@@ -27,7 +27,6 @@ import com.riiablo.Riiablo;
 import com.riiablo.attributes.AttributesUpdater;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
-import com.riiablo.engine.client.NetworkedClientItemManager;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.BodyLocs;
 import com.riiablo.codec.excel.Inventory;
@@ -525,14 +524,8 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     // use action for consumables and does nothing for equipment.
     if (item != null && item.base != null && item.base.useable) {
       if (item.type != null && item.type.is(com.riiablo.item.Type.POTI)) {
-        if (itemController instanceof NetworkedClientItemManager) {
-          itemController.useInventoryItem(item);
-          return true;
-        }
-        if (character.useInventoryPotion(item)) {
-          if (audio != null) audio.play(item.getUseSound(), true);
-          return true;
-        }
+        itemController.useInventoryItem(item);
+        return true;
       }
       // Misc consumables (notably tsc/tbk) must be routed through the item
       // controller instead of falling through to the legacy "play sound only"

@@ -6204,7 +6204,15 @@ public class D2GS extends ApplicationAdapter {
       @Override public void onTradeUpdate(TradeSession session, int playerId) {}
       @Override public void onConfirmChanged(TradeSession session, int playerId,
                                               boolean confirmed) {}
-      @Override public void onTradeComplete(TradeSession session) {}
+      @Override public void onTradeComplete(TradeSession session) {
+        for (int entity : new int[] {session.getPlayer1Id(), session.getPlayer2Id()}) {
+          int clientId = clientForEntity(entity);
+          if (clientId >= 0) {
+            publishInventorySnapshot(clientId, true);
+            if (sync != null) sync.syncEntityTo(clientId, entity);
+          }
+        }
+      }
       @Override public void onTradeCancelled(TradeSession session, int cancelledBy) {
         if (cancelledBy != -1 || session == null) return;
         int p1 = session.getPlayer1Id();
@@ -6596,6 +6604,7 @@ public class D2GS extends ApplicationAdapter {
         SnapshotBaselinePhase.BEGIN, true, "", count, waypointMasks, difficulty,
         inventoryRevision, questRevision);
     sync.syncAllTo(id);
+    publishInventorySnapshot(id, false);
     tick = simulation == null ? tick : simulation.tickNumber();
     serverTime = simulation == null ? serverTime : simulation.serverTimeMillis();
     enqueueSnapshotBaseline(id, baselineId, baselineId, tick, serverTime,
@@ -6644,6 +6653,7 @@ public class D2GS extends ApplicationAdapter {
         SnapshotBaselinePhase.BEGIN, true, "", count, waypointMasks, difficulty,
         inventoryRevision, questRevision);
     sync.syncAllTo(clientId);
+    publishInventorySnapshot(clientId, false);
     current = simulation;
     tick = current == null ? tick : current.tickNumber();
     serverTime = current == null ? serverTime : current.serverTimeMillis();
@@ -8128,6 +8138,10 @@ public class D2GS extends ApplicationAdapter {
     boolean success = reason == null;
     int gold = wallet(playerComponent, com.riiablo.attributes.Stat.gold);
     int goldBank = wallet(playerComponent, com.riiablo.attributes.Stat.goldbank);
+    if (success && request.operation() != com.riiablo.net.packet.d2gs.NpcServiceOperation.OPEN) {
+      publishInventorySnapshot(packet.id, true);
+      if (sync != null) sync.syncEntityTo(packet.id, playerId);
+    }
     sendNpcServiceResult(packet.id, request.requestId(), success, reason, gold, goldBank,
         session, resultItemId, resultItemData, playerComponent == null ? null : playerComponent.data,
         requestIntent, true);
@@ -8211,6 +8225,10 @@ public class D2GS extends ApplicationAdapter {
     }
 
     boolean success = reason == null;
+    if (success) {
+      publishInventorySnapshot(packet.id, request.operation() != QuestOperation.SNAPSHOT);
+      if (sync != null) sync.syncEntityTo(packet.id, playerId);
+    }
     sendQuestResult(packet.id, request.requestId(), success, reason, intent, true);
     Gdx.app.log(TAG, "[QUEST_NET] player=" + playerId + " request="
         + request.requestId() + " operation=" + request.operation()
@@ -8758,6 +8776,7 @@ public class D2GS extends ApplicationAdapter {
     }
     sendGoldResult(packet.id, request.requestId(), request.operation(), amount, success, reason,
         character, groundEntityId);
+    if (success && sync != null) sync.syncEntityTo(packet.id, playerEntityId);
   }
 
   private static int gold(CharData character, short stat) {
@@ -8869,7 +8888,15 @@ public class D2GS extends ApplicationAdapter {
               character, intent, groundItem);
         }
       }
-      if (outcome.success && outcome.consumeGroundEntity) world.delete(groundEntity);
+      if (outcome.success && outcome.consumeGroundEntity) {
+        if (groundItem != null && groundItem.code != null
+            && !"gld".equalsIgnoreCase(groundItem.code)) {
+          world.getSystem(EventSystem.class).dispatch(
+              com.riiablo.engine.server.event.QuestItemPickedUpEvent.obtain(
+                  playerEntityId, groundEntity, groundItem.code));
+        }
+        world.delete(groundEntity);
+      }
     } else if (operation == ItemMoveOperation.CURSOR_TO_GROUND) {
       com.riiablo.engine.server.component.Position position = playerEntityId == Engine.INVALID_ENTITY
           ? null : world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerEntityId);
@@ -9098,6 +9125,17 @@ public class D2GS extends ApplicationAdapter {
       if (player.get(clientId, Engine.INVALID_ENTITY) == entityId) return clientId;
     }
     return -1;
+  }
+
+  /** Existing full-snapshot packet, also used for baseline and non-item transactions. */
+  private void publishInventorySnapshot(int clientId, boolean mutated) {
+    int entityId = player.get(clientId, Engine.INVALID_ENTITY);
+    if (entityId == Engine.INVALID_ENTITY) return;
+    long revision = mutated ? authoritativeItems.markExternalMutation(entityId)
+        : authoritativeItems.revision(entityId);
+    ItemMoveIntent correction = new ItemMoveIntent(0L, revision,
+        ItemMoveOperation.CURSOR_TO_STORE, -1, -1, -1, -1, -1, -1, false);
+    sendItemMoveResult(clientId, correction, true, ItemMoveFailure.NONE, revision, false, false);
   }
 
   private void sendItemMoveResult(int clientId, ItemMoveIntent intent, boolean success,

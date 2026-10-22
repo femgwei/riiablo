@@ -264,6 +264,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   ClientItemManager itemController;
 
+  public void requestWeaponSwap() { itemController.intents().swapWeapons(); }
+
   public EscapePanel escapePanel;
   public HelpPanel helpPanel;
   public ControlPanel controlPanel;
@@ -426,7 +428,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     hireMercenaryPanel = new com.riiablo.screen.panel.HireMercenaryPanel(this);
     stage.addActor(hireMercenaryPanel);
 
-    mercenaryHud = new MercenaryHud(this, itemController);
+    mercenaryHud = new MercenaryHud(this, itemController.intents());
     // Keep the native portrait inset symmetrical: its top and left margins are
     // both eight virtual pixels instead of touching the top edge.
     mercenaryHud.setPosition(8, stage.getHeight() - mercenaryHud.getHeight() - 8);
@@ -599,15 +601,15 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         } else if (key == Keys.Vendor) {
           setLeftPanel(vendorPanel.isVisible() ? null : vendorPanel);
         } else if (key == Keys.SwapWeapons) {
-          Riiablo.charData.getItems().alternate();
+          itemController.intents().swapWeapons();
         } else if (key == Keys.Belt1) {
-          itemController.useBeltSlot(0);
+          itemController.intents().useBeltSlot(0);
         } else if (key == Keys.Belt2) {
-          itemController.useBeltSlot(1);
+          itemController.intents().useBeltSlot(1);
         } else if (key == Keys.Belt3) {
-          itemController.useBeltSlot(2);
+          itemController.intents().useBeltSlot(2);
         } else if (key == Keys.Belt4) {
-          itemController.useBeltSlot(3);
+          itemController.intents().useBeltSlot(3);
         }
       }
     };
@@ -797,7 +799,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
             }))
         .register("config", config)
         .register("factory", factory)
-        .register("itemController", itemController)
+        .register("itemController", itemController.intents())
         .register("townPortalRegistry", townPortalRegistry)
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)

@@ -44,6 +44,7 @@ class VendorPanelLifecycleTest extends RiiabloTest {
   private FontTBL.BitmapFont font;
   private MockedConstruction<Texture> uploads;
   private Input previousInput;
+  private com.artemis.World world;
 
   @BeforeEach void fixture() throws Exception {
     previousInput = Gdx.input; Gdx.input = mock(Input.class);
@@ -52,6 +53,9 @@ class VendorPanelLifecycleTest extends RiiabloTest {
     Riiablo.colors = new Colors(); Riiablo.game = null;
     character = CharData.obtain().clear().set(Riiablo.NORMAL, false, "VendorOwner", Riiablo.AMAZON);
     Riiablo.charData = character; wallet(1000);
+    world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder().with(
+        new com.riiablo.engine.client.ClientVendorSystem(() -> character)).build());
+    Riiablo.engine = world;
     Riiablo.cursor = mock(Cursor.class); Riiablo.audio = mock(Audio.class);
     Texture texture = mock(Texture.class); when(texture.getWidth()).thenReturn(32); when(texture.getHeight()).thenReturn(32);
     TextureRegion region = new TextureRegion(texture);
@@ -84,7 +88,7 @@ class VendorPanelLifecycleTest extends RiiabloTest {
   }
 
   @AfterEach void restore() throws Exception {
-    try { for (Disposable resource : resources) resource.dispose(); assets.dispose(); }
+    try { for (Disposable resource : resources) resource.dispose(); assets.dispose(); world.dispose(); }
     finally { uploads.close(); for (Map.Entry<Field, Object> alias : aliases.entrySet()) alias.getKey().set(null, alias.getValue()); Gdx.input = previousInput; }
   }
 
@@ -163,8 +167,11 @@ class VendorPanelLifecycleTest extends RiiabloTest {
 
   @Test void confirmedPurchaseUsesCursorAndIsSingleShot() throws Exception {
     VendorPanel panel = vendor(); Item item = stock(panel); prompt(panel, item);
+    panel.setVisible(true);
     int expectedGold = 1000 - VendorPricing.buyPrice(item, null, character);
     ClickListener yes = action(panel, "purchaseConfirm"); yes.clicked(null, 0, 0);
+    assertNull(character.getItems().getCursor()); assertEquals(1000, gold());
+    world.process();
     assertSame(item, character.getItems().getCursor()); assertEquals(expectedGold, gold());
     assertFalse(item.hasFlag2(Item.ITEMFLAG2_INSTORE)); assertFalse(prompt(panel).isVisible());
     yes.clicked(null, 0, 0); assertEquals(expectedGold, gold());
@@ -175,6 +182,7 @@ class VendorPanelLifecycleTest extends RiiabloTest {
     int expectedGold = 1000 - VendorPricing.buyPrice(item, null, character);
     action(panel, "btnSell").clicked(null, 0, 0); assertTrue(panel.isSelling());
     assertTrue(purchase(panel).onPurchase(item, true)); assertNull(character.getItems().getCursor());
+    assertFalse(character.getItems().contains(item)); world.process();
     assertTrue(character.getItems().contains(item)); assertEquals(expectedGold, gold()); assertFalse(panel.isSelling());
   }
 
@@ -187,21 +195,21 @@ class VendorPanelLifecycleTest extends RiiabloTest {
     action(panel, "btnExit").clicked(null, 0, 0); verify(game).closeVendorTradePanels();
   }
 
-  @Test void networkOpenAndBuyKeepRequestRoutingAndWalletSnapshots() throws Exception {
+  @Test void networkOpenAndBuyKeepRequestRoutingWithoutApplyingUntimedWallet() throws Exception {
     VendorPanel panel = vendor(); ClientNetworkSynchronizer sync = network(panel);
     when(sync.requestNpcService(anyInt(), anyByte(), anyByte(), anyInt(), anyInt(), anyLong())).thenReturn(42L, 43L);
     panel.configNetwork(VendorPanel.TRADER, 7, NpcServiceType.TRADE);
     verify(sync).requestNpcService(7, NpcServiceType.TRADE, NpcServiceOperation.OPEN, 0, -1, 0);
     NpcServiceResult result = mock(NpcServiceResult.class); when(result.requestId()).thenReturn(42L); when(result.gold()).thenReturn(900L);
-    panel.applyNetworkResult(result); assertEquals(900, gold()); assertEquals(0L, get(panel, "pendingRequestId"));
+    panel.applyNetworkResult(result); assertEquals(1000, gold()); assertEquals(0L, get(panel, "pendingRequestId"));
     Item item = item(); item.id = 99; purchase(panel).onPurchase(item, true);
     verify(sync).requestNpcService(7, NpcServiceType.TRADE, NpcServiceOperation.BUY, 99, -1, 0);
-    assertEquals(43L, get(panel, "pendingRequestId")); assertEquals(900, gold());
+    assertEquals(43L, get(panel, "pendingRequestId")); assertEquals(1000, gold());
   }
 
-  @Test void hiddenSameSessionResultStillUpdatesWalletAsBefore() throws Exception {
+  @Test void hiddenSameSessionResultCannotWriteWallet() throws Exception {
     VendorPanel panel = vendor(); NpcServiceResult result = mock(NpcServiceResult.class); when(result.gold()).thenReturn(750L);
-    panel.setVisible(false); panel.applyNetworkResult(result); assertEquals(750, gold());
+    panel.setVisible(false); panel.applyNetworkResult(result); assertEquals(1000, gold());
   }
 
   @Test void oldCallbacksAndNetworkResultsCannotTouchReplacementSession() throws Exception {
@@ -231,7 +239,8 @@ class VendorPanelLifecycleTest extends RiiabloTest {
 
   @Test void explicitGameOwnerAllowsConstructionBeforePublicationButGatesLaterDispatch() {
     GameScreen game = mock(GameScreen.class), other = mock(GameScreen.class); Riiablo.game = other;
-    VendorPanel panel = own(new VendorPanel(game)); panel.config(VendorPanel.TRADER, new Array<>()); assertEquals(0, getInt(panel, "configuredFlags"));
+    VendorPanel panel = own(new VendorPanel(game)); panel.bindWorld(world);
+    panel.config(VendorPanel.TRADER, new Array<>()); assertEquals(0, getInt(panel, "configuredFlags"));
     Riiablo.game = game; panel.config(VendorPanel.TRADER, new Array<>()); assertEquals(VendorPanel.TRADER, getInt(panel, "configuredFlags"));
     Riiablo.game = other; panel.setVisible(true); assertFalse(panel.isVisible()); panel.dispose(); assertNull(getUnchecked(panel, "owner"));
   }

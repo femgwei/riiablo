@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
 
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
@@ -14,6 +15,9 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.ItemInteractor;
+import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
+import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.item.ItemGenerator;
@@ -23,8 +27,88 @@ import com.riiablo.item.StoreLoc;
 import com.riiablo.save.CharData;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
+import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 class ClientItemManagerGoldPickupTest extends RiiabloTest {
+  @Test
+  void successfulPickupPublishesQuestEventOnlyAfterIntentExecutesForCursorAndStore() {
+    for (boolean manual : new boolean[] {false, true}) {
+      CharData data = character("QuestPickup", 0, 1);
+      ClientGameplayContext context = mock(ClientGameplayContext.class);
+      when(context.charData()).thenReturn(data);
+      when(context.playerId()).thenReturn(42);
+      when(context.inventoryVisible()).thenReturn(manual);
+      ClientItemManager manager = new ClientItemManager(context);
+      PickupRecorder recorder = new PickupRecorder();
+      World world = intentWorld(manager, recorder);
+      try {
+        com.riiablo.item.Item armor = generated("cap", 301);
+        int entity = groundItem(world, armor);
+        world.getSystem(ItemInteractor.class).interact(42, entity);
+        assertEquals(0, recorder.count);
+        assertFalse(data.getItems().contains(armor));
+        world.process();
+        assertEquals(1, recorder.count);
+        assertEquals(42, recorder.player);
+        assertEquals(entity, recorder.entity);
+        assertEquals("cap", recorder.code);
+        assertTrue(data.getItems().contains(armor));
+        world.process();
+        assertEquals(1, recorder.count);
+      } finally { world.dispose(); }
+    }
+  }
+
+  @Test
+  void rejectedPickupAndNetworkIntentCannotPublishLocalQuestReward() throws Exception {
+    for (boolean remote : new boolean[] {false, true}) {
+      CharData data = character("RejectedQuestPickup", 0, 1);
+      ClientGameplayContext context = mock(ClientGameplayContext.class);
+      when(context.charData()).thenReturn(data);
+      when(context.playerId()).thenReturn(42);
+      when(context.inventoryVisible()).thenReturn(true);
+      // A full cursor rejects the local mutation. The network owner only sends intent.
+      if (!remote) data.groundToCursor(generated("cap", 900));
+      ClientItemManager manager = remote ? new NetworkedClientItemManager(context)
+          : new ClientItemManager(context);
+      PickupRecorder recorder = new PickupRecorder();
+      World world = intentWorld(manager, recorder);
+      try {
+        com.riiablo.item.Item armor = generated("cap", 301);
+        int entity = groundItem(world, armor);
+        world.getMapper(com.riiablo.engine.server.component.Networked.class).create(entity).serverId = 301;
+        world.getSystem(ItemInteractor.class).interact(42, entity);
+        assertEquals(0, recorder.count);
+        world.process();
+        assertEquals(0, recorder.count);
+        assertTrue(world.getEntityManager().isActive(entity));
+        assertFalse(data.getItems().contains(armor));
+      } finally { world.dispose(); }
+    }
+  }
+
+  private static World intentWorld(ClientItemManager manager, PickupRecorder recorder) throws RuntimeException {
+    TestFactory factory = new TestFactory();
+    com.badlogic.gdx.net.Socket socket = mock(com.badlogic.gdx.net.Socket.class);
+    when(socket.getOutputStream()).thenReturn(new java.io.ByteArrayOutputStream());
+    return new World(new WorldConfigurationBuilder().with(manager, manager.intents(),
+        new ItemInteractor(), new EventSystem(), recorder, factory).build()
+        .register("factory", factory).register("itemController", manager.intents())
+        .register("client.socket", socket)
+        .register("townPortalRegistry", new TownPortalRegistry())
+        .register("map", new com.riiablo.map.Map(0, 0)));
+  }
+
+  private static final class PickupRecorder extends PassiveSystem {
+    int count, player, entity;
+    String code;
+    @Subscribe public void onPickup(QuestItemPickedUpEvent event) {
+      count++; player = event.playerId; entity = event.itemEntityId; code = event.itemCode;
+    }
+  }
+
   @AfterEach
   void clearCharacter() {
     Riiablo.charData = null;
