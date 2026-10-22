@@ -13,6 +13,8 @@ import com.riiablo.Keys;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.SimulationCommandEnvelope;
+import com.riiablo.engine.SimulationTickCoordinator;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.RenderSystem;
@@ -65,6 +67,8 @@ public class KeyboardMovementSystem extends BaseSystem {
 
   protected RenderSystem renderer;
   protected Actioneer actioneer;
+  @com.artemis.annotations.Wire(name = "simulationTickCoordinator", failOnNull = false)
+  protected SimulationTickCoordinator simulationTickCoordinator;
   @com.artemis.annotations.Wire(name = "clientContext")
   protected com.riiablo.presentation.ClientUiServices clientContext = ClientGameplayContext.fromGlobals();
 
@@ -146,8 +150,9 @@ public class KeyboardMovementSystem extends BaseSystem {
         tmpTarget.set(position.position)
             .add(tmpDirection.x * MOVE_DISTANCE, tmpDirection.y * MOVE_DISTANCE);
 
-        // 请求移动
-        actioneer.moveTo(playerId, tmpTarget);
+        // 请求移动；固定 Tick 存在时，输入只捕获意图，下一 Tick 执行。
+        final Vector2 capturedTarget = new Vector2(tmpTarget);
+        enqueueMovement(() -> actioneer.moveTo(playerId, capturedTarget), "movement.keyboard");
 
         if (!wasMoving) {
           log.debug("Started keyboard movement: dir=({},{})", tmpDirection.x, tmpDirection.y);
@@ -159,6 +164,16 @@ public class KeyboardMovementSystem extends BaseSystem {
       log.debug("Stopped keyboard movement");
       wasMoving = false;
     }
+  }
+
+  private void enqueueMovement(Runnable movement, String kind) {
+    if (simulationTickCoordinator == null) {
+      movement.run();
+      return;
+    }
+    simulationTickCoordinator.commands().submit(
+        SimulationCommandEnvelope.builder("client-input", kind, movement)
+            .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L)));
   }
 
   //==========================================================================

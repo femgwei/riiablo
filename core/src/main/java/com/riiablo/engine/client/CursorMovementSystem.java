@@ -68,6 +68,8 @@ public class CursorMovementSystem extends BaseSystem {
   protected HoveredManager hoveredManager;
   protected ClientUnitLifecycleSystem lifecycle;
   protected ClientNetworkReceiver networkReceiver;
+  @Wire(name = "simulationTickCoordinator", failOnNull = false)
+  protected com.riiablo.engine.SimulationTickCoordinator simulationTickCoordinator;
   @Wire(name = "clientContext")
   protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
@@ -507,32 +509,56 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private void moveToGround(int src, Vector2 destination) {
+    final Vector2 capturedDestination = new Vector2(destination);
+    enqueueMovement(() -> executeMoveToGround(src, capturedDestination), "movement.cursor.ground");
+  }
+
+  private void moveToTarget(int src, int target) {
+    enqueueMovement(() -> executeMoveToTarget(src, target), "movement.cursor.target");
+  }
+
+  private void moveToTargetForSkill(int src, int target, int skillId) {
+    enqueueMovement(() -> executeMoveToTargetForSkill(src, target, skillId),
+        "movement.cursor.skill");
+  }
+
+  private void stopTargeting(int src) {
+    enqueueMovement(() -> {
+      clearApproachSkill();
+      actioneer.moveTo(src, Engine.INVALID_ENTITY);
+    }, "movement.cursor.stop");
+  }
+
+  private void executeMoveToGround(int src, Vector2 destination) {
     clearApproachSkill();
     Position position = mPosition.get(src);
     Pathfind pathfind = mPathfind.get(src);
     if (!shouldRefreshHeldGroundPath(
-        position != null ? position.position : null, pathfind, destination)) {
-      return;
-    }
+        position != null ? position.position : null, pathfind, destination)) return;
     closeTradePanelsForMovement();
     actioneer.moveTo(src, destination);
   }
 
-  private void moveToTarget(int src, int target) {
+  private void executeMoveToTarget(int src, int target) {
     clearApproachSkill();
     closeTradePanelsForMovement();
     actioneer.moveTo(src, target);
   }
 
-  private void moveToTargetForSkill(int src, int target, int skillId) {
+  private void executeMoveToTargetForSkill(int src, int target, int skillId) {
     rememberApproachSkill(target, skillId);
     closeTradePanelsForMovement();
     actioneer.moveTo(src, target);
   }
 
-  private void stopTargeting(int src) {
-    clearApproachSkill();
-    actioneer.moveTo(src, Engine.INVALID_ENTITY);
+  private void enqueueMovement(Runnable movement, String kind) {
+    if (simulationTickCoordinator == null) {
+      movement.run();
+      return;
+    }
+    simulationTickCoordinator.commands().submit(
+        com.riiablo.engine.SimulationCommandEnvelope.builder("client-input", kind, movement)
+            .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L)));
   }
 
   private void rememberApproachSkill(int target, int skillId) {
@@ -589,18 +615,28 @@ public class CursorMovementSystem extends BaseSystem {
       stopTargeting(sourceId);
       return;
     }
-    if (socket == null) {
-      actioneer.cast(sourceId, skillId, targetId, targetVec);
+    final Vector2 capturedTarget = new Vector2(targetVec);
+    Runnable cast = () -> {
+      if (socket == null) {
+        actioneer.cast(sourceId, skillId, targetId, capturedTarget);
+        return;
+      }
+      int targetServerId = Engine.INVALID_ENTITY;
+      if (targetId != Engine.INVALID_ENTITY && mNetworked.has(targetId)) {
+        targetServerId = mNetworked.get(targetId).serverId;
+      }
+      long observedTick = networkReceiver == null ? 0L : networkReceiver.latestServerTick();
+      long targetTick = observedTick == 0L ? 0L : observedTick + 2L;
+      NetworkedActionSender.cast(socket, skillId, targetServerId, capturedTarget,
+          NetworkedActionSender.nextCombatSequence(), observedTick, targetTick);
+    };
+    if (simulationTickCoordinator != null) {
+      simulationTickCoordinator.commands().submit(
+          com.riiablo.engine.SimulationCommandEnvelope.builder("client-input", "skill.cast", cast)
+              .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L)));
       return;
     }
-    int targetServerId = Engine.INVALID_ENTITY;
-    if (targetId != Engine.INVALID_ENTITY && mNetworked.has(targetId)) {
-      targetServerId = mNetworked.get(targetId).serverId;
-    }
-    long observedTick = networkReceiver == null ? 0L : networkReceiver.latestServerTick();
-    long targetTick = observedTick == 0L ? 0L : observedTick + 2L;
-    NetworkedActionSender.cast(socket, skillId, targetServerId, targetVec,
-        NetworkedActionSender.nextCombatSequence(), observedTick, targetTick);
+    cast.run();
   }
 
   /**

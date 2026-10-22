@@ -32,6 +32,8 @@ public class ClientUnitLifecycleSystem extends BaseSystem {
 
   protected ClientNetworkReceiver receiver;
   protected ClientNetworkSynchronizer network;
+  @Wire(name = "simulationTickCoordinator", failOnNull = false)
+  protected com.riiablo.engine.SimulationTickCoordinator simulationTickCoordinator;
   protected ComponentMapper<UnitStates> mStates;
   protected ComponentMapper<PlayerCorpse> mPlayerCorpse;
   protected ComponentMapper<Position> mPosition;
@@ -68,7 +70,16 @@ public class ClientUnitLifecycleSystem extends BaseSystem {
   }
 
   /** Host/UI captures only intent. Validation and execution happen on the next tick. */
-  public void requestRespawn(int player) { requestedPlayer = player; }
+  public void requestRespawn(int player) {
+    if (simulationTickCoordinator != null) {
+      simulationTickCoordinator.commands().submit(
+          com.riiablo.engine.SimulationCommandEnvelope.builder("client-ui", "player.respawn",
+              (Runnable) () -> requestedPlayer = player)
+              .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L)));
+    } else {
+      requestedPlayer = player;
+    }
+  }
 
   @Override protected void processSystem() {
     int player = requestedPlayer;
