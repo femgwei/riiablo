@@ -19,6 +19,8 @@
 
 - M2 第 2/4 批范围：玩家/单位死亡、尸体、复活与状态/生命快照的唯一接收写入接口；ESC 只捕获复活意图，在仿真 Tick 内准入；联网生命周期仅应用已提交快照，复活确认包不计算位置或生命结果。本地/服务端规则沿用既有 owner，物品/任务事务在第 3 批收口；不修改协议、战斗公式或 M3 调度/结构屏障。
 
+- M2 第 3/4 批范围：库存、地面物品、钱包/弹药及当前难度任务记录的不可变接收状态和写入接口；拾取、装备、存储、药剂、商店和任务对话由 UI 捕获意图，在仿真 Tick 内调用既有本地/服务端规则；联网副本仅应用完整库存和带 Tick 的玩家/任务快照，确认包不重算交易或奖励。允许同步完善 D2GS baseline、NPC/任务/交易完成后的既有快照发布及拾取成功事件；佣兵/地图权威状态留第 4 批。不修改协议或 D2 公式，不提前实现 M3 envelope/完整结构屏障、M6 完整领域事务或 M8 网络三层/回放。
+
 ## 总体迁移表
 
 | 编号 | 迁移名称 | 范围 | 目标 | 主要产物 | 出口条件 | 依赖 | 状态 |
@@ -355,6 +357,37 @@ D2MOO 依据：`F:\3rd_src\D2MOO\source\D2Game\src\PLAYER\PlrMsg.cpp::D2GAME_PAC
 
 下一迁移：M2 第 3/4 批，集中处理物品/任务权威状态与事务写入接口；随后第 4/4 批佣兵/地图状态。不得将类级修补、验收记录或补记 hash 另计批次。
 
+### M2 第 3/4 批：物品/任务权威状态与事务写入接口（2026-10-22）
+
+完成日期：2026-10-22；本批完成度 100%，M2 整体仍为进行中，已完成 3/4 批。本批将库存/地面物品、钱包/弹药、任务记录和客户端意图统一收口；实现、回归和本节记录属于同一完整批次。
+
+提交：`6611ca2c4`（物品/任务权威快照、Tick 意图入口、D2GS 完整库存发布和拾取事件收口）。
+
+状态来源与写入边界：
+
+- 新增 `AuthoritativeInventoryState`、`AuthoritativeGroundItemState`、`AuthoritativeQuestState` 和 `AuthoritativePlayerItemState`。接收端先复制 FlatBuffers 字节、校验完整库存/地面物品/40 条任务记录和时间顺序，再由 `Client*SnapshotWriter` 一次性投影到兼容的 `CharData`/ECS 副本；坏包、重复槽位、重复 ID、非法枚举、非有限坐标和佣兵越权条目不会部分提交或推进 revision。任务 revision 保持 D2 现有 FNV 内容哈希语义，允许哈希下降，不被误当作递增计数器。
+- `ClientItemIntentSystem`、`ClientQuestIntentSystem` 和 `ClientVendorSystem` 把背包、拾取、装备、药剂、武器切换、NPC 对话、日志确认、购买/出售/修理等 UI 调用排入仿真 Tick；索引操作在 Tick 重新按稳定 item id 解析，地面操作保存 `NativePathIdentity.Token`，死亡、会话变化、实体复用和联网副本都会拒绝本地结算。现有协议没有武器切换和联网 imbue 操作，远端明确拒绝本地规则并保留到 M6/M8。
+- `ClientNetworkReceiver` 删除旧的 11 条 inventory echo replay 路径，仅接受完整 `ItemMoveResult`；baseline BEGIN 清理权威 stores，END 同时要求实体计数、库存 revision 和任务快照完整后才推进完成水位。未带 Tick 的 Quest/Gold/NPC 结果只做反馈或触发 resync，不能覆盖带 Tick 的钱包、弹药和任务记录。
+- D2GS 在登录/resync、拾取/物品事务、任务/NPC 成功、交易完成和金币成功后发布完整库存并同步带时间戳的 `PlayerP`；拾取只有在本地 Tick 或服务端权威结算成功、且地面实体确实被消费后才派发 `QuestItemPickedUpEvent`。地面 ItemP 更新保持服务器实体 ID、拾取归属窗口和 party gold 元数据，元数据更新不丢失已提交物品字节。
+- `VendorPanel`、`InventoryPanel`、`GameScreen`、任务对话和日志面板只捕获意图/消费反馈；网络结果不直接写钱包、所有权、耐久或奖励。D2MOO 对照保留 `ITEMS_IsInPlayersInventory`、`PLRTRADE_AddGold`、`QUESTS_NPCMessage`、`QUESTS_SendCurrentFlags`、`QUESTS_UpdatePlayerFlags` 和 `ACT1Q1_Callback11_ScrollMessage` 的既有规则依据；本批不把 riiablo 既有 bit63 兼容标记宣称为 D2MOO 新规则。
+
+验证命令与结果：
+
+```powershell
+./gradlew.bat :core:clientInventoryQuestRegression :desktop:compileJava :server:netty:compileJava :tools:map-viewer:compileJava :tools:skill-viewer:compileJava '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --no-daemon
+./gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.MonsterAiArenaTest --tests com.riiablo.server.d2gs.SoundEventTransportTest --tests com.riiablo.server.d2gs.InventorySnapshotTransportTest --no-daemon
+python -m unittest discover -s tools/architecture -p test_migration_boundaries.py
+git diff --check
+```
+
+结果：`clientInventoryQuestRegression` 210 项通过；其依赖的 `clientLifecycleRegression` 111 项、`clientTransformRegression` 81 项、`clientUiBoundaryRegression` 403 项中 402 通过/1 项可选跳过、`architectureRegression` 12 项通过；D2GS 定向测试 22 项通过（含新增完整库存传输 2 项）。架构边界 unittest 9 项通过，M1-A 0、M1-B 生成层 0/运行时适配器 58 无漂移，表现债务 73 edges/74 references 无新增。core、D2GS、desktop、Netty、Map Viewer、Skill Viewer 编译均通过。`SoundP.java` 结尾已规范为单个换行。
+
+真实资源：是；客户端/headless 回归使用 `G:\BaiduNetdiskDownload\Diablo II 1.10F` 的 MPQ 数据、字符串和相关资源。没有启动真实 GL/audio 设备或双客户端实机验收。
+
+剩余问题：库存/任务仍投影到现有可变 `CharData`/ECS 兼容副本；完整领域事务回滚、所有外部消耗/奖励统一事件出口属于 M6。协议尚未提供联网 imbue/weapon-set 操作；M3 command envelope、完整 phase barrier，M8 replay 与 network 三层收敛仍未完成。佣兵/地图权威状态留 M2 第 4/4 批。
+
+下一迁移：M2 第 4/4 批，集中处理佣兵和地图状态；不得把类级修补、验收记录或补记 hash 另计批次。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
@@ -391,7 +424,7 @@ D2MOO 依据：<源码文件/函数>
 - M5：5 个以上批次，先完成一个技能族，再扩展普通攻击和其他技能。
 - M6～M8：每行 3～5 个批次，按领域和验收门槛拆分。
 
-因此完整计划预计为 **8 次主要迁移、约 25～35 个完整批次**，不将这一数量全部消耗在 M1。当前 M1 三项交付已验收，M2 已完成第 2/4 批，下一项为 M2 第 3/4 批物品/任务权威状态与事务写入；已有 M3/M8 局部实现不代表后续迁移已完成。
+因此完整计划预计为 **8 次主要迁移、约 25～35 个完整批次**，不将这一数量全部消耗在 M1。当前 M1 三项交付已验收，M2 已完成第 3/4 批，下一项为 M2 第 4/4 批佣兵/地图状态；已有 M3/M8 局部实现不代表后续迁移已完成。
 
 
 
