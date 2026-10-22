@@ -414,6 +414,30 @@ git diff --check
 
 剩余问题：佣兵 header、CharData/ECS 兼容投影、MapManager/RoomEx 所有权仍未统一为 M6 领域事务；M3 command envelope/结构屏障、M8 网络三层和回放仍未完成。下一正式迁移为 M3，按原计划进入 Tick、命令与事件边界；不得把后续修补拆成新的 M2 微批次。
 
+### M3 第 1/4 批：固定 Tick、命令 envelope 与阶段屏障（2026-10-23）
+
+完成日期：2026-10-23；本批完成度 100%，M3 计划四个批次中的第 1 批。本批建立固定 25Hz 仿真的统一准入边界，不改变既有 D2 规则、网络协议或系统内部结算顺序。
+
+实现与边界：
+
+- 新增不可变 `SimulationCommandEnvelope`，统一记录目标 Tick、提交序号、来源、命令类型和 payload；`SimulationCommandQueue` 按 Tick/sequence 稳定排序，并拒绝已经排空 Tick 的迟到命令。
+- 新增 `SimulationEventQueue`，把仿真事件按 Tick/sequence 排序后再交给表现/兼容事件系统；新增 `StructuralChangeQueue`，阶段末以稳定批次冲刷实体/组件结构变更，冲刷期间产生的新变更留到下一 Tick。
+- 新增 `SimulationTickCoordinator`，明确 `COMMANDS → SIMULATION → EVENTS → STRUCTURAL_COMMIT` 阶段，并接入 `GameScreen` 的既有 `FixedStepAccumulator`。暂停时清空未提交命令、事件和结构变更，避免恢复后跨会话执行旧输入。
+- 现有 Artemis 系统注册顺序和 `SimulationClock` 25Hz 规则保持不变；本批没有把 D2GS 改造成新 envelope，也没有提前实现完整 M8 replay/network 三层。
+
+提交：`880758c69`（固定 Tick coordinator、command/event 队列、结构变更屏障和 GameScreen 接入）。
+
+验证命令与结果：
+
+```powershell
+./gradlew.bat :core:m3TickCommandRegression :core:compileJava --no-daemon
+git diff --check
+```
+
+结果：M3 定向门禁 11 项通过（FixedStepAccumulator 6、SimulationClock 2、SimulationTickCoordinator 3）；模块边界检查通过；core 编译通过。真实资源路径未用于纯调度门禁；未启动真实客户端。后续 M3 批次仍需把更多输入/网络意图适配到 envelope、统一事件出口并扩大结构屏障覆盖面。
+
+剩余问题：当前旧 UI/网络入口仍有兼容队列，完整命令准入、事件生命周期、所有结构变更迁移以及 M8 回放/网络三层仍未完成。下一迁移为 M3 第 2/4 批，集中处理输入意图和网络结果的 Tick 准入；不得把类级修补、验收记录或补记 hash 另计批次。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
