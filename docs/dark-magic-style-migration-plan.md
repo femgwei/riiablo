@@ -17,6 +17,8 @@
 - 本批 M1-C source-set 隔离补缺：将没有外部生产调用者的 `server/netty/.../d2gs_test/Main` 与 `TestClient` 原样移入 `src/test/java`，禁止生产源新增测试 harness 或引用它；既有 `net/nnet/onet/d2gs_netty` 实现的网络语义和启动入口不在本批改写，仍由 M8-D 收敛。
 - M2 第 1/4 批范围：玩家/单位移动状态的权威来源、不可变接收快照、预测校正与 GPU 只读变换视图；同步修改 renderer、automap、标签/天气/调试读取与 host 输入入口，并验证渲染及回滚不修改已接收权威快照或原生精度。后续三批分别处理玩家/单位生命周期写入、物品/任务、佣兵/地图状态；总批次保持原定 3～4 批范围。战斗/移动公式和协议不变；M3 命令 envelope、完整结构屏障与 M8 回放不在本批实现。
 
+- M2 第 2/4 批范围：玩家/单位死亡、尸体、复活与状态/生命快照的唯一接收写入接口；ESC 只捕获复活意图，在仿真 Tick 内准入；联网生命周期仅应用已提交快照，复活确认包不计算位置或生命结果。本地/服务端规则沿用既有 owner，物品/任务事务在第 3 批收口；不修改协议、战斗公式或 M3 调度/结构屏障。
+
 ## 总体迁移表
 
 | 编号 | 迁移名称 | 范围 | 目标 | 主要产物 | 出口条件 | 依赖 | 状态 |
@@ -320,6 +322,39 @@ D2MOO 依据：沿用已有 1.10f `UNITS_UpdateRunWalkAnimRateAndVelocity` 对�
 
 下一迁移：M2 第 2/4 批，集中收口玩家/单位生命周期状态及写入接口；随后第 3/4 批物品/任务、第 4/4 批佣兵/地图。不得将类级修补、验收记录或补记 hash 另计批次。
 
+### M2 第 2/4 批：玩家/单位生命周期状态及写入接口（2026-10-22）
+
+完成日期：2026-10-22；本批完成度 100%，M2 整体仍为进行中，已完成 2/4 批。实现与本节验收记录属于同一完整批次。
+
+提交：`ce96a7935`（生命周期快照、写入端口、复活意图和死亡/尸体权威边界）；本节验收记录随同批次提交。
+
+状态来源与写入边界：
+
+- 新增不可变 `AuthoritativeUnitLifecycleState`，按服务器 `tick/serverTimeMillis` 接受 PLR/MON 的 `CofReferenceP`、`VitalsP`、`StateP`；状态层与 FlatBuffers buffer 解耦，部分更新保留未携带字段，显式空 `StateP` 清空列表，旧 Tick 的死亡数据不能覆盖新复活状态。
+- `ClientUnitSnapshotWriter` 是客户端 State/Vitals 的统一快照写入端口：Vitals 只写 aggregate，不改 base；StateP 保留 source/skill 层和周期字段，并标记 `snapshotOnly`。联网客户端的资源恢复、DOT、死亡结算、尸体回收和本地复活规则均不会因快照副作用运行。
+- `ClientUnitLifecycleSystem` 将 ESC 转为复活意图，在仿真 Tick 内重新校验；联网复活只发送一个去重请求，结果包不直接应用坐标、HP/MP 或本地 `DeathHandler` 规则，只接受匹配请求并触发带 Tick 的 snapshot resync。
+- `ClientNetworkReceiver` 在 EntitySync 中先提交生命周期快照，再投影 ECS/表现；删除、关闭、重连和 baseline begin 清理快照。`DeathHandler` 仅消费已提交快照创建表现尸体、恢复碰撞/动画适配器，不卸装联网副本装备，也不创建权威尸体。
+- 服务端/本地 owner 继续负责生命周期、死亡、尸体回收和资源恢复规则；相关系统增加 `snapshotOnly` 守卫，联网尸体由服务端删除。修复本地/服务端复活后 `UnitLifecycle` 未恢复的问题，使下一次死亡可重新进入权威清理。M1 表现债务登记同步删除 `ClientNetworkReceiver`/`CursorMovementSystem` 对 `DeathHandler` 的两条旧边，当前剩余 73 条边、74 次引用，没有新增允许项。
+
+验证命令：
+
+```powershell
+./gradlew.bat :core:clientLifecycleRegression '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --no-daemon
+./gradlew.bat :desktop:compileJava :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.MonsterAiArenaTest --tests com.riiablo.server.d2gs.SoundEventTransportTest :server:netty:compileJava :tools:map-viewer:compileJava :tools:skill-viewer:compileJava '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --no-daemon
+python -m unittest discover -s tools/architecture -p test_migration_boundaries.py
+git diff --check
+```
+
+结果：`clientLifecycleRegression` 111 项通过；其依赖门禁 `clientTransformRegression` 76 项通过、`clientUiBoundaryRegression` 385 项中 384 通过/1 项可选跳过、`architectureRegression` 12 项通过；D2GS 定向测试 20 项通过（D2GSSimulationAssembly 5、MonsterAiArena 14、SoundEventTransport 1）。合计 604 次测试执行，603 通过、1 跳过，失败/错误为 0；任务间包含共享用例，不表示全仓库测试全部重跑。架构边界 unittest 9 项通过，`migrationBoundaryCheck` 通过；M1-A 原扫描 0，M1-B 生成层 0/运行时适配器 58 条无漂移。core 生产/测试、desktop、D2GS 生产/测试、Netty、Map Viewer、Skill Viewer 编译均通过；`SoundP.java` 规范化为单个结尾换行，最终差异检查无 EOF 空行问题。
+
+真实资源：是；明确使用 `G:\BaiduNetdiskDownload\Diablo II 1.10F`，相关 headless 用例加载真实 MPQ 表/字符串/资源。未启动真实 GL/audio 客户端或双客户端网络实机。
+
+D2MOO 依据：`F:\3rd_src\D2MOO\source\D2Game\src\PLAYER\PlrMsg.cpp::D2GAME_PACKETCALLBACK_Rcv0x41_Resurrect_6FC87480`。该函数表明服务端在复活准入后恢复最大生命、Mana、Stamina，设置 targetable，切换 Act/出生点并重新分配技能；本批只把这些结果作为带 Tick 的权威快照消费，不在客户端重算。
+
+剩余问题：物品/任务事务、佣兵/地图状态尚未迁移；技能/神殿等表现适配器的全量事件出口仍按 M3/M8-C 跟踪。M3 command envelope、完整 phase barrier 和 M8 replay/network 三层收敛仍未完成。联网快照仍兼容写入现有 ECS 副本，完整事件出口和双客户端实机验收留到后续批次。
+
+下一迁移：M2 第 3/4 批，集中处理物品/任务权威状态与事务写入接口；随后第 4/4 批佣兵/地图状态。不得将类级修补、验收记录或补记 hash 另计批次。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
@@ -356,7 +391,7 @@ D2MOO 依据：<源码文件/函数>
 - M5：5 个以上批次，先完成一个技能族，再扩展普通攻击和其他技能。
 - M6～M8：每行 3～5 个批次，按领域和验收门槛拆分。
 
-因此完整计划预计为 **8 次主要迁移、约 25～35 个完整批次**，不将这一数量全部消耗在 M1。当前 M1 三项交付已验收，M2 已完成第 1/4 批，下一项为 M2 第 2/4 批玩家/单位生命周期写入；已有 M3/M8 局部实现不代表后续迁移已完成。
+因此完整计划预计为 **8 次主要迁移、约 25～35 个完整批次**，不将这一数量全部消耗在 M1。当前 M1 三项交付已验收，M2 已完成第 2/4 批，下一项为 M2 第 3/4 批物品/任务权威状态与事务写入；已有 M3/M8 局部实现不代表后续迁移已完成。
 
 
 
