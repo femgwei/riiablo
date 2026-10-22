@@ -77,6 +77,7 @@ import com.riiablo.engine.client.debug.RenderSystemDebugger;
 import com.riiablo.engine.client.FixedStepAccumulator;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
+import com.riiablo.engine.SimulationTickCoordinator;
 import com.riiablo.presentation.ClientAudioSession;
 import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.engine.client.ClientSimulationAssembly;
@@ -226,6 +227,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   boolean discardNextSimulationDelta;
   private final FixedStepAccumulator simulationAccumulator =
       new FixedStepAccumulator(SimulationClock.STEP_SECONDS, MAX_SIMULATION_STEPS_PER_RENDER);
+  private final SimulationTickCoordinator simulationTickCoordinator =
+      new SimulationTickCoordinator();
   private long lastSlowSimulationLogNanos;
   private ClientRenderSystemRunner renderSystemRunner;
   private AuthoritativeInterpolationSystem interpolationSystem;
@@ -810,6 +813,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .register("input", input)
         .register("output", output)
         .register("clientMessages", (java.util.function.Consumer<String>) output::appendText)
+        .register("simulationTickCoordinator", simulationTickCoordinator)
         ;
     if (socket != null) config.register("client.socket", socket);
     engine = Riiablo.engine = new World(config);
@@ -970,6 +974,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     // Do not retain a partial tick across an application pause/background
     // transition. The next visible frame starts from a clean native tick.
     simulationAccumulator.reset();
+    simulationTickCoordinator.clear();
   }
 
   @Override
@@ -1107,7 +1112,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       simulationSteps = simulationAccumulator.advance(delta, stepSeconds -> {
         engine.setDelta(stepSeconds);
         long simulationStartNanos = System.nanoTime();
-        engine.process();
+        simulationTickCoordinator.advance(ignored -> {},
+            tick -> engine.process(), ignored -> {});
         long simulationElapsedNanos = System.nanoTime() - simulationStartNanos;
         if (simulationElapsedNanos > 30_000_000L
             && simulationStartNanos - lastSlowSimulationLogNanos > 1_000_000_000L) {

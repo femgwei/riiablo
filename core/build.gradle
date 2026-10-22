@@ -813,3 +813,22 @@ task clientMercenaryMapRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M3 batch 1: fixed tick admission, command/event ordering and structural barrier.
+task m3TickCommandRegression(type: Test) {
+  group = 'verification'
+  description = 'M3 fixed tick command envelope, event ordering and structural change barrier.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform { excludeTags 'visual' }
+  filter {
+    ['com.riiablo.engine.SimulationClockTest',
+     'com.riiablo.engine.SimulationTickCoordinatorTest',
+     'com.riiablo.engine.client.FixedStepAccumulatorTest'].each { includeTestsMatching it }
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
