@@ -16,6 +16,8 @@ import java.util.function.IntConsumer;
 public final class ClientItemIntentSystem extends BaseSystem implements ItemController {
   private final ClientItemManager owner;
   private final ArrayDeque<Runnable> pending = new ArrayDeque<>();
+  @Wire(name = "simulationTickCoordinator", failOnNull = false)
+  protected com.riiablo.engine.SimulationTickCoordinator simulationTickCoordinator;
   protected ClientUnitLifecycleSystem lifecycle;
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mGround;
   protected ComponentMapper<com.riiablo.engine.server.component.NativePathIdentity> mIdentity;
@@ -35,7 +37,7 @@ public final class ClientItemIntentSystem extends BaseSystem implements ItemCont
     Item cursor = captured.getItems().getCursor();
     boolean hadCursor = cursor != null;
     int cursorId = cursor == null ? 0 : cursor.id;
-    pending.add(() -> {
+    Runnable guarded = () -> {
       if (character() != captured) return;
       int player = owner.clientContext.playerId();
       if (lifecycle != null && lifecycle.isPlayerDead(player)) return;
@@ -43,7 +45,14 @@ public final class ClientItemIntentSystem extends BaseSystem implements ItemCont
       if (cursorSensitive && (hadCursor != (current != null)
           || current != null && current.id != cursorId)) return;
       intent.run();
-    });
+    };
+    if (simulationTickCoordinator != null) {
+      return simulationTickCoordinator.commands().submit(
+          com.riiablo.engine.SimulationCommandEnvelope.builder(
+              "client-ui", "item.intent", guarded)
+              .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L))) != null;
+    }
+    pending.add(guarded);
     return true;
   }
 
@@ -58,9 +67,12 @@ public final class ClientItemIntentSystem extends BaseSystem implements ItemCont
   }
 
   @Override protected void processSystem() {
+    if (simulationTickCoordinator != null) return;
     for (int count = pending.size(); count > 0; count--) pending.removeFirst().run();
   }
-  @Override protected void dispose() { pending.clear(); }
+  @Override protected void dispose() {
+    pending.clear();
+  }
 
   @Override public void groundToCursor(int entity) {
     if (entity < 0 || mGround == null || !mGround.has(entity) || mGround.get(entity).item == null) return;

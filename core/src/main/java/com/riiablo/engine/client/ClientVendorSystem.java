@@ -23,6 +23,8 @@ public final class ClientVendorSystem extends BaseSystem {
   private final Supplier<CharData> character;
   private final IntSupplier player;
   private final ArrayDeque<Runnable> pending = new ArrayDeque<>();
+  @Wire(name = "simulationTickCoordinator", failOnNull = false)
+  protected com.riiablo.engine.SimulationTickCoordinator simulationTickCoordinator;
   protected ClientNetworkReceiver receiver;
   protected ClientUnitLifecycleSystem lifecycle;
 
@@ -33,10 +35,16 @@ public final class ClientVendorSystem extends BaseSystem {
   private boolean enqueue(BooleanSupplier valid, Consumer<CharData> action) {
     CharData captured = character.get();
     if (captured == null || receiver != null) return false;
-    pending.add(() -> {
+    Runnable guarded = () -> {
       if (receiver == null && character.get() == captured && valid.getAsBoolean()
           && (lifecycle == null || !lifecycle.isPlayerDead(player.getAsInt()))) action.accept(captured);
-    });
+    };
+    if (simulationTickCoordinator != null) {
+      return simulationTickCoordinator.commands().submit(
+          com.riiablo.engine.SimulationCommandEnvelope.builder("client-ui", "vendor.intent", guarded)
+              .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L))) != null;
+    }
+    pending.add(guarded);
     return true;
   }
 
@@ -86,7 +94,10 @@ public final class ClientVendorSystem extends BaseSystem {
     });
   }
   @Override protected void processSystem() {
+    if (simulationTickCoordinator != null) return;
     for (int count = pending.size(); count > 0; count--) pending.removeFirst().run();
   }
-  @Override protected void dispose() { pending.clear(); }
+  @Override protected void dispose() {
+    pending.clear();
+  }
 }

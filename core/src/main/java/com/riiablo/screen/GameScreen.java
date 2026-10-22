@@ -1112,7 +1112,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       simulationSteps = simulationAccumulator.advance(delta, stepSeconds -> {
         engine.setDelta(stepSeconds);
         long simulationStartNanos = System.nanoTime();
-        simulationTickCoordinator.advance(ignored -> {},
+        simulationTickCoordinator.advance(command -> {
+              if (command.payload instanceof Runnable) ((Runnable) command.payload).run();
+            },
             tick -> engine.process(), ignored -> {});
         long simulationElapsedNanos = System.nanoTime() - simulationStartNanos;
         if (simulationElapsedNanos > 30_000_000L

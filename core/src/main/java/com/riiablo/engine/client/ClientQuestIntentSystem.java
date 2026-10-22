@@ -24,6 +24,18 @@ public final class ClientQuestIntentSystem extends BaseSystem {
   protected ClientNetworkReceiver receiver;
   protected ClientUnitLifecycleSystem lifecycle;
   private final ArrayDeque<Runnable> pending = new ArrayDeque<>();
+  @Wire(name = "simulationTickCoordinator", failOnNull = false)
+  protected com.riiablo.engine.SimulationTickCoordinator simulationTickCoordinator;
+
+  private void enqueue(Runnable intent, String kind) {
+    if (simulationTickCoordinator != null) {
+      simulationTickCoordinator.commands().submit(
+          com.riiablo.engine.SimulationCommandEnvelope.builder("client-ui", kind, intent)
+              .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L)));
+    } else {
+      pending.add(intent);
+    }
+  }
 
   /** Local persistence of the journal acknowledgement stays with its Tick owner. */
   public boolean acknowledgeLog(int playerId) {
@@ -36,7 +48,7 @@ public final class ClientQuestIntentSystem extends BaseSystem {
       short[] records = character.getQuests(act);
       displayed[act] = records == null ? new short[0] : records.clone();
     }
-    pending.add(() -> {
+    enqueue(() -> {
       if (replica(playerId) || !mPlayer.has(playerId) || mPlayer.get(playerId).data != character
           || character.diff != difficulty) return;
       for (int act = 0; act < 5; act++) {
@@ -47,7 +59,7 @@ public final class ClientQuestIntentSystem extends BaseSystem {
             com.riiablo.engine.server.quest.NativeQuestRecord.set(records[i],
                 com.riiablo.engine.server.quest.NativeQuestRecord.UPDATE_QUEST_LOG);
       }
-    });
+    }, "quest.log_ack");
     return true;
   }
 
@@ -61,7 +73,7 @@ public final class ClientQuestIntentSystem extends BaseSystem {
         ? mIdentity.get(npcId).token() : null;
     com.riiablo.save.CharData character = player.data;
     if (character == null) return false;
-    pending.add(() -> {
+    enqueue(() -> {
       if (!mPlayer.has(playerId) || mPlayer.get(playerId).data != character
           || !mMonster.has(npcId) || mMonster.get(npcId) != npc || npc.monstats != type
           || token != null && !token.isCurrent(world, npcId)
@@ -70,7 +82,7 @@ public final class ClientQuestIntentSystem extends BaseSystem {
       else if (!replica(playerId) && events != null) {
         events.dispatch(NpcQuestMessageEvent.obtain(playerId, npcId, message));
       }
-    });
+    }, "quest.npc_message");
     return true;
   }
 
@@ -80,12 +92,12 @@ public final class ClientQuestIntentSystem extends BaseSystem {
     if (playerId < 0 || network != null || replica(playerId) || !mPlayer.has(playerId)) return false;
     com.riiablo.save.CharData character = mPlayer.get(playerId).data;
     if (character == null) return false;
-    pending.add(() -> {
+    enqueue(() -> {
       if (!replica(playerId) && mPlayer.has(playerId) && mPlayer.get(playerId).data == character
           && events != null && (lifecycle == null || !lifecycle.isPlayerDead(playerId))) {
         events.dispatch(NativeImbueRequestEvent.obtain(playerId, itemId));
       }
-    });
+    }, "quest.imbue");
     return true;
   }
 
@@ -93,7 +105,10 @@ public final class ClientQuestIntentSystem extends BaseSystem {
     return receiver != null || mStates.has(player) && mStates.get(player).snapshotOnly;
   }
   @Override protected void processSystem() {
+    if (simulationTickCoordinator != null) return;
     for (int count = pending.size(); count > 0; count--) pending.removeFirst().run();
   }
-  @Override protected void dispose() { pending.clear(); }
+  @Override protected void dispose() {
+    pending.clear();
+  }
 }

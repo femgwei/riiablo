@@ -825,7 +825,10 @@ task m3TickCommandRegression(type: Test) {
   filter {
     ['com.riiablo.engine.SimulationClockTest',
      'com.riiablo.engine.SimulationTickCoordinatorTest',
-     'com.riiablo.engine.client.FixedStepAccumulatorTest'].each { includeTestsMatching it }
+     'com.riiablo.engine.client.FixedStepAccumulatorTest',
+     'com.riiablo.engine.client.ClientItemIntentSystemTest',
+     'com.riiablo.engine.client.ClientQuestIntentSystemTest',
+     'com.riiablo.engine.client.ClientVendorSystemTest'].each { includeTestsMatching it }
   }
   maxHeapSize = test.maxHeapSize
   systemProperty 'java.awt.headless', 'true'
