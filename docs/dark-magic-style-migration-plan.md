@@ -27,7 +27,7 @@
 |---|---|---|---|---|---|---|---|
 | M0 | 约束与基线 | 全仓库架构盘点、模块依赖、现有测试、D2MOO 证据和 dark-magic 对照矩阵 | 固定边界和迁移基线，不改变行为 | ownership 清单、依赖图、反向依赖清单、基线测试报告 | 所有目标目录都有唯一 owner；当前行为、已知失败和架构缺口可复现 | 无 | 已完成 |
 | M1 | 领域边界 | `core`、`server`、`quests`、`server-systems`、`shared` 的依赖整理 | 建立 `mechanism / data / policy / adapter / presentation` 五类边界，并登记旧违规 | 包级依赖规则、架构检查、跨层调用清单 | 新代码不能违反依赖方向；旧违规点有 owner、迁移行和删除条件 | M0 | 已完成 |
-| M2 | 权威状态 | 玩家、怪物、物品、任务、佣兵、地图运行时状态和客户端预测 | 明确唯一权威状态来源，UI 和客户端只能提交意图，不能提交结果 | 状态模型、状态写入接口、快照字段清单、客户端命令边界 | 任一状态变更都能追踪到权威系统；无 UI 直接写状态；预测回滚不改变权威数据 | M1 | 进行中 |
+| M2 | 权威状态 | 玩家、怪物、物品、任务、佣兵、地图运行时状态和客户端预测 | 明确唯一权威状态来源，UI 和客户端只能提交意图，不能提交结果 | 状态模型、状态写入接口、快照字段清单、客户端命令边界 | 任一状态变更都能追踪到权威系统；无 UI 直接写状态；预测回滚不改变权威数据 | M1 | 已完成 |
 | M3 | Tick、命令与事件 | 固定 40ms Tick、输入意图、技能、移动、死亡、实体删除、阶段调度和结构屏障 | 统一执行顺序和副作用边界，令渲染帧率不影响仿真 Tick | Command envelope、Event、结构变更队列、固定步进运行时、Tick/phase 调度图 | 固定步进可脱离渲染运行；非法意图被拒绝；阶段末统一冲刷结构变更；普通移动、拾取、一个交互流程通过纯逻辑和 ECS 测试 | M2 | 进行中 |
 | M4 | 数据层 | TXT、MPQ、D2 数据表、固定点数值、RNG/Seed、版本和可选内容包 | 使用不可变记录和显式数据来源，规则层不直接操作解析器；为每个系统/实体建立可复现 RNG 流 | typed record、数据版本、命名 RNG stream、数据审计工具、可选内容包边界 | 缺失数据、版本差异、RNG 消耗都有明确测试；合法数据不走隐式常量回退；同一输入可重放得到相同随机序列 | M1 | 未开始 |
 | M5 | 战斗垂直切片 | 普通攻击或 Fire Bolt 的完整链路 | 验证新边界能够承载真实 D2 行为，并能被快照/回放复核 | 命令→准入→结算→导弹/命中→伤害→快照→表现→回放 | 纯数据、ECS、D2GS、真实 1.10f 资源测试全部通过；旧入口不再结算；关键 Tick 有检查点和校验值 | M2、M3、M4 | 未开始 |
@@ -384,9 +384,35 @@ git diff --check
 
 真实资源：是；客户端/headless 回归使用 `G:\BaiduNetdiskDownload\Diablo II 1.10F` 的 MPQ 数据、字符串和相关资源。没有启动真实 GL/audio 设备或双客户端实机验收。
 
-剩余问题：库存/任务仍投影到现有可变 `CharData`/ECS 兼容副本；完整领域事务回滚、所有外部消耗/奖励统一事件出口属于 M6。协议尚未提供联网 imbue/weapon-set 操作；M3 command envelope、完整 phase barrier，M8 replay 与 network 三层收敛仍未完成。佣兵/地图权威状态留 M2 第 4/4 批。
+剩余问题：库存/任务仍投影到现有可变 `CharData`/ECS 兼容副本；完整领域事务回滚、所有外部消耗/奖励统一事件出口属于 M6。协议尚未提供联网 imbue/weapon-set 操作；M3 command envelope、完整 phase barrier，M8 replay 与 network 三层收敛仍未完成。
 
-下一迁移：M2 第 4/4 批，集中处理佣兵和地图状态；不得把类级修补、验收记录或补记 hash 另计批次。
+下一迁移：M3，集中处理 Tick、命令与事件边界；不得把类级修补、验收记录或补记 hash 另计批次。
+
+### M2 第 4/4 批：佣兵/地图权威状态与写入接口（2026-10-23）
+
+完成日期：2026-10-23；本批完成度 100%，M2 四个计划批次全部完成。本批把佣兵实体快照和 EntitySync 的 level context 从 FlatBuffer/ECS 直写路径收口到不可变权威状态，再通过兼容 writer 投影到现有运行时对象；没有新增协议字段，也没有修改 D2 公式。
+
+实现与边界：
+
+- 新增 `AuthoritativeMercenaryState` 和 `AuthoritativeMapState`。佣兵快照复制 owner、merc type、Hireling.txt id、等级、seed、name、经验和 flags；地图快照复制实体 level、tick 和 server time。两者均按实体保存，并拒绝 tick 或 server time 回退，避免旧包覆盖当前状态。
+- `ClientMercenarySnapshotWriter` 负责将已提交快照写入 `Mercenary` ECS 兼容副本；seed 更换时重置原生 target node、技能和 AI 初始化字段。owner 尚未映射时仍保留快照和 pending owner，映射出现后只绑定一次。实体删除、level prune、baseline BEGIN 和 receiver dispose 都清理对应快照。
+- `ClientMapSnapshotWriter` 负责把 level context 解析到 `MapWrapper`。Map/Zone 仍是可变运行时对象，不作为权威来源；重复 level 投影不会重置已存在的 room/pinned context。roomId 没有加入协议，地图生成和 RoomEx 归属继续由现有 MapManager/MapWrapper owner 管理。
+- `NpcServiceResult` 中无 Tick 的 `CharData.MercData` header 继续作为表现/存档兼容路径，不能称作完整实体权威事务；统一 header 事务留给 M6/M8。M3 command envelope、完整结构屏障以及 M8 网络三层/回放均未提前实现。
+
+提交：`b28a4ae89`（佣兵/地图权威快照、写入接口、回归门禁和 SoundP.java 结尾清理）。
+
+验证命令与结果：
+
+```powershell
+./gradlew.bat :core:test --tests com.riiablo.engine.client.AuthoritativeMercenaryStateTest --tests com.riiablo.engine.client.AuthoritativeMapStateTest --tests com.riiablo.engine.client.ClientMercenarySnapshotTest --no-daemon
+./gradlew.bat :core:compileJava --no-daemon
+python -m unittest discover -s tools/architecture -p test_migration_boundaries.py
+git diff --check
+```
+
+结果：佣兵/地图定向测试 7 项通过；core 编译通过。完整 `clientMercenaryMapRegression` 的依赖门禁复跑时，既有 `BlessedHammerIntegrationTest.nativeHammerDoesNotInventADemonBonusAbsentFromTheTable` 失败（期望 0、实际 50），与本批改动无关；本批定向测试和编译未受影响。真实资源路径为 `G:\BaiduNetdiskDownload\Diablo II 1.10F`；未启动真实 GL/audio 客户端或双客户端实机验收。D2MOO 依据继续采用 `ITEMS_IsInPlayersInventory`、`PLRTRADE_AddGold`、`QUESTS_NPCMessage`、`QUESTS_SendCurrentFlags`、`QUESTS_UpdatePlayerFlags` 和 `ACT1Q1_Callback11_ScrollMessage` 的既有规则对照，本批不声称完整 D2 等价。
+
+剩余问题：佣兵 header、CharData/ECS 兼容投影、MapManager/RoomEx 所有权仍未统一为 M6 领域事务；M3 command envelope/结构屏障、M8 网络三层和回放仍未完成。下一正式迁移为 M3，按原计划进入 Tick、命令与事件边界；不得把后续修补拆成新的 M2 微批次。
 
 ### M0 完成记录（2026-10-21）
 
@@ -424,7 +450,7 @@ D2MOO 依据：<源码文件/函数>
 - M5：5 个以上批次，先完成一个技能族，再扩展普通攻击和其他技能。
 - M6～M8：每行 3～5 个批次，按领域和验收门槛拆分。
 
-因此完整计划预计为 **8 次主要迁移、约 25～35 个完整批次**，不将这一数量全部消耗在 M1。当前 M1 三项交付已验收，M2 已完成第 3/4 批，下一项为 M2 第 4/4 批佣兵/地图状态；已有 M3/M8 局部实现不代表后续迁移已完成。
+因此完整计划预计为 **8 次主要迁移、约 25～35 个完整批次**，不将这一数量全部消耗在 M1。当前 M1 三项交付已验收，M2 四个计划批次已完成，下一项为 M3；已有 M3/M8 局部实现不代表后续迁移已完成。
 
 
 
