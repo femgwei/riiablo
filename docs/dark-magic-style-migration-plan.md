@@ -473,6 +473,8 @@ git diff --check
 - `CursorMovementSystem` 的技能 cast 命令在执行阶段重新解析网络目标、观测 Tick 和目标 Tick；`ClientUnitLifecycleSystem` 的复活请求也延迟到命令阶段恢复请求玩家，再走原有生命周期准入。
 - `GameScreen` 继续使用既有 `COMMANDS → SIMULATION → EVENTS → STRUCTURAL_COMMIT` 顺序；没有增加 D2GS 字段，没有改变 D2 公式或 Actioneer 结算，也没有提前实现 M6 完整事务和 M8 replay/network 三层。
 
+提交：`029b5005f`（移动、技能和生命周期意图 Tick 准入及 M3 回归门禁扩展）。
+
 验证命令与结果：
 
 ```powershell
