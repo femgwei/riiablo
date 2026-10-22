@@ -463,6 +463,30 @@ git diff --check
 
 剩余问题：部分移动/技能输入仍由旧入口直接捕获，网络反馈仍走现有 D2GS 结果路由；下一迁移为 M3 第 3/4 批，集中处理移动/技能命令和网络结果事件的统一 Tick 出口；不得把后续修补拆成新的微批次。
 
+### M3 第 3/4 批：移动/技能命令与生命周期意图 Tick 准入（2026-10-23）
+
+完成日期：2026-10-23；本批完成度 100%，M3 计划四个批次中的第 3 批。键盘、触控板、鼠标移动目标、技能施放和复活请求在固定 Tick coordinator 存在时统一提交下一 Tick 的 `SimulationCommandEnvelope`，由 `COMMANDS` 阶段执行；无 coordinator 的离线测试/兼容装配继续保留原路径。
+
+实现与边界：
+
+- `KeyboardMovementSystem`、`TouchpadMovementSystem` 和 `CursorMovementSystem` 捕获稳定的目标副本后提交移动命令，执行阶段仍调用既有 `Actioneer`，没有搬动移动公式、寻路或结算规则。
+- `CursorMovementSystem` 的技能 cast 命令在执行阶段重新解析网络目标、观测 Tick 和目标 Tick；`ClientUnitLifecycleSystem` 的复活请求也延迟到命令阶段恢复请求玩家，再走原有生命周期准入。
+- `GameScreen` 继续使用既有 `COMMANDS → SIMULATION → EVENTS → STRUCTURAL_COMMIT` 顺序；没有增加 D2GS 字段，没有改变 D2 公式或 Actioneer 结算，也没有提前实现 M6 完整事务和 M8 replay/network 三层。
+
+验证命令与结果：
+
+```powershell
+./gradlew.bat :core:compileJava :core:compileTestJava --no-daemon
+./gradlew.bat :core:m3TickCommandRegression --no-daemon
+./gradlew.bat :core:test --tests com.riiablo.engine.client.CursorMovementSystemTest --tests com.riiablo.engine.client.TouchpadMovementSystemTest --tests com.riiablo.engine.client.ClientUnitLifecycleSystemTest --tests com.riiablo.engine.client.ClientPlayerRespawnResultTest --tests com.riiablo.engine.client.ClientItemIntentSystemTest --tests com.riiablo.engine.client.ClientQuestIntentSystemTest --tests com.riiablo.engine.client.ClientVendorSystemTest --no-daemon
+python -m unittest discover -s tools/architecture -p test_migration_boundaries.py
+git diff --check
+```
+
+结果：M3 Tick command regression 门禁通过（固定步进/时钟、coordinator、移动、生命周期和 item/quest/vendor 意图共 46 个测试方法）；移动/生命周期及既有意图定向测试通过；模块边界 unittest 9 项通过；core 生产与测试编译通过。生成的 `SoundP.java` 末尾空行已规范化。真实资源路径未用于纯调度门禁，未启动真实 GL/audio 客户端或双客户端实机验收。
+
+剩余问题：网络反馈仍走现有 D2GS 结果路由，事件出口和结构变更仍有兼容路径；M3 第 4 批需继续收口网络结果事件与结构提交边界，M6 完整事务及 M8 replay/network 三层仍未完成。不得把后续修补拆成新的微批次。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
