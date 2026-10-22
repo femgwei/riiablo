@@ -21,9 +21,12 @@ public class CorpseManager extends IteratingSystem {
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<PlayerCorpse> mPlayerCorpse;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<com.riiablo.engine.server.component.Networked> mNetworked;
 
   @Override
   protected void process(int entityId) {
+    // Server deletion/resurrection owns a network corpse's lifetime.
+    if (mNetworked.has(entityId)) return;
     // Player corpses own recoverable equipment and persist until retrieval.
     if (mPlayerCorpse.has(entityId)) return;
 

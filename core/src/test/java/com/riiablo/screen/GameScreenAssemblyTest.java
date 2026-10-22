@@ -223,7 +223,7 @@ class GameScreenAssemblyTest {
         + "ItemManager CofManager EnvironmentSystem ObjectInitializer ObjectInteractor WarpInteractor "
         + "ItemInteractor MenuManager DialogManager SelectableManager HoveredManager "
         + (platform == Application.ApplicationType.Desktop ? "CursorMovementSystem KeyboardMovementSystem " : "")
-        + "TouchpadMovementSystem "
+        + "TouchpadMovementSystem ClientUnitLifecycleSystem "
         + "StateUpdater StaminaSystem ManaRecoverySystem PotionRecoverySystem MercenaryPotionSystem "
         + "MissileCollisionSystem Actioneer ServerMonsterCorpseSystem UnitLifecycleSystem NativePlayerTargetSlots "
         + "SkillCastHandler OverlayManager MissileImpactPresentationSystem ElementalHitPresentationSystem "

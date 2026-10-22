@@ -3,7 +3,6 @@ package com.riiablo.engine.client;
 import com.riiablo.presentation.ClientEntityFactory;
 import com.riiablo.presentation.ItemEffectManager;
 
-import com.riiablo.presentation.DeathHandler;
 import com.riiablo.presentation.PlayerHitSound;
 import com.riiablo.presentation.ClientGameplayContext;
 
@@ -54,10 +53,8 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.presentation.component.Label;
-import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.component.Missile;
-import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.engine.server.event.SoundEvent;
 import com.riiablo.io.ByteInput;
@@ -192,6 +189,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
       new AuthoritativeSnapshotTimeline();
   private final AuthoritativeTransformState authoritativeTransforms =
       new AuthoritativeTransformState();
+  private final AuthoritativeUnitLifecycleState authoritativeLifecycles =
+      new AuthoritativeUnitLifecycleState();
   /** Last authoritative deletion tick per server entity.  Deletion packets
    * can be duplicated or arrive after a RoomEx re-entry; retaining this
    * watermark prevents an old delete from removing a newly rebuilt entity
@@ -227,9 +226,21 @@ public class ClientNetworkReceiver extends IntervalSystem {
     return authoritativeTransforms.get(entityId);
   }
 
+  public AuthoritativeUnitLifecycleState.Snapshot authoritativeLifecycle(int entityId) {
+    return authoritativeLifecycles.get(entityId);
+  }
+
   private void removeTransform(int entityId) {
+    authoritativeLifecycles.remove(entityId);
     authoritativeTransforms.remove(entityId);
     if (interpolation != null) interpolation.remove(entityId);
+  }
+
+  @Override protected void dispose() {
+    authoritativeTransforms.clear();
+    authoritativeLifecycles.clear();
+    if (interpolation != null) interpolation.clear();
+    super.dispose();
   }
 
   /** Latest accepted authoritative tick, or zero before the first snapshot. */
@@ -459,9 +470,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
     }
     if (output != null) output.accept("\n");
 
+    removeTransform(entityId);
     world.delete(entityId);
-    Body body = mBox2DBody.get(entityId).body;
-    if (body != null) ;
   }
 
   @Deprecated
@@ -1077,6 +1087,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
     // Commit the wire value before prediction replays unacknowledged inputs.
     // Mutable client Position/Velocity/Angle are replicas, not server authority.
     if (movingEntity && !authoritativeTransforms.commit(entityId, entityData)) return;
+    if (movingEntity && !authoritativeLifecycles.commit(entityId, entityData)) return;
+    AuthoritativeUnitLifecycleState.Snapshot lifecycle = authoritativeLifecycles.get(entityId);
+    if (lifecycle != null) {
+      UnitStates states = mUnitStates.create(entityId);
+      if (states.stateList == null) states.init(entityId);
+      states.snapshotOnly = true;
+    }
     if (!localPlayer && movingEntity && interpolation != null) {
       PositionP position = findTable(entityData, ComponentP.PositionP, new PositionP());
       AngleP angle = findTable(entityData, ComponentP.AngleP, new AngleP());
@@ -1092,12 +1109,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
     boolean applyLocalPositionNormally = true;
     if (localPlayer) {
+      boolean respawning = lifecycle != null
+          && lifecycle.phase == AuthoritativeUnitLifecycleState.Phase.ALIVE
+          && world.getMapper(com.riiablo.engine.server.component.PlayerCorpse.class).has(entityId);
       PositionP authoritative = findTable(entityData, ComponentP.PositionP, new PositionP());
       if (authoritative != null && networkSynchronizer != null) {
         long acknowledged = entityData.acknowledgedInputSequence();
-        if (acknowledged == 0L) {
+        if (respawning || acknowledged == 0L) {
           // Compatible pre-prediction baseline.
-          networkSynchronizer.rebaseLegacyPrediction(authoritative.x(), authoritative.y());
+          if (respawning) networkSynchronizer.resetPrediction(authoritative.x(), authoritative.y());
+          else networkSynchronizer.rebaseLegacyPrediction(authoritative.x(), authoritative.y());
           if (interpolation != null) interpolation.correctLocal(entityId, 0f, 0f, true);
         } else {
           StateP states = findTable(entityData, ComponentP.StateP, new StateP());
@@ -1184,13 +1205,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
           break;
         }
         case ComponentP.StateP: {
-          StateP data = (StateP) entityData.component(new StateP(), i);
-          applyStateSnapshot(entityId, data);
+          if (lifecycle != null) {
+            ClientUnitSnapshotWriter.states(entityId, mUnitStates.create(entityId), lifecycle);
+          }
           break;
         }
         case ComponentP.VitalsP: {
-          VitalsP data = (VitalsP) entityData.component(new VitalsP(), i);
-          applyVitalsSnapshot(entityId, data);
+          if (lifecycle != null) applyVitalsSnapshot(entityId, lifecycle.vitals);
           break;
         }
         case ComponentP.CofReferenceP: {
@@ -1260,6 +1281,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
     cofs.updateTransform(entityId, tFlags);
     cofs.updateAlpha(entityId, aFlags);
+    ClientUnitLifecycleSystem lifecycleSystem = world.getSystem(ClientUnitLifecycleSystem.class);
+    if (lifecycle != null && lifecycleSystem != null) {
+      lifecycleSystem.applySnapshot(entityId, lifecycle);
+    }
   }
 
   private void applySummonedPetSnapshot(int entityId, SummonedPetP data) {
@@ -1418,6 +1443,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       deferredServerEntities.clear();
       if (interpolation != null) interpolation.clear();
       authoritativeTransforms.clear();
+      authoritativeLifecycles.clear();
       Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=begin request=" + marker.requestId()
           + " baseline=" + marker.baselineId() + " tick=" + marker.serverTick()
           + " entities=" + marker.entityCount());
@@ -1512,76 +1538,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
     }
   }
 
-  private void applyStateSnapshot(int entityId, StateP data) {
-    if (!mUnitStates.has(entityId)) {
-      Gdx.app.debug(TAG, "Ignoring state snapshot for entity without UnitStates: " + entityId);
-      return;
-    }
-    UnitStates unitStates = mUnitStates.get(entityId);
-    if (unitStates.stateList == null) unitStates.init(entityId);
-    int count = data.stateIdLength();
-    int[] stateIds = new int[count];
-    int[] durations = new int[count];
-    int[] levels = new int[count];
-    for (int i = 0; i < count; i++) {
-      stateIds[i] = data.stateId(i);
-      durations[i] = i < data.durationLength() ? data.duration(i) : 0;
-      levels[i] = i < data.levelLength() ? data.level(i) : 1;
-    }
-    if (count > 0) {
-      StringBuilder snapshot = new StringBuilder();
-      for (int i = 0; i < count; i++) {
-        if (i > 0) snapshot.append(',');
-        snapshot.append(stateIds[i]).append(':').append(durations[i])
-            .append('@').append(levels[i])
-            .append("#skill=").append(i < data.skillIdLength() ? data.skillId(i) : -1)
-            .append("/source=")
-            .append(i < data.sourceEntityIdLength() ? data.sourceEntityId(i) : -1)
-            .append("/period=")
-            .append(i < data.periodicCountdownFramesLength()
-                ? data.periodicCountdownFrames(i) : -1)
-            .append('/')
-            .append(i < data.periodicDelayFramesLength()
-                ? data.periodicDelayFrames(i) : 0);
-      }
-      Gdx.app.log(TAG, String.format(
-          "[STATE_SYNC] entity=%d count=%d states=%s source=server",
-          entityId, count, snapshot));
-    }
-    unitStates.stateList.replaceFromSnapshot(stateIds, durations, levels);
-    for (int i = 0; i < count; i++) {
-      UnitState state = unitStates.stateList.getState(stateIds[i]);
-      if (state != null) {
-        state.velocityModifier = i < data.velocityModifierLength()
-            ? data.velocityModifier(i) : 0;
-        state.runtimeValue = i < data.runtimeValueLength() ? data.runtimeValue(i) : 0;
-        state.animationRateModifier = i < data.animationRateModifierLength()
-            ? data.animationRateModifier(i) : 0;
-        state.skillModifier = i < data.skillModifierLength() ? data.skillModifier(i) : 0;
-        state.maxLifeModifier = i < data.maxLifeModifierLength() ? data.maxLifeModifier(i) : 0;
-        state.maxManaModifier = i < data.maxManaModifierLength() ? data.maxManaModifier(i) : 0;
-        state.maxStaminaModifier = i < data.maxStaminaModifierLength()
-            ? data.maxStaminaModifier(i) : 0;
-        state.sourceEntityId = i < data.sourceEntityIdLength()
-            ? data.sourceEntityId(i) : -1;
-        state.skillId = i < data.skillIdLength() ? data.skillId(i) : -1;
-        state.periodicDelayFrames = i < data.periodicDelayFramesLength()
-            ? data.periodicDelayFrames(i) : 0;
-        state.periodicCountdownFrames = i < data.periodicCountdownFramesLength()
-            ? data.periodicCountdownFrames(i) : -1;
-      }
-    }
-    unitStates.snapshotOnly = true;
-  }
-
-  private void applyVitalsSnapshot(int entityId, VitalsP data) {
+  private void applyVitalsSnapshot(int entityId, AuthoritativeUnitLifecycleState.Vitals data) {
     if (!mAttributesWrapper.has(entityId)) {
       Gdx.app.debug(TAG, "Ignoring vitals snapshot for entity without attributes: " + entityId);
       return;
     }
     AttributesWrapper wrapper = mAttributesWrapper.get(entityId);
     float oldHitpoints = wrapper.attrs.aggregate().getValue(Stat.hitpoints, 0f);
-    com.riiablo.engine.server.component.serializer.VitalsSerializer.apply(wrapper, data);
+    ClientUnitSnapshotWriter.vitals(wrapper, data);
     float hitpoints = wrapper.attrs.aggregate().getValue(Stat.hitpoints, 0f);
     // Vitals snapshots do not carry the attacker's hit sound.  A real decrease
     // in a player entity's hit points is therefore the reliable network-side
@@ -1590,52 +1554,24 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (hitpoints < oldHitpoints && mPlayer.has(entityId)) {
       PlayerHitSound.play(clientContext, mPlayer.get(entityId));
     }
-    if (oldHitpoints != hitpoints || data.dead()) {
+    if (oldHitpoints != hitpoints || data.dead) {
           Gdx.app.log(TAG, String.format(
           "[VITALS_SYNC] entity=%d hp=%.3f oldHp=%.3f maxHp=%.3f mana=%.3f maxMana=%.3f stamina=%.3f maxStamina=%.3f dead=%s",
-          entityId, hitpoints, oldHitpoints, data.maxHitpoints(), data.mana(),
-          data.maxMana(), data.stamina(), data.maxStamina(), data.dead()));
-    }
-    if (oldHitpoints > 0f && data.dead()) {
-      Gdx.app.log(TAG, String.format(
-          "[PLAYER_DEATH_SYNC] phase=client entity=%d hp=%.3f dispatch=DeathEvent",
-          entityId, hitpoints));
-      // VitalsP currently has no killer id. Use the victim as a safe local
-      // sentinel; presentation handlers only need the victim and this avoids
-      // negative entity-id mapper lookups in legacy subscribers.
-      events.dispatch(DeathEvent.obtain(entityId, entityId));
+          entityId, hitpoints, oldHitpoints, data.maxHitpoints, data.mana,
+          data.maxMana, data.stamina, data.maxStamina, data.dead));
     }
   }
 
   private void PlayerLifecycleResult(D2GS packet) {
-    PlayerLifecycleResult result = (PlayerLifecycleResult) packet.data(
-        new PlayerLifecycleResult());
-    if (!result.success()) {
-      Gdx.app.log(TAG, "[PLAYER_RESPAWN] phase=reject request=" + result.requestId()
-          + " reason=" + result.reason());
-      return;
-    }
-    if (player() < 0) return;
-    int localPlayerId = player();
-    DeathHandler death = world.getSystem(DeathHandler.class);
-    if (death != null && death.isPlayerDead(localPlayerId)) {
-      death.respawnPlayerAtTown(localPlayerId);
-    }
-    if (mPosition.has(localPlayerId)) {
-      mPosition.get(localPlayerId).invalidateNativePrecision();
-      mPosition.get(localPlayerId).position.set(result.x(), result.y());
-      if (networkSynchronizer != null) {
-        networkSynchronizer.resetPrediction(result.x(), result.y());
-      }
-      if (interpolation != null) interpolation.correctLocal(localPlayerId, 0f, 0f, true);
-    }
-    if (mMapWrapper.has(localPlayerId)) {
-      Vector2 position = mPosition.get(localPlayerId).position;
-      mMapWrapper.get(localPlayerId).set(map, map.getZone(position));
-    }
-    Gdx.app.log(TAG, String.format(
-        "[PLAYER_RESPAWN] phase=confirmed request=%d serverPlayer=%d position=(%.2f,%.2f)",
-        result.requestId(), result.playerEntityId(), result.x(), result.y()));
+    PlayerLifecycleResult result = (PlayerLifecycleResult) packet.data(new PlayerLifecycleResult());
+    if (networkSynchronizer == null
+        || !networkSynchronizer.acceptPlayerLifecycleResult(result.requestId())) return;
+    Gdx.app.log(TAG, "[PLAYER_RESPAWN] phase=result request=" + result.requestId()
+        + " success=" + result.success() + " reason=" + result.reason());
+    // This legacy acknowledgement has no server tick. Applying its coordinates,
+    // local town spawn, or full resources could overwrite a newer EntitySync.
+    // Only the timestamped baseline may commit the resulting lifecycle.
+    if (result.success()) requestSnapshotResync(snapshotTimeline.tick(), "respawn");
   }
 
   private void applyCofReferenceSnapshot(int entityId, CofReferenceP data) {

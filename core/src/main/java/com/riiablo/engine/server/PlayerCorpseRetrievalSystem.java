@@ -32,9 +32,11 @@ public class PlayerCorpseRetrievalSystem extends IteratingSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<PlayerCorpse> mPlayerCorpse;
+  protected ComponentMapper<com.riiablo.engine.server.component.UnitStates> mUnitStates;
   
   @Override
   protected void process(int playerId) {
+    if (mUnitStates.has(playerId) && mUnitStates.get(playerId).snapshotOnly) return;
     // DeathHandler attaches PlayerCorpse to the player as the authoritative
     // dead-state marker. Do not let a dead player retrieve the independent
     // corpse that occupies the same death location; retrieval becomes valid

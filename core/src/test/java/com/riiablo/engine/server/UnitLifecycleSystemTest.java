@@ -23,6 +23,26 @@ import org.junit.jupiter.api.Test;
 /** Regression tests for the authoritative death boundary and reference cleanup. */
 class UnitLifecycleSystemTest {
   @Test
+  void replicaDeathCannotAdvanceAuthorityOrDeleteOwnedUnits() {
+    EventSystem events = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder().with(events, new UnitLifecycleSystem()).build());
+    try {
+      int player = world.create();
+      world.getMapper(Player.class).create(player);
+      world.getMapper(UnitStates.class).create(player).init(player).snapshotOnly = true;
+      UnitLifecycle lifecycle = world.getMapper(UnitLifecycle.class).create(player).reset();
+      int missile = world.create();
+      world.getMapper(Missile.class).create(missile).ownerId = player;
+      world.process();
+      events.dispatch(DeathEvent.obtain(player, player));
+      world.process();
+      assertEquals(UnitLifecycle.Phase.SPAWN, lifecycle.phase);
+      assertFalse(lifecycle.deathHandled);
+      assertTrue(world.getEntityManager().isActive(player));
+      assertTrue(world.getEntityManager().isActive(missile));
+    } finally { world.dispose(); }
+  }
+  @Test
   void spawnAdvancesThroughInsertedToActiveOnFixedTicks() {
     World world = new World(new WorldConfigurationBuilder()
         .with(new UnitLifecycleSystem())

@@ -532,20 +532,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           // D2MOD: Priority 1 - Handle player death respawn
           // If player is dead, respawn at town instead of showing menu
           if (Riiablo.game.player >= 0 && engine != null) {
-            DeathHandler deathHandler = engine.getSystem(DeathHandler.class);
-            if (deathHandler != null && deathHandler.isPlayerDead(Riiablo.game.player)) {
-              boolean ready = deathHandler.canRespawnPlayer(Riiablo.game.player);
-              Gdx.app.log(TAG, "[PLAYER_REVIVE_INPUT] entity=" + Riiablo.game.player
-                  + " ready=" + ready);
-              if (ready) {
-                if (socket == null) {
-                  deathHandler.respawnPlayerAtTown(Riiablo.game.player);
-                } else {
-                  ClientNetworkSynchronizer network = engine.getSystem(
-                      ClientNetworkSynchronizer.class);
-                  if (network != null) network.requestPlayerRespawn();
-                }
-              }
+            com.riiablo.engine.client.ClientUnitLifecycleSystem lifecycle = engine.getSystem(
+                com.riiablo.engine.client.ClientUnitLifecycleSystem.class);
+            if (lifecycle != null && lifecycle.isPlayerDead(Riiablo.game.player)) {
+              lifecycle.requestRespawn(Riiablo.game.player);
               return; // Never show the menu during DT/DD
             }
           }

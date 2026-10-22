@@ -61,6 +61,7 @@ public class UnitLifecycleSystem extends BaseEntitySystem {
     // tick.  Death/removed phases are terminal and deliberately untouched.
     UnitLifecycle lifecycle = mLifecycle.get(entityId);
     if (lifecycle == null) return;
+    if (mUnitStates.has(entityId) && mUnitStates.get(entityId).snapshotOnly) return;
     if (lifecycle.phase == UnitLifecycle.Phase.SPAWN) {
       lifecycle.transition(UnitLifecycle.Phase.INSERTED);
     } else if (lifecycle.phase == UnitLifecycle.Phase.INSERTED) {
@@ -89,6 +90,7 @@ public class UnitLifecycleSystem extends BaseEntitySystem {
   @Subscribe
   public void onDeath(DeathEvent event) {
     if (event == null || event.victim < 0 || !world.getEntityManager().isActive(event.victim)) return;
+    if (mUnitStates.has(event.victim) && mUnitStates.get(event.victim).snapshotOnly) return;
     UnitLifecycle lifecycle = mLifecycle.has(event.victim)
         ? mLifecycle.get(event.victim) : mLifecycle.create(event.victim).reset();
     // DeathEvent may be emitted by both melee and missile paths in one tick.

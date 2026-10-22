@@ -10,6 +10,21 @@ import org.junit.jupiter.api.Test;
 
 class CorpseManagerTest {
   @Test
+  void networkCorpseWaitsForServerRemovalEvenWithFiniteLocalTimer() {
+    World world = new World(new WorldConfigurationBuilder().with(new CorpseManager()).build());
+    try {
+      int entity = world.create();
+      Corpse corpse = world.getMapper(Corpse.class).create(entity).reset(0.1f, true);
+      world.getMapper(com.riiablo.engine.server.component.Networked.class).create(entity).serverId = 99;
+      world.setDelta(60f);
+      world.process();
+      world.process();
+      assertTrue(world.getEntityManager().isActive(entity));
+      assertFalse(corpse.fading);
+      assertTrue(corpse.usable);
+    } finally { world.dispose(); }
+  }
+  @Test
   void nativeMonsterCorpseDoesNotExpireOnLegacyTenSecondTimer() {
     World world = new World(new WorldConfigurationBuilder()
         .with(new CorpseManager())

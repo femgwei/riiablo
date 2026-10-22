@@ -51,7 +51,7 @@ class PlayerCorpseIntegrationTest extends RiiabloTest {
     PlayerCorpseRetrievalSystem retrieval = new PlayerCorpseRetrievalSystem();
     CofManager cofs = new CofManager();
     World world = new World(new WorldConfigurationBuilder()
-        .with(events, cofs, death, retrieval)
+        .with(events, cofs, new UnitLifecycleSystem(), death, retrieval)
         .build()
         .register("clientContext", com.riiablo.presentation.ClientGameplayContext.fromGlobals())
         .register("map", map)
@@ -99,6 +99,8 @@ class PlayerCorpseIntegrationTest extends RiiabloTest {
           + " items=" + corpse.equippedItems.size + " location=" + corpse.deathLocation);
 
       death.respawnPlayerAtTown(playerId);
+      assertEquals(com.riiablo.engine.server.component.UnitLifecycle.Phase.ACTIVE,
+          world.getMapper(com.riiablo.engine.server.component.UnitLifecycle.class).get(playerId).phase);
       assertFalse(death.isPlayerDead(playerId), "ESC respawn must clear the dead marker");
       assertEquals(new Vector2(99, 101), world.getMapper(Position.class).get(playerId).position);
       assertEquals(60f, data.getStats().aggregate().getValue(Stat.hitpoints, 0f));
@@ -113,6 +115,9 @@ class PlayerCorpseIntegrationTest extends RiiabloTest {
       assertFalse(world.getMapper(PlayerCorpse.class).has(corpseId),
           "fully looted corpse entity must be deleted after retrieval");
       System.out.println("[PLAYER_CORPSE_CHAIN] phase=summary detached=2 restored=2 respawn=(99,101)");
+      events.dispatch(DeathEvent.obtain(playerId, playerId));
+      assertTrue(world.getMapper(com.riiablo.engine.server.component.UnitLifecycle.class)
+          .get(playerId).deathHandled, "a later death must reopen authoritative cleanup");
     } finally {
       world.dispose();
     }

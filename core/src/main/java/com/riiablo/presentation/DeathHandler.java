@@ -9,6 +9,9 @@ import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.Gdx;
 
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.client.AuthoritativeUnitLifecycleState;
+import com.riiablo.engine.client.ClientNetworkReceiver;
+import com.riiablo.engine.client.ClientUnitLifecycleSystem;
 import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.presentation.component.BBoxWrapper;
@@ -49,7 +52,8 @@ import com.riiablo.attributes.Stat;
 import com.artemis.annotations.Wire;
 
 @Wire(failOnNull = false)
-public class DeathHandler extends PassiveSystem {
+public class DeathHandler extends PassiveSystem
+    implements ClientUnitLifecycleSystem.LocalAuthority, ClientUnitLifecycleSystem.Presentation {
   private static final Logger log = LogManager.getLogger(DeathHandler.class);
 
   protected ComponentMapper<AIWrapper> mAIWrapper;
@@ -74,6 +78,7 @@ public class DeathHandler extends PassiveSystem {
   protected EntityFactory factory;
 
   protected CofManager cofs;
+  protected ClientNetworkReceiver receiver;
 
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Class> mClass;
@@ -97,6 +102,9 @@ public class DeathHandler extends PassiveSystem {
   public void onDeathEvent(DeathEvent event) {
     log.traceEntry("onDeathEvent(killer: {}, victim: {})", event.killer, event.victim);
     final int victimId = event.victim;
+    // Network clients consume committed snapshots below. A presentation death
+    // must never detach inventory, retain states, kill AI, or settle death twice.
+    if (receiver != null || mUnitStates.has(victimId) && mUnitStates.get(victimId).snapshotOnly) return;
     boolean shattered = false;
 
     if (mUnitStates.has(victimId) && mUnitStates.get(victimId).stateList != null) {
@@ -273,6 +281,8 @@ public class DeathHandler extends PassiveSystem {
 
   @Subscribe
   public void onModeChanged(ModeChangeEvent event) {
+    if (receiver != null || mUnitStates.has(event.entityId)
+        && mUnitStates.get(event.entityId).snapshotOnly) return;
     final int entityId = event.entityId;
     log.trace("onModeChanged(entityId: {}, mode: {})", entityId, event.mode);
     
@@ -498,7 +508,7 @@ public class DeathHandler extends PassiveSystem {
     if (sourceMap != null) mMapWrapper.create(corpseEntityId).set(sourceMap.map, sourceMap.zone);
     com.riiablo.engine.server.DynamicUnitCollisionSystem collision =
         world.getSystem(com.riiablo.engine.server.DynamicUnitCollisionSystem.class);
-    if (collision != null) collision.reservePlayerCorpse(playerId, corpseEntityId);
+    if (receiver == null && collision != null) collision.reservePlayerCorpse(playerId, corpseEntityId);
     
     log.info("Created corpse entity {} at death location ({}, {}) for player {}", 
         corpseEntityId, deathLocation.x, deathLocation.y, playerId);
@@ -517,6 +527,10 @@ public class DeathHandler extends PassiveSystem {
     if (playerId < 0) {
       return false;
     }
+    if (receiver != null) {
+      AuthoritativeUnitLifecycleState.Snapshot snapshot = receiver.authoritativeLifecycle(playerId);
+      return snapshot != null && snapshot.dead();
+    }
     if (!mPlayer.has(playerId)) {
       return false;
     }
@@ -527,6 +541,7 @@ public class DeathHandler extends PassiveSystem {
 
   /** Recreates the native saved JM corpse at the current town spawn. */
   public void restoreSavedCorpse(int playerId, com.riiablo.save.CharData data, Vector2 townLocation) {
+    if (receiver != null) return;
     if (data == null || data.getCorpseItems().size == 0 || townLocation == null
         || !mPlayer.has(playerId) || mPlayerCorpse.has(playerId)) return;
     PlayerCorpse marker = mPlayerCorpse.create(playerId);
@@ -561,6 +576,7 @@ public class DeathHandler extends PassiveSystem {
    * Reference: D2MOO GAME/Clients.cpp - town player spawn index 0.
    */
   public void respawnPlayerAtTown(int playerId) {
+    if (receiver != null) return;
     if (map == null) {
       log.warn("Map not available, cannot respawn player at town");
       return;
@@ -624,6 +640,9 @@ public class DeathHandler extends PassiveSystem {
       mPlayerCorpse.remove(playerId);
       log.debug("Player {} PlayerCorpse component removed on respawn", playerId);
     }
+    com.riiablo.engine.server.component.UnitLifecycle lifecycle = world.getMapper(
+        com.riiablo.engine.server.component.UnitLifecycle.class).get(playerId);
+    if (lifecycle != null) lifecycle.revive();
     
     // Restore Velocity component so player can move again
     // D2MOD: Velocity component was removed on death, need to recreate it with correct speeds
@@ -676,6 +695,72 @@ public class DeathHandler extends PassiveSystem {
         "[PLAYER_REVIVE] entity=%d from=(%.3f,%.3f) to=(%.3f,%.3f) zone=%s",
         playerId, oldLocation.x, oldLocation.y, townLocation.x, townLocation.y,
         townZone == null || townZone.level == null ? "null" : townZone.level.LevelName));
+  }
+
+  /** Projects already committed lifecycle values; does not calculate game results. */
+  @Override
+  public void applyLifecycle(int entityId, AuthoritativeUnitLifecycleState.Snapshot snapshot,
+      boolean wasDead) {
+    if (receiver == null) return;
+    if (snapshot.dead()) {
+      if (snapshot.type == Class.Type.PLR && !wasDead && mPosition.has(entityId)) {
+        // A visual corpse carries appearance only. Recoverable equipment and
+        // its ownership remain on the server and arrive via inventory snapshots.
+        PlayerCorpse marker = mPlayerCorpse.get(entityId);
+        createCorpseEntity(entityId, new Vector2(marker.deathLocation), marker,
+            mCofComponents.has(entityId) ? mCofComponents.get(entityId).component.clone() : null,
+            mCofAlphas.has(entityId) ? mCofAlphas.get(entityId).alpha.clone() : null,
+            mCofTransforms.has(entityId) ? mCofTransforms.get(entityId).transform.clone() : null);
+      }
+      if (snapshot.phase == AuthoritativeUnitLifecycleState.Phase.CORPSE) {
+        if (mBox2DBody.has(entityId)) {
+          if (box2d != null) box2d.destroyBody(mBox2DBody.get(entityId));
+          mBox2DBody.remove(entityId);
+        }
+        mSelectable.remove(entityId);
+        if (snapshot.type == Class.Type.MON) {
+          boolean shattered = isShattered(entityId);
+          Monster monster = mMonster.get(entityId);
+          if (shattered) {
+            if (monster != null && !monster.shatteredAtDeath) spawnShatterEffect(entityId);
+            if (monster != null) monster.shatteredAtDeath = true;
+            mCorpse.remove(entityId);
+          } else if (!mCorpse.has(entityId)) {
+            mCorpse.create(entityId).reset(Corpse.DEFAULT_DURATION, false);
+          }
+        }
+      }
+    } else if (snapshot.phase == AuthoritativeUnitLifecycleState.Phase.ALIVE) {
+      boolean wasCorpse = mCorpse.has(entityId);
+      mCorpse.remove(entityId);
+      if (mMonster.has(entityId)) mMonster.get(entityId).shatteredAtDeath = false;
+      if ((wasDead || wasCorpse) && mPosition.has(entityId)) {
+        // Position and resources are copied from EntitySync before this call.
+        // Rebuild only the client physics adapter, at that received position.
+        if (!mBox2DBody.has(entityId)) mBox2DBody.create(entityId);
+        else {
+          Body body = mBox2DBody.get(entityId).body;
+          if (body != null) {
+            body.setLinearVelocity(0f, 0f);
+            body.setTransform(mPosition.get(entityId).position, body.getAngle());
+          }
+        }
+        if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+          com.riiablo.save.CharData data = mPlayer.get(entityId).data;
+          com.riiablo.codec.excel.CharStats.Entry stats = data.classId == null ? null : data.classId.entry();
+          float walk = stats != null && stats.WalkVelocity > 0 ? stats.WalkVelocity : Engine.Player.SPEED_WALK;
+          float run = stats != null && stats.RunVelocity > 0 ? stats.RunVelocity : Engine.Player.SPEED_RUN;
+          mVelocity.create(entityId).setPlayer(walk, run);
+        } else if (mMonster.has(entityId)) {
+          Monster monster = mMonster.get(entityId);
+          if (monster.monstats != null) {
+            mVelocity.create(entityId).setMonsterFromNativeTable(monster.monstats.Velocity);
+            if (monster.monstats2 != null && (monster.monstats2.isSel
+                || monster.monstats.npc && monster.monstats.interact)) mSelectable.create(entityId);
+          }
+        }
+      }
+    }
   }
 }
 

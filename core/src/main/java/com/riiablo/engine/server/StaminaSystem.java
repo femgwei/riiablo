@@ -60,6 +60,7 @@ public class StaminaSystem extends IteratingSystem {
     AttributesWrapper wrapper = mAttributes.get(entityId);
     Velocity velocity = mVelocity.get(entityId);
     if (player == null || wrapper == null || wrapper.attrs == null || velocity == null) return;
+    if (mUnitStates.has(entityId) && mUnitStates.get(entityId).snapshotOnly) return;
 
     Attributes attrs = wrapper.attrs;
     StatRef stamina = attrs.get(Stat.stamina, StatRef.obtain());

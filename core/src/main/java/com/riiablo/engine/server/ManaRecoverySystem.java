@@ -28,6 +28,7 @@ public class ManaRecoverySystem extends IteratingSystem {
   protected void process(int entityId) {
     AttributesWrapper wrapper = mAttributes.get(entityId);
     if (wrapper == null || wrapper.attrs == null || isDead(entityId)) return;
+    if (mUnitStates.has(entityId) && mUnitStates.get(entityId).snapshotOnly) return;
 
     Attributes attrs = wrapper.attrs;
     if (mUnitStates.has(entityId)) {

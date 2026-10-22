@@ -57,6 +57,7 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
   protected ComponentMapper<MovementModes> mMovementModes;
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<com.riiablo.engine.server.component.UnitLifecycle> mLifecycle;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
 
@@ -69,6 +70,7 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
   public void onDeath(DeathEvent event) {
     int playerId = event.victim;
     if (playerId < 0 || !mPlayer.has(playerId) || mPlayerCorpse.has(playerId)) return;
+    if (mUnitStates.has(playerId) && mUnitStates.get(playerId).snapshotOnly) return;
     Player player = mPlayer.get(playerId);
     Position position = mPosition.has(playerId) ? mPosition.get(playerId) : null;
     if (player.data == null || position == null) {
@@ -147,6 +149,7 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
   /** Applies the authenticated respawn request while preserving the corpse entity. */
   public boolean respawnAtTown(int playerId) {
     if (!canRespawn(playerId) || map == null || !mPosition.has(playerId)) return false;
+    if (mUnitStates.has(playerId) && mUnitStates.get(playerId).snapshotOnly) return false;
     Vector2 town = map.townPlayerSpawn();
     if (town == null || map.getZone(town) == null || !map.getZone(town).isTown()) return false;
 
@@ -185,6 +188,7 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
         Engine.Player.MODE_TN, Engine.Player.MODE_TW, Engine.Player.MODE_RN);
     mRunning.create(playerId);
     mPlayerCorpse.remove(playerId);
+    if (mLifecycle.has(playerId)) mLifecycle.get(playerId).revive();
     cofs.setMode(playerId, Engine.Player.MODE_NU);
     cofs.setWClass(playerId, Engine.WEAPON_HTH);
     Gdx.app.log(TAG, String.format(

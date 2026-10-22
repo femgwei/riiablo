@@ -80,6 +80,8 @@ public class ClientNetworkSynchronizer extends IntervalSystem implements QuestRe
   private long nextNpcRequestId = 1;
   private long nextPartyRequestId = 1;
   private long nextLifecycleRequestId = 1;
+  private long pendingLifecycleRequestId;
+  private long pendingLifecycleRequestMillis;
   private long nextQuestRequestId = 1;
   private long nextTradeRequestId = 1;
   private long nextSnapshotResyncRequestId = 1;
@@ -392,6 +394,10 @@ public class ClientNetworkSynchronizer extends IntervalSystem implements QuestRe
   /** Requests an authenticated server-authoritative town respawn. */
   public long requestPlayerRespawn() {
     if (socket == null) return 0;
+    if (pendingLifecycleRequestId != 0L
+        && TimeUtils.millis() - pendingLifecycleRequestMillis < 5000L) {
+      return pendingLifecycleRequestId;
+    }
     long requestId = nextLifecycleRequestId++;
     FlatBufferBuilder builder = new FlatBufferBuilder(64);
     int request = PlayerLifecycleRequest.createPlayerLifecycleRequest(
@@ -402,12 +408,20 @@ public class ClientNetworkSynchronizer extends IntervalSystem implements QuestRe
       WritableByteChannel channel = Channels.newChannel(socket.getOutputStream());
       ByteBuffer frame = builder.dataBuffer();
       while (frame.hasRemaining()) channel.write(frame);
+      pendingLifecycleRequestId = requestId;
+      pendingLifecycleRequestMillis = TimeUtils.millis();
       Gdx.app.log(TAG, "[PLAYER_RESPAWN] phase=request request=" + requestId);
       return requestId;
     } catch (Throwable t) {
       Gdx.app.error(TAG, "Failed to send player respawn request", t);
       return 0;
     }
+  }
+
+  boolean acceptPlayerLifecycleResult(long requestId) {
+    if (requestId == 0L || requestId != pendingLifecycleRequestId) return false;
+    pendingLifecycleRequestId = 0L;
+    return true;
   }
 
   /** Sends an authenticated, idempotent Act I quest intent to D2GS. */

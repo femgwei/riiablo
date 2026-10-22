@@ -108,6 +108,7 @@ public final class ClientSimulationAssembly {
     if (clientAudioSession.environment() != simulationSession.environment()) {
       throw new IllegalArgumentException("Audio and simulation must share the same environment");
     }
+    DeathHandler death = new DeathHandler();
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         // Must precede input, AI and animation keyframes in every fixed tick.
         .with(new CombatPositionCaptureSystem())
@@ -132,6 +133,7 @@ public final class ClientSimulationAssembly {
       builder.with(new KeyboardMovementSystem()); // 键盘方向键移动支持
     }
     builder.with(new TouchpadMovementSystem());
+    builder.with(new ClientUnitLifecycleSystem(death, death));
     builder
         // Explicit native 25 Hz order: state/stat decay, missile movement and
         // collision, then unit/AI behavior and death processing.
@@ -144,7 +146,7 @@ public final class ClientSimulationAssembly {
         .with(new NativeShrinePresentationSystem())
         .with(new OverlayStepper()) // TODO: move to more appropriate spot in list
         .with(new DamageHandler()) // TODO: move to more appropriate spot in list
-        .with(new DeathHandler()) // TODO: move to more appropriate spot in list
+        .with(death)
         .with(new CorpseManager()) // Manages corpse lifetime and removal
         ;
     // Presentation is shared by local and remote clients; only authority

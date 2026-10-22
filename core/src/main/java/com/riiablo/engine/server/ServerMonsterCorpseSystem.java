@@ -64,6 +64,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   @Subscribe
   public void onDeath(DeathEvent event) {
     if (event == null || event.victim < 0 || !mMonster.has(event.victim)) return;
+    if (mUnitStates.has(event.victim) && mUnitStates.get(event.victim).snapshotOnly) return;
     detachTargetNode(event.victim);
 
     // UnitLifecycleSystem claims the authoritative death boundary first. A
@@ -151,6 +152,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   @Subscribe
   public void onModeChanged(ModeChangeEvent event) {
     if (event == null || !mMonster.has(event.entityId)) return;
+    if (mUnitStates.has(event.entityId) && mUnitStates.get(event.entityId).snapshotOnly) return;
     if (event.mode == Engine.Monster.MODE_DT || event.mode == Engine.Monster.MODE_DD) {
       detachTargetNode(event.entityId);
       clearDeathCombatFlags(event.entityId);

@@ -1,6 +1,5 @@
 package com.riiablo.engine.client;
 
-import com.riiablo.presentation.DeathHandler;
 
 import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.presentation.MenuManager;
@@ -67,7 +66,7 @@ public class CursorMovementSystem extends BaseSystem {
   protected ProfilerSystem profiler;
   protected Actioneer actioneer;
   protected HoveredManager hoveredManager;
-  protected DeathHandler deathHandler;
+  protected ClientUnitLifecycleSystem lifecycle;
   protected ClientNetworkReceiver networkReceiver;
   @Wire(name = "clientContext")
   protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
@@ -131,7 +130,7 @@ public class CursorMovementSystem extends BaseSystem {
     
     // D2MOD: Check if player is dead, if so, block all input except ESC key
     final int playerId = renderer.getSrc();
-    if (deathHandler != null && deathHandler.isPlayerDead(playerId)) {
+    if (lifecycle != null && lifecycle.isPlayerDead(playerId)) {
       // Player is dead, block all movement/attack input
       // ESC key handling for respawn should be done elsewhere (e.g., GameScreen)
       return;
