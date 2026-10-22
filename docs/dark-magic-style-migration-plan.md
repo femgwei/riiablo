@@ -489,6 +489,32 @@ git diff --check
 
 剩余问题：网络反馈仍走现有 D2GS 结果路由，事件出口和结构变更仍有兼容路径；M3 第 4 批需继续收口网络结果事件与结构提交边界，M6 完整事务及 M8 replay/network 三层仍未完成。不得把后续修补拆成新的微批次。
 
+### M3 第 4/4 批：网络结果事件与结构提交边界（2026-10-23）
+
+完成日期：2026-10-23；本批完成度 100%，M3 计划四个批次全部完成。网络接收器在固定 Tick 中处理 D2GS 结果时，表现事件和 ECS 结构删除分别经过事件队列与结构提交屏障，保持现有权威状态更新顺序和协议格式。
+
+实现与边界：
+
+- `ClientNetworkReceiver` 的 `MissileImpactP`、`SoundP` 结果在 coordinator 存在时发布为下一 Tick 的 `SimulationEventQueue` 事件，由 `GameScreen` 的 `EVENTS` 阶段派发到既有 `EventSystem`；无 coordinator 的测试/兼容装配继续直接派发。
+- 断线、EntitySync 删除、切图清理和地面物品权威移除统一经过 `StructuralChangeQueue`，在 `STRUCTURAL_COMMIT` 阶段执行 `world.delete`；权威快照、删除水位和跨地图过滤逻辑保持不变。
+- 没有增加 D2GS 字段，没有修改 D2 公式或网络结果含义；事件队列只负责阶段准入，M6 完整事务和 M8 replay/network 三层仍未提前实现。
+
+提交：`3b7c47db2`（网络结果事件与结构提交 Tick 边界及回归门禁）。
+
+验证命令与结果：
+
+```powershell
+./gradlew.bat :core:compileJava :core:compileTestJava --no-daemon
+./gradlew.bat :core:m3TickCommandRegression --no-daemon
+./gradlew.bat :core:test --tests com.riiablo.engine.client.ClientInventoryQuestReceiverTest --tests com.riiablo.engine.client.ClientLifecycleReceiverTest --tests com.riiablo.engine.client.ClientPlayerRespawnResultTest --tests com.riiablo.engine.client.ClientMercenarySnapshotTest --tests com.riiablo.engine.client.ClientObjectSnapshotStateTest --no-daemon
+python -m unittest discover -s tools/architecture -p test_migration_boundaries.py
+git diff --check
+```
+
+结果：M3 Tick command regression 门禁 48 项通过，包含网络事件延迟派发和结构提交屏障边界测试；网络接收器定向回归通过；模块边界 unittest 9 项通过；core 生产与测试编译通过。真实资源路径未用于纯调度门禁，未启动真实 GL/audio 客户端或双客户端实机验收。
+
+剩余问题：M3 基础阶段边界已完成，但网络反馈仍保留现有 D2GS 结果路由，完整事件溯源、可重放网络层和领域事务属于 M6/M8；下一正式迁移按计划进入后续 M4，不得把 M3 收口补丁拆成新的微批次。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
