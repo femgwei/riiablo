@@ -288,6 +288,38 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-net
 
 下一正式迁移：M2，按原计划集中处理玩家/单位权威状态、写入接口与预测/表现边界；物品/任务和佣兵/地图按 M2 原定后续批次处理。M8-C/M8-D 完整改造继续保留其依赖与出口，不在 M1 中提前重写。
 
+### M2 第 1/4 批：玩家/单位移动权威与渲染视图（2026-10-22）
+
+完成日期：2026-10-22；本批完成度 100%，M2 整体仍为进行中，已完成 1/4 批。实现与本节验收记录属于同一完整批次。
+
+提交：`8880ebc8f`（不可变移动快照、复制式渲染变换、触摸移动意图和专项门禁）。
+
+状态来源与写入边界：
+
+- 本地/服务端移动状态继续由现有 `Pathfinder`、移动积分和物理同步系统负责；本批不改写移动/战斗公式。远程客户端在 `ClientNetworkReceiver` 接收 PLR/MON/MIS 变换时，先把服务器字段提交到独立的 `AuthoritativeTransformState`，再更新 ECS 副本或重放本地预测。查询仅返回不可变标量快照，不返回 FlatBuffers 表、接收缓冲或 ECS 向量。
+- 快照字段清单：`tick`、`serverTimeMillis`；Position 的 `x/y`；Velocity 的 `velocityX/velocityY`；Angle 的 `angleX/angleY`；三个 `hasPosition/hasVelocity/hasAngle` 存在标记。部分更新保留未携带字段；带时间戳的乱序更新被拒绝，同 Tick 更新和旧版零 Tick 兼容保留，零 Tick 不清除已有单调水位。删除、跨 level 清理和新 baseline 开始时同步清除对应快照/插值历史。
+- `AuthoritativeInterpolationSystem` 仅计算渲染副本，不再临时覆盖或恢复 ECS Position/Angle；本地校正只淡出视觉偏移。`ClientTransformView` 和 renderer 的复制接口供精灵/阴影、相机、光照、automap 标记、世界标签、任务指示器、天气与路径调试读取，动画方向只在绘制时临时应用并恢复。地图探索记录继续读取仿真位置，MonsterLabel 顶部固定标题没有世界坐标读取，无需改动。
+- `GameScreen` 触摸入口只捕获方向；新增 `TouchpadMovementSystem` 在仿真 Tick 内调用现有 `Actioneer.moveTo`，松开时提交一次停止意图，遵守可打断守卫。删除 host 对 Velocity/Angle 的直接移动写入；本地及远程客户端配方均安装该入口，移动协议沿用现有链路。
+- 插值系统不再依赖 `AnimationWrapper`，从 M1 登记中删除这条已消除的旧债。补充表现门禁 76 条边/77 次引用降至 75 条边/76 次引用（14 个文件），没有新增允许项；M1-A 原扫描仍为 0，M1-B 生成层仍为 0、运行时适配器 58 条无漂移。
+
+验证命令：
+
+```powershell
+./gradlew.bat :core:compileJava :core:compileTestJava --no-daemon
+./gradlew.bat :core:clientTransformRegression :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.MonsterAiArenaTest --tests com.riiablo.server.d2gs.SoundEventTransportTest :desktop:compileJava :server:netty:compileJava :tools:map-viewer:compileJava :tools:skill-viewer:compileJava '-Pd2Home=G:\BaiduNetdiskDownload\Diablo II 1.10F' --no-daemon
+python -m unittest discover -s tools/architecture -p test_migration_boundaries.py
+```
+
+结果：M2 专项 70 项、客户端表现 383 项（382 通过、1 项可选原版 automap 存档样本跳过）、架构 12 项、D2GS 定向 20 项，共 485 次测试执行，484 通过、1 跳过，失败/错误为 0；按四个任务 XML 统计，包含门禁共享的用例，不表示全仓库测试全部重跑。扫描器拒绝用例另有 9 项通过。core 生产/测试、desktop、D2GS 生产/测试、Netty、Map Viewer、Skill Viewer 编译均通过。专项覆盖渲染期间 ECS 与原生精度不变、复制值不泄漏、预测重放不改已接收快照、缓冲复用、部分更新、时间倒退、删除/清空及触摸输入的 Tick/停止/可打断边界；既有原生移动、位置序列化、预测和 baseline 测试纳入同一门禁。
+
+真实资源：是；明确使用 `G:\BaiduNetdiskDownload\Diablo II 1.10F`，相关 headless 用例加载真实 MPQ 表/字符串/资源。未启动真实 GL/audio 客户端、物理触屏或双客户端网络实机。
+
+D2MOO 依据：沿用已有 1.10f `UNITS_UpdateRunWalkAnimRateAndVelocity` 对应的 `NativePlayerMovement` 与 `D2PathStep::stepUnit` 原生精度移动链；本批只隔离已提交变换、预测和 GPU 读取。网络 PositionP 仍为现有浮点投影，接收时照旧使副本原生精度失效；本批保证渲染不会额外破坏本地原生精度，不宣称浮点协议可以恢复原生定点坐标。
+
+剩余问题：玩家/单位死亡、复活、技能/神殿/状态适配器等生命周期写入仍未统一；物品/任务、佣兵/地图状态的权威来源与写入接口尚未迁移。表现副本仍兼容读取 ECS，本批没有完成全量事件/快照出口；M3 envelope/结构屏障及 M8 回放/网络三层收敛继续按原行跟踪。
+
+下一迁移：M2 第 2/4 批，集中收口玩家/单位生命周期状态及写入接口；随后第 3/4 批物品/任务、第 4/4 批佣兵/地图。不得将类级修补、验收记录或补记 hash 另计批次。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
@@ -324,7 +356,7 @@ D2MOO 依据：<源码文件/函数>
 - M5：5 个以上批次，先完成一个技能族，再扩展普通攻击和其他技能。
 - M6～M8：每行 3～5 个批次，按领域和验收门槛拆分。
 
-因此完整计划预计为 **8 次主要迁移、约 25～35 个完整批次**，不将这一数量全部消耗在 M1。当前 M1 三项交付已验收，下一正式迁移为 M2；已有 M3/M8 局部实现不代表后续迁移已完成。
+因此完整计划预计为 **8 次主要迁移、约 25～35 个完整批次**，不将这一数量全部消耗在 M1。当前 M1 三项交付已验收，M2 已完成第 1/4 批，下一项为 M2 第 2/4 批玩家/单位生命周期写入；已有 M3/M8 局部实现不代表后续迁移已完成。
 
 
 
