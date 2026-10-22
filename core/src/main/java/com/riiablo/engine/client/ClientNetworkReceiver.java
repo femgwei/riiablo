@@ -28,6 +28,7 @@ import com.badlogic.gdx.utils.TimeUtils;
 
 import com.riiablo.Riiablo;
 import com.riiablo.engine.SimulationClock;
+import com.riiablo.engine.SimulationTickCoordinator;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Dirty;
@@ -106,6 +107,7 @@ import com.riiablo.util.ArrayUtils;
 import com.riiablo.util.DebugUtils;
 import java.util.function.Consumer;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Event;
 
 @All
 public class ClientNetworkReceiver extends IntervalSystem {
@@ -142,6 +144,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected EventSystem events;
   protected AuthoritativeInterpolationSystem interpolation;
   protected ClientNetworkSynchronizer networkSynchronizer;
+  @Wire(name = "simulationTickCoordinator", failOnNull = false)
+  protected SimulationTickCoordinator simulationTickCoordinator;
   @Wire(name="clientSession") protected ClientNetworkSession clientSession;
   @Wire(name="clientContext") protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
 
@@ -243,6 +247,27 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (interpolation != null) interpolation.remove(entityId);
   }
 
+  /** Network packets are read during SIMULATION; presentation events are handed off after it. */
+  void publishEvent(String kind, Event event) {
+    if (events == null) return;
+    if (simulationTickCoordinator == null) {
+      events.dispatch(event);
+      return;
+    }
+    simulationTickCoordinator.events().publish(
+        Math.max(1L, simulationTickCoordinator.tick() + 1L), kind,
+        (Runnable) () -> events.dispatch(event));
+  }
+
+  /** Defers ECS deletion until the structural commit barrier when running under fixed ticks. */
+  void deleteEntity(int entityId) {
+    if (simulationTickCoordinator == null) {
+      world.delete(entityId);
+      return;
+    }
+    simulationTickCoordinator.structuralChanges().enqueue(() -> world.delete(entityId));
+  }
+
   @Override protected void dispose() {
     authoritativeTransforms.clear();
     authoritativeLifecycles.clear();
@@ -340,21 +365,18 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.MissileImpactP:
         MissileImpactP impact = (MissileImpactP) packet.data(new MissileImpactP());
-        if (events != null) {
-          events.dispatch(MissileImpactEvent.obtain(impact.missileEntityId(),
+        publishEvent("network.missile_impact", MissileImpactEvent.obtain(
+              impact.missileEntityId(),
               impact.missileId(), impact.ownerId(), impact.targetEntityId(),
               new Vector2(impact.x(), impact.y()),
               new Vector2(impact.dx(), impact.dy())));
-        }
         break;
       case D2GSData.SoundP:
         SoundP sound = (SoundP) packet.data(new SoundP());
-        if (events != null) {
-          SoundEvent event = SoundEvent.obtain(
+        SoundEvent event = SoundEvent.obtain(
               sound.entityId(), sound.sound(), sound.global());
-          if (sound.positionPresent()) event.withPosition(sound.x(), sound.y());
-          events.dispatch(event);
-        }
+        if (sound.positionPresent()) event.withPosition(sound.x(), sound.y());
+        publishEvent("network.sound", event);
         break;
       case D2GSData.SnapshotBaseline:
         SnapshotBaseline(packet);
@@ -468,7 +490,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (output != null) output.accept("\n");
 
     removeTransform(entityId);
-    world.delete(entityId);
+    deleteEntity(entityId);
   }
 
   @Deprecated
@@ -1024,7 +1046,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       if (entityId != Engine.INVALID_ENTITY) {
         pendingMercenaryOwners.remove(entityId, Engine.INVALID_ENTITY);
         removeTransform(entityId);
-        world.delete(entityId);
+        deleteEntity(entityId);
       }
 
       return;
@@ -1390,7 +1412,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
         staleServerIds.add(entry.key);
         pendingMercenaryOwners.remove(localEntityId, Engine.INVALID_ENTITY);
         removeTransform(localEntityId);
-        world.delete(localEntityId);
+        deleteEntity(localEntityId);
       }
     }
     for (int i = 0; i < staleServerIds.size; i++) {
@@ -1639,7 +1661,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       deferredServerEntities.remove(snapshot.groundEntityId);
       if (localEntityId != Engine.INVALID_ENTITY) {
         removeTransform(localEntityId);
-        world.delete(localEntityId);
+        deleteEntity(localEntityId);
       }
       Gdx.app.log(TAG, "[ITEM_MOVE_GROUND] phase=authoritative_remove serverEntity="
           + snapshot.groundEntityId + " request=" + snapshot.requestId);

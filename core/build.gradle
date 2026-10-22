@@ -830,6 +830,7 @@ task m3TickCommandRegression(type: Test) {
      'com.riiablo.engine.client.TouchpadMovementSystemTest',
      'com.riiablo.engine.client.ClientUnitLifecycleSystemTest',
      'com.riiablo.engine.client.ClientPlayerRespawnResultTest',
+     'com.riiablo.engine.client.ClientNetworkReceiverTickBoundaryTest',
      'com.riiablo.engine.client.ClientItemIntentSystemTest',
      'com.riiablo.engine.client.ClientQuestIntentSystemTest',
      'com.riiablo.engine.client.ClientVendorSystemTest'].each { includeTestsMatching it }
