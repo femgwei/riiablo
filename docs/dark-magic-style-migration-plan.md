@@ -515,6 +515,29 @@ git diff --check
 
 剩余问题：M3 基础阶段边界已完成，但网络反馈仍保留现有 D2GS 结果路由，完整事件溯源、可重放网络层和领域事务属于 M6/M8；下一正式迁移按计划进入后续 M4，不得把 M3 收口补丁拆成新的微批次。
 
+### M4 第 1/4 批：命名确定性 RNG stream（2026-10-23）
+
+完成日期：2026-10-23；本批完成度 100%，M4 计划四个批次中的第 1 批。新增显式命名 RNG stream 工厂，为后续数据/规则迁移提供可复现的随机来源边界；现有 D2Common 两词 `pSeed` 和兼容 RNG 调用保持不变。
+
+实现与边界：
+
+- `NamedRngStreams` 按 `gameSeed + streamName + contextId` 派生稳定种子，返回独立 `NativeRng` 实例；名称和上下文都进入种子，某个 stream 增加消费不会改变其他 stream 的序列。
+- 工厂拒绝空名称，并提供 `seedFor` 诊断入口，便于后续 replay/检查点记录 stream identity；没有引入全局 RNG、线程共享状态或隐式常量回退。
+- 本批未改 `NativeUnitRandom`、D2Common 两词种子、战斗/掉落/AI 公式，也未将现有调用方强行切换到新 stream；调用方迁移和消费计数属于后续 M4 批次。
+
+提交：`45052ed5c`（命名确定性 RNG stream 工厂与回归门禁）。
+
+验证命令与结果：
+
+```powershell
+./gradlew.bat :core:m4NamedRngRegression --no-daemon
+git diff --check
+```
+
+结果：M4 命名 RNG 门禁 3 项通过，覆盖同身份序列重放、名称/上下文隔离和参数拒绝；模块边界检查通过。真实资源路径未用于纯数据流门禁，未启动真实客户端。
+
+剩余问题：现有规则调用方仍有兼容 `NativeRng` 和 D2Common `pSeed` 入口，尚未为 AI、战斗、掉落、地图和表现建立完整消费审计；数据版本、MPQ/TXT 来源和缺失数据策略留在后续 M4 批次。不得把后续适配拆成新的微批次。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
