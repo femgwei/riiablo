@@ -28,8 +28,8 @@
 | M0 | 约束与基线 | 全仓库架构盘点、模块依赖、现有测试、D2MOO 证据和 dark-magic 对照矩阵 | 固定边界和迁移基线，不改变行为 | ownership 清单、依赖图、反向依赖清单、基线测试报告 | 所有目标目录都有唯一 owner；当前行为、已知失败和架构缺口可复现 | 无 | 已完成 |
 | M1 | 领域边界 | `core`、`server`、`quests`、`server-systems`、`shared` 的依赖整理 | 建立 `mechanism / data / policy / adapter / presentation` 五类边界，并登记旧违规 | 包级依赖规则、架构检查、跨层调用清单 | 新代码不能违反依赖方向；旧违规点有 owner、迁移行和删除条件 | M0 | 已完成 |
 | M2 | 权威状态 | 玩家、怪物、物品、任务、佣兵、地图运行时状态和客户端预测 | 明确唯一权威状态来源，UI 和客户端只能提交意图，不能提交结果 | 状态模型、状态写入接口、快照字段清单、客户端命令边界 | 任一状态变更都能追踪到权威系统；无 UI 直接写状态；预测回滚不改变权威数据 | M1 | 已完成 |
-| M3 | Tick、命令与事件 | 固定 40ms Tick、输入意图、技能、移动、死亡、实体删除、阶段调度和结构屏障 | 统一执行顺序和副作用边界，令渲染帧率不影响仿真 Tick | Command envelope、Event、结构变更队列、固定步进运行时、Tick/phase 调度图 | 固定步进可脱离渲染运行；非法意图被拒绝；阶段末统一冲刷结构变更；普通移动、拾取、一个交互流程通过纯逻辑和 ECS 测试 | M2 | 进行中 |
-| M4 | 数据层 | TXT、MPQ、D2 数据表、固定点数值、RNG/Seed、版本和可选内容包 | 使用不可变记录和显式数据来源，规则层不直接操作解析器；为每个系统/实体建立可复现 RNG 流 | typed record、数据版本、命名 RNG stream、数据审计工具、可选内容包边界 | 缺失数据、版本差异、RNG 消耗都有明确测试；合法数据不走隐式常量回退；同一输入可重放得到相同随机序列 | M1 | 未开始 |
+| M3 | Tick、命令与事件 | 固定 40ms Tick、输入意图、技能、移动、死亡、实体删除、阶段调度和结构屏障 | 统一执行顺序和副作用边界，令渲染帧率不影响仿真 Tick | Command envelope、Event、结构变更队列、固定步进运行时、Tick/phase 调度图 | 固定步进可脱离渲染运行；非法意图被拒绝；阶段末统一冲刷结构变更；普通移动、拾取、一个交互流程通过纯逻辑和 ECS 测试 | M2 | 已完成 |
+| M4 | 数据层 | TXT、MPQ、D2 数据表、固定点数值、RNG/Seed、版本和可选内容包 | 使用不可变记录和显式数据来源，规则层不直接操作解析器；为每个系统/实体建立可复现 RNG 流 | typed record、数据版本、命名 RNG stream、数据审计工具、可选内容包边界 | 缺失数据、版本差异、RNG 消耗都有明确测试；合法数据不走隐式常量回退；同一输入可重放得到相同随机序列 | M1 | 进行中 |
 | M5 | 战斗垂直切片 | 普通攻击或 Fire Bolt 的完整链路 | 验证新边界能够承载真实 D2 行为，并能被快照/回放复核 | 命令→准入→结算→导弹/命中→伤害→快照→表现→回放 | 纯数据、ECS、D2GS、真实 1.10f 资源测试全部通过；旧入口不再结算；关键 Tick 有检查点和校验值 | M2、M3、M4 | 未开始 |
 | M6 | 物品与成长 | 物品生成、装备、背包、库存事务、经验、升级、佣兵成长 | 将交易和属性聚合变成可回滚、可验证的领域事务 | Item domain、Inventory transaction、Progression service、存档字段映射 | 拾取、装备、交易、升级和重连状态无重复提交或双重结算 | M2、M4、M5 | 未开始 |
 | M7 | 世界规则 | 地图生成、碰撞、寻路、怪物 AI、任务、NPC、Warp、对象 | 将 D2 规则从通用地图/ECS 机制中分离 | World policy、AI policy、Quest/NPC command handlers | Act 1 关键链路通过 headless、双客户端和真实 MPQ 验收 | M2、M3、M4、M5、M6 | 未开始 |
@@ -537,6 +537,31 @@ git diff --check
 结果：M4 命名 RNG 门禁 3 项通过，覆盖同身份序列重放、名称/上下文隔离和参数拒绝；模块边界检查通过。真实资源路径未用于纯数据流门禁，未启动真实客户端。
 
 剩余问题：现有规则调用方仍有兼容 `NativeRng` 和 D2Common `pSeed` 入口，尚未为 AI、战斗、掉落、地图和表现建立完整消费审计；数据版本、MPQ/TXT 来源和缺失数据策略留在后续 M4 批次。不得把后续适配拆成新的微批次。
+
+### M4 第 2/4 批：TXT/MPQ 数据来源与版本身份（2026-10-23）
+
+完成日期：2026-10-23；本批完成度 100%，M4 计划四个批次中的第 2 批。五类原生表 projection 现在保留不可变的表来源、版本标记和内容摘要，规则层可审计实际加载的数据身份。
+
+实现与边界：
+
+- 新增 `TxtTableSource`，以路径、`DIABLO_II_110F`/未声明版本和 `TxtTableManifest` 保存 TXT/MPQ 来源；manifest 同时记录原始 SHA-256、表头摘要、语义摘要、行数和列数。
+- `NativeSkills`、`NativeMissiles`、`NativeMonStats`、`NativeItemStatCost` 和 `States` 的 MPQ 加载路径统一标记 1.10f 来源；内存 fixture 继续标记未声明版本，便于测试不得伪装为真实资源。
+- 表值、字段转换、缺失列和 projection schema 行为保持不变；没有修改 D2 公式、协议或资源内容，也没有把解析器调用搬入规则层。
+
+提交：待本批实现提交后补记；本节实现、回归和记录属于同一完整批次。
+
+验证命令与结果：
+
+```powershell
+./gradlew.bat :core:m4DataSourceRegression --no-daemon
+$env:D2_110F_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+./gradlew.bat :core:test --tests com.riiablo.codec.excel.Native110FTxtTablesIntegrationTest --no-daemon
+git diff --check
+```
+
+结果：M4 数据来源门禁通过；纯表 projection/ownership/manifest 回归通过；真实 1.10f MPQ 表摘要和 schema 集成测试通过。资源路径为 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`，未启动真实 GL/audio 客户端。
+
+剩余问题：数据版本目前以加载入口声明为准，尚未建立跨表 data-pack digest、缺失数据拒绝策略和完整固定点字段审计；这些留在后续 M4 批次。不得把后续适配拆成新的微批次。
 
 ### M0 完成记录（2026-10-21）
 

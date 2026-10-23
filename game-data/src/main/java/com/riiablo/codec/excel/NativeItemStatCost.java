@@ -37,9 +37,15 @@ public final class NativeItemStatCost implements Iterable<NativeItemStatCost.Ent
   private final List<Entry> entries;
   private final Map<String, Entry> byName;
   private final List<NativeTxtSchema.Issue> schemaIssues;
+  private final TxtTableSource tableSource;
 
   private NativeItemStatCost(LosslessTxtTable source) {
+    this(source, null);
+  }
+
+  private NativeItemStatCost(LosslessTxtTable source, TxtTableSource tableSource) {
     this.source = source;
+    this.tableSource = tableSource;
     schemaIssues = SCHEMA.validate(source);
     List<Entry> entries = new ArrayList<>();
     Map<String, Entry> byName = new LinkedHashMap<>();
@@ -58,19 +64,24 @@ public final class NativeItemStatCost implements Iterable<NativeItemStatCost.Ent
   public static NativeItemStatCost load(FileHandle handle) {
     if (handle == null) throw new GdxRuntimeException("ItemStatCost.txt was not found");
     try {
-      return parse(handle.readBytes());
+      byte[] bytes = handle.readBytes();
+      return new NativeItemStatCost(LosslessTxtTable.parse(bytes),
+          TxtTableSource.fromHandle(handle, bytes)
+              .declareVersion(TxtTableSource.Version.DIABLO_II_110F));
     } catch (IOException e) {
       throw new GdxRuntimeException("Couldn't read ItemStatCost.txt", e);
     }
   }
 
   public static NativeItemStatCost parse(byte[] bytes) throws IOException {
-    return new NativeItemStatCost(LosslessTxtTable.parse(bytes));
+    return new NativeItemStatCost(LosslessTxtTable.parse(bytes), TxtTableSource.fromBytes(bytes));
   }
 
   public LosslessTxtTable source() {
     return source;
   }
+
+  public TxtTableSource tableSource() { return tableSource; }
 
   public List<NativeTxtSchema.Issue> schemaIssues() { return schemaIssues; }
 

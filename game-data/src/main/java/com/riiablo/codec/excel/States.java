@@ -32,9 +32,15 @@ public final class States implements Iterable<States.Entry> {
   private final List<Entry> entries;
   private final Map<String, Entry> byName;
   private final List<NativeTxtSchema.Issue> schemaIssues;
+  private final TxtTableSource tableSource;
 
   private States(LosslessTxtTable source) {
+    this(source, null);
+  }
+
+  private States(LosslessTxtTable source, TxtTableSource tableSource) {
     this.source = source;
+    this.tableSource = tableSource;
     schemaIssues = SCHEMA.validate(source);
     List<Entry> entries = new ArrayList<>();
     Map<String, Entry> byName = new LinkedHashMap<>();
@@ -53,19 +59,24 @@ public final class States implements Iterable<States.Entry> {
   public static States load(FileHandle handle) {
     if (handle == null) throw new GdxRuntimeException("States.txt was not found");
     try {
-      return parse(handle.readBytes());
+      byte[] bytes = handle.readBytes();
+      return new States(LosslessTxtTable.parse(bytes),
+          TxtTableSource.fromHandle(handle, bytes)
+              .declareVersion(TxtTableSource.Version.DIABLO_II_110F));
     } catch (IOException e) {
       throw new GdxRuntimeException("Couldn't read States.txt", e);
     }
   }
 
   public static States parse(byte[] bytes) throws IOException {
-    return new States(LosslessTxtTable.parse(bytes));
+    return new States(LosslessTxtTable.parse(bytes), TxtTableSource.fromBytes(bytes));
   }
 
   public LosslessTxtTable source() {
     return source;
   }
+
+  public TxtTableSource tableSource() { return tableSource; }
 
   public List<NativeTxtSchema.Issue> schemaIssues() { return schemaIssues; }
 
