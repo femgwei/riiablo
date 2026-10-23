@@ -525,7 +525,7 @@ git diff --check
 - `SimulationCommandQueue` 对 `(source, actor, request)` 做会话内幂等去重，并保留可诊断的拒绝原因；默认本地 UI 仍使用兼容的 local admission，不强迫现有离线输入伪造网络身份。
 - 新增独立 `SimulationPhaseContract`，记录 system 所属 phase、读集、写集和结构写集；同一 system 不得重复注册，结构资源只能在 `STRUCTURAL_COMMIT` 写入。`SimulationTickCoordinator` 暴露该契约供 headless 组装和检查使用。
 
-提交：待本批实现提交后补记。
+提交：`a589f61f0`（命令身份准入、request 幂等和 phase contract）。
 
 验证：
 
