@@ -840,3 +840,15 @@ task m3TickCommandRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M4 batch 1: explicit deterministic named RNG streams.
+task m4NamedRngRegression(type: Test) {
+  group = 'verification'
+  description = 'M4 named deterministic RNG stream and replay identity regressions.'
+  dependsOn ':server-domain:testClasses'
+  testClassesDirs = project(':server-domain').sourceSets.test.output.classesDirs
+  classpath = project(':server-domain').sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter { includeTestsMatching 'com.riiablo.engine.server.NamedRngStreamsTest' }
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
