@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +39,45 @@ class SimulationTickCoordinatorTest {
     queue.submit(SimulationCommandEnvelope.builder("input", "cast", 1).tick(1));
     assertEquals(1, queue.drain(1, ignored -> {}));
     assertNull(queue.submit(SimulationCommandEnvelope.builder("input", "late", 2).tick(1)));
+    assertEquals(SimulationCommandAdmission.Rejection.STALE_TICK, queue.lastRejection());
     assertEquals(0, queue.pendingCount());
+  }
+
+  @Test void networkCommandsRequireIdentityAndAuthorizedTargets() {
+    SimulationCommandQueue queue = new SimulationCommandQueue(
+        SimulationCommandAdmission.network((command, target) -> command.actorId == 7 && target == 42));
+    assertNull(queue.submit(SimulationCommandEnvelope.builder("net", "cast", "x").tick(1)
+        .request(1).authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT)));
+    assertEquals(SimulationCommandAdmission.Rejection.MISSING_ACTOR, queue.lastRejection());
+
+    SimulationCommandEnvelope accepted = queue.submit(SimulationCommandEnvelope.builder("net", "cast", "x")
+        .tick(1).actor(7).request(1).target(42)
+        .authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT));
+    assertNotNull(accepted);
+    assertNull(queue.submit(SimulationCommandEnvelope.builder("net", "cast", "x")
+        .tick(1).actor(7).request(1).target(42)
+        .authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT)));
+    assertEquals(SimulationCommandAdmission.Rejection.DUPLICATE_REQUEST, queue.lastRejection());
+    assertNull(queue.submit(SimulationCommandEnvelope.builder("net", "cast", "x")
+        .tick(1).actor(7).request(2).target(99)
+        .authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT)));
+    assertEquals(SimulationCommandAdmission.Rejection.UNAUTHORIZED_TARGET, queue.lastRejection());
+  }
+
+  @Test void phaseContractExposesReadWriteSetsAndStructuralBarrier() {
+    SimulationPhaseContract contract = new SimulationPhaseContract();
+    contract.markStructuralResource("entities");
+    contract.register("movement", SimulationTickCoordinator.Phase.SIMULATION,
+        Collections.singleton("world"), Collections.singleton("position"));
+    contract.register("commit", SimulationTickCoordinator.Phase.STRUCTURAL_COMMIT,
+        Collections.singleton("world"), Collections.singleton("entities"),
+        Collections.singleton("entities"));
+
+    assertTrue(contract.mayRead("movement", SimulationTickCoordinator.Phase.SIMULATION, "world"));
+    assertTrue(contract.mayWrite("movement", SimulationTickCoordinator.Phase.SIMULATION, "position"));
+    assertFalse(contract.mayWrite("movement", SimulationTickCoordinator.Phase.SIMULATION, "entities"));
+    assertTrue(contract.mayWrite("commit", SimulationTickCoordinator.Phase.STRUCTURAL_COMMIT, "entities"));
+    assertThrows(IllegalStateException.class, () -> contract.register("movement",
+        SimulationTickCoordinator.Phase.EVENTS, Collections.emptySet(), Collections.emptySet()));
   }
 }

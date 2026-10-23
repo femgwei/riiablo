@@ -11,14 +11,24 @@ public final class SimulationTickCoordinator {
   private final SimulationCommandQueue commands = new SimulationCommandQueue();
   private final SimulationEventQueue events = new SimulationEventQueue();
   private final StructuralChangeQueue structuralChanges = new StructuralChangeQueue();
+  private final SimulationPhaseContract phaseContract;
   private long tick;
   private Phase phase = Phase.IDLE;
+
+  public SimulationTickCoordinator() {
+    this(new SimulationPhaseContract());
+  }
+
+  public SimulationTickCoordinator(SimulationPhaseContract phaseContract) {
+    this.phaseContract = Objects.requireNonNull(phaseContract, "phaseContract");
+  }
 
   public long tick() { return tick; }
   public Phase phase() { return phase; }
   public SimulationCommandQueue commands() { return commands; }
   public SimulationEventQueue events() { return events; }
   public StructuralChangeQueue structuralChanges() { return structuralChanges; }
+  public SimulationPhaseContract phaseContract() { return phaseContract; }
 
   public void advance(Consumer<SimulationCommandEnvelope> commandHandler,
       TickStep simulation, Consumer<SimulationEventQueue.Event> eventHandler) {

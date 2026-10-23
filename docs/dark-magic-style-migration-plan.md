@@ -28,7 +28,7 @@
 | M0 | 约束与基线 | 全仓库架构盘点、模块依赖、现有测试、D2MOO 证据和 dark-magic 对照矩阵 | 固定边界和迁移基线，不改变行为 | ownership 清单、依赖图、反向依赖清单、基线测试报告 | 所有目标目录都有唯一 owner；当前行为、已知失败和架构缺口可复现 | 无 | 已完成 |
 | M1 | 领域边界 | `core`、`server`、`quests`、`server-systems`、`shared` 的依赖整理 | 建立 `mechanism / data / policy / adapter / presentation` 五类边界，并登记旧违规 | 包级依赖规则、架构检查、跨层调用清单 | 新代码不能违反依赖方向；旧违规点有 owner、迁移行和删除条件 | M0 | 已完成 |
 | M2 | 权威状态 | 玩家、怪物、物品、任务、佣兵、地图运行时状态和客户端预测 | 明确唯一权威状态来源，UI 和客户端只能提交意图，不能提交结果 | 状态模型、状态写入接口、快照字段清单、客户端命令边界 | 任一状态变更都能追踪到权威系统；无 UI 直接写状态；预测回滚不改变权威数据 | M1 | 已完成 |
-| M3 | Tick、命令与事件 | 固定 40ms Tick、输入意图、技能、移动、死亡、实体删除、阶段调度和结构屏障 | 统一执行顺序和副作用边界，令渲染帧率不影响仿真 Tick | Command envelope、Event、结构变更队列、固定步进运行时、Tick/phase 调度图 | 固定步进可脱离渲染运行；非法意图被拒绝；阶段末统一冲刷结构变更；普通移动、拾取、一个交互流程通过纯逻辑和 ECS 测试 | M2 | 已完成 |
+| M3 | Tick、命令与事件 | 固定 40ms Tick、输入意图、技能、移动、死亡、实体删除、阶段调度和结构屏障 | 统一执行顺序和副作用边界，令渲染帧率不影响仿真 Tick | Command envelope、Event、结构变更队列、固定步进运行时、Tick/phase 调度图 | 固定步进可脱离渲染运行；非法意图被拒绝；阶段末统一冲刷结构变更；普通移动、拾取、一个交互流程通过纯逻辑和 ECS 测试 | M2 | 进行中 |
 | M4 | 数据层 | TXT、MPQ、D2 数据表、固定点数值、RNG/Seed、版本和可选内容包 | 使用不可变记录和显式数据来源，规则层不直接操作解析器；为每个系统/实体建立可复现 RNG 流 | typed record、数据版本、命名 RNG stream、数据审计工具、可选内容包边界 | 缺失数据、版本差异、RNG 消耗都有明确测试；合法数据不走隐式常量回退；同一输入可重放得到相同随机序列 | M1 | 进行中 |
 | M5 | 战斗垂直切片 | 普通攻击或 Fire Bolt 的完整链路 | 验证新边界能够承载真实 D2 行为，并能被快照/回放复核 | 命令→准入→结算→导弹/命中→伤害→快照→表现→回放 | 纯数据、ECS、D2GS、真实 1.10f 资源测试全部通过；旧入口不再结算；关键 Tick 有检查点和校验值 | M2、M3、M4 | 未开始 |
 | M6 | 物品与成长 | 物品生成、装备、背包、库存事务、经验、升级、佣兵成长 | 将交易和属性聚合变成可回滚、可验证的领域事务 | Item domain、Inventory transaction、Progression service、存档字段映射 | 拾取、装备、交易、升级和重连状态无重复提交或双重结算 | M2、M4、M5 | 未开始 |
@@ -514,6 +514,30 @@ git diff --check
 结果：M3 Tick command regression 门禁 48 项通过，包含网络事件延迟派发和结构提交屏障边界测试；网络接收器定向回归通过；模块边界 unittest 9 项通过；core 生产与测试编译通过。真实资源路径未用于纯调度门禁，未启动真实 GL/audio 客户端或双客户端实机验收。
 
 剩余问题：M3 基础阶段边界已完成，但网络反馈仍保留现有 D2GS 结果路由，完整事件溯源、可重放网络层和领域事务属于 M6/M8；下一正式迁移按计划进入后续 M4，不得把 M3 收口补丁拆成新的微批次。
+
+### M3 独立补强：命令身份准入与 phase contract（2026-10-23）
+
+完成日期：2026-10-23；本批补齐 M3 基础四批之外、无需等待 M6/M8 的独立边界能力。M3 仍不宣称整体完成：全量网络结果唯一入口、所有 ECS 结构写入、回放/网络三层和表现快照债务继续按依赖项保留。
+
+实现与边界：
+
+- `SimulationCommandEnvelope` 增加 actor、request、target 和 authority 元数据；`SimulationCommandAdmission.network(...)` 要求网络命令具备身份、正 request id，并通过调用方提供的目标授权检查。
+- `SimulationCommandQueue` 对 `(source, actor, request)` 做会话内幂等去重，并保留可诊断的拒绝原因；默认本地 UI 仍使用兼容的 local admission，不强迫现有离线输入伪造网络身份。
+- 新增独立 `SimulationPhaseContract`，记录 system 所属 phase、读集、写集和结构写集；同一 system 不得重复注册，结构资源只能在 `STRUCTURAL_COMMIT` 写入。`SimulationTickCoordinator` 暴露该契约供 headless 组装和检查使用。
+
+提交：待本批实现提交后补记。
+
+验证：
+
+```powershell
+./gradlew.bat :core:test --tests com.riiablo.engine.SimulationTickCoordinatorTest --no-daemon
+./gradlew.bat :core:compileJava --no-daemon
+git diff --check
+```
+
+结果：命令身份、目标授权、重复 request、phase 读写集和结构写入边界定向测试通过；未启动真实客户端，也未修改 D2GS 协议。M3 尚余完整结构迁移、事件溯源和 M8 网络/回放依赖。
+
+下一迁移：M4；M3 的剩余项随 M6/M8 依赖完成后继续收口。
 
 ### M4 第 1/4 批：命名确定性 RNG stream（2026-10-23）
 
