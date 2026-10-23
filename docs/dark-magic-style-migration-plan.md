@@ -598,7 +598,7 @@ git diff --check
 - `NativeRng` 增加 draw count、stream name 和 context 诊断字段；`NamedRngStreams.openLegacy(...)` 为旧 seed 提供不改变序列的命名迁移入口，掉落 fallback/treasure-class 已接入该入口。
 - 新增独立 `m4CoreDataSourceRegression` 与 `m4FixedPointRegression`，覆盖 core 表 projection、真实 1.10f manifest、8.8/24.8 伤害/状态/位置/技能转换门禁；game-data ownership 门禁保持独立 classpath，避免测试隔离被污染。
 
-提交：`d1858f928`（data-pack 身份、严格缺失策略、RNG 消费诊断与固定点门禁）。
+提交：`d4ba1c400`（data-pack 身份、严格缺失策略、RNG 消费诊断与固定点门禁）。
 
 验证：
 
