@@ -869,3 +869,54 @@ task m4DataSourceRegression(type: Test) {
   }
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M4 core projection/schema and real-installation identity gate. Keep this
+// separate from the game-data ownership test so its classpath cannot mask a
+// forbidden dependency on core/application classes.
+task m4CoreDataSourceRegression(type: Test) {
+  group = 'verification'
+  description = 'M4 core TXT projection, schema and optional 1.10f identity regressions.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    ['com.riiablo.codec.excel.NativeTableIdentityTest',
+     'com.riiablo.codec.excel.LosslessTxtTableTest',
+     'com.riiablo.codec.excel.Native110FTxtTablesIntegrationTest'].each { includeTestsMatching it }
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_110F_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_110F_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
+
+// M4 fixed-point audit gate: representative 8.8/24.8 arithmetic and the
+// table-backed skill/missile conversion paths. This is intentionally focused;
+// it does not claim every presentation float is a native fixed-point field.
+task m4FixedPointRegression(type: Test) {
+  group = 'verification'
+  description = 'M4 native fixed-point arithmetic and table conversion regressions.'
+  dependsOn testClasses, ':server-domain:testClasses', ':verifyModuleBoundaries'
+  testClassesDirs = files(sourceSets.test.output.classesDirs,
+      project(':server-domain').sourceSets.test.output.classesDirs)
+  classpath = files(sourceSets.test.runtimeClasspath,
+      project(':server-domain').sourceSets.test.runtimeClasspath)
+  useJUnitPlatform()
+  filter {
+    ['com.riiablo.engine.server.combat.NativeFixedPhysicalDamageTest',
+     'com.riiablo.engine.server.combat.NativeFixedElementalMathTest',
+     'com.riiablo.engine.server.combat.NativeStatusDurationMathTest',
+     'com.riiablo.engine.server.component.PositionNativePrecisionTest',
+     'com.riiablo.engine.server.skill.NativeSkillResolverTest',
+     'com.riiablo.engine.server.combat.NativePoisonRegenMathTest',
+     'com.riiablo.engine.server.StaminaSystemTest'].each { includeTestsMatching it }
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

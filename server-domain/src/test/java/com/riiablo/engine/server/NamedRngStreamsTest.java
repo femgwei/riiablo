@@ -29,4 +29,22 @@ class NamedRngStreamsTest {
     assertThrows(NullPointerException.class, () -> NamedRngStreams.open(1, null, 0));
     assertThrows(IllegalArgumentException.class, () -> NamedRngStreams.open(1, "  ", 0));
   }
+
+  @Test void diagnosticsRecordConsumptionWithoutChangingTheSequence() {
+    NativeRng named = NamedRngStreams.open(0x110F, "loot.quality", 17L);
+    NativeRng expected = new NativeRng(NamedRngStreams.seedFor(0x110F, "loot.quality", 17L));
+    assertEquals(expected.nextInt(), named.nextInt());
+    assertEquals(expected.nextInt(7), named.nextInt(7));
+    assertEquals(2L, named.drawCount());
+    assertEquals("loot.quality", named.streamName());
+    assertEquals(17L, named.contextId());
+  }
+
+  @Test void legacyNamingKeepsTheOriginalSeedSequence() {
+    NativeRng named = NamedRngStreams.openLegacy(12345, "loot.fallback", 3L);
+    NativeRng expected = new NativeRng(12345);
+    assertEquals(expected.nextInt(), named.nextInt());
+    assertEquals(expected.nextInt(), named.nextInt());
+    assertEquals(2L, named.drawCount());
+  }
 }

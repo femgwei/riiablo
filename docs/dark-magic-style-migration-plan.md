@@ -572,20 +572,48 @@ git diff --check
 - `NativeSkills`、`NativeMissiles`、`NativeMonStats`、`NativeItemStatCost` 和 `States` 的 MPQ 加载路径统一标记 1.10f 来源；内存 fixture 继续标记未声明版本，便于测试不得伪装为真实资源。
 - 表值、字段转换、缺失列和 projection schema 行为保持不变；没有修改 D2 公式、协议或资源内容，也没有把解析器调用搬入规则层。
 
-提交：待本批实现提交后补记；本节实现、回归和记录属于同一完整批次。
+提交：`6c47323ba`（TXT/MPQ 来源身份与 projection manifest）。
 
 验证命令与结果：
 
 ```powershell
-./gradlew.bat :core:m4DataSourceRegression --no-daemon
+./gradlew.bat :core:m4DataSourceRegression :core:m4CoreDataSourceRegression --no-daemon
 $env:D2_110F_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
 ./gradlew.bat :core:test --tests com.riiablo.codec.excel.Native110FTxtTablesIntegrationTest --no-daemon
 git diff --check
 ```
 
-结果：M4 数据来源门禁通过；纯表 projection/ownership/manifest 回归通过；真实 1.10f MPQ 表摘要和 schema 集成测试通过。资源路径为 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`，未启动真实 GL/audio 客户端。
+结果：M4 数据来源门禁通过；game-data ownership/manifest 回归与 core projection/schema/真实 1.10f MPQ 表摘要门禁分开通过。资源路径为 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`，未启动真实 GL/audio 客户端。
 
 剩余问题：数据版本目前以加载入口声明为准，尚未建立跨表 data-pack digest、缺失数据拒绝策略和完整固定点字段审计；这些留在后续 M4 批次。不得把后续适配拆成新的微批次。
+
+### M4 第 3/4 批：data-pack 身份、严格缺失策略与固定点门禁（2026-10-24）
+
+完成日期：2026-10-24；本批补齐 M4 数据身份和固定点验收中不依赖 M5/M6 的部分。
+
+实现与边界：
+
+- 新增 `TxtDataPackManifest`，按逻辑表名、声明版本、行列计数和 raw/header/semantic digest 生成与路径无关的跨表 SHA-256 身份；表插入顺序变化不会改变身份。
+- 新增 `MissingTxtDataException` 和 `NativeTxtProjectionReport.createAllStrict(...)`。严格规则装配在缺表、版本不匹配或 schema issue 时失败，不再把缺失数据静默降级为空 projection；旧兼容 `parse` 路径保持可用。
+- `NativeRng` 增加 draw count、stream name 和 context 诊断字段；`NamedRngStreams.openLegacy(...)` 为旧 seed 提供不改变序列的命名迁移入口，掉落 fallback/treasure-class 已接入该入口。
+- 新增独立 `m4CoreDataSourceRegression` 与 `m4FixedPointRegression`，覆盖 core 表 projection、真实 1.10f manifest、8.8/24.8 伤害/状态/位置/技能转换门禁；game-data ownership 门禁保持独立 classpath，避免测试隔离被污染。
+
+提交：`d1858f928`（data-pack 身份、严格缺失策略、RNG 消费诊断与固定点门禁）。
+
+验证：
+
+```powershell
+./gradlew.bat :server-domain:test --tests com.riiablo.engine.server.NamedRngStreamsTest --no-daemon
+./gradlew.bat :game-data:test --tests com.riiablo.codec.excel.TxtDataPackManifestTest --no-daemon
+./gradlew.bat :core:m4DataSourceRegression :core:m4CoreDataSourceRegression :core:m4FixedPointRegression --no-daemon
+$env:D2_110F_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+./gradlew.bat :core:m4CoreDataSourceRegression --no-daemon
+git diff --check
+```
+
+结果：data-pack/严格缺失策略、RNG 消费诊断和固定点门禁通过；真实 1.10f core 数据门禁 14 项全部通过。尚未把所有 server AI/技能/地图/表现的 `MathUtils.random` 和兼容 `NativeRng` 调用迁移到命名 stream；这些仍是 M4-A 的剩余迁移债务，不能据此宣称 M4 总体完成。
+
+下一迁移：继续 M4-A 调用方审计与命名 stream 迁移；M4-B 内容包按计划暂停。
 
 ### M0 完成记录（2026-10-21）
 

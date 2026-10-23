@@ -14,6 +14,7 @@ import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.item.TreasureClassResolver;
 import com.riiablo.item.NativeItemQualityResolver;
 import com.riiablo.engine.server.NativeRng;
+import com.riiablo.engine.server.NamedRngStreams;
 import com.riiablo.engine.server.ServerGameplayContext;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -297,7 +298,9 @@ public class LootManager {
 
     // Legacy fallback still uses the same unit-scoped stream as native TC
     // resolution, so a server world never consumes LibGDX's global RNG.
-    NativeRng rng = new NativeRng(config.rngSeed == 0 ? gameSeed() : config.rngSeed);
+    NativeRng rng = NamedRngStreams.openLegacy(
+        config.rngSeed == 0 ? gameSeed() : config.rngSeed,
+        "loot.fallback", config.monsterType);
 
     // 计算金币掉落
     calculateGoldDrop(config, cachedResult, rng);
@@ -341,7 +344,9 @@ public class LootManager {
         root != null ? root.itemProbability() : 0,
         players.totalPlayers, players.partyMembersInLevel,
         players.monsterPlayerCount, players.effectivePlayerCount());
-    NativeRng rng = new NativeRng(config.rngSeed == 0 ? gameSeed() : config.rngSeed);
+    NativeRng rng = NamedRngStreams.openLegacy(
+        config.rngSeed == 0 ? gameSeed() : config.rngSeed,
+        "loot.treasure-class", config.monsterType);
     List<TreasureClassResolver.Drop> drops;
     try {
       TreasureClassResolver resolver = new TreasureClassResolver(

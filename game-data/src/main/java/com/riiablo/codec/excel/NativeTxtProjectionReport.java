@@ -81,4 +81,28 @@ public final class NativeTxtProjectionReport {
     }
     return Collections.unmodifiableList(reports);
   }
+
+  /**
+   * Creates reports for every declared schema and rejects missing tables or
+   * schema/type issues before a strict ruleset starts.
+   */
+  public static List<TableReport> createAllStrict(
+      Map<String, NativeTxtSchema> schemas, Map<String, LosslessTxtTable> sources) {
+    if (schemas == null) throw new NullPointerException("schemas");
+    if (sources == null) throw new NullPointerException("sources");
+    List<TableReport> reports = new ArrayList<>();
+    List<String> missing = new ArrayList<>();
+    for (Map.Entry<String, NativeTxtSchema> entry : schemas.entrySet()) {
+      LosslessTxtTable source = sources.get(entry.getKey());
+      if (source == null) missing.add(entry.getKey());
+      else reports.add(create(entry.getKey(), entry.getValue(), source));
+    }
+    if (!missing.isEmpty()) {
+      throw new MissingTxtDataException("missing required TXT tables: " + missing);
+    }
+    for (TableReport report : reports) {
+      if (!report.isClean()) throw new IllegalArgumentException(report.toString());
+    }
+    return Collections.unmodifiableList(reports);
+  }
 }

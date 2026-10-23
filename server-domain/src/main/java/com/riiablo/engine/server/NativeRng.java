@@ -7,17 +7,42 @@ package com.riiablo.engine.server;
  */
 public final class NativeRng {
   private int state;
+  private final String streamName;
+  private final long contextId;
+  private long drawCount;
 
   public NativeRng(int seed) {
+    this(seed, "legacy", -1L);
+  }
+
+  NativeRng(int seed, String streamName, long contextId) {
     state = seed == 0 ? 0x6D2B79F5 : seed;
+    this.streamName = streamName == null ? "legacy" : streamName;
+    this.contextId = contextId;
   }
 
   public int state() {
     return state;
   }
 
+  /** Number of random values consumed from this stream. */
+  public long drawCount() {
+    return drawCount;
+  }
+
+  /** Stable diagnostic name; it does not affect the compatibility sequence. */
+  public String streamName() {
+    return streamName;
+  }
+
+  /** Stable diagnostic scope supplied by the stream factory. */
+  public long contextId() {
+    return contextId;
+  }
+
   public int nextInt() {
     state = state * 1103515245 + 12345;
+    drawCount++;
     return state & 0x7FFFFFFF;
   }
 
@@ -33,7 +58,7 @@ public final class NativeRng {
   }
 
   public NativeRng fork(int salt) {
-    return new NativeRng(state ^ (salt * 0x9E3779B9));
+    return new NativeRng(state ^ (salt * 0x9E3779B9), streamName + ".fork", contextId);
   }
 
   public static NativeRng forUnit(int gameSeed, int unitId) {
