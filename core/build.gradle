@@ -920,3 +920,24 @@ task m4FixedPointRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M5 batch 1: authoritative Fire Bolt command, missile and fixed-point hit slice.
+task m5FireBoltRegression(type: Test) {
+  group = 'verification'
+  description = 'M5 Fire Bolt cast admission, missile creation, damage and synchronization slice.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    ['com.riiablo.engine.server.FireBoltGoldenDamageTest',
+     'com.riiablo.engine.server.FireBoltVerticalSliceTest',
+     'com.riiablo.engine.server.MonsterMissileElementalIntegrationTest'].each {
+      includeTestsMatching it
+    }
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

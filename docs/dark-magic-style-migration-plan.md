@@ -30,7 +30,7 @@
 | M2 | 权威状态 | 玩家、怪物、物品、任务、佣兵、地图运行时状态和客户端预测 | 明确唯一权威状态来源，UI 和客户端只能提交意图，不能提交结果 | 状态模型、状态写入接口、快照字段清单、客户端命令边界 | 任一状态变更都能追踪到权威系统；无 UI 直接写状态；预测回滚不改变权威数据 | M1 | 已完成 |
 | M3 | Tick、命令与事件 | 固定 40ms Tick、输入意图、技能、移动、死亡、实体删除、阶段调度和结构屏障 | 统一执行顺序和副作用边界，令渲染帧率不影响仿真 Tick | Command envelope、Event、结构变更队列、固定步进运行时、Tick/phase 调度图 | 固定步进可脱离渲染运行；非法意图被拒绝；阶段末统一冲刷结构变更；普通移动、拾取、一个交互流程通过纯逻辑和 ECS 测试 | M2 | 进行中 |
 | M4 | 数据层 | TXT、MPQ、D2 数据表、固定点数值、RNG/Seed、版本和可选内容包 | 使用不可变记录和显式数据来源，规则层不直接操作解析器；为每个系统/实体建立可复现 RNG 流 | typed record、数据版本、命名 RNG stream、数据审计工具、可选内容包边界 | 缺失数据、版本差异、RNG 消耗都有明确测试；合法数据不走隐式常量回退；同一输入可重放得到相同随机序列 | M1 | 进行中 |
-| M5 | 战斗垂直切片 | 普通攻击或 Fire Bolt 的完整链路 | 验证新边界能够承载真实 D2 行为，并能被快照/回放复核 | 命令→准入→结算→导弹/命中→伤害→快照→表现→回放 | 纯数据、ECS、D2GS、真实 1.10f 资源测试全部通过；旧入口不再结算；关键 Tick 有检查点和校验值 | M2、M3、M4 | 未开始 |
+| M5 | 战斗垂直切片 | 普通攻击或 Fire Bolt 的完整链路 | 验证新边界能够承载真实 D2 行为，并能被快照/回放复核 | 命令→准入→结算→导弹/命中→伤害→快照→表现→回放 | 纯数据、ECS、D2GS、真实 1.10f 资源测试全部通过；旧入口不再结算；关键 Tick 有检查点和校验值 | M2、M3、M4 | 进行中 |
 | M6 | 物品与成长 | 物品生成、装备、背包、库存事务、经验、升级、佣兵成长 | 将交易和属性聚合变成可回滚、可验证的领域事务 | Item domain、Inventory transaction、Progression service、存档字段映射 | 拾取、装备、交易、升级和重连状态无重复提交或双重结算 | M2、M4、M5 | 未开始 |
 | M7 | 世界规则 | 地图生成、碰撞、寻路、怪物 AI、任务、NPC、Warp、对象 | 将 D2 规则从通用地图/ECS 机制中分离 | World policy、AI policy、Quest/NPC command handlers | Act 1 关键链路通过 headless、双客户端和真实 MPQ 验收 | M2、M3、M4、M5、M6 | 未开始 |
 | M8 | 网络、存档与表现收口 | FlatBuffers/Netty、快照、重连、D2S、声音/视觉表现和 LibGDX UI/渲染 | 让客户端成为纯表现层，统一协议、持久化和表现适配边界 | semantic protocol、snapshot/replay/checkpoint、versioned save、presentation adapter、SoundEvent | 重连、回放、存档往返和客户端显示通过；服务端不直接访问音频/渲染；旧直连入口已删除 | M3、M5、M6、M7 | 进行中 |
@@ -614,6 +614,33 @@ git diff --check
 结果：data-pack/严格缺失策略、RNG 消费诊断和固定点门禁通过；真实 1.10f core 数据门禁 14 项全部通过。尚未把所有 server AI/技能/地图/表现的 `MathUtils.random` 和兼容 `NativeRng` 调用迁移到命名 stream；这些仍是 M4-A 的剩余迁移债务，不能据此宣称 M4 总体完成。
 
 下一迁移：继续 M4-A 调用方审计与命名 stream 迁移；M4-B 内容包按计划暂停。
+
+### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
+
+完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
+
+实现与边界：
+
+- 新增 `FireBoltVerticalSliceTest`，从服务端 `SkillCastEvent` 准入开始，验证 Sorceress 的 Fire Bolt 技能身份、技能等级和 Mana 消耗；无效 Mana 不创建导弹且不改变权威状态。
+- 通过真实 `SkillDoEvent` 和 Skills/Missiles 表创建 Fire Bolt 导弹，检查技能伤害在发射时固定到导弹快照，并由 `MissileCollisionSystem` 完成固定点火焰伤害和生命变化。
+- 新增 `m5FireBoltRegression` 门禁，组合 Fire Bolt 1--20 级 D2MOO 黄金值、Fire Bolt 垂直切片和元素导弹/生命快照回归；不修改 D2GS 协议，不提前实现 M8 replay/checkpoint，也保留旧兼容测试装配。
+
+提交：待本批验证后生成。
+
+验证：
+
+```powershell
+./gradlew.bat :core:m5FireBoltRegression --no-daemon
+git diff --check
+```
+
+结果：M5 Fire Bolt 门禁 40 个测试通过；包含 cast 准入/耗蓝、真实导弹创建、固定点命中、DamageEvent/DamageAppliedEvent 和 VitalsP 同步，以及现有 D2MOO Fire Bolt 等级黄金值。使用仓库内测试资源，未使用外部 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F` 安装，未启动真实客户端或 D2GS 双客户端。
+
+D2MOO 依据：Fire Bolt 等级伤害沿用 `D2Skills.cpp:2459`、`2623`、`2685` 与 `Units/Missile.cpp:467` 的既有黄金测试注释；本批没有凭经验改写公式。
+
+剩余问题：M5 仍未完成普通攻击、其他技能族、D2GS/真实 1.10f 端到端验收和关键 Tick 检查点/完整回放；M3/M4 的全量网络事件及 RNG 调用方迁移债务仍按原记录保留。当前垂直切片仍允许旧兼容事件装配用于离线测试，不能视为“旧入口已全部删除”。
+
+下一迁移：M5 第 2 批，继续扩展 Fire Bolt 相邻技能/普通攻击前先补 D2GS headless 命令入口和可复核的最小检查点摘要。
 
 ### M0 完成记录（2026-10-21）
 
