@@ -70,17 +70,17 @@ import com.riiablo.presentation.DialogManager;
 import com.riiablo.presentation.MenuManager;
 import com.riiablo.engine.client.NetworkedClientItemManager;
 import com.riiablo.engine.client.NetworkedActionSender;
-import com.riiablo.engine.client.debug.Box2DDebugger;
+import com.riiablo.presentation.debug.Box2DDebugger;
 import com.riiablo.presentation.debug.PathDebugger;
 import com.riiablo.presentation.debug.PathfindDebugger;
-import com.riiablo.engine.client.debug.RenderSystemDebugger;
+import com.riiablo.presentation.debug.RenderSystemDebugger;
 import com.riiablo.engine.client.FixedStepAccumulator;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
 import com.riiablo.engine.SimulationTickCoordinator;
 import com.riiablo.presentation.ClientAudioSession;
 import com.riiablo.presentation.ClientGameplayContext;
-import com.riiablo.engine.client.ClientSimulationAssembly;
+import com.riiablo.presentation.ClientSimulationAssembly;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.ServerGameplayContext;
 import com.riiablo.engine.server.InteractionRange;
@@ -744,8 +744,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
             PathfindDebugger pathfindDebugger = engine.getSystem(PathfindDebugger.class);
             pathfindDebugger.setEnabled(!pathfindDebugger.isEnabled());
             // F10 同时切换 RenderSystemDebugger，使 D2MOD 土路路径在 drawDebug 中正确绘制
-            com.riiablo.engine.client.debug.RenderSystemDebugger renderDebugger =
-                engine.getSystem(com.riiablo.engine.client.debug.RenderSystemDebugger.class);
+            RenderSystemDebugger renderDebugger = engine.getSystem(RenderSystemDebugger.class);
             if (renderDebugger != null) {
               renderDebugger.setEnabled(pathfindDebugger.isEnabled());
             }

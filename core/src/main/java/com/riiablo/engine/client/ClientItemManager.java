@@ -1,7 +1,5 @@
 package com.riiablo.engine.client;
 
-import com.riiablo.presentation.ItemEffectManager;
-
 import com.riiablo.presentation.ClientGameplayContext;
 
 import java.util.HashSet;
@@ -35,6 +33,7 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import com.riiablo.engine.client.event.ClientItemPickupEvent;
+import com.riiablo.engine.client.event.ClientItemDropReplayEvent;
 
 public class ClientItemManager extends PassiveSystem implements ItemController {
   private static final String TAG = "ClientItemManager";
@@ -66,6 +65,11 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
   public ClientItemManager(ClientGameplayContext clientContext) {
     this.clientContext = java.util.Objects.requireNonNull(clientContext, "clientContext");
+  }
+
+  /** Read-only context access for the presentation-owned client host recipe. */
+  public ClientGameplayContext clientContext() {
+    return clientContext;
   }
 
   @Override
@@ -129,8 +133,10 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   }
 
   protected boolean replayGroundDrop(int entityId) {
-    ItemEffectManager effects = world.getSystem(ItemEffectManager.class);
-    return effects != null && effects.replayDrop(entityId);
+    EventSystem events = world.getSystem(EventSystem.class);
+    if (events == null) return false;
+    events.dispatch(ClientItemDropReplayEvent.obtain(entityId));
+    return true;
   }
 
   /** Quest pickup is a consequence of a successful local mutation, never of UI intent capture. */

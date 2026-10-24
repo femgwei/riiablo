@@ -1056,6 +1056,38 @@ git diff --check
 依赖已清零。`ClientGameplayContext`、物品适配器和 host 装配兼容债务仍待后续 M8-C 批次，
 M8-C/M8 整体继续标记为进行中。
 
+### M8-C 第 3 批：客户端表现装配 owner 迁移（2026-10-24）
+
+本批将客户端表现系统的装配配方迁移到 `com.riiablo.presentation.ClientSimulationAssembly`，
+由 presentation 侧拥有表现系统的注册与相对顺序；`GameScreen` 和装配回归测试改为引用新的
+presentation owner。引擎客户端仍只提供仿真系统、输入系统和生命周期适配器，表现系统不再通过
+`engine/client/ClientSimulationAssembly` 作为 host 组合入口反向挂载。
+
+为保持 `ClientVendorSystem` 的现有行为，`ClientItemManager` 新增只读的 `clientContext()` 访问器，
+装配只读取 `charData`/`playerId` 端口，不改变物品事务、网络协议或权威 Tick 顺序。
+本批同时将本地背包满时的地面物品 bounce 从 `ClientItemManager` 对
+`ItemEffectManager` 的直接查找改为 `ClientItemDropReplayEvent`，并移除
+`ZoneChangeTracker` 中未使用的 `Stage` 注入；Box2D/Shape 调试器也迁入
+`presentation.debug`，由表现装配统一注册。
+
+验证：
+
+```powershell
+./gradlew.bat :core:compileJava :core:compileTestJava --no-daemon --max-workers=1 --console=plain
+python tools/architecture/migration_boundaries.py --mode check
+& tools/architecture/check-client-presentation-boundary.ps1 -FailOnDrift
+git diff --check
+```
+
+结果：core 生产/测试编译通过，模块边界、M1-A 表现边界和客户端装配回归通过；装配债务从
+`engine/client/ClientSimulationAssembly` 清除，物品 bounce、ZoneChangeTracker 和调试渲染器的直接表现依赖也已清除。输入、物品管理器和测试 harness 的兼容
+`ClientGameplayContext` 依赖仍按后续 M8-C 批次处理，M8-C/M8 整体继续标记为进行中。
+
+真实资源：未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；本批不修改暗黑规则。
+
+下一迁移：M8-C 第 4 批，收口 `ClientItemManager`/`NetworkedClientItemManager` 的物品表现事件
+出口和窄接口，再处理输入/交互及 debug 适配器残余依赖。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

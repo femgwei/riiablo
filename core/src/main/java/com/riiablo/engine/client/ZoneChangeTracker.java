@@ -5,7 +5,6 @@ import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.ZoneAware;
@@ -22,9 +21,6 @@ public class ZoneChangeTracker extends IteratingSystem {
 
   protected RenderSystem renderer;
   protected EventSystem events;
-
-  @Wire(name = "stage")
-  protected Stage stage;
 
   @Wire(name = "map")
   protected Map map;

@@ -1,5 +1,20 @@
-package com.riiablo.engine.client;
+package com.riiablo.presentation;
 
+import com.riiablo.engine.client.ActTransitionSystem;
+import com.riiablo.engine.client.AutoInteracter;
+import com.riiablo.engine.client.ClientItemManager;
+import com.riiablo.engine.client.ClientQuestIntentSystem;
+import com.riiablo.engine.client.ClientUnitLifecycleSystem;
+import com.riiablo.engine.client.ClientVendorSystem;
+import com.riiablo.engine.client.CorpseManager;
+import com.riiablo.engine.client.CursorMovementSystem;
+import com.riiablo.engine.client.HoveredManager;
+import com.riiablo.engine.client.KeyboardMovementSystem;
+import com.riiablo.engine.client.NetworkIdManager;
+import com.riiablo.engine.client.SelectableManager;
+import com.riiablo.engine.client.TouchpadMovementSystem;
+import com.riiablo.engine.client.WarpSubstManager;
+import com.riiablo.engine.client.ZoneChangeTracker;
 import com.riiablo.presentation.AnimationStepper;
 import com.riiablo.presentation.CofAlphaHandler;
 import com.riiablo.presentation.CofLayerCacher;
@@ -52,10 +67,10 @@ import com.riiablo.engine.SimulationClock;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
 import com.riiablo.engine.SimulationSystemGroups;
-import com.riiablo.engine.client.debug.Box2DDebugger;
+import com.riiablo.presentation.debug.Box2DDebugger;
 import com.riiablo.presentation.debug.PathDebugger;
 import com.riiablo.presentation.debug.PathfindDebugger;
-import com.riiablo.engine.client.debug.RenderSystemDebugger;
+import com.riiablo.presentation.debug.RenderSystemDebugger;
 import com.riiablo.engine.server.AngularVelocity;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.Box2DDisposer;
@@ -118,7 +133,8 @@ public final class ClientSimulationAssembly {
         .with(mapManager)
         .with(itemController, itemController.intents(), new ItemManager())
         .with(new ClientQuestIntentSystem())
-        .with(new ClientVendorSystem(itemController.clientContext::charData, itemController.clientContext::playerId))
+        .with(new ClientVendorSystem(itemController.clientContext()::charData,
+            itemController.clientContext()::playerId))
         .with(new CofManager())
         .with(new com.riiablo.engine.server.EnvironmentSystem(
             simulationSession.map(), simulationSession.environment()))

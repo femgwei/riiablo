@@ -1,4 +1,4 @@
-package com.riiablo.engine.client.debug;
+package com.riiablo.presentation.debug;
 
 import com.artemis.BaseSystem;
 import com.artemis.annotations.Wire;

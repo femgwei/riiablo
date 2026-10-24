@@ -1,4 +1,4 @@
-package com.riiablo.engine.client.debug;
+package com.riiablo.presentation.debug;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;

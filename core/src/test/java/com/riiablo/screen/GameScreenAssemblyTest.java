@@ -27,7 +27,7 @@ import com.riiablo.engine.SimulationSession;
 import com.riiablo.presentation.ClientAudioSession;
 import com.riiablo.presentation.ClientEntityFactory;
 import com.riiablo.engine.client.ClientItemManager;
-import com.riiablo.engine.client.ClientSimulationAssembly;
+import com.riiablo.presentation.ClientSimulationAssembly;
 import com.riiablo.engine.client.NetworkedClientItemManager;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.map.EnvironmentCycle;
