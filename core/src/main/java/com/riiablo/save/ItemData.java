@@ -43,6 +43,9 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
   final IntIntMap equippedSets = new IntIntMap(); // Indexed using set id
   final IntIntMap setItemsOwned = new IntIntMap(); // Indexed using set item id
 
+  /** Monotonic revision of the committed equipment aggregate. */
+  private long equipmentRevision;
+
   final Array<UpdateListener> updateListeners = new Array<>(false, 16);
 
   private static final AttributesUpdater updater = new AttributesUpdater(); // TODO: inject
@@ -1563,8 +1566,12 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
     // would undo the callback on equipment changes.
     restoreCurrentResource(Stat.stamina, Stat.maxstamina, currentResource(Stat.stamina));
     
+    equipmentRevision++;
     notifyUpdated();
   }
+
+  /** Revision of the last completed equipment aggregate rebuild. */
+  public long equipmentRevision() { return equipmentRevision; }
 
   private float currentResource(short statId) {
     StatRef current = stats.aggregate().get(statId, StatRef.obtain());
