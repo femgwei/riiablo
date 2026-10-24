@@ -991,3 +991,30 @@ task m5PhysicalCombatRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M5 batch 5: ordinary melee Attack, keyframe settlement and observer state.
+task m5MeleeCombatRegression(type: Test) {
+  group = 'verification'
+  description = 'M5 ordinary melee Attack lifecycle, physical settlement and snapshot regressions.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    ['com.riiablo.engine.server.CombatPipelineIntegrationTest.playerMeleeAttackKeyframeDamagesAndKillsMonster',
+     'com.riiablo.engine.server.CombatPipelineIntegrationTest.ordinaryPlayerMeleeHitsDrainWeaponDurability',
+     'com.riiablo.engine.server.CombatPipelineIntegrationTest.ordinaryMonsterMeleeHitsDrainPlayerArmorDurability',
+     'com.riiablo.engine.server.CombatPipelineIntegrationTest.javelinNormalAttackRemainsMeleeAndCannotHitAtThrowRange',
+     'com.riiablo.engine.server.CombatPipelineIntegrationTest.bowNormalAttackCreatesArrowAndDamagesAtRange',
+     'com.riiablo.engine.server.AmazonMeleeSkillLifecycleTest',
+     'com.riiablo.engine.server.combat.WeaponSkillLifecycleTest',
+     'com.riiablo.engine.server.combat.OrdinaryWeaponDamageTest',
+     'com.riiablo.engine.server.MonsterModeMeleeIntegrationTest'].each {
+      includeTestsMatching it
+    }
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

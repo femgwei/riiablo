@@ -2886,6 +2886,23 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("Amazon melee life diverged: owner=" + ownerLife
             + " peer=" + peerLife + " target=" + targetId);
       }
+      Set<Integer> sharedMeleeMissiles = new HashSet<>(owner.playerMissiles);
+      sharedMeleeMissiles.retainAll(peer.playerMissiles);
+      CombatCheckpoint ownerCheckpoint = CombatCheckpoint.of(
+          Math.max(0L, Math.min(owner.lastSnapshotTick, peer.lastSnapshotTick)),
+          owner.playerId, targetId, config.amazonMeleeSkillId,
+          Math.round(initialLife * 256f), Math.round(ownerLife * 256f),
+          sharedMeleeMissiles.size());
+      CombatCheckpoint peerCheckpoint = CombatCheckpoint.of(
+          ownerCheckpoint.tick(), owner.playerId, targetId, config.amazonMeleeSkillId,
+          Math.round(initialLife * 256f), Math.round(peerLife * 256f),
+          sharedMeleeMissiles.size());
+      if (!ownerCheckpoint.canonical().equals(peerCheckpoint.canonical())) {
+        throw new IllegalStateException("Amazon melee checkpoint diverged across observers: owner="
+            + ownerCheckpoint.canonical() + " peer=" + peerCheckpoint.canonical());
+      }
+      log("amazon_melee_checkpoint", "canonical=" + ownerCheckpoint.canonical()
+          + " digest=" + ownerCheckpoint.digest() + " sharedObservers=2");
       log("amazon_melee_dual_pass", "skill=" + config.amazonMeleeSkillId
           + " target=" + targetId + " initialLife=" + initialLife
           + " ownerLife=" + ownerLife + " peerLife=" + peerLife
@@ -2937,7 +2954,23 @@ public final class D2GSHeadlessClient {
           }
         }
         Snapshot restored = awaitSpecificMonster(reconnected, reconnectInput, targetId, deadline());
-        boolean reconnectLifeInvalid = !restored.hasVitals || restored.life > ownerLife + 0.001f
+        // The first room-scoped reconnect frame can be an older vitals sample
+        // than the owner's latest post-hit frame.  Drain until the replacement
+        // observer catches the same authoritative life, rather than treating a
+        // transient pre-settlement sample as stale world state.
+        if (!config.amazonMeleeExpectMiss && !config.amazonMeleeTargetDeath
+            && restored.hasVitals
+            && restored.life >= initialLife) {
+          long settleDeadline = Math.min(deadline, System.currentTimeMillis() + 5_000L);
+          while (System.currentTimeMillis() < settleDeadline
+              && restored.life >= initialLife) {
+            com.riiablo.net.packet.d2gs.D2GS packet = readPacket(reconnectInput);
+            if (packet != null) reconnected.consume(packet);
+            Snapshot latest = reconnected.monsters.get(targetId);
+            if (latest != null && latest.hasVitals && !latest.deleted) restored = latest;
+          }
+        }
+        boolean reconnectLifeInvalid = !restored.hasVitals
             || (config.amazonMeleeExpectMiss
                 ? restored.life + 0.001f < ownerLife
                 : restored.life >= initialLife);
@@ -12855,9 +12888,11 @@ public final class D2GSHeadlessClient {
     weapon.attrs.base().put(Stat.maxdurability, mapTour ? 255 : 20);
     weapon.attrs.reset();
     character.getItems().equipItem(BodyLoc.RARM, character.getItems().add(weapon));
-    seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
-    if (!character.setSkillLevel(skillId, skillLevel)) {
-      throw new IllegalStateException("could not seed Amazon melee skill " + skillId);
+    if (skillId != SkillId.ATTACK) {
+      seedSkillPrerequisites(character, skillId, new HashSet<Integer>());
+      if (!character.setSkillLevel(skillId, skillLevel)) {
+        throw new IllegalStateException("could not seed Amazon melee skill " + skillId);
+      }
     }
     byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
     log("character_generated", "name=HeadAmaMelee class=amazon skill="
@@ -13496,7 +13531,7 @@ public final class D2GSHeadlessClient {
             "--require-area-skill-expiry currently requires Blade Shield(277)");
       }
       if (config.requireAmazonMelee && !isAmazonMeleeSkill(config.amazonMeleeSkillId)) {
-        throw new IllegalArgumentException("--amazon-melee-skill must be Jab(10), Power Strike(14), "
+        throw new IllegalArgumentException("--amazon-melee-skill must be Attack(0), Jab(10), Power Strike(14), "
             + "Impale(19), Poison Javelin(15), Lightning Bolt(20), Charged Strike(24), "
             + "Plague Javelin(25), Fend(30), Lightning Strike(34), or Lightning Fury(35)");
       }
@@ -13610,7 +13645,7 @@ public final class D2GSHeadlessClient {
     }
 
     private static boolean isAmazonMeleeSkill(int skillId) {
-      return skillId == SkillId.JAB || skillId == SkillId.POWER_STRIKE
+      return skillId == SkillId.ATTACK || skillId == SkillId.JAB || skillId == SkillId.POWER_STRIKE
           || skillId == SkillId.IMPALE || skillId == SkillId.POISON_JAVELIN
           || skillId == SkillId.LIGHTNING_BOLT || skillId == SkillId.CHARGED_STRIKE
           || skillId == SkillId.PLAGUE_JAVELIN
@@ -13730,7 +13765,7 @@ public final class D2GSHeadlessClient {
           + " [--require-quest-recovery]"
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"
-           + " [--require-amazon-melee] [--amazon-melee-skill 35]"
+           + " [--require-amazon-melee] [--amazon-melee-skill 0|35]"
            + " [--amazon-melee-skill-level 1..20] [--amazon-melee-weapon jav|spr]"
            + " [--require-amazon-summon] [--amazon-summon-skill 28|32]"
            + " [--amazon-summon-skill-level 1..20]"

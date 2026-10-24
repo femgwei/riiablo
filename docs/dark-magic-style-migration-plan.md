@@ -769,6 +769,33 @@ git diff --check
 
 下一迁移：M5 第 5 批或最终收口批，集中完成近战普通攻击/表现快照与旧入口复核；只有相关门禁和真实资源验证完成后才更新为完成。
 
+### M5 第 5 批：近战普通 Attack 与观察端 checkpoint（2026-10-24）
+
+完成日期：2026-10-24；本批把 Amazon 普通 Attack（skill=0）接入既有权威近战链路，补齐 ECS keyframe/物理结算、双客户端观察、重连恢复和 checkpoint 一致性门禁；不宣称 M5 的表现事件出口、旧兼容入口清理或完整 replay 已完成。
+
+实现与边界：
+
+- `D2GSHeadlessClient` 的 Amazon melee fixture 允许原生 Attack(0)，生成存档保留 CharData 默认普通攻击，不把 Attack 伪造为技能等级；既有 Jab/Impale 等专用技能路径保持不变。
+- 新增 `:server:d2gs:headlessAmazonAttack`，复用生产 D2GS TCP 双客户端/重连 gate，使用真实 1.10f `spr` 近战武器验证普通攻击命中、两端生命一致、观察端重连不恢复旧生命，并输出共享 `CombatCheckpoint`。
+- 新增 `m5MeleeCombatRegression`，集中覆盖普通 Attack keyframe、武器耐久、弓/标枪普通攻击距离策略、Amazon 近战生命周期、普通武器伤害快照与服务端生命/事件线；过滤掉与本批无关的 Throwing Mastery 专项资源测试。
+
+验证：
+
+```powershell
+./gradlew.bat :core:m5MeleeCombatRegression --no-daemon
+$env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:headlessAmazonAttack --no-daemon
+git diff --check
+```
+
+结果：`m5MeleeCombatRegression` 53 项测试通过（0 失败、0 跳过）；真实 1.10f gate 通过，观察到 skill=0、双客户端目标生命 `1000000.0→999996.4`，本次运行输出共享 checkpoint canonical `23|117|142|0|256000000|255999072|0`，digest `c00dafe642a7cf374f83f0fb8ec1510a08f49cb04686b715191e24bbffe0976c`，并验证重连观察端恢复生命 `999996.94` 且无陈旧命中前状态。tick/entity 字段随独立 server run 分配，比较时以 canonical 字段和 digest 为本次运行摘要；未修改 FlatBuffer 字段，未启动图形客户端。
+
+D2MOO/原版依据：普通 Attack 使用 `SkillCodes.attack=0` 的原生 `SrvDo002`/普通武器分派；物理伤害、武器耐久和 keyframe 顺序沿用现有 D2MOO 注释与 `CombatPipelineIntegrationTest`/`OrdinaryWeaponDamageTest` 的固定点断言，没有凭经验改写公式。
+
+剩余问题：M5 仍需最终复核表现快照事件出口、旧兼容入口删除范围以及摘要 checkpoint 到 M8 可恢复 replay 的转换；本批只完成普通近战权威结算和网络观察，不把这些依赖提前宣称完成。
+
+下一迁移：M5 最终收口批，集中清理/登记战斗旧入口并把表现快照与 replay 依赖交给 M8；若旧入口仍有明确生产结算职责，继续保留为未完成项。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21

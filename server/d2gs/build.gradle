@@ -326,6 +326,19 @@ tasks.register('headlessAmazonMelee', JavaExec) {
   if (project.hasProperty('areaVerbose')) args '--verbose'
 }
 
+tasks.register('headlessAmazonAttack', JavaExec) {
+  group = 'verification'
+  description = 'Runs ordinary Amazon Attack through the real-MPQ dual-client and reconnect gate.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--require-amazon-melee', '--amazon-melee-skill', '0',
+       '--amazon-melee-skill-level', '1', '--amazon-melee-weapon', 'spr',
+       '--test-timeout', '90'
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessAmazonSummon', JavaExec) {
   group = 'verification'
   description = 'Runs a real-MPQ Amazon Decoy/Valkyrie summon and reconnect gate.'
