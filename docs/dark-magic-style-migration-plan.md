@@ -1650,6 +1650,37 @@ git diff --check
 下一迁移：把 session identity/authority rebind 纳入 checkpoint transaction，并运行真实双进程
 断线恢复 gate；完成后再评估 M8-A 收尾条件。
 
+### M8-A 第 13 批：session authority checkpoint 与 generation rebind（2026-10-25）
+
+本批把 session identity 纳入 D2GS checkpoint 边界，仍不宣称 M8-A/M8 整体完成。
+
+- `AuthoritativeSessionRegistry` 新增不可变 authority `Snapshot`、原子 restore、稳定角色
+  `rebind` 和单调 generation；旧 active connection 在接管后转为 `DISCONNECTED`，迟到命令
+  不能继续使用旧 connection，带旧 generation 的命令显式拒绝。
+- `D2gsCommandAdapter` 增加 generation-aware submit/rebind；保留现有无 generation 调用以兼容
+  旧 transport，新的 reconnect transport 可用 generation 做 epoch 隔离。
+- `D2gsCheckpointSnapshot` 可携带 session authority canonical 摘要；D2GS capture/restore
+  将 ECS、RNG、D2S 和 authority snapshot 纳入同一恢复门禁。恢复后的 active stable key 会进入
+  pending rebind 集合，新的连接可在 generation 校验后接管旧 actor 身份。
+- 增加 registry、旧 connection 拒绝、新 connection 接管、generation 迟到包拒绝和 checkpoint
+  authority round-trip 测试。真实双进程 socket gate 仍待下一批运行环境验收，D2S/ECS/RNG 的
+  全量跨系统回滚事务也仍未完成。
+
+验证：
+
+```powershell
+./gradlew.bat :core:test --tests com.riiablo.engine.D2gsCommandAdapterTest `
+  :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：定向 core/D2GS 测试和编译通过；M8-A 仍待真实双进程 reconnect gate，以及 ECS/RNG/D2S/
+session authority 失败时的完整跨系统回滚验证。
+
+下一迁移：在可用的 headless 双进程环境运行跨进程 checkpoint restore/reconnect gate；随后
+补齐失败回滚事务并复核旧 transport 的 generation 注入，之后再评估 M8-A 收尾条件。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

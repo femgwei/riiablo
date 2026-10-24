@@ -1,8 +1,11 @@
 package com.riiablo.engine;
 
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Owns the authenticated connection-to-actor identity boundary for a D2GS
@@ -19,7 +22,9 @@ public final class AuthoritativeSessionRegistry {
     CONNECTION_IN_USE,
     STABLE_KEY_ACTIVE,
     UNKNOWN_CONNECTION,
-    SESSION_NOT_ACTIVE
+    SESSION_NOT_ACTIVE,
+    GENERATION_MISMATCH,
+    INVALID_SNAPSHOT
   }
 
   public static final class Session {
@@ -29,24 +34,53 @@ public final class AuthoritativeSessionRegistry {
     public final State state;
     public final long connectedTick;
     public final long disconnectedTick;
+    /** Monotonic authority generation for this stable identity. */
+    public final long generation;
 
     private Session(int connectionId, int actorId, String stableKey, State state,
-        long connectedTick, long disconnectedTick) {
+        long connectedTick, long disconnectedTick, long generation) {
       this.connectionId = connectionId;
       this.actorId = actorId;
       this.stableKey = stableKey;
       this.state = state;
       this.connectedTick = connectedTick;
       this.disconnectedTick = disconnectedTick;
-    }
-
-    private Session active(int connectionId, int actorId, long tick) {
-      return new Session(connectionId, actorId, stableKey, State.ACTIVE, tick, -1L);
+      this.generation = generation;
     }
 
     private Session disconnected(long tick) {
       return new Session(connectionId, actorId, stableKey, State.DISCONNECTED,
-          connectedTick, tick);
+          connectedTick, tick, generation);
+    }
+  }
+
+  /** Immutable cross-process authority payload. */
+  public static final class Snapshot {
+    private final List<Session> sessions;
+
+    private Snapshot(List<Session> sessions) {
+      this.sessions = Collections.unmodifiableList(new ArrayList<>(sessions));
+    }
+
+    public List<Session> sessions() { return sessions; }
+
+    public Session stableKey(String stableKey) {
+      if (stableKey == null) return null;
+      for (Session session : sessions) {
+        if (stableKey.equals(session.stableKey)) return session;
+      }
+      return null;
+    }
+
+    public String canonical() {
+      StringBuilder result = new StringBuilder("session-authority-v1");
+      for (Session session : sessions) {
+        result.append('|').append(session.connectionId).append(':')
+            .append(session.actorId).append(':').append(session.stableKey).append(':')
+            .append(session.state).append(':').append(session.connectedTick).append(':')
+            .append(session.disconnectedTick).append(':').append(session.generation);
+      }
+      return result.toString();
     }
   }
 
@@ -89,10 +123,52 @@ public final class AuthoritativeSessionRegistry {
       return Result.rejected(Rejection.STABLE_KEY_ACTIVE);
     }
     if (currentConnection != null) byConnection.remove(connectionId);
-    Session session = new Session(connectionId, actorId, stableKey, State.ACTIVE, tick, -1L);
+    long generation = nextGeneration(currentKey);
+    Session session = new Session(connectionId, actorId, stableKey, State.ACTIVE, tick, -1L,
+        generation);
     byConnection.put(connectionId, session);
     byStableKey.put(stableKey, session);
     return Result.accepted(session);
+  }
+
+  /**
+   * Takes over an existing stable identity after a process restart.  The old
+   * active connection is retained as disconnected, so packets arriving from
+   * that connection cannot be admitted after the handoff.
+   */
+  public synchronized Result rebind(int connectionId, String stableKey, int actorId, long tick) {
+    if (connectionId < 0) return Result.rejected(Rejection.INVALID_CONNECTION);
+    if (actorId < 0) return Result.rejected(Rejection.INVALID_ACTOR);
+    if (stableKey == null || stableKey.trim().isEmpty()) {
+      return Result.rejected(Rejection.INVALID_STABLE_KEY);
+    }
+    if (tick < 0L) throw new IllegalArgumentException("tick");
+    Session currentConnection = byConnection.get(connectionId);
+    if (currentConnection != null && currentConnection.state == State.ACTIVE) {
+      return Result.rejected(Rejection.CONNECTION_IN_USE);
+    }
+    Session currentKey = byStableKey.get(stableKey);
+    if (currentKey != null && currentKey.state == State.ACTIVE
+        && currentKey.connectionId != connectionId) {
+      byConnection.put(currentKey.connectionId, currentKey.disconnected(tick));
+    }
+    if (currentConnection != null) byConnection.remove(connectionId);
+    long generation = nextGeneration(currentKey);
+    Session session = new Session(connectionId, actorId, stableKey, State.ACTIVE, tick, -1L,
+        generation);
+    byConnection.put(connectionId, session);
+    byStableKey.put(stableKey, session);
+    return Result.accepted(session);
+  }
+
+  /** Rebinds only when the caller still owns the expected checkpoint generation. */
+  public synchronized Result rebind(int connectionId, String stableKey, int actorId, long tick,
+      long expectedGeneration) {
+    Session current = stableKey == null ? null : byStableKey.get(stableKey);
+    if (current == null || current.generation != expectedGeneration) {
+      return Result.rejected(Rejection.GENERATION_MISMATCH);
+    }
+    return rebind(connectionId, stableKey, actorId, tick);
   }
 
   public synchronized Result disconnect(int connectionId, long tick) {
@@ -126,5 +202,57 @@ public final class AuthoritativeSessionRegistry {
       if (session.state == State.ACTIVE) count++;
     }
     return count;
+  }
+
+  /** Captures all connection and stable-key entries in deterministic order. */
+  public synchronized Snapshot snapshot() {
+    List<Session> sessions = new ArrayList<>(byConnection.values());
+    sessions.sort(Comparator.comparingInt(session -> session.connectionId));
+    return new Snapshot(sessions);
+  }
+
+  /** Restores authority atomically; invalid snapshots leave this registry untouched. */
+  public synchronized void restore(Snapshot snapshot) {
+    if (snapshot == null) throw new NullPointerException("snapshot");
+    Map<Integer, Session> restoredConnections = new HashMap<>();
+    Map<String, Session> restoredKeys = new HashMap<>();
+    try {
+      for (Session session : snapshot.sessions()) {
+        validateSnapshotSession(session);
+        if (restoredConnections.put(session.connectionId, session) != null) {
+          throw new IllegalArgumentException("duplicate connection");
+        }
+        if (restoredKeys.put(session.stableKey, session) != null) {
+          throw new IllegalArgumentException("duplicate stable key");
+        }
+      }
+    } catch (RuntimeException e) {
+      throw new IllegalArgumentException(Rejection.INVALID_SNAPSHOT.name(), e);
+    }
+    byConnection.clear();
+    byConnection.putAll(restoredConnections);
+    byStableKey.clear();
+    byStableKey.putAll(restoredKeys);
+  }
+
+  private static long nextGeneration(Session current) {
+    if (current == null) return 1L;
+    if (current.generation == Long.MAX_VALUE) throw new IllegalStateException("generation overflow");
+    return current.generation + 1L;
+  }
+
+  private static void validateSnapshotSession(Session session) {
+    if (session == null || session.connectionId < 0 || session.actorId < 0
+        || session.stableKey == null || session.stableKey.trim().isEmpty()
+        || session.connectedTick < 0L || session.generation <= 0L) {
+      throw new IllegalArgumentException("invalid session");
+    }
+    if (session.state == State.ACTIVE && session.disconnectedTick != -1L) {
+      throw new IllegalArgumentException("active disconnected tick");
+    }
+    if (session.state == State.DISCONNECTED
+        && (session.disconnectedTick < session.connectedTick)) {
+      throw new IllegalArgumentException("disconnected tick");
+    }
   }
 }

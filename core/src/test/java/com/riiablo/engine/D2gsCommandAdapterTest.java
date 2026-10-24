@@ -3,6 +3,7 @@ package com.riiablo.engine;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -52,5 +53,40 @@ class D2gsCommandAdapterTest {
     assertEquals(0, adapter.drain(1, drained::add));
     assertTrue(drained.isEmpty());
     assertFalse(adapter.submit(1, "move", "east", 2, 2, -1).accepted);
+  }
+
+  @Test
+  void checkpointAuthorityCanRebindAndRejectOldGeneration() {
+    AuthoritativeSessionRegistry sessions = new AuthoritativeSessionRegistry();
+    D2gsCommandAdapter adapter = new D2gsCommandAdapter(sessions, "d2gs",
+        (command, target) -> true);
+    assertTrue(adapter.connect(3, "hero", 7, 0).accepted);
+    long firstGeneration = sessions.stableKey("hero").generation;
+    AuthoritativeSessionRegistry.Snapshot snapshot = sessions.snapshot();
+
+    AuthoritativeSessionRegistry restored = new AuthoritativeSessionRegistry();
+    restored.restore(snapshot);
+    D2gsCommandAdapter resumed = new D2gsCommandAdapter(restored, "d2gs",
+        (command, target) -> true);
+    assertTrue(resumed.rebind(8, "hero", 42, 10, firstGeneration).accepted);
+    assertEquals(AuthoritativeSessionRegistry.State.DISCONNECTED,
+        restored.connection(3).state);
+    assertEquals(42, restored.activeConnection(8).actorId);
+    assertEquals(D2gsCommandAdapter.Rejection.SESSION_NOT_ACTIVE,
+        resumed.submit(3, "move", "late", 11, 1, -1).rejection);
+    assertEquals(D2gsCommandAdapter.Rejection.STALE_SESSION,
+        resumed.submit(8, firstGeneration, "move", "late", 11, 2, -1).rejection);
+    assertTrue(resumed.submit(8, restored.activeConnection(8).generation,
+        "move", "east", 11, 3, -1).accepted);
+  }
+
+  @Test
+  void restoringInvalidAuthoritySnapshotIsAtomic() {
+    AuthoritativeSessionRegistry sessions = new AuthoritativeSessionRegistry();
+    assertTrue(sessions.connect(1, "hero", 7, 0).accepted);
+    AuthoritativeSessionRegistry.Snapshot valid = sessions.snapshot();
+    assertThrows(NullPointerException.class, () -> sessions.restore(null));
+    assertEquals(1, sessions.activeCount());
+    assertEquals(valid.canonical(), sessions.snapshot().canonical());
   }
 }

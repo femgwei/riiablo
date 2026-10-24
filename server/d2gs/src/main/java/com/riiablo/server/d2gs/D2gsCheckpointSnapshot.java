@@ -17,6 +17,7 @@ import com.artemis.utils.IntBag;
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.component.Networked;
+import com.riiablo.engine.AuthoritativeSessionRegistry;
 import com.riiablo.engine.replay.SimulationCheckpoint;
 import com.riiablo.save.D2SCheckpoint;
 import com.riiablo.net.packet.d2gs.D2GS;
@@ -71,9 +72,11 @@ public final class D2gsCheckpointSnapshot {
   private final SimulationCheckpoint summary;
   private final Map<Integer, byte[]> payloads;
   private final D2SCheckpoint d2sCheckpoint;
+  private final AuthoritativeSessionRegistry.Snapshot sessionSnapshot;
 
   private D2gsCheckpointSnapshot(long tick, SimulationCheckpoint summary,
-      Map<Integer, byte[]> payloads, D2SCheckpoint d2sCheckpoint) {
+      Map<Integer, byte[]> payloads, D2SCheckpoint d2sCheckpoint,
+      AuthoritativeSessionRegistry.Snapshot sessionSnapshot) {
     this.tick = tick;
     this.summary = summary;
     TreeMap<Integer, byte[]> copy = new TreeMap<>();
@@ -82,6 +85,7 @@ public final class D2gsCheckpointSnapshot {
     }
     this.payloads = Collections.unmodifiableMap(copy);
     this.d2sCheckpoint = d2sCheckpoint;
+    this.sessionSnapshot = sessionSnapshot;
   }
 
   /** Captures the same EntitySync state used for an authoritative baseline. */
@@ -108,6 +112,16 @@ public final class D2gsCheckpointSnapshot {
       long tick, List<SimulationCheckpoint.RngState> rngStates,
       List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates,
       D2SCheckpoint d2sCheckpoint) {
+    return capture(world, serializer, tick, rngStates, nativeUnitRngStates,
+        d2sCheckpoint, null);
+  }
+
+  /** Captures ECS/RNG/D2S state and the authenticated session authority. */
+  public static D2gsCheckpointSnapshot capture(World world, SerializationManager serializer,
+      long tick, List<SimulationCheckpoint.RngState> rngStates,
+      List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates,
+      D2SCheckpoint d2sCheckpoint,
+      AuthoritativeSessionRegistry.Snapshot sessionSnapshot) {
     if (world == null) throw new NullPointerException("world");
     if (serializer == null) throw new NullPointerException("serializer");
     if (tick < 0L) throw new IllegalArgumentException("tick");
@@ -121,7 +135,8 @@ public final class D2gsCheckpointSnapshot {
     // a process restart with a different wall-clock epoch.
     for (int entityId : ids) payloads.put(entityId,
         serialize(serializer, entityId, 0L, 0L));
-    return fromPayloads(tick, payloads, rngStates, nativeUnitRngStates, d2sCheckpoint);
+    return fromPayloads(tick, payloads, rngStates, nativeUnitRngStates, d2sCheckpoint,
+        sessionSnapshot);
   }
 
   /** Builds a snapshot from serialized EntitySync envelopes for deterministic tests/tools. */
@@ -147,6 +162,15 @@ public final class D2gsCheckpointSnapshot {
       List<SimulationCheckpoint.RngState> rngStates,
       List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates,
       D2SCheckpoint d2sCheckpoint) {
+    return fromPayloads(tick, payloads, rngStates, nativeUnitRngStates, d2sCheckpoint, null);
+  }
+
+  /** Builds a snapshot with ECS/RNG/D2S payloads and session authority. */
+  public static D2gsCheckpointSnapshot fromPayloads(long tick, Map<Integer, byte[]> payloads,
+      List<SimulationCheckpoint.RngState> rngStates,
+      List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates,
+      D2SCheckpoint d2sCheckpoint,
+      AuthoritativeSessionRegistry.Snapshot sessionSnapshot) {
     if (tick < 0L) throw new IllegalArgumentException("tick");
     if (payloads == null) throw new NullPointerException("payloads");
     TreeMap<Integer, String> entityDigests = new TreeMap<>();
@@ -165,14 +189,17 @@ public final class D2gsCheckpointSnapshot {
       canonical.append("|entity:").append(entry.getKey()).append(":")
           .append(entry.getValue());
     }
+    if (sessionSnapshot != null) canonical.append("|sessions:")
+        .append(digest(sessionSnapshot.canonical()));
     SimulationCheckpoint summary = SimulationCheckpoint.of(tick, digest(canonical.toString()),
         entityDigests, rngStates, nativeUnitRngStates);
-    return new D2gsCheckpointSnapshot(tick, summary, copy, d2sCheckpoint);
+    return new D2gsCheckpointSnapshot(tick, summary, copy, d2sCheckpoint, sessionSnapshot);
   }
 
   public long tick() { return tick; }
   public SimulationCheckpoint summary() { return summary; }
   public D2SCheckpoint d2sCheckpoint() { return d2sCheckpoint; }
+  public AuthoritativeSessionRegistry.Snapshot sessionSnapshot() { return sessionSnapshot; }
   public Map<Integer, byte[]> payloads() {
     Map<Integer, byte[]> copy = new TreeMap<>();
     for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {

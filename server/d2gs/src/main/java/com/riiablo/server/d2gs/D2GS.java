@@ -6081,6 +6081,8 @@ public class D2GS extends ApplicationAdapter {
   private CheckpointRngRegistry replayRngRegistry;
   private NativeUnitRandomRegistry replayNativeUnitRngRegistry;
   private D2SCheckpointRegistry replayD2sRegistry;
+  /** Stable identities captured from a restarted process and awaiting takeover. */
+  private final Set<String> pendingSessionRebindKeys = new HashSet<>();
   /** Single fixed-tick ingress for authenticated movement/combat packets. */
   private final AuthoritativeSessionRegistry authoritativeSessions =
       new AuthoritativeSessionRegistry();
@@ -6200,6 +6202,11 @@ public class D2GS extends ApplicationAdapter {
     return replayNativeUnitRngRegistry;
   }
 
+  /** Exposes the owner-thread session authority for checkpoint/reconnect adapters. */
+  public AuthoritativeSessionRegistry authoritativeSessions() {
+    return authoritativeSessions;
+  }
+
   /** Installs the optional authoritative player D2S checkpoint registry. */
   public void setReplayD2sRegistry(D2SCheckpointRegistry registry) {
     replayD2sRegistry = registry;
@@ -6231,7 +6238,7 @@ public class D2GS extends ApplicationAdapter {
         ? null : replayD2sRegistry.capture();
     if (rngStates == null && replayRngRegistry != null) rngStates = replayRngRegistry.snapshot();
     return D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber(), rngStates,
-        nativeUnitRngStates, d2sCheckpoint);
+        nativeUnitRngStates, d2sCheckpoint, authoritativeSessions.snapshot());
   }
 
   public D2gsCheckpointSnapshot replayCheckpoint() { return replayCheckpoint; }
@@ -6275,6 +6282,12 @@ public class D2GS extends ApplicationAdapter {
     if (replayD2sRegistry != null && d2sCheckpoint != null) {
       replayD2sRegistry.validate(d2sCheckpoint);
     }
+    AuthoritativeSessionRegistry.Snapshot sessionSnapshot = checkpoint.sessionSnapshot();
+    if (sessionSnapshot != null) {
+      // Validate with a throw-away registry before touching ECS.  The live
+      // registry is changed only after all other checkpoint payloads succeed.
+      new AuthoritativeSessionRegistry().restore(sessionSnapshot);
+    }
     D2gsCheckpointSnapshot.RestoreResult result = lifecycle == null
         ? checkpoint.restoreExisting(world, serializer)
         : checkpoint.restoreExisting(world, serializer, lifecycle);
@@ -6291,6 +6304,15 @@ public class D2GS extends ApplicationAdapter {
         if (!d2sResult.success()) {
           throw new IllegalStateException("D2S checkpoint restore failed: "
               + d2sResult.failedEntities);
+        }
+      }
+      if (sessionSnapshot != null) {
+        authoritativeSessions.restore(sessionSnapshot);
+        pendingSessionRebindKeys.clear();
+        for (AuthoritativeSessionRegistry.Session session : sessionSnapshot.sessions()) {
+          if (session.state == AuthoritativeSessionRegistry.State.ACTIVE) {
+            pendingSessionRebindKeys.add(session.stableKey);
+          }
         }
       }
       // Replaying an archived checkpoint is the one explicit operation allowed
@@ -6714,8 +6736,17 @@ public class D2GS extends ApplicationAdapter {
     if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
     int entityId = factory.createPlayer(charData, origin);
     player.put(packet.id, entityId);
+    long sessionTick = simulation == null ? 0L : simulation.tickNumber();
     AuthoritativeSessionRegistry.Result session = commandAdapter.connect(
-        packet.id, charData.name, entityId, simulation == null ? 0L : simulation.tickNumber());
+        packet.id, charData.name, entityId, sessionTick);
+    if (!session.accepted
+        && session.rejection == AuthoritativeSessionRegistry.Rejection.STABLE_KEY_ACTIVE
+        && pendingSessionRebindKeys.contains(charData.name)) {
+      AuthoritativeSessionRegistry.Session archived = authoritativeSessions.stableKey(charData.name);
+      session = archived == null ? session : commandAdapter.rebind(packet.id, charData.name,
+          entityId, sessionTick, archived.generation);
+      if (session.accepted) pendingSessionRebindKeys.remove(charData.name);
+    }
     if (!session.accepted) {
       Gdx.app.error(TAG, "[NET_INGRESS] phase=session_reject connection=" + packet.id
           + " player=" + entityId + " reason=" + session.rejection);

@@ -10,7 +10,9 @@ import java.util.function.Consumer;
  * authoritative simulation.
  */
 public final class D2gsCommandAdapter {
-  public enum Rejection { NONE, SESSION_NOT_ACTIVE, INVALID_REQUEST }
+  public enum Rejection {
+    NONE, SESSION_NOT_ACTIVE, STALE_SESSION, INVALID_REQUEST
+  }
 
   public static final class Result {
     public final boolean accepted;
@@ -63,11 +65,36 @@ public final class D2gsCommandAdapter {
     return result;
   }
 
+  /** Takes over a stable identity retained by a restored checkpoint. */
+  public AuthoritativeSessionRegistry.Result rebind(int connectionId, String stableKey,
+      int actorId, long tick) {
+    return sessions.rebind(connectionId, stableKey, actorId, tick);
+  }
+
+  /** Takes over a stable identity only if the checkpoint generation still matches. */
+  public AuthoritativeSessionRegistry.Result rebind(int connectionId, String stableKey,
+      int actorId, long tick, long expectedGeneration) {
+    return sessions.rebind(connectionId, stableKey, actorId, tick, expectedGeneration);
+  }
+
   public Result submit(int connectionId, String kind, Object payload, long tick,
+      long requestId, int targetEntityId) {
+    return submit(connectionId, 0L, kind, payload, tick, requestId, targetEntityId);
+  }
+
+  /**
+   * Admits a command with an optional connection generation.  A non-zero
+   * generation is required by reconnecting transports so a delayed packet
+   * from the previous owner cannot enter the new session.
+   */
+  public Result submit(int connectionId, long generation, String kind, Object payload, long tick,
       long requestId, int targetEntityId) {
     if (requestId <= 0L) return Result.rejected(Rejection.INVALID_REQUEST);
     AuthoritativeSessionRegistry.Session session = sessions.activeConnection(connectionId);
     if (session == null) return Result.rejected(Rejection.SESSION_NOT_ACTIVE);
+    if (generation > 0L && session.generation != generation) {
+      return Result.rejected(Rejection.STALE_SESSION);
+    }
     SimulationCommandEnvelope.Builder builder = SimulationCommandEnvelope.builder(
         source, requireText(kind, "kind"), Objects.requireNonNull(payload, "payload"))
         .tick(tick).actor(session.actorId).request(requestId)

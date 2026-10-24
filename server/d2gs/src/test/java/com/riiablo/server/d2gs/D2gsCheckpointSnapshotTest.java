@@ -8,6 +8,7 @@ import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.engine.server.AuthoritativeSimulation;
+import com.riiablo.engine.AuthoritativeSessionRegistry;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.replay.SimulationCheckpoint;
@@ -63,6 +64,27 @@ public class D2gsCheckpointSnapshotTest {
             new SimulationCheckpoint.NativeUnitRngState("unit.hit", id, 3, 4)));
     assertEquals("native-rng:unit.hit#" + id,
         nativeCheckpoint.summary().diff(nativeDrifted.summary()).get(0).field);
+  }
+
+  @Test public void checkpointCarriesSessionAuthorityForReconnectTakeover() {
+    World world = worldWithEntities(1);
+    FakeSerializer serializer = new FakeSerializer();
+    int id = networkedIds(world)[0];
+    serializer.states.put(id, 10);
+    AuthoritativeSessionRegistry sessions = new AuthoritativeSessionRegistry();
+    assertTrue(sessions.connect(4, "hero", id, 7L).accepted);
+
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(world, serializer, 7L,
+        null, null, null, sessions.snapshot());
+    assertEquals(sessions.snapshot().canonical(), checkpoint.sessionSnapshot().canonical());
+
+    AuthoritativeSessionRegistry resumed = new AuthoritativeSessionRegistry();
+    resumed.restore(checkpoint.sessionSnapshot());
+    long generation = resumed.stableKey("hero").generation;
+    assertTrue(resumed.rebind(9, "hero", 99, 8L, generation).accepted);
+    assertEquals(AuthoritativeSessionRegistry.State.DISCONNECTED,
+        resumed.connection(4).state);
+    assertEquals(99, resumed.activeConnection(9).actorId);
   }
 
   @Test public void restoredEcsStateContinuesOnTheNextFixedTick() {
