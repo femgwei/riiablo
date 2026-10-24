@@ -1214,6 +1214,36 @@ git diff --check
 下一迁移：继续收口 `ClientItemManager`/`NetworkedClientItemManager`/`ClientNetworkReceiver` 的
 状态出口，或在输入意图端口批次中处理 `CursorMovementSystem` 与 `KeyboardMovementSystem` 的剩余 context 依赖。
 
+### M8-C 第 8 批：客户端输入状态端口（2026-10-24）
+
+提交：`aa7322f14`。
+
+本批新增 engine-side 的 `ClientActionInputPort` 与 `ClientKeyboardInputPort`，由 presentation 侧
+`ClientGameplayInputAdapter` 统一提供当前技能、技能表、投掷/远程武器和移动阻塞事实。`CursorMovementSystem`
+与 `KeyboardMovementSystem` 不再直接依赖 `ClientGameplayContext`/`ClientUiServices`；GameScreen 为真实
+客户端世界注册同一个适配器的两个窄端口，保留固定 Tick 输入队列、城镇技能限制、普通攻击/投掷/弓箭判定和
+雇佣兵面板阻塞语义。缺少适配器的离线构造保持安全降级，不修改服务端规则或协议。
+
+验证：
+
+```powershell
+./gradlew :core:compileJava :core:compileTestJava :core:test `
+  --tests com.riiablo.presentation.ClientGameplayInputAdapterTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests com.riiablo.architecture.ClientUiBoundaryTest --no-daemon --max-workers=1 --console=plain
+python tools/architecture/migration_boundaries.py --mode check
+& tools/architecture/check-client-presentation-boundary.ps1 -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、输入适配器/客户端装配/表现边界回归通过；M8-C 债务由 6 条降至 3 条。剩余债务为
+`ClientItemManager`、`NetworkedClientItemManager` 和 `ClientNetworkReceiver` 的
+`ClientGameplayContext` 兼容读取，后续按物品事务与网络副本状态出口收口。M8-C/M8 整体继续标记为进行中。
+
+真实资源：未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；本批不修改暗黑规则。
+
+下一迁移：处理物品事务/网络副本的状态适配器，统一提交已确认的物品快照和表现事件。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
