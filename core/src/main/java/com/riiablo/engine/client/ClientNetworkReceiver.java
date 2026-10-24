@@ -213,6 +213,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
       new SnapshotBaselineTransaction();
   /** Current level of the local player; -1 until the first authoritative snapshot. */
   private int localLevelId = -1;
+  private long progressionRevision = -1L;
+  private long equipmentRevision = -1L;
 
   public ClientNetworkReceiver() {
     super(null, SimulationClock.STEP_SECONDS);
@@ -237,6 +239,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   public AuthoritativeMapState.Snapshot authoritativeMap(int entity) {
     return authoritativeMaps.get(entity);
   }
+  public long progressionRevision() { return progressionRevision; }
+  public long equipmentRevision() { return equipmentRevision; }
 
   private void removeTransform(int entityId) {
     authoritativeGroundItems.remove(entityId);
@@ -277,6 +281,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
     authoritativeGroundItems.clear();
     authoritativeMercenaries.clear();
     authoritativeMaps.clear();
+    progressionRevision = -1L;
+    equipmentRevision = -1L;
     if (interpolation != null) interpolation.clear();
     super.dispose();
   }
@@ -706,6 +712,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (character() == null || player() < 0 || entityId != player()) {
       return;
     }
+
+    if (data.progressionRevision() < progressionRevision
+        || data.equipmentRevision() < equipmentRevision) return;
+    progressionRevision = data.progressionRevision();
+    equipmentRevision = data.equipmentRevision();
 
     long wireExperience = data.experience();
     // Stat values are encoded as unsigned 32-bit values. Clamp malformed or
