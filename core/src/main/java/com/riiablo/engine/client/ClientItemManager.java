@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.quest.QuestWarp;
 import com.riiablo.engine.server.item.GroundDropPosition;
 import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
+import com.riiablo.engine.server.event.SoundEvent;
 import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.BodyLoc;
@@ -150,8 +151,14 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   }
 
   /** Native D2 uses one generic sound when an item is taken by the player. */
-  public void playPickupSound() {
-    if (clientContext.audio() != null) clientContext.audio().play("item_pickup", true);
+  public void playPickupSound() { dispatchSound("item_pickup"); }
+
+  /** Publishes a one-shot item presentation sound without resolving an audio device here. */
+  protected void dispatchSound(String sound) {
+    if (sound == null || sound.isEmpty() || world == null) return;
+    EventSystem events = world.getSystem(EventSystem.class);
+    int source = clientContext.playerId();
+    if (events != null && source >= 0) events.dispatch(SoundEvent.obtain(source, sound, true));
   }
 
   /** Handles a committed network pickup after the receiver's simulation phase. */
@@ -269,7 +276,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     if (clientContext.charData() == null) return;
     com.riiablo.item.Item potion = clientContext.charData().getItems().getBeltPotion(column);
     if (potion != null && clientContext.charData().useBeltPotion(column)) {
-      if (clientContext.audio() != null) clientContext.audio().play(potion.getUseSound(), true);
+      dispatchSound(potion.getUseSound());
     }
   }
 
@@ -309,7 +316,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
           itemId, itemCode);
       return false;
     }
-    if (clientContext.audio() != null) clientContext.audio().play(potion.getUseSound(), true);
+    dispatchSound(potion.getUseSound());
     log.info("[MERC_POTION] phase=used mode=local item={} code={} player={}", itemId, itemCode,
         player);
     return true;
@@ -325,9 +332,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     if (item == null || item.code == null || clientContext.charData() == null
         || !clientContext.isGameActive() || clientContext.playerId() < 0) return;
     if (item.type != null && item.type.is(com.riiablo.item.Type.POTI)) {
-      if (clientContext.charData().useInventoryPotion(item) && clientContext.audio() != null) {
-        clientContext.audio().play(item.getUseSound(), true);
-      }
+      if (clientContext.charData().useInventoryPotion(item)) dispatchSound(item.getUseSound());
       return;
     }
     if (!"tsc".equalsIgnoreCase(item.code) && !"tbk".equalsIgnoreCase(item.code)) return;
@@ -376,14 +381,14 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     }
     townPortalRegistry.replace(player, world, wrapper.zone, portalPosition,
         visual, warp, townZone, returnPosition, returnVisual, returnWarp);
-    if (clientContext.audio() != null) clientContext.audio().play("player_townportal_cast", true);
+    dispatchSound("player_townportal_cast");
   }
 
   @Override
   public boolean identifyItem(com.riiablo.item.Item source, com.riiablo.item.Item target) {
     if (clientContext.charData() == null
         || !clientContext.charData().getItems().identifyItem(source, target)) return false;
-    if (clientContext.audio() != null) clientContext.audio().play("cursor_identify_item", true);
+    dispatchSound("cursor_identify_item");
     return true;
   }
 

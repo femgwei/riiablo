@@ -1126,6 +1126,35 @@ M8-C/M8 整体继续标记为进行中。
 下一迁移：M8-C 第 5 批，处理 `ClientItemManager` 与 `NetworkedClientItemManager` 的音效、
 cursor 和物品表现事件出口。
 
+### M8-C 第 5 批：物品音效事件出口（2026-10-24）
+
+提交：待本批提交。
+
+本批将本地和联网物品管理器中的拾取、药水、城镇传送门、鉴定等音效播放改为发布既有
+`SoundEvent`，由 `SoundEventSystem` 在表现阶段按 listener、区域和距离策略播放。物品系统
+仍直接读取角色物品状态并提交本地/网络事务；cursor 操作、物品快照和协议字段不变。
+
+验证：
+
+```powershell
+./gradlew.bat :core:compileJava :core:compileTestJava `
+  :core:test --tests com.riiablo.engine.client.ClientItemManagerGoldPickupTest `
+  --tests com.riiablo.engine.client.NetworkedClientItemManagerTest `
+  --tests com.riiablo.engine.client.ClientItemIntentSystemTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest --no-daemon --max-workers=1 --console=plain
+python tools/architecture/migration_boundaries.py --mode check
+& tools/architecture/check-client-presentation-boundary.ps1 -FailOnDrift
+git diff --check
+```
+
+结果：物品本地/联网定向回归、core 编译、模块边界和 M1-A 表现边界通过。物品管理器仍保留
+`ClientGameplayContext` 用于角色物品、文件表和 cursor 的权威兼容读取，属于 M2/M6 后续窄
+接口工作；M8-C/M8 整体继续标记为进行中。
+
+真实资源：未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；本批不修改暗黑规则。
+
+下一迁移：继续处理物品 cursor/状态端口，或在 M2/M6 物品事务端口完成后删除剩余 context 依赖。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

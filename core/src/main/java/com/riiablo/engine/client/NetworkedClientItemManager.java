@@ -77,8 +77,9 @@ public class NetworkedClientItemManager extends ClientItemManager {
       return false;
     }
     inventoryRevision = result.revision();
-    if (result.success() && result.operation() == ItemMoveOperation.IDENTIFY_ITEM
-        && clientContext.audio() != null) clientContext.audio().play("cursor_identify_item", true);
+    if (result.success() && result.operation() == ItemMoveOperation.IDENTIFY_ITEM) {
+      dispatchSound("cursor_identify_item");
+    }
     Gdx.app.log(TAG, "[ITEM_MOVE_RESULT] request=" + result.requestId()
         + " success=" + result.success() + " failure=" + result.failure()
         + " revision=" + inventoryRevision + " snapshot=" + result.snapshotLength());
@@ -220,7 +221,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
     com.riiablo.item.Item potion = clientContext.charData() == null
         ? null : clientContext.charData().getItems().getBeltPotion(column);
     if (potion == null) return;
-    if (clientContext.audio() != null) clientContext.audio().play(potion.getUseSound(), true);
+    dispatchSound(potion.getUseSound());
     send(ItemMoveOperation.USE_BELT_ITEM, potion.id, -1, -1, column, -1, -1, false);
   }
 
@@ -255,9 +256,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
     boolean portal = "tsc".equalsIgnoreCase(item.code) || "tbk".equalsIgnoreCase(item.code);
     boolean potion = item.type != null && item.type.is(com.riiablo.item.Type.POTI);
     if (!portal && !potion) return;
-    if (clientContext.audio() != null) {
-      clientContext.audio().play(portal ? "player_townportal_cast" : item.getUseSound(), true);
-    }
+    dispatchSound(portal ? "player_townportal_cast" : item.getUseSound());
     send(ItemMoveOperation.USE_INVENTORY_ITEM, item.id, -1, -1, -1, -1, -1, false);
   }
 
