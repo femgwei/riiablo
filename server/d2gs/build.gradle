@@ -185,6 +185,18 @@ tasks.register('headlessMissileCombat', JavaExec) {
   }
 }
 
+tasks.register('headlessPhysicalThrow', JavaExec) {
+  group = 'verification'
+  description = 'Runs the explicit physical Throw packet through D2GS collision and checkpoint gates.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--skill', '2', '--require-missile', '--require-physical',
+       '--test-timeout', '60'
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessFireBolt', JavaExec) {
   group = 'verification'
   description = 'Runs a generated Sorceress Fire Bolt through the real D2GS TCP missile path.'

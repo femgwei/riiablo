@@ -592,6 +592,13 @@ public final class D2GSHeadlessClient {
           target.life = 1000f;
           target.maxLife = 1000f;
         }
+        if (config.requirePhysical
+            && config.skillId != SkillCodes.throw_
+            && config.skillId != SkillCodes.left_hand_throw
+            && config.skillId != SkillCodes.attack) {
+          throw new IllegalStateException("physical combat gate received non-physical skill: "
+              + config.skillId);
+        }
         if (config.requireMonsterMovement) {
           Snapshot movingTarget = awaitMeleeTarget(
               input, System.currentTimeMillis() + config.testTimeoutMillis);
@@ -13237,6 +13244,7 @@ public final class D2GSHeadlessClient {
     boolean generatedAmazon;
     boolean generatedFireBolt;
     boolean requireMissile;
+    boolean requirePhysical;
     boolean requirePeer;
     boolean requireMonsterMovement;
     boolean requireSimulationTick;
@@ -13343,6 +13351,7 @@ public final class D2GSHeadlessClient {
         else if ("--generated-amazon".equals(arg)) config.generatedAmazon = true;
         else if ("--generated-fire-bolt".equals(arg)) config.generatedFireBolt = true;
         else if ("--require-missile".equals(arg)) config.requireMissile = true;
+        else if ("--require-physical".equals(arg)) config.requirePhysical = true;
         else if ("--require-peer".equals(arg)) config.requirePeer = true;
         else if ("--require-monster-movement".equals(arg)) config.requireMonsterMovement = true;
         else if ("--require-sim-tick".equals(arg)) config.requireSimulationTick = true;

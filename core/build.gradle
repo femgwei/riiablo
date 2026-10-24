@@ -966,3 +966,28 @@ task m5FireSkillRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M5 batch 4: physical projectile settlement and ordinary weapon ownership.
+task m5PhysicalCombatRegression(type: Test) {
+  group = 'verification'
+  description = 'M5 physical projectile, attack-rating and ordinary weapon settlement regressions.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    ['com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest',
+     'com.riiablo.engine.server.AmazonDamageOwnershipTest',
+     'com.riiablo.engine.server.AmazonSkillSpecializationTest.ordinaryWeaponLaunchAndCollisionKeepCreationPacketAndFractionalDamage',
+     'com.riiablo.engine.server.AmazonSkillSpecializationTest.localEffectsModeCreatesAuthoritativeArrowForNormalBowAttack',
+     'com.riiablo.engine.server.AmazonMeleeSkillLifecycleTest',
+     'com.riiablo.engine.server.combat.CombatSystemTest',
+     'com.riiablo.engine.server.combat.NativeFixedPhysicalDamageTest'].each {
+      includeTestsMatching it
+    }
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
