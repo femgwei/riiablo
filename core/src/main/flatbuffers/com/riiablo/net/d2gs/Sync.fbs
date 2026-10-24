@@ -67,6 +67,8 @@ table MercenaryP {
   nameId:int32;
   experience:ulong;
   flags:uint32;
+  progressionRevision:ulong;
+  equipmentRevision:ulong;
 }
 
 enum EntityFlags:uint8 (bit_flags) {
@@ -156,6 +158,8 @@ table PlayerP {
   ammoItemId:int32 = -1;
   ammoQuantity:uint16;
   ammoPresent:bool;
+  progressionRevision:ulong;
+  equipmentRevision:ulong;
 }
 
 table DS1ObjectWrapperP {

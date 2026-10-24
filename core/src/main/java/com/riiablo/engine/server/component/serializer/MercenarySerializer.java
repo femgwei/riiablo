@@ -9,8 +9,10 @@ import com.riiablo.net.packet.d2gs.MercenaryP;
 public final class MercenarySerializer implements FlatBuffersSerializer<Mercenary, MercenaryP> {
   public byte getDataType() { return ComponentP.MercenaryP; }
   public int putData(FlatBufferBuilder builder, Mercenary merc) {
-    return MercenaryP.createMercenaryP(builder, merc.ownerId, merc.mercType,
-        merc.hirelingId(), merc.level, merc.seed, merc.nameId, merc.experience, merc.flags);
+    int offset = MercenaryP.createMercenaryP(builder, merc.ownerId, merc.mercType,
+        merc.hirelingId(), merc.level, merc.seed, merc.nameId, merc.experience, merc.flags,
+        0L, 0L);
+    return offset;
   }
   public MercenaryP getTable(EntitySync sync, int index) {
     return (MercenaryP) sync.component(new MercenaryP(), index);

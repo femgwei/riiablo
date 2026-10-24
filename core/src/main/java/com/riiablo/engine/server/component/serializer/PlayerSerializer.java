@@ -84,6 +84,8 @@ public class PlayerSerializer implements FlatBuffersSerializer<Player, PlayerP> 
         data.getStats().aggregate().getValue(com.riiablo.attributes.Stat.gold, 0L))));
     PlayerP.addQuestRecords(builder, questRecordsOffset);
     PlayerP.addQuestRevision(builder, questRevision);
+    PlayerP.addProgressionRevision(builder, 0L);
+    PlayerP.addEquipmentRevision(builder, data.getItems().equipmentRevision());
     return PlayerP.endPlayerP(builder);
   }
 
