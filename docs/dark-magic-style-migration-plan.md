@@ -1244,6 +1244,36 @@ git diff --check
 
 下一迁移：处理物品事务/网络副本的状态适配器，统一提交已确认的物品快照和表现事件。
 
+### M8-C 第 9 批：网络副本表现端口（2026-10-25）
+
+提交：`ffa569880`。
+
+本批新增 `ClientNetworkPresentationPort` 与 `ClientNetworkPresentationAdapter`。`ClientNetworkReceiver`
+不再直接依赖 `ClientGameplayContext`，网络副本所需的字符串格式化、表数据、角色/游标事实以及 NPC/交易
+结果展示均通过窄端口提供；GameScreen 为真实客户端注册适配器。实体同步、物品快照提交、网络事件顺序和
+协议格式保持不变，缺少表现端口时安全降级为无 UI 输出。
+
+验证：
+
+```powershell
+./gradlew :core:compileJava :core:compileTestJava :core:test `
+  --tests com.riiablo.presentation.ClientNetworkPresentationAdapterTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests com.riiablo.architecture.ClientUiBoundaryTest --no-daemon --max-workers=1 --console=plain
+python tools/architecture/migration_boundaries.py --mode check
+& tools/architecture/check-client-presentation-boundary.ps1 -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、网络表现适配器/客户端装配/表现边界回归通过；M8-C 债务由 3 条降至 2 条。剩余两条
+均为 `ClientItemManager` 与 `NetworkedClientItemManager` 的 `ClientGameplayContext` 物品事务兼容读取，
+留待下一批统一迁移；M8-C/M8 整体继续标记为进行中。
+
+真实资源：未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；本批不修改暗黑规则。
+
+下一迁移：收口本地/联网物品管理器的角色物品端口，并保持 `ClientItemIntentSystem` 的固定 Tick 准入与
+联网 `ItemMoveResult` 快照顺序不变。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
