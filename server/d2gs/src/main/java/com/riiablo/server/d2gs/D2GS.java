@@ -6223,7 +6223,10 @@ public class D2GS extends ApplicationAdapter {
         ? checkpoint.restoreExisting(world, serializer)
         : checkpoint.restoreExisting(world, serializer, lifecycle);
     if (result.success()) {
-      simulation.restoreFromCheckpoint(checkpoint.tick());
+      // Replaying an archived checkpoint is the one explicit operation allowed
+      // to move the fixed clock backwards; ordinary callers retain the
+      // monotonic restore guard.
+      simulation.restoreFromCheckpoint(checkpoint.tick(), true);
       replayCheckpoint = checkpoint;
     }
     return result;

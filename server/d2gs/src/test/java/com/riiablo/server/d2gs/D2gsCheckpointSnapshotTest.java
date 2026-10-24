@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.google.flatbuffers.FlatBufferBuilder;
+import com.riiablo.engine.server.AuthoritativeSimulation;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.replay.SimulationCheckpoint;
@@ -51,6 +52,37 @@ public class D2gsCheckpointSnapshotTest {
     assertEquals(1, checkpoint.summary().diff(drifted.summary()).size());
     assertEquals("rng:combat.hit#" + id,
         checkpoint.summary().diff(drifted.summary()).get(0).field);
+  }
+
+  @Test public void restoredEcsStateContinuesOnTheNextFixedTick() {
+    World world = worldWithEntities(1);
+    FakeSerializer serializer = new FakeSerializer();
+    int id = networkedIds(world)[0];
+    serializer.states.put(id, 10);
+    AuthoritativeSimulation simulation = new AuthoritativeSimulation(world);
+
+    simulation.tick(null, null);
+    simulation.tick(null, null);
+    D2gsCheckpointSnapshot checkpoint =
+        D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber());
+
+    simulation.tick(() -> serializer.states.put(id, 99), null);
+    simulation.tick(null, null);
+    assertEquals(4L, simulation.tickNumber());
+
+    D2gsCheckpointSnapshot.RestoreResult result =
+        checkpoint.restoreExisting(world, serializer);
+    assertTrue(result.success());
+    simulation.restoreFromCheckpoint(checkpoint.tick(), true);
+
+    simulation.tick(() -> serializer.states.put(id, serializer.states.get(id) + 1), null);
+    assertEquals(3L, simulation.tickNumber());
+    assertEquals(11, (int) serializer.states.get(id));
+
+    D2gsCheckpointSnapshot continued =
+        D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber());
+    assertEquals(3L, continued.tick());
+    assertTrue(continued.summary().canonical().startsWith("checkpoint|3|"));
   }
 
   @Test public void rejectsMissingAndUnexpectedEntitiesBeforeApplying() {

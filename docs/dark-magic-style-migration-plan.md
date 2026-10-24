@@ -1526,6 +1526,36 @@ git diff --check
 下一迁移：进入真实 ECS checkpoint restore、RNG/D2S 与跨进程重连网络验收；若发现旧 transport
 仍有生产入口，再按完整 handler 组收敛，不把本批写成 M8-A/M8-D 完成。
 
+### M8-A 第 9 批：真实 ECS checkpoint continuation gate（2026-10-25）
+
+本批把“恢复后继续运行”从摘要声明落实为固定 Tick 门禁。`AuthoritativeSimulation` 保留默认
+单调时钟保护，同时提供带显式 `allowTimeRewind` 的 replay restore 入口；只有 checkpoint
+适配器在同一 owner thread 完成 ECS payload 恢复后，才能用该入口把时钟回到归档 Tick。
+D2GS 的 `restoreReplayCheckpoint` 现在在 ECS 恢复成功后使用这一显式 replay 语义，随后下一
+个固定 Tick 从检查点状态继续执行。
+
+新增定向测试覆盖：默认恢复拒绝倒退、显式 replay restore 允许倒退、真实序列化 ECS 状态回滚，
+以及恢复后的 N+1 Tick 状态/摘要继续推进。该批没有把 RNG stream registry、D2S 角色状态、跨
+进程 native factory 重建或 session rebind 误称为完成。
+
+验证：
+
+```powershell
+./gradlew.bat :core:test `
+  --tests com.riiablo.engine.server.AuthoritativeSimulationTest `
+  --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：默认单调恢复、显式 replay 回滚和 ECS checkpoint N+1 Tick continuation 定向门禁通过；
+M8-A 仍未完成完整跨进程恢复，M8-D 仍未完成所有旧 transport owner 收敛。
+
+下一迁移：接入 checkpoint 的显式 RNG registry restore，并把 D2S/角色状态与 ECS continuation
+绑定到同一恢复事务；之后再做真实跨进程 session rebind/reconnect gate。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

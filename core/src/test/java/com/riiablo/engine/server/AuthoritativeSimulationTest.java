@@ -2,6 +2,7 @@ package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -123,6 +124,27 @@ class AuthoritativeSimulationTest {
       assertSame(Thread.currentThread(), simulation.ownerThread());
       simulation.tick(null, null);
       assertEquals(18L, simulation.tickNumber());
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void replayRestoreExplicitlyAllowsRewindButDefaultRemainsMonotonic() {
+    World world = new World(new WorldConfigurationBuilder().build());
+    try {
+      AuthoritativeSimulation simulation = new AuthoritativeSimulation(world);
+      simulation.tick(null, null);
+      simulation.tick(null, null);
+      simulation.tick(null, null);
+
+      assertThrows(IllegalStateException.class,
+          () -> simulation.restoreFromCheckpoint(1L));
+
+      simulation.restoreFromCheckpoint(1L, true);
+      assertEquals(1L, simulation.tickNumber());
+      simulation.tick(null, null);
+      assertEquals(2L, simulation.tickNumber());
     } finally {
       world.dispose();
     }

@@ -94,12 +94,25 @@ public final class AuthoritativeSimulation {
    * responsibility of the checkpoint adapter.
    */
   public synchronized void restoreFromCheckpoint(long checkpointTick) {
+    restoreFromCheckpoint(checkpointTick, false);
+  }
+
+  /**
+   * Restores the simulation clock for an explicit replay/checkpoint transaction.
+   *
+   * <p>Normal callers retain the monotonic-clock guard from
+   * {@link #restoreFromCheckpoint(long)}. A replay adapter may explicitly
+   * allow a rewind, but it must still run on the owning simulation thread and
+   * apply the ECS checkpoint before calling this method.
+   */
+  public synchronized void restoreFromCheckpoint(long checkpointTick,
+      boolean allowTimeRewind) {
     if (checkpointTick < 0L) throw new IllegalArgumentException("checkpointTick");
     Thread current = Thread.currentThread();
     if (ownerThread != null && ownerThread != current) {
       throw new IllegalStateException("checkpoint restore must run on the owner thread");
     }
-    if (ownerThread != null && checkpointTick < tick) {
+    if (ownerThread != null && checkpointTick < tick && !allowTimeRewind) {
       throw new IllegalStateException("checkpoint restore cannot move the clock backwards");
     }
     if (ownerThread == null) ownerThread = current;
