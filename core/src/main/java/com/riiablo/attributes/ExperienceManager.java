@@ -585,9 +585,22 @@ public class ExperienceManager extends PassiveSystem {
     long currentExp = getLong(stats, Stat.experience, 0);
     int charClass = charData.charClass & 0xFF;
 
-    // 计算最大经验值（99级所需经验值）
-    long maxExp = expTable.getExperienceForNextLevel(ExperienceTable.MAX_LEVEL - 1, charClass);
-    long newExp = Math.min(currentExp + experienceGained, maxExp);
+    ProgressionService.Result result = new ProgressionService(expTable)
+        .award(currentExp, oldLevel, charClass, experienceGained);
+    commitExperience(charData, result);
+  }
+
+  /**
+   * Commits one already-calculated progression result. This is the sole
+   * CharData mutation boundary for experience awards; callers must calculate
+   * the result before entering this method and must not apply it twice.
+   */
+  public void commitExperience(CharData charData, ProgressionService.Result result) {
+    if (charData == null || result == null || result.appliedExperience <= 0) return;
+
+    StatListRef stats = charData.getStats().base();
+    long newExp = result.newExperience;
+    long experienceGained = result.appliedExperience;
 
     // 更新经验值
     int encodedExp = (int) Math.min(newExp, Integer.MAX_VALUE);
@@ -600,9 +613,8 @@ public class ExperienceManager extends PassiveSystem {
     charData.getStats().aggregate().put(Stat.lastexp, encodedLastExp);
 
     // 检查是否升级
-    int newLevel = getCurrentLevelFromExp(charClass, newExp);
-    if (newLevel != oldLevel) {
-      levelUp(charData, oldLevel, newLevel);
+    if (result.newLevel != result.oldLevel) {
+      levelUp(charData, result.oldLevel, result.newLevel);
     }
 
     // An experience award inserts/updates progression stats in both backing
@@ -610,7 +622,7 @@ public class ExperienceManager extends PassiveSystem {
     // player snapshot is serialized, even when this kill did not level up.
     charData.synchronizeCurrentResources();
     log.info("[XP_SYNC] character={} gained={} total={} oldLevel={} aggregate={} hp={}/{} baseHp={}",
-        charData.name, experienceGained, newExp, oldLevel,
+        charData.name, experienceGained, newExp, result.oldLevel,
         charData.getStats().get(Stat.experience).asLong(),
         getFixed(charData.getStats().aggregate(), Stat.hitpoints, 0f),
         getFixed(charData.getStats().aggregate(), Stat.maxhp, 0f),
