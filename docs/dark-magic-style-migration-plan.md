@@ -907,6 +907,28 @@ git diff --check
 结果：D2GS 生产编译和 M8 回放/权威入口 12 项回归通过。物品、任务、NPC、交易等其他
 FlatBuffer handler 以及实际 checkpoint 世界摘要仍待后续批次接入；M8-A/M8-D 继续进行中。
 
+### M8 第 5 批：D2GS 权威请求回放命令（2026-10-24）
+
+本批把 D2GS 中已经完成权威变更的请求接入 replay recorder。成功的物品移动、金币、NPC
+服务、任务、交易、组队、技能/属性加点和玩家生命周期请求，现在在响应发送前以稳定的
+canonical payload 记录；失败、重复、无效 request id（`<= 0`）以及未认证 actor 不会写入
+回放。记录点位于实际权威 mutation 之后，避免把网络接收或失败尝试误记成游戏状态。
+
+命令统一携带 `d2gs` 来源、当前仿真 Tick、actor、request、target 和网络 authority 元数据；
+没有修改 FlatBuffer 协议、D2 结算、ACK 或响应格式。Movement/CastSkill 仍由前一批的
+scheduler drain 记录，避免重复提交。新增覆盖范围不代表所有旧 handler 已迁移到统一 ingress，
+也不代表 checkpoint 已包含真实 ECS 世界摘要或可恢复断线状态。
+
+验证：
+
+```powershell
+./gradlew.bat :server:d2gs:compileJava :core:m8ReplayRegression --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：生产 D2GS 编译和 M8 回放/权威入口回归通过。M8-A 的真实 checkpoint 世界摘要、ECS
+恢复/断线继续运行，以及 M8-D 网络三层唯一 owner 和其余旧 handler 的统一迁移仍待后续批次。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

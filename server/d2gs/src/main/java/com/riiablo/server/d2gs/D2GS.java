@@ -7226,6 +7226,19 @@ public class D2GS extends ApplicationAdapter {
     replayRecorder.recordCommand(builder.build(input.sequence));
   }
 
+  /** Records a successful request after its authoritative mutation has completed. */
+  private void recordAuthoritativeCommand(int clientId, long requestId, String kind,
+      int targetEntityId, String payload) {
+    if (requestId <= 0L || simulation == null) return;
+    int actorId = player.get(clientId, Engine.INVALID_ENTITY);
+    if (actorId == Engine.INVALID_ENTITY) return;
+    SimulationCommandEnvelope.Builder builder = SimulationCommandEnvelope.builder(
+        "d2gs", kind, payload).tick(simulation.tickNumber()).actor(actorId)
+        .request(requestId).authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT);
+    if (targetEntityId >= 0) builder.target(targetEntityId);
+    replayRecorder.recordCommand(builder.build(requestId));
+  }
+
   private void applyCombatIntent(
       int connectionId, int entityId, CombatIntent request, long currentTick) {
     long snapshotTick = request.targetTick == 0L ? currentTick : request.targetTick;
@@ -7431,6 +7444,8 @@ public class D2GS extends ApplicationAdapter {
       if (skill.aura) auraActive = auraSystem.selectAura(entityId, skillId);
       else auraSystem.clearAura(entityId);
     }
+    recordAuthoritativeCommand(packet.id, request.requestId(), "select_skill", entityId,
+        "button=" + button + "|skill=" + skillId + "|aura=" + auraActive);
     Gdx.app.log(TAG, "[SKILL_SELECT_NET] phase=accept connection=" + packet.id
         + " request=" + request.requestId() + " player=" + entityId
         + " button=" + button + " skill=" + skillId + " aura=" + auraActive);
@@ -7467,6 +7482,10 @@ public class D2GS extends ApplicationAdapter {
         ? new PlayerStatsManager().getAvailableSkillPoints(data) : 0;
     sendSkillPointResult(packet.id, request.requestId(), success, reason,
         request.skillId(), level, points, true);
+    if (success) {
+      recordAuthoritativeCommand(packet.id, request.requestId(), "spend_skill_point", entityId,
+          "skill=" + request.skillId());
+    }
     if (success && entityId != Engine.INVALID_ENTITY) sync.process(entityId);
     Gdx.app.log(TAG, "[SKILL_POINT_NET] phase=" + (success ? "accept" : "reject")
         + " connection=" + packet.id + " player=" + entityId
@@ -7529,6 +7548,10 @@ public class D2GS extends ApplicationAdapter {
         : new PlayerStatsManager().getAvailableStatPoints(data);
     sendStatPointResult(packet.id, request.requestId(), success, reason,
         request.statType(), statValue, statPoints, true);
+    if (success) {
+      recordAuthoritativeCommand(packet.id, request.requestId(), "spend_stat_point", entityId,
+          "stat=" + request.statType());
+    }
     if (success && entityId != Engine.INVALID_ENTITY) sync.process(entityId);
     Gdx.app.log("D2GS", "[STAT_POINT_NET] phase=" + (success ? "accept" : "reject")
         + " connection=" + packet.id + " player=" + entityId
@@ -7659,6 +7682,10 @@ public class D2GS extends ApplicationAdapter {
                                int sourceEntityId, int targetEntityId,
                                PartyServiceProtocol.Result result, boolean cacheResponse,
                                PartyRequestCache.Intent intent) {
+    if (result.success && requestId > 0L) {
+      recordAuthoritativeCommand(clientId, requestId, "party",
+          targetEntityId, "operation=" + operation + "|target=" + targetEntityId);
+    }
     FlatBufferBuilder builder = new FlatBufferBuilder(4096);
     int reasonOffset = builder.createString(result.reason == null ? "" : result.reason);
     int viewerEntityId = player.get(clientId, Engine.INVALID_ENTITY);
@@ -7861,6 +7888,11 @@ public class D2GS extends ApplicationAdapter {
         : current == null ? TradeState.NONE : current.getState();
     String reason = success ? "OK" : TradeState.getResultName(result);
     TradeSession snapshot = current == null ? null : current;
+    if (success) {
+      recordAuthoritativeCommand(packet.id, request.requestId(), "trade", target,
+          "operation=" + operation + "|session=" + sessionId + "|item=" + request.itemId()
+              + "|x=" + request.x() + "|y=" + request.y() + "|gold=" + request.gold());
+    }
     sendTradeResult(packet.id, request.requestId(), operation, success, reason,
         sessionId, sessionSource, sessionTarget, state, snapshot, intent, true);
     int otherClient = clientForEntity(target);
@@ -7888,6 +7920,10 @@ public class D2GS extends ApplicationAdapter {
     int sessionId = session == null ? 0 : session.getSessionId();
     int state = session == null ? TradeState.NONE : session.getState();
     String reason = success ? "OK" : TradeState.getResultName(result);
+    if (success) {
+      recordAuthoritativeCommand(clientId, request.requestId(), "trade", target,
+          "operation=" + TradeOperation.REQUEST + "|target=" + target);
+    }
     sendTradeResult(clientId, request.requestId(), TradeOperation.REQUEST, success, reason,
         sessionId, source, target, state, session, intent, true);
     int targetClient = clientForEntity(target);
@@ -8181,6 +8217,12 @@ public class D2GS extends ApplicationAdapter {
       publishInventorySnapshot(packet.id, true);
       if (sync != null) sync.syncEntityTo(packet.id, playerId);
     }
+    if (success) {
+      recordAuthoritativeCommand(packet.id, request.requestId(), "npc_service", npcId,
+          "npc=" + npcId + "|service=" + request.serviceType() + "|operation="
+              + request.operation() + "|item=" + request.itemId() + "|index="
+              + request.itemIndex() + "|stockRevision=" + request.stockRevision());
+    }
     sendNpcServiceResult(packet.id, request.requestId(), success, reason, gold, goldBank,
         session, resultItemId, resultItemData, playerComponent == null ? null : playerComponent.data,
         requestIntent, true);
@@ -8267,6 +8309,9 @@ public class D2GS extends ApplicationAdapter {
     if (success) {
       publishInventorySnapshot(packet.id, request.operation() != QuestOperation.SNAPSHOT);
       if (sync != null) sync.syncEntityTo(packet.id, playerId);
+      recordAuthoritativeCommand(packet.id, request.requestId(), "quest", request.targetEntityId(),
+          "operation=" + request.operation() + "|target=" + request.targetEntityId()
+              + "|message=" + request.messageIndex());
     }
     sendQuestResult(packet.id, request.requestId(), success, reason, intent, true);
     Gdx.app.log(TAG, "[QUEST_NET] player=" + playerId + " request="
@@ -8650,6 +8695,10 @@ public class D2GS extends ApplicationAdapter {
         builder, D2GSData.PlayerLifecycleResult, result);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     outPackets.offer(Packet.obtain(1 << packet.id, builder.dataBuffer()));
+    if (success) {
+      recordAuthoritativeCommand(packet.id, request.requestId(), "player_lifecycle", entityId,
+          "operation=" + request.operation());
+    }
     if (success) sync.process(entityId);
     Gdx.app.log(TAG, "[PLAYER_RESPAWN] phase=" + (success ? "accept" : "reject")
         + " connection=" + packet.id + " player=" + entityId
@@ -8815,6 +8864,10 @@ public class D2GS extends ApplicationAdapter {
     }
     sendGoldResult(packet.id, request.requestId(), request.operation(), amount, success, reason,
         character, groundEntityId);
+    if (success) {
+      recordAuthoritativeCommand(packet.id, request.requestId(), "gold", groundEntityId,
+          "operation=" + request.operation() + "|amount=" + amount);
+    }
     if (success && sync != null) sync.syncEntityTo(packet.id, playerEntityId);
   }
 
@@ -9180,6 +9233,15 @@ public class D2GS extends ApplicationAdapter {
   private void sendItemMoveResult(int clientId, ItemMoveIntent intent, boolean success,
                                   byte failure, long revision, boolean cacheResponse,
                                   boolean includeGroundCorrection) {
+    if (success && intent != null) {
+      recordAuthoritativeCommand(clientId, intent.requestId, "item_move",
+          intent.groundEntityId,
+          "operation=" + intent.operation + "|revision=" + intent.revision
+              + "|item=" + intent.itemId + "|ground=" + intent.groundEntityId
+              + "|store=" + intent.storeLoc + "|x=" + intent.x + "|y=" + intent.y
+              + "|body=" + intent.bodyLoc + "|merc=" + intent.merc
+              + "|pickupToCursor=" + intent.pickupToCursor);
+    }
     FlatBufferBuilder builder = new FlatBufferBuilder(8192);
     int[] entries = new int[0];
     int playerEntityId = player.get(clientId, Engine.INVALID_ENTITY);
