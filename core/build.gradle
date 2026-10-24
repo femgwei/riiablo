@@ -941,3 +941,28 @@ task m5FireBoltRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M5 batch 3: Fire Bolt's adjacent Fire Ball impact and native fan-out contracts.
+task m5FireSkillRegression(type: Test) {
+  group = 'verification'
+  description = 'M5 Fire Bolt/Fire Ball skill-family damage, impact and lifecycle regressions.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    ['com.riiablo.engine.server.FireBoltGoldenDamageTest',
+     'com.riiablo.engine.server.FireBoltVerticalSliceTest',
+     'com.riiablo.engine.server.MonsterMissileElementalIntegrationTest',
+     'com.riiablo.engine.server.FireBallGoldenDamageTest',
+     'com.riiablo.engine.server.SorceressFireBallIntegrationTest',
+     'com.riiablo.engine.server.NativeExplosionLifecycleTest',
+     'com.riiablo.engine.server.NativeSorceressProjectileDataTest'].each {
+      includeTestsMatching it
+    }
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

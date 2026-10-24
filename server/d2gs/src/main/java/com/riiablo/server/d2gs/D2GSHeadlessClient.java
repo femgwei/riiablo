@@ -1322,6 +1322,30 @@ public final class D2GSHeadlessClient {
             + " missilesA=" + areaMissileSummary(a.areaMissiles)
             + " missilesB=" + areaMissileSummary(b.areaMissiles));
       }
+      if (skillId == SkillId.FIRE_BALL) {
+        if (!areaTargetDamaged(a, b, targetId, traumaInitialLife)) {
+          throw new IllegalStateException("Fire Ball produced no shared target damage: target="
+              + targetId + " initialLife=" + traumaInitialLife
+              + " owner=" + snapshotLife(a, targetId)
+              + " peer=" + snapshotLife(b, targetId));
+        }
+        Set<Integer> shared = new HashSet<>(a.areaMissiles.keySet());
+        shared.retainAll(b.areaMissiles.keySet());
+        CombatCheckpoint ownerCheckpoint = CombatCheckpoint.of(
+            Math.min(a.lastSnapshotTick, b.lastSnapshotTick), a.playerId, targetId, skillId,
+            Math.round(traumaInitialLife * 256f),
+            Math.round(snapshotLife(a, targetId) * 256f), shared.size());
+        CombatCheckpoint peerCheckpoint = CombatCheckpoint.of(
+            Math.min(a.lastSnapshotTick, b.lastSnapshotTick), a.playerId, targetId, skillId,
+            Math.round(traumaInitialLife * 256f),
+            Math.round(snapshotLife(b, targetId) * 256f), shared.size());
+        if (!ownerCheckpoint.canonical().equals(peerCheckpoint.canonical())) {
+          throw new IllegalStateException("Fire Ball checkpoint diverged across observers: owner="
+              + ownerCheckpoint.canonical() + " peer=" + peerCheckpoint.canonical());
+        }
+        log("fire_ball_checkpoint", "canonical=" + ownerCheckpoint.canonical()
+            + " digest=" + ownerCheckpoint.digest() + " sharedObservers=2");
+      }
       if (skillId == ASSASSIN_BLADE_SENTINEL
           && !bladeSentinelSharedEvidence(a, b)) {
         throw new IllegalStateException("Blade Sentinel controller/missile evidence missing: "

@@ -278,6 +278,18 @@ tasks.register('headlessAreaSkill', JavaExec) {
   }
 }
 
+tasks.register('headlessFireBall', JavaExec) {
+  group = 'verification'
+  description = 'Runs Fire Ball through the two-client D2GS impact and checkpoint gate.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--require-area-skill', '--area-skill', '47', '--area-skill-level', '20',
+       '--test-timeout', '60'
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessAmazonMelee', JavaExec) {
   group = 'verification'
   description = 'Runs a real-MPQ Amazon melee skill dual-client, damage and reconnect gate.'

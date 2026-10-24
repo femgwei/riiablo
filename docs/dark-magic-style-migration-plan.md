@@ -652,7 +652,7 @@ D2MOO 依据：Fire Bolt 等级伤害沿用 `D2Skills.cpp:2459`、`2623`、`2685
 - 新增 `:server:d2gs:headlessFireBolt`，在真实 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F` 资源下验证 TCP 准入、Blood Moor 目标、Fire Bolt 导弹同步、命中生命变化和导弹生命周期顺序。
 - 新增不可变 `CombatCheckpoint`，以 Tick、caster/target、skill、8.8 生命前后值和导弹数量生成 canonical 摘要及 SHA-256；headless 命中后输出摘要。它只用于诊断/比对，不是 M8 完整世界快照或恢复格式。
 
-提交：待本批验证后生成。
+提交：`67a1a7d3e`。
 
 验证：
 
@@ -670,6 +670,35 @@ D2MOO/原版依据：Fire Bolt 伤害仍由第 1 批 D2MOO `D2Skills.cpp:2459/26
 剩余问题：M5 仍需普通攻击/其他技能族、双客户端观察、真实命中事件与表现快照收口；checkpoint 尚不能恢复/继续仿真，M8 replay/network 三层仍未完成。旧兼容事件装配仍服务离线测试，不能视为旧入口已删除。
 
 下一迁移：M5 第 3 批，扩展 Fire Bolt 相邻火系技能或普通攻击，并把命中结果摘要接入双客户端观察门禁。
+
+### M5 第 3 批：Fire Ball 相邻技能族与双客户端检查点（2026-10-24）
+
+完成日期：2026-10-24；本批扩展 Fire Bolt 相邻的 Fire Ball 技能族，把单客户端命中、原生爆炸子弹和双客户端权威观察放入同一个验收门禁；不拆成单类补丁。
+
+实现与边界：
+
+- 新增 `m5FireSkillRegression`，集中覆盖 Fire Bolt/Fire Ball 的等级黄金值、ECS 命中、Fire Ball `SrvHit01` 爆炸生命周期与投射物数据，共 70 个测试。
+- 新增 `:server:d2gs:headlessFireBall`，复用真实双 TCP 客户端 area-skill 入口，使用真实 1.10f 资源验证 Fire Ball parent/`explodingarrowexp` child 的共享观察、目标生命变化和观察端一致性。
+- Fire Ball 双客户端命中后生成 `CombatCheckpoint`；owner/peer canonical 摘要必须一致，并输出稳定 digest。没有修改 FlatBuffer 协议，也没有把该摘要当作 M8 完整回放/恢复格式。
+
+提交：待本批验证后生成。
+
+验证：
+
+```powershell
+./gradlew.bat :core:m5FireSkillRegression --no-daemon
+$env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:headlessFireBall --no-daemon
+git diff --check
+```
+
+结果：`m5FireSkillRegression` 70 项通过；真实 1.10f 双客户端 Fire Ball 门禁通过，观察到 skill=47、root/child missile 类型 `[62, 42]`、两个观察端共享 5 个 missile entity，目标生命 `6.00→0.00`，并输出 canonical `23|118|138|47|1536|0|5` 与一致 digest。该低生命目标是现有确定性 Blood Moor fixture 的实际目标，不代表所有怪物均一击致死。
+
+D2MOO/原版依据：Fire Ball 的 `MISSMODE_SrvHit01` 爆炸 fan-out 与 child 生命周期沿用现有 `SorceressFireBallIntegrationTest`、`NativeExplosionLifecycleTest` 的 D2MOO 注释和 1.10f 表数据；本批只收紧双观察与检查点一致性。
+
+剩余问题：M5 仍需普通攻击/物理伤害、表现快照事件出口、旧兼容入口清理和最终全量出口复核；checkpoint 仍是摘要而非可恢复 replay。M3/M4 的全量网络事件与 RNG 调用方债务不在本批伪装解决。
+
+下一迁移：M5 第 4 批，完成普通攻击/物理伤害链路并纳入同一数据、ECS、D2GS 和双客户端门禁，再评估 M5 最终收口批次。
 
 ### M0 完成记录（2026-10-21）
 
