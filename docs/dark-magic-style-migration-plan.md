@@ -1058,6 +1058,8 @@ M8-C/M8 整体继续标记为进行中。
 
 ### M8-C 第 3 批：客户端表现装配 owner 迁移（2026-10-24）
 
+提交：`40fddea17`、`e63ee2bc7`。
+
 本批将客户端表现系统的装配配方迁移到 `com.riiablo.presentation.ClientSimulationAssembly`，
 由 presentation 侧拥有表现系统的注册与相对顺序；`GameScreen` 和装配回归测试改为引用新的
 presentation owner。引擎客户端仍只提供仿真系统、输入系统和生命周期适配器，表现系统不再通过
