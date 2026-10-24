@@ -203,7 +203,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
           && previous.zone == zone) continue;
       // Generated maps use native allocation and bit state. The owner index
       // remains diagnostic there; spawn relocation is only a legacy fallback.
-      if (zone != null && zone.hasNativeCollisionData()) {
+      if (nativeZone(zone)) {
         grid.put(entityId, x, y, size);
       } else
       if (grid.isFree(entityId, -1, x, y, size, sameSpaceBlocker(entityId))) {
@@ -251,7 +251,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     if (lifecycle != null && lifecycle.phase.ordinal()
         >= com.riiablo.engine.server.component.UnitLifecycle.Phase.REMOVED.ordinal()) return null;
     Map.Zone zone = zoneOf(id);
-    if (zone == null || !zone.hasNativeCollisionData() || !mPosition.has(id)) return null;
+    if (!nativeZone(zone) || !mPosition.has(id)) return null;
     Position p = mPosition.get(id);
     int x = Map.round(p.position.x), y = Map.round(p.position.y);
     int pattern = SharedUnitCollisionIndex.WITH_SIZE, size = 1, mask;
@@ -491,7 +491,8 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       if (size == 2 && dx != 0 && dy != 0) continue;
       final int px = x + dx, py = y + dy;
       if (!zone.contains(px, py)) return false;
-      int flags = zone.nativeCollisionFlagsWorld(px, py);
+      int flags = zone.map == null ? zone.nativeCollisionFlagsWorld(px, py)
+          : zone.map.pathCollisionFlags(zone, px, py);
       if ((flags & mask) != 0) return false;
       if (enabled && (mask & 0x8000) != 0 && hasSpawnCorpse(sourceId, zone, px, py)) return false;
       if (enabled && (mask & 0x100) != 0 && hasSpawnMonsterMarker(sourceId, zone, px, py)) return false;
@@ -737,7 +738,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   }
 
   private static boolean nativeZone(Map.Zone zone) {
-    return zone != null && zone.hasNativeCollisionData();
+    return zone != null && zone.map != null && zone.map.usesNativeCollision(zone);
   }
 
   private static int testPattern(int size) {

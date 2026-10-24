@@ -20,7 +20,7 @@ final class WhirlwindCollision {
         if (size == 2 && dx != 0 && dy != 0) continue;
         Map.Zone zone = map.getZone(x + dx, y + dy);
         if (zone == null) return true; // native invalid cell: COLLIDE_BLANK
-        int flags = zone.nativeCollisionFlagsWorld(x + dx, y + dy);
+        int flags = map.pathCollisionFlags(zone, x + dx, y + dy);
         if (blocks(flags, constructing)) return true;
       }
     }

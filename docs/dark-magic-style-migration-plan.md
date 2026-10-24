@@ -777,6 +777,20 @@ com.riiablo.engine.server.quest.QuestModuleIntegrationTest --no-daemon` 通过�
 `verifyModuleBoundaries` 与 `git diff --check`。M7-B 的旧地图实现删除仍需下一批在真实
 MPQ/headless 地图验收后决定，当前不删除 `map5` 资产解码器或其工具依赖。
 
+### M7 第 6 批：全量路径与碰撞策略出口（2026-10-24）
+
+本批将 native path/collision 的所有权纳入 `MapGenerationPolicy`。新增
+`usesNativeCollision` 与 `pathCollisionFlags`，通用路径阻塞、Zone flags、飞行碰撞、
+Whirlwind 和动态单位碰撞现在只有在当前会话处于 native D2MOO 模式且对应 Zone 已接受
+原生碰撞导出时才读取 16 位 native grid；显式 legacy 模式或缺失导出统一使用静态
+DT1/DS1 兼容层，不会把未完成的 native grid 当作权威结果。动态碰撞的 spawn-mask fallback
+也经过同一策略入口。
+
+新增策略回归覆盖 native/legacy/缺失导出的三种组合；`m7WorldRegression` 共 129 项通过，
+失败/错误/跳过均为 0，同时通过 `verifyModuleBoundaries` 与 `git diff --check`。本批未改
+D2MOO path/collision 公式、mask 数值或单位行为，只统一读取边界；真实 MPQ/headless 和
+双客户端验收仍留在 M7 第 7 批。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

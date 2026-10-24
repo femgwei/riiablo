@@ -55,7 +55,7 @@ public final class NativePathRuntime implements D2PathTick.Effects {
     Monster monster = world.getMapper(Monster.class).get(id);
     if (map == null || collision == null || monster == null || position == null || !position.hasNativePrecision()
         || velocity == null || velocity.nativeMonsterBaseVelocity < 0 || velocity.stateSpeedMultiplier != 1f
-        || wrapper == null || wrapper.zone == null || !wrapper.zone.hasNativeCollisionData()
+        || wrapper == null || wrapper.zone == null || !map.usesNativeCollision(wrapper.zone)
         || !wrapper.zone.hasNativeRoomTopology() || world.getMapper(Casting.class).has(id)
         || world.getMapper(Leap.class).has(id) || world.getMapper(WhirlwindRuntime.class).has(id)) return null;
     if (targetId < 0 && (destination.x != (int) destination.x || destination.y != (int) destination.y
@@ -210,7 +210,7 @@ public final class NativePathRuntime implements D2PathTick.Effects {
     generations.clear();
     for (Map.Zone zone : map.getZones()) {
       generations.put(zone,zone.nativeCollisionGeneration());
-      if (zone.hasNativeRoomTopology() && zone.hasNativeCollisionData()) resolved.add(zone);
+      if (map.usesNativeCollision(zone) && zone.hasNativeRoomTopology()) resolved.add(zone);
     }
     rooms = new NativePathRoomGraph(resolved);
     MapWrapper wrapper = world.getMapper(MapWrapper.class).get(id);

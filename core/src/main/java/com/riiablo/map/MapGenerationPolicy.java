@@ -38,6 +38,11 @@ public final class MapGenerationPolicy {
 
   public boolean usesLegacyCompatibility() { return mode == Mode.LEGACY_COMPATIBILITY; }
 
+  /** Native collision is authoritative only after the export was accepted. */
+  public boolean usesNativeCollision(boolean hasNativeCollisionData) {
+    return usesNativeD2Moo() && hasNativeCollisionData;
+  }
+
   /**
    * Returns whether the compatibility straight-line path generator may run.
    *

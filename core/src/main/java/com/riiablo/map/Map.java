@@ -888,7 +888,21 @@ public class Map implements Disposable {
     int mask = flags;
     if (flags == DT1.Tile.FLAG_BLOCK_JUMP) mask |= 0x800;
     else if ((flags & DT1.Tile.FLAG_BLOCK_WALK) != 0) mask |= 0x400 | (canOpenDoors ? 0 : 0x800);
-    return (zone.nativeCollisionFlagsWorld(x, y) & mask) != 0;
+    return (pathCollisionFlags(zone, x, y) & mask) != 0;
+  }
+
+  /** True when this map session owns the native collision grid for a zone. */
+  public boolean usesNativeCollision(Zone zone) {
+    return zone != null && generationPolicy.usesNativeCollision(zone.hasNativeCollisionData());
+  }
+
+  /** Resolves the effective terrain collision without silently promoting a legacy grid. */
+  public int pathCollisionFlags(Zone zone, int x, int y) {
+    Zone owner = zone == null ? getZone(x, y) : zone.nativeCollisionZone(x, y);
+    if (owner == null) return 0x27;
+    return usesNativeCollision(owner)
+        ? owner.nativeCollisionFlagsWorld(x, y)
+        : owner.staticFlagsWorld(x, y);
   }
 
   public boolean isBlockedForPath(int x, int y, int flags, int size,
@@ -1946,9 +1960,13 @@ public class Map implements Disposable {
       // A render-only boundary wall can own getZone() just outside the
       // rectangular collision footprint. Such cells are not walkable.
       if (x < 0 || y < 0 || x >= width || y >= height) return 0xFF;
-      int nativeFlags = nativeCollisionFlagsWorld(this.x + x, this.y + y);
+      int nativeFlags = map != null && map.usesNativeCollision(this)
+          ? nativeCollisionFlagsWorld(this.x + x, this.y + y)
+          : staticFlags(x, y);
       int value = nativeFlags & 0xFF;
-      if ((nativeFlags & 0xC00) != 0) value |= DT1.Tile.FLAG_BLOCK_WALK;
+      if (map != null && map.usesNativeCollision(this) && (nativeFlags & 0xC00) != 0) {
+        value |= DT1.Tile.FLAG_BLOCK_WALK;
+      }
       return value;
     }
 
@@ -2032,9 +2050,13 @@ public class Map implements Disposable {
       if (x < 0 || y < 0 || x >= width || y >= height) {
         return DT1.Tile.FLAG_BLOCK_JUMP;
       }
-      int nativeFlags = nativeCollisionFlagsWorld(this.x + x, this.y + y);
+      int nativeFlags = map != null && map.usesNativeCollision(this)
+          ? nativeCollisionFlagsWorld(this.x + x, this.y + y)
+          : staticFlags(x, y);
       int value = nativeFlags & DT1.Tile.FLAG_BLOCK_JUMP;
-      if ((nativeFlags & 0x800) != 0) value |= DT1.Tile.FLAG_BLOCK_JUMP;
+      if (map != null && map.usesNativeCollision(this) && (nativeFlags & 0x800) != 0) {
+        value |= DT1.Tile.FLAG_BLOCK_JUMP;
+      }
       return value;
     }
 

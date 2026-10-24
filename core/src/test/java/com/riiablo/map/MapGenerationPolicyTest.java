@@ -40,4 +40,11 @@ class MapGenerationPolicyTest {
     MapGenerationPolicy policy = MapGenerationPolicy.fromNativeToggle(false);
     assertTrue(policy.usesCompatibilityPath(true));
   }
+
+  @Test
+  void nativeCollisionRequiresBothNativeModeAndAnAcceptedExport() {
+    assertTrue(MapGenerationPolicy.nativeDefault().usesNativeCollision(true));
+    assertFalse(MapGenerationPolicy.nativeDefault().usesNativeCollision(false));
+    assertFalse(MapGenerationPolicy.fromNativeToggle(false).usesNativeCollision(true));
+  }
 }
