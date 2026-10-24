@@ -50,6 +50,38 @@ public final class SimulationCheckpoint {
     }
   }
 
+  /** Full two-word D2Common pSeed state for a named native unit stream. */
+  public static final class NativeUnitRngState {
+    public final String stream;
+    public final long contextId;
+    public final int lowSeed;
+    public final int highSeed;
+
+    public NativeUnitRngState(String stream, long contextId, int lowSeed, int highSeed) {
+      if (stream == null || stream.trim().isEmpty()) throw new IllegalArgumentException("stream");
+      this.stream = stream;
+      this.contextId = contextId;
+      this.lowSeed = lowSeed;
+      this.highSeed = highSeed;
+    }
+
+    String canonical() {
+      return encode(stream) + ":" + contextId + ":" + lowSeed + ":" + highSeed;
+    }
+
+    @Override public boolean equals(Object other) {
+      if (this == other) return true;
+      if (!(other instanceof NativeUnitRngState)) return false;
+      NativeUnitRngState that = (NativeUnitRngState) other;
+      return contextId == that.contextId && lowSeed == that.lowSeed
+          && highSeed == that.highSeed && stream.equals(that.stream);
+    }
+
+    @Override public int hashCode() {
+      return Objects.hash(stream, contextId, lowSeed, highSeed);
+    }
+  }
+
   public static final class Mismatch {
     public final long tick;
     public final int entityId;
@@ -75,9 +107,11 @@ public final class SimulationCheckpoint {
   private final String worldDigest;
   private final Map<Integer, String> entityDigests;
   private final java.util.List<RngState> rngStates;
+  private final java.util.List<NativeUnitRngState> nativeUnitRngStates;
 
   private SimulationCheckpoint(long tick, String worldDigest,
-      Map<Integer, String> entityDigests, java.util.List<RngState> rngStates) {
+      Map<Integer, String> entityDigests, java.util.List<RngState> rngStates,
+      java.util.List<NativeUnitRngState> nativeUnitRngStates) {
     if (tick < 0L) throw new IllegalArgumentException("tick");
     if (worldDigest == null || worldDigest.trim().isEmpty()) {
       throw new IllegalArgumentException("worldDigest");
@@ -100,17 +134,30 @@ public final class SimulationCheckpoint {
     for (RngState state : streams) Objects.requireNonNull(state, "rngState");
     streams.sort((a, b) -> a.canonical().compareTo(b.canonical()));
     this.rngStates = Collections.unmodifiableList(streams);
+    ArrayList<NativeUnitRngState> nativeStreams = new ArrayList<>();
+    if (nativeUnitRngStates != null) nativeStreams.addAll(nativeUnitRngStates);
+    for (NativeUnitRngState state : nativeStreams) Objects.requireNonNull(state, "nativeUnitRngState");
+    nativeStreams.sort((a, b) -> a.canonical().compareTo(b.canonical()));
+    this.nativeUnitRngStates = Collections.unmodifiableList(nativeStreams);
   }
 
   public static SimulationCheckpoint of(long tick, String worldDigest,
       Map<Integer, String> entityDigests, java.util.List<RngState> rngStates) {
-    return new SimulationCheckpoint(tick, worldDigest, entityDigests, rngStates);
+    return of(tick, worldDigest, entityDigests, rngStates, null);
+  }
+
+  public static SimulationCheckpoint of(long tick, String worldDigest,
+      Map<Integer, String> entityDigests, java.util.List<RngState> rngStates,
+      java.util.List<NativeUnitRngState> nativeUnitRngStates) {
+    return new SimulationCheckpoint(tick, worldDigest, entityDigests, rngStates,
+        nativeUnitRngStates);
   }
 
   public long tick() { return tick; }
   public String worldDigest() { return worldDigest; }
   public Map<Integer, String> entityDigests() { return entityDigests; }
   public java.util.List<RngState> rngStates() { return rngStates; }
+  public java.util.List<NativeUnitRngState> nativeUnitRngStates() { return nativeUnitRngStates; }
 
   /** Stable field order for replay manifests and cross-process comparisons. */
   public String canonical() {
@@ -120,6 +167,9 @@ public final class SimulationCheckpoint {
           .append(encode(entity.getValue()));
     }
     for (RngState state : rngStates) result.append("|rng:").append(state.canonical());
+    for (NativeUnitRngState state : nativeUnitRngStates) {
+      result.append("|native-rng:").append(state.canonical());
+    }
     return result.toString();
   }
 
@@ -156,12 +206,31 @@ public final class SimulationCheckpoint {
             observed == null ? "null" : observed.canonical()));
       }
     }
+    TreeMap<String, NativeUnitRngState> expectedNative = byNativeRng(nativeUnitRngStates);
+    TreeMap<String, NativeUnitRngState> actualNative = byNativeRng(actual.nativeUnitRngStates);
+    TreeMap<String, NativeUnitRngState> nativeStreams = new TreeMap<>(expectedNative);
+    nativeStreams.putAll(actualNative);
+    for (String key : nativeStreams.keySet()) {
+      NativeUnitRngState expected = expectedNative.get(key), observed = actualNative.get(key);
+      if (!Objects.equals(expected, observed)) {
+        mismatches.add(new Mismatch(tick, -1, "native-rng:" + key,
+            expected == null ? "null" : expected.canonical(),
+            observed == null ? "null" : observed.canonical()));
+      }
+    }
     return Collections.unmodifiableList(mismatches);
   }
 
   private static TreeMap<String, RngState> byRng(java.util.List<RngState> states) {
     TreeMap<String, RngState> result = new TreeMap<>();
     for (RngState state : states) result.put(state.stream + "#" + state.contextId, state);
+    return result;
+  }
+
+  private static TreeMap<String, NativeUnitRngState> byNativeRng(
+      java.util.List<NativeUnitRngState> states) {
+    TreeMap<String, NativeUnitRngState> result = new TreeMap<>();
+    for (NativeUnitRngState state : states) result.put(state.stream + "#" + state.contextId, state);
     return result;
   }
 

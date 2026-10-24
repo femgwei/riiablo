@@ -52,6 +52,17 @@ public class D2gsCheckpointSnapshotTest {
     assertEquals(1, checkpoint.summary().diff(drifted.summary()).size());
     assertEquals("rng:combat.hit#" + id,
         checkpoint.summary().diff(drifted.summary()).get(0).field);
+
+    java.util.List<SimulationCheckpoint.NativeUnitRngState> nativeRng =
+        java.util.Collections.singletonList(
+            new SimulationCheckpoint.NativeUnitRngState("unit.hit", id, 1, 2));
+    D2gsCheckpointSnapshot nativeCheckpoint = D2gsCheckpointSnapshot.fromPayloads(
+        7L, checkpoint.payloads(), null, nativeRng);
+    D2gsCheckpointSnapshot nativeDrifted = D2gsCheckpointSnapshot.fromPayloads(
+        7L, checkpoint.payloads(), null, java.util.Collections.singletonList(
+            new SimulationCheckpoint.NativeUnitRngState("unit.hit", id, 3, 4)));
+    assertEquals("native-rng:unit.hit#" + id,
+        nativeCheckpoint.summary().diff(nativeDrifted.summary()).get(0).field);
   }
 
   @Test public void restoredEcsStateContinuesOnTheNextFixedTick() {

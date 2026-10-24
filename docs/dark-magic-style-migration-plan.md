@@ -1588,6 +1588,38 @@ D2GS checkpoint 编译与既有 ECS 恢复回归通过。M8-A 仍待双字 nativ
 下一迁移：为 `NativeUnitRandom` 建立带 low/high seed 的 native-unit registry，并将其与 D2S
 角色状态纳入同一 checkpoint transaction；完成后再验收 session authority rebind。
 
+### M8-A 第 11 批：NativeUnitRandom 双字 seed registry（2026-10-25）
+
+本批新增 `NativeUnitRandomRegistry` 与 `SimulationCheckpoint.NativeUnitRngState`，按
+`(stream, contextId)` 保存 D2Common `pSeed` 的完整 low/high 两字；恢复时不会把 ECS 组件上的
+低字 `rngState` 当作完整随机状态。由于 native unit stream 必须绑定实际 Monster/Missile/
+UnitRandomSeed 与 `World`，跨进程恢复要求调用方提供显式 factory，不能凭 game seed 盲目重建。
+
+D2GS checkpoint 摘要现在可同时携带兼容 `NativeRng` 和双字 native-unit RNG；安装可选
+`replayNativeUnitRngRegistry` 后，capture 会记录双字状态，restore 会在 ECS 变更前校验并在
+ECS 成功后恢复 registry。`SimulationCheckpoint.diff` 对 native stream 变化报告
+`native-rng:<stream>#<context>`，便于继续运行门禁定位。
+
+验证：
+
+```powershell
+./gradlew.bat :core:test `
+  --tests com.riiablo.engine.replay.NativeUnitRandomRegistryTest `
+  --tests com.riiablo.engine.replay.CheckpointRngRegistryTest `
+  --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:compileJava :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：双字 low/high 捕获、原地恢复、显式 factory 缺失 stream 重建、无 factory 拒绝和摘要
+差异定位测试通过；D2GS checkpoint 编译与 ECS 回归通过。D2S/角色状态尚未进入同一恢复事务，
+session authority rebind 和真实跨进程重连仍未完成。
+
+下一迁移：建立角色 D2S checkpoint adapter（序列化字节、校验和、恢复回滚）并与 ECS/RNG
+恢复组成单一事务；随后接入 session rebind/reconnect gate。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
