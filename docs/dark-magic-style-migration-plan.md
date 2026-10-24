@@ -765,6 +765,18 @@ com.riiablo.engine.server.quest.QuestModuleIntegrationTest --no-daemon` 通过�
 同时通过 `verifyModuleBoundaries` 与 `git diff --check`。本批不宣称真实双客户端或 MPQ
 验收完成，也未修改 D2 任务规则和数值公式。
 
+### M7 第 5 批：地图过渡实现调用者门禁（2026-10-24）
+
+本批先对 M7-B 的生产调用者做安全收口。审计确认 `map2` 在核心生产源码中已经没有
+外部调用者；`map5` 仍由 `Ds1Loader`、`Dt1Loader` 及其参数类作为 MPQ 资源解码桥使用，
+不能在未迁移资产管线前删除。新增 `MapGenerationBoundaryTest` 门禁：禁止世界生成规则
+重新依赖 `map2` 或 `map5`，并将上述四个资产桥调用者列为唯一允许的 `map5` 兼容边界。
+这不会改变资产读取行为，也不把资源解码桥误报为地图生成 owner。
+
+`m7WorldRegression` 纳入该架构门禁后共 128 项通过，失败/错误/跳过均为 0；同时通过
+`verifyModuleBoundaries` 与 `git diff --check`。M7-B 的旧地图实现删除仍需下一批在真实
+MPQ/headless 地图验收后决定，当前不删除 `map5` 资产解码器或其工具依赖。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

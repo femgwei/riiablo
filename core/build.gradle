@@ -1118,6 +1118,7 @@ task m7WorldRegression(type: Test) {
       'com.riiablo.map.d2moo.Act1D2MOOLayoutBridgeTest',
       'com.riiablo.map.NativeRoomMonsterPopulationResourceTest',
       'com.riiablo.map.NativeWaypointResourceTest',
+      'com.riiablo.architecture.MapGenerationBoundaryTest',
       'com.riiablo.engine.server.ai.MonsterAiPolicyTest',
       'com.riiablo.engine.server.ai.NativeAiDecisionTest',
       'com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest',

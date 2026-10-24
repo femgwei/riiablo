@@ -48,6 +48,33 @@ class MapGenerationBoundaryTest {
     assertTrue(violations.isEmpty(), "generation must stay independent of runtime: " + violations);
   }
 
+  @Test void transitionalMapReadersStayOutsideWorldGenerationRules() throws IOException {
+    Path source = sourceRoot();
+    Set<String> approvedMap5Bridges = new HashSet<>(Arrays.asList(
+        "com/riiablo/asset/loader/Ds1Loader.java",
+        "com/riiablo/asset/loader/Dt1Loader.java",
+        "com/riiablo/asset/param/Ds1Params.java",
+        "com/riiablo/asset/param/Dt1Params.java"));
+    List<String> violations = new ArrayList<>();
+    try (Stream<Path> paths = Files.walk(source)) {
+      for (Path file : (Iterable<Path>) paths.filter(p -> p.toString().endsWith(".java"))::iterator) {
+        String relative = source.relativize(file).toString().replace('\\', '/');
+        if (relative.startsWith("com/riiablo/map2/")
+            || relative.startsWith("com/riiablo/map5/")) continue;
+        String code = COMMENTS_AND_STRINGS.matcher(new String(
+            Files.readAllBytes(file), StandardCharsets.UTF_8)).replaceAll(" ");
+        if (code.contains("com.riiablo.map2.")) {
+          violations.add(relative + " -> com.riiablo.map2");
+        }
+        if (code.contains("com.riiablo.map5.") && !approvedMap5Bridges.contains(relative)) {
+          violations.add(relative + " -> com.riiablo.map5 (not an asset bridge)");
+        }
+      }
+    }
+    assertTrue(violations.isEmpty(),
+        "transitional map readers must not become world-rule dependencies: " + violations);
+  }
+
   private static Path sourceRoot() {
     Path working = Paths.get("").toAbsolutePath().normalize();
     Path source = working.resolve("src/main/java");
