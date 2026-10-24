@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import com.riiablo.engine.replay.SimulationCheckpoint;
 import com.riiablo.engine.replay.SimulationReplayCapture;
 import com.riiablo.engine.replay.SimulationReplayLog;
+import com.riiablo.engine.replay.SimulationReplayRunner;
 
 class SimulationReplayLogTest {
   @Test
@@ -106,6 +107,58 @@ class SimulationReplayLogTest {
     advance(replayed, replayedTotal);
     assertTrue(log.checkpointAt(2).diff(checkpoint(replayed, replayedTotal[0])).isEmpty());
     assertEquals(recordedTotal[0], replayedTotal[0]);
+  }
+
+  @Test
+  void replayRunnerVerifiesRecordedTicks() {
+    SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
+        "ui", "delta", 3).tick(1).build(1);
+    SimulationCheckpoint expected = SimulationCheckpoint.of(1, "world-total=3",
+        Collections.singletonMap(7, "total=3"),
+        Collections.singletonList(new SimulationCheckpoint.RngState("test", 0L, 3, 3)));
+    SimulationReplayLog log = SimulationReplayLog.builder(1)
+        .command(command, "3").checkpoint(expected).build();
+    SimulationTickCoordinator coordinator = new SimulationTickCoordinator();
+    int[] total = {0};
+    SimulationReplayRunner.Result result = SimulationReplayRunner.play(log, coordinator,
+        item -> total[0] += Integer.parseInt(String.valueOf(item.payload)),
+        tick -> {}, event -> {}, tick -> checkpoint(coordinator, total[0]));
+    assertTrue(result.success());
+    assertEquals(1, result.submittedCommands);
+    assertEquals(1, result.verifiedCheckpoints);
+    assertEquals(3, total[0]);
+  }
+
+  @Test
+  void replayRunnerContinuesAfterAResumeTickAndReportsMismatch() {
+    SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
+        "ui", "delta", 2).tick(2).build(2);
+    SimulationCheckpoint baseline = SimulationCheckpoint.of(1, "world-total=1",
+        Collections.singletonMap(7, "total=1"), null);
+    SimulationCheckpoint expected = SimulationCheckpoint.of(2, "world-total=3",
+        Collections.singletonMap(7, "total=3"), null);
+    SimulationReplayLog log = SimulationReplayLog.builder(1)
+        .command(command, "2").checkpoint(baseline).checkpoint(expected).build();
+
+    SimulationTickCoordinator coordinator = new SimulationTickCoordinator();
+    int[] total = {1};
+    coordinator.advance(ignored -> {}, tick -> {}, event -> {});
+    SimulationReplayRunner.Result result = SimulationReplayRunner.play(log, coordinator,
+        item -> total[0] += Integer.parseInt(String.valueOf(item.payload)),
+        tick -> {}, event -> {}, tick -> SimulationCheckpoint.of(tick,
+            "world-total=" + total[0], Collections.singletonMap(7, "total=" + total[0]), null));
+    assertTrue(result.success());
+    assertEquals(1L, result.startTick);
+    assertEquals(2L, result.endTick);
+    assertEquals(1, result.submittedCommands);
+    assertEquals(2, result.verifiedCheckpoints);
+    assertEquals(3, total[0]);
+
+    SimulationReplayRunner.Result mismatch = SimulationReplayRunner.play(log,
+        new SimulationTickCoordinator(), item -> {}, tick -> {}, event -> {},
+        tick -> SimulationCheckpoint.of(tick, "wrong", null, null));
+    assertTrue(!mismatch.success());
+    assertTrue(mismatch.mismatches().stream().anyMatch(item -> "worldDigest".equals(item.field)));
   }
 
   private static void advance(SimulationTickCoordinator coordinator, int[] total) {

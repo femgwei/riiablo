@@ -929,6 +929,28 @@ git diff --check
 结果：生产 D2GS 编译和 M8 回放/权威入口回归通过。M8-A 的真实 checkpoint 世界摘要、ECS
 恢复/断线继续运行，以及 M8-D 网络三层唯一 owner 和其余旧 handler 的统一迁移仍待后续批次。
 
+### M8 第 6 批：回放继续运行与检查点校验器（2026-10-24）
+
+本批新增协议中立的 `SimulationReplayRunner`。它从协调器当前 Tick 开始，只提交尚未被
+恢复检查点覆盖的命令，按固定 Tick 推进仿真，并在每个记录检查点调用外部摘要源进行逐项
+差异校验；结果同时报告起止 Tick、提交命令数、已校验检查点数和 `tick/entity/field`
+级 mismatch。已有的 replay log 因此可以用于断线后的继续运行门禁，而不依赖 Java 对象
+身份或 Map 遍历顺序。
+
+本批没有把摘要校验器误称为 ECS 存档恢复：真实 D2GS 世界摘要、组件反序列化、RNG stream
+恢复和断线 session 重绑定仍需后续 server/ECS adapter；没有修改 FlatBuffer 协议或 D2
+规则。回归同时覆盖从 Tick 0 播放、从已有 Tick 继续播放，以及摘要不一致时的可定位失败。
+
+验证：
+
+```powershell
+./gradlew.bat :core:m8ReplayRegression --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：M8 replay 回归门禁通过；M8-A 仍待真实 ECS checkpoint/restore，M8-D 仍待网络三层
+唯一 owner 和剩余旧 handler 的统一迁移。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
