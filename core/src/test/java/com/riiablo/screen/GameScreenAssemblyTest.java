@@ -221,7 +221,7 @@ class GameScreenAssemblyTest {
         + "CombatPositionCaptureSystem NetworkIdManager EventSystem TagManager MapManager "
         + (local ? "ClientItemManager " : "NetworkedClientItemManager ")
         + "ClientItemIntentSystem ItemManager ClientQuestIntentSystem ClientVendorSystem CofManager EnvironmentSystem ObjectInitializer ObjectInteractor WarpInteractor "
-        + "ItemInteractor MenuManager DialogManager SelectableManager HoveredManager "
+        + "ItemInteractor MenuManager DialogManager SelectableManager ClientHoverPresentationAdapter HoveredManager "
         + (platform == Application.ApplicationType.Desktop ? "CursorMovementSystem KeyboardMovementSystem " : "")
         + "TouchpadMovementSystem ClientUnitLifecycleSystem "
         + "StateUpdater StaminaSystem ManaRecoverySystem PotionRecoverySystem MercenaryPotionSystem "

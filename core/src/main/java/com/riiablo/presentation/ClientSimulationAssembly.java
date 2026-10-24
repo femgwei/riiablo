@@ -144,6 +144,7 @@ public final class ClientSimulationAssembly {
         // Hover selection owns all pointer hit testing and must be current
         // before CursorMovementSystem consumes a captured click.
         .with(new SelectableManager())
+        .with(new ClientHoverPresentationAdapter())
         .with(new HoveredManager())
         ;
     if (desktopInput) {

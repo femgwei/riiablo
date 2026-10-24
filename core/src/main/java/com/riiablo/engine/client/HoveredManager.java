@@ -1,7 +1,5 @@
 package com.riiablo.engine.client;
 
-import com.riiablo.presentation.ClientGameplayContext;
-
 import com.artemis.ComponentMapper;
 import com.artemis.Aspect;
 import com.artemis.EntitySubscription;
@@ -10,26 +8,20 @@ import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.Riiablo;
-import com.riiablo.codec.util.BBox;
 import com.riiablo.engine.Engine;
-import com.riiablo.presentation.component.AnimationWrapper;
-import com.riiablo.presentation.component.BBoxWrapper;
 import com.riiablo.engine.client.component.Hovered;
-import com.riiablo.presentation.component.Label;
 import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.event.ModeChangeEvent;
-import com.riiablo.engine.server.skill.SkillId;
 import net.mostlyoriginal.api.event.common.Subscribe;
 
-@All({Selectable.class, BBoxWrapper.class, Position.class})
+@All({Selectable.class, Position.class})
 public class HoveredManager extends IteratingSystem {
   static final float INTERACTABLE_PADDING_X = 8f;
   static final float INTERACTABLE_PADDING_Y = 6f;
@@ -37,11 +29,7 @@ public class HoveredManager extends IteratingSystem {
   static final float ITEM_PADDING_Y = 8f;
 
   protected ComponentMapper<Hovered> mHovered;
-  protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
   protected ComponentMapper<Position> mPosition;
-  protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
-  protected ComponentMapper<com.riiablo.presentation.component.Overlay> mOverlay;
-  protected ComponentMapper<Label> mLabel;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<SummonedPet> mSummonedPet;
@@ -49,8 +37,8 @@ public class HoveredManager extends IteratingSystem {
 
   @Wire(name="iso")
   protected IsometricCamera iso;
-  @Wire(name="clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  @Wire(name="hoverPresentation", failOnNull = false)
+  protected ClientHoverPresentationPort hoverPresentation;
 
   private final Vector2 coords = new Vector2();
   private final Vector2 tmpVec2 = new Vector2();
@@ -61,7 +49,7 @@ public class HoveredManager extends IteratingSystem {
   @Override
   protected void initialize() {
     selectableSubscriber = world.getAspectSubscriptionManager().get(
-        Aspect.all(Selectable.class, BBoxWrapper.class, Position.class));
+        Aspect.all(Selectable.class, Position.class));
   }
 
   @Override
@@ -81,8 +69,11 @@ public class HoveredManager extends IteratingSystem {
       setHovered(entityId, false);
       return;
     }
-    BBox box = mBBoxWrapper.get(entityId).box;
-    if (box == null) return;
+    ClientHoverBounds box = hoverPresentation == null ? null : hoverPresentation.bounds(entityId);
+    if (box == null) {
+      setHovered(entityId, false);
+      return;
+    }
     Vector2 position = mPosition.get(entityId).position;
     iso.toScreen(tmpVec2.set(position));
     boolean b = containsScreenPoint(box, tmpVec2, coords,
@@ -106,23 +97,24 @@ public class HoveredManager extends IteratingSystem {
       if (candidate == sourceId) continue;
       if (mSummonedPet.has(candidate) && !isUnsummonSelected()) continue;
       Position candidatePosition = mPosition.get(candidate);
-      BBoxWrapper boxWrapper = mBBoxWrapper.get(candidate);
-      if (candidatePosition == null || boxWrapper == null || boxWrapper.box == null) continue;
+      if (candidatePosition == null) continue;
+      ClientHoverBounds box = hoverPresentation == null ? null : hoverPresentation.bounds(candidate);
+      if (box == null) continue;
 
       iso.toScreen(hitEntityScreen.set(candidatePosition.position));
       // While Alt is held, native D2 selects ground items through their
       // labels only. The item sprite itself must not win the click.
       boolean hitAnimation = !(mItem.has(candidate) && altDown)
-          && containsScreenPoint(boxWrapper.box, hitEntityScreen, hitCoords,
+          && containsScreenPoint(box, hitEntityScreen, hitCoords,
               hitPaddingX(candidate), hitPaddingY(candidate));
       // Ground-item names are drawn directly by LabelManager instead of being
       // attached to a Scene2D stage, so stage.hit() cannot select them. Treat
       // the visible label bounds as an additional pickup hit area. The label
       // is only eligible while it is actually shown (Alt or normal hover),
       // which avoids leaving a stale, invisible actor clickable.
-      boolean hitLabel = altDown && isVisibleItemLabel(candidate) && mLabel.has(candidate)
-          && mLabel.get(candidate).actor != null
-          && containsLabelPoint(mLabel.get(candidate).actor, hitCoords);
+      boolean hitLabel = altDown && isVisibleItemLabel(candidate)
+          && hoverPresentation != null
+          && hoverPresentation.containsLabel(candidate, hitCoords.x, hitCoords.y);
       if (!hitAnimation && !hitLabel) continue;
 
       boolean candidateInteractable = mInteractable.has(candidate);
@@ -169,7 +161,7 @@ public class HoveredManager extends IteratingSystem {
     return mInteractable.has(entityId) ? INTERACTABLE_PADDING_Y : 0f;
   }
 
-  static boolean containsScreenPoint(BBox box, Vector2 entityScreen, Vector2 pointer,
+  static boolean containsScreenPoint(ClientHoverBounds box, Vector2 entityScreen, Vector2 pointer,
       float paddingX, float paddingY) {
     float x = entityScreen.x + box.xMin - paddingX;
     float y = entityScreen.y - box.yMax - paddingY;
@@ -178,17 +170,7 @@ public class HoveredManager extends IteratingSystem {
   }
 
   private boolean isUnsummonSelected() {
-    if (clientContext.charData() == null) return false;
-    return clientContext.charData().getAction(Input.Buttons.LEFT) == SkillId.UNSUMMON
-        || clientContext.charData().getAction(Input.Buttons.RIGHT) == SkillId.UNSUMMON;
-  }
-
-  static boolean containsLabelPoint(com.badlogic.gdx.scenes.scene2d.Actor actor,
-      Vector2 pointer) {
-    float x = actor.getX();
-    float y = actor.getY();
-    return x <= pointer.x && pointer.x <= x + actor.getWidth()
-        && y <= pointer.y && pointer.y <= y + actor.getHeight();
+    return hoverPresentation != null && hoverPresentation.isUnsummonSelected();
   }
 
   static boolean shouldReplaceTarget(boolean candidateInteractable, float candidateDst2,
@@ -204,8 +186,7 @@ public class HoveredManager extends IteratingSystem {
       mHovered.remove(id);
     }
 
-    if (mAnimationWrapper.has(id)) mAnimationWrapper.get(id).animation.setHighlighted(b);
-    if (mOverlay.has(id)) mOverlay.get(id).animation.setHighlighted(b);
+    if (hoverPresentation != null) hoverPresentation.setHighlighted(id, b);
   }
 }
 
