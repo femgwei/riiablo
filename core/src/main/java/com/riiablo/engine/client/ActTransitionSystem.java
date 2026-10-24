@@ -1,7 +1,5 @@
 package com.riiablo.engine.client;
 
-import com.riiablo.presentation.ClientGameplayContext;
-
 import com.riiablo.engine.server.event.NativeActTransitionEvent;
 import com.d2moo.common.drlg.D2LevelIds;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -9,14 +7,14 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 /** Applies server-authoritative act transitions to the local loading screen. */
 public class ActTransitionSystem extends PassiveSystem {
-  @com.artemis.annotations.Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  @com.artemis.annotations.Wire(name = "clientActTransition", failOnNull = false)
+  protected ClientActTransitionPort clientActTransition;
 
   @Subscribe
   public void onActTransition(NativeActTransitionEvent transition) {
-    if (transition == null || transition.destinationLevelId <= 0 || clientContext == null) return;
+    if (transition == null || transition.destinationLevelId <= 0 || clientActTransition == null) return;
     int act = actForLevel(transition.destinationLevelId);
-    if (act < 0 || !clientContext.transitionAct(act)) return;
+    if (act < 0 || !clientActTransition.transitionAct(act)) return;
     transition.accept();
   }
 

@@ -28,7 +28,10 @@ public final class ClientSystemHarness implements AutoCloseable {
         if (system != null) builder.with(system);
       }
     }
-    this.world = new World(builder.build().register("clientContext", context));
+    this.world = new World(builder.build()
+        .register("clientContext", context)
+        .register("clientActTransition", (ClientActTransitionPort) context::transitionAct)
+        .register("clientPlayer", (ClientPlayerPort) context::playerId));
   }
 
   public World world() { return world; }

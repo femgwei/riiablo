@@ -1,6 +1,4 @@
 file	target	count	owner	migration	remove_when
-core/src/main/java/com/riiablo/engine/client/ActTransitionSystem.java	com.riiablo.presentation.ClientGameplayContext	1	client-act-adapter	M8-C	Replace context act-transition callback with an accepted transition event consumed by the host
-core/src/main/java/com/riiablo/engine/client/AutoInteracter.java	com.riiablo.presentation.ClientGameplayContext	1	client-interaction-adapter	M2/M8-C	Submit interaction intent using session data and publish presentation effects as events
 core/src/main/java/com/riiablo/engine/client/ClientItemManager.java	com.riiablo.presentation.ClientGameplayContext	1	client-inventory-adapter	M2/M6/M8-C	Inventory transactions publish committed changes consumed by item effects and label presentation
 core/src/main/java/com/riiablo/engine/client/ClientNetworkReceiver.java	com.riiablo.presentation.ClientGameplayContext	1	client-replica-adapter	M2/M8-C/M8-D	Decode validated replicas once and publish lifecycle snapshots instead of calling concrete presentation handlers
 core/src/main/java/com/riiablo/engine/client/ClientSystemHarness.java	com.riiablo.presentation.ClientGameplayContext	1	client-test-host	M8-C	Use the explicit client host recipe and remove legacy global-context fallback

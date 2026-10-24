@@ -1,7 +1,5 @@
 package com.riiablo.engine.client;
 
-import com.riiablo.presentation.ClientGameplayContext;
-
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
@@ -22,8 +20,8 @@ public class AutoInteracter extends IteratingSystem {
   protected ComponentMapper<Interactable> mInteractable;
 
   protected HoveredManager hoveredManager;
-  @com.artemis.annotations.Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  @com.artemis.annotations.Wire(name = "clientPlayer", failOnNull = false)
+  protected ClientPlayerPort clientPlayer;
 
   private final Vector2 position = new Vector2();
   private float shortestDistance;
@@ -34,7 +32,7 @@ public class AutoInteracter extends IteratingSystem {
     if (closest == Engine.INVALID_ENTITY) return;
     Interactable interactable = mInteractable.get(closest);
     if (interactable == null) return;
-    int player = clientContext == null ? -1 : clientContext.playerId();
+    int player = clientPlayer == null ? -1 : clientPlayer.playerId();
     if (player < 0) return;
     interactable.interactor.interact(player, closest);
   }
@@ -43,7 +41,7 @@ public class AutoInteracter extends IteratingSystem {
   protected void begin() {
     closest = Engine.INVALID_ENTITY;
     shortestDistance = Float.POSITIVE_INFINITY;
-    int player = clientContext == null ? -1 : clientContext.playerId();
+    int player = clientPlayer == null ? -1 : clientPlayer.playerId();
     if (player < 0 || !mPosition.has(player) || mPosition.get(player) == null) return;
     position.set(mPosition.get(player).position);
   }

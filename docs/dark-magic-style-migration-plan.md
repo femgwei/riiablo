@@ -1083,6 +1083,10 @@ git diff --check
 `engine/client/ClientSimulationAssembly` 清除，物品 bounce、ZoneChangeTracker 和调试渲染器的直接表现依赖也已清除。输入、物品管理器和测试 harness 的兼容
 `ClientGameplayContext` 依赖仍按后续 M8-C 批次处理，M8-C/M8 整体继续标记为进行中。
 
+本批收尾前置的两个窄端口已落地：`ActTransitionSystem` 通过 `ClientActTransitionPort` 接收
+已接受的换 Act 意图，`AutoInteracter` 通过 `ClientPlayerPort` 读取玩家身份；真实 screen 和
+测试 harness 均显式注册端口，旧 `ClientGameplayContext` 仍仅保留给尚未迁移的物品/输入/网络兼容路径。
+
 真实资源：未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；本批不修改暗黑规则。
 
 下一迁移：M8-C 第 4 批，收口 `ClientItemManager`/`NetworkedClientItemManager` 的物品表现事件
