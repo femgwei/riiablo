@@ -81,6 +81,7 @@ import com.riiablo.engine.SimulationTickCoordinator;
 import com.riiablo.presentation.ClientAudioSession;
 import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.presentation.ClientPointerUiAdapter;
+import com.riiablo.presentation.ClientGameplayInputAdapter;
 import com.riiablo.presentation.ClientSimulationAssembly;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.ServerGameplayContext;
@@ -783,6 +784,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
         new com.riiablo.engine.server.quest.Act5QuestGameState();
     WorldConfiguration config = simulationSession.registerServices(getWorldConfiguration());
+    ClientGameplayInputAdapter gameplayInput = new ClientGameplayInputAdapter(clientGameplayContext);
     config
         .register("clientSession", new ClientNetworkSession(charData, () -> player,
             new ClientNetworkSession.ResultRouter() {
@@ -796,6 +798,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
             }))
         .register("iso", iso)
         .register("clientContext", clientGameplayContext)
+        .register("clientActionInput", (com.riiablo.engine.client.ClientActionInputPort) gameplayInput)
+        .register("clientKeyboardInput", (com.riiablo.engine.client.ClientKeyboardInputPort) gameplayInput)
         .register("clientActTransition", (com.riiablo.engine.client.ClientActTransitionPort)
             clientGameplayContext::transitionAct)
         .register("clientPlayer", (com.riiablo.engine.client.ClientPlayerPort)

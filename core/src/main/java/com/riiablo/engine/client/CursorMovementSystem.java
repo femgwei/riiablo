@@ -1,8 +1,6 @@
 package com.riiablo.engine.client;
 
 
-import com.riiablo.presentation.ClientGameplayContext;
-
 import com.artemis.Aspect;
 import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
@@ -65,8 +63,8 @@ public class CursorMovementSystem extends BaseSystem {
   protected ClientPointerUiPort pointerUi;
   @Wire(name = "simulationTickCoordinator", failOnNull = false)
   protected com.riiablo.engine.SimulationTickCoordinator simulationTickCoordinator;
-  @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  @Wire(name = "clientActionInput", failOnNull = false)
+  protected ClientActionInputPort actionInput;
 
   @Wire(name = "iso")
   protected IsometricCamera iso;
@@ -149,7 +147,7 @@ public class CursorMovementSystem extends BaseSystem {
       if (targetId != Engine.INVALID_ENTITY && (isTargetDead(targetId) || actioneer.didLastAttackTargetDie(playerId))) {
         stopTargeting(playerId);
       } else {
-        final int skillId = clientContext.charData().getAction(
+        final int skillId = actionInput == null ? Engine.INVALID_ENTITY : actionInput.action(
             leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
         iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
         if (!isSkillAllowedForInput(playerId, skillId)) {
@@ -286,7 +284,8 @@ public class CursorMovementSystem extends BaseSystem {
         pendingLeftClicks.restore(click);
         return false;
       }
-      int skillId = clientContext.charData().getAction(Input.Buttons.LEFT);
+      int skillId = actionInput == null ? Engine.INVALID_ENTITY
+          : actionInput.action(Input.Buttons.LEFT);
       if (!isSkillAllowedForInput(src, skillId)) {
         stopTargeting(src);
         return true;
@@ -345,7 +344,8 @@ public class CursorMovementSystem extends BaseSystem {
       stopTargeting(src);
       return true;
     }
-    int skillId = clientContext.charData().getAction(Input.Buttons.RIGHT);
+    int skillId = actionInput == null ? Engine.INVALID_ENTITY
+        : actionInput.action(Input.Buttons.RIGHT);
     if (!isSkillAllowedForInput(src, skillId)) {
       stopTargeting(src);
       return true;
@@ -449,7 +449,7 @@ public class CursorMovementSystem extends BaseSystem {
           
           final int selectedSkillId = skillForApproachedTarget(
               approachTarget, approachSkill, targetId,
-              clientContext.charData().getAction(Input.Buttons.LEFT));
+              actionInput == null ? Engine.INVALID_ENTITY : actionInput.action(Input.Buttons.LEFT));
           final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
           final boolean rangedNormalAttack = isRangedNormalAttack(selectedSkillId);
 
@@ -457,7 +457,7 @@ public class CursorMovementSystem extends BaseSystem {
           // weapon is throwable and has quantity. A throwable weapon does not
           // turn the normal Attack skill into a ranged attack.
           boolean canThrow = false;
-          Item weapon = clientContext.charData().getItems().getEquippedThrowableWeapon();
+          Item weapon = actionInput == null ? null : actionInput.equippedThrowableWeapon();
           
           if (weapon != null && weapon.attrs != null) {
             com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
@@ -623,8 +623,7 @@ public class CursorMovementSystem extends BaseSystem {
    */
   private boolean isSkillAllowedForInput(int sourceId, int skillId) {
     if (!isPlayerInTown(sourceId)) return true;
-    Skills.Entry skill = clientContext.files() != null && clientContext.files().skills != null
-        ? clientContext.files().skills.get(skillId) : null;
+    Skills.Entry skill = actionInput == null ? null : actionInput.skill(skillId);
     boolean allowed = com.riiablo.engine.server.skill.NativeSkillResolver
         .isAllowedInTown(skill, true);
     if (!allowed && Gdx.app != null) {
@@ -691,7 +690,8 @@ public class CursorMovementSystem extends BaseSystem {
       // A disabled offensive skill must not turn a town click into an
       // approach/attack command.  Keep interactables above unaffected so NPC
       // and waypoint clicks remain usable while an attack icon is red.
-      final int selectedSkill = clientContext.charData().getAction(Input.Buttons.LEFT);
+      final int selectedSkill = actionInput == null ? Engine.INVALID_ENTITY
+          : actionInput.action(Input.Buttons.LEFT);
       if (!isSkillAllowedForInput(src, selectedSkill)) {
         stopTargeting(src);
         return true;
@@ -713,7 +713,7 @@ public class CursorMovementSystem extends BaseSystem {
       // weapon is throwable and has quantity. Normal Attack remains point-
       // blank melee even when a throwable weapon is equipped.
       boolean canThrow = false;
-      Item weapon = clientContext.charData().getItems().getEquippedThrowableWeapon();
+      Item weapon = actionInput == null ? null : actionInput.equippedThrowableWeapon();
 
       if (weapon != null && weapon.attrs != null) {
         com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
@@ -747,8 +747,7 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private Skills.Entry skillEntry(int skillId) {
-    return skillId >= 0 && clientContext.files() != null && clientContext.files().skills != null
-        ? clientContext.files().skills.get(skillId) : null;
+    return actionInput == null ? null : actionInput.skill(skillId);
   }
 
   static boolean shouldMoveOnUntargetedRightClick(
@@ -812,7 +811,7 @@ public class CursorMovementSystem extends BaseSystem {
     if (skillId == SkillCodes.throw_ || skillId == SkillCodes.left_hand_throw) {
       return true;
     }
-    Skills.Entry skill = clientContext.files().skills.get(skillId);
+    Skills.Entry skill = actionInput == null ? null : actionInput.skill(skillId);
     return skill != null && (skill.srvdofunc == 3 || skill.srvdofunc == 5
         || skill.cltdofunc == 3 || skill.cltdofunc == 5);
   }
@@ -835,9 +834,7 @@ public class CursorMovementSystem extends BaseSystem {
 
   private boolean isRangedNormalAttack(int skillId) {
     return skillId == SkillCodes.attack
-        && clientContext.charData() != null
-        && clientContext.charData().getItems() != null
-        && clientContext.charData().getItems().getEquippedRangedWeapon() != null;
+        && actionInput != null && actionInput.equippedRangedWeapon() != null;
   }
 
   private boolean isMeleeNormalAttack(int skillId) {
@@ -870,8 +867,7 @@ public class CursorMovementSystem extends BaseSystem {
         || lastAttackRangeRangedNormal != rangedNormalAttack;
     if (!stateChanged && now - lastAttackRangeTraceMillis < 1000L) return;
 
-    Item throwable = clientContext.charData() != null && clientContext.charData().getItems() != null
-        ? clientContext.charData().getItems().getEquippedThrowableWeapon() : null;
+    Item throwable = actionInput == null ? null : actionInput.equippedThrowableWeapon();
     int quantity = -1;
     if (throwable != null && throwable.attrs != null) {
       com.riiablo.attributes.StatRef quantityRef = throwable.attrs.base().get(Stat.quantity);

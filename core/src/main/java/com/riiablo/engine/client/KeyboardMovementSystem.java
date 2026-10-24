@@ -1,7 +1,5 @@
 package com.riiablo.engine.client;
 
-import com.riiablo.presentation.ClientGameplayContext;
-
 import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
 
@@ -69,8 +67,8 @@ public class KeyboardMovementSystem extends BaseSystem {
   protected Actioneer actioneer;
   @com.artemis.annotations.Wire(name = "simulationTickCoordinator", failOnNull = false)
   protected SimulationTickCoordinator simulationTickCoordinator;
-  @com.artemis.annotations.Wire(name = "clientContext")
-  protected com.riiablo.presentation.ClientUiServices clientContext = ClientGameplayContext.fromGlobals();
+  @com.artemis.annotations.Wire(name = "clientKeyboardInput", failOnNull = false)
+  protected ClientKeyboardInputPort keyboardInput;
 
   //==========================================================================
   // 字段
@@ -98,7 +96,7 @@ public class KeyboardMovementSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
-    if (clientContext.movementBlocked()) return;
+    if (keyboardInput != null && keyboardInput.movementBlocked()) return;
     if (!enabled) {
       return;
     }
