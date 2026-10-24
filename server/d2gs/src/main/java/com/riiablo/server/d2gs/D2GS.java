@@ -62,6 +62,8 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
 import com.riiablo.engine.SimulationCommandEnvelope;
+import com.riiablo.engine.AuthoritativeSessionRegistry;
+import com.riiablo.engine.D2gsCommandAdapter;
 import com.riiablo.engine.replay.SimulationReplayRecorder;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.RoomActivationSystem;
@@ -6073,6 +6075,19 @@ public class D2GS extends ApplicationAdapter {
   private SimulationReplayRecorder replayRecorder = SimulationReplayRecorder.NONE;
   private D2gsCheckpointSnapshot replayCheckpoint;
   private D2gsCheckpointSnapshot.EntityLifecycle replayEntityLifecycle;
+  /** Single fixed-tick ingress for authenticated movement/combat packets. */
+  private final AuthoritativeSessionRegistry authoritativeSessions =
+      new AuthoritativeSessionRegistry();
+  private final D2gsCommandAdapter commandAdapter = new D2gsCommandAdapter(
+      authoritativeSessions, "d2gs", this::authorizeD2gsTarget);
+  private long nextIngressRequestId = 1L;
+
+  private boolean authorizeD2gsTarget(SimulationCommandEnvelope command, int targetEntityId) {
+    if (targetEntityId < 0 || world == null) return false;
+    return targetEntityId == command.actorId
+        || world.getMapper(com.riiablo.engine.server.component.Class.class)
+            .has(targetEntityId);
+  }
   Map map;
   CombatPositionHistory combatPositionHistory;
   final com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
@@ -6107,6 +6122,18 @@ public class D2GS extends ApplicationAdapter {
       this.packet = packet;
       this.clientIndex = clientIndex;
       this.dueTick = dueTick;
+    }
+  }
+
+  private static final class IngressCommand {
+    final int connectionId;
+    final int entityId;
+    final Object intent;
+
+    IngressCommand(int connectionId, int entityId, Object intent) {
+      this.connectionId = connectionId;
+      this.entityId = entityId;
+      this.intent = intent;
     }
   }
 
@@ -6408,6 +6435,7 @@ public class D2GS extends ApplicationAdapter {
       if (DEBUG_RECEIVED_PACKETS && !ignoredPackets.get(packet.data.dataType())) Gdx.app.log(TAG, "processing " + D2GSData.name(packet.data.dataType()) + " packet from " + packet.id);
       process(packet);
     }
+    drainD2gsIngress(simulation.tickNumber());
     playerTrades.update();
     cancelTradesOutsideSharedArea();
     applyReadyMovementIntents();
@@ -6603,6 +6631,15 @@ public class D2GS extends ApplicationAdapter {
     if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
     int entityId = factory.createPlayer(charData, origin);
     player.put(packet.id, entityId);
+    AuthoritativeSessionRegistry.Result session = commandAdapter.connect(
+        packet.id, charData.name, entityId, simulation == null ? 0L : simulation.tickNumber());
+    if (!session.accepted) {
+      Gdx.app.error(TAG, "[NET_INGRESS] phase=session_reject connection=" + packet.id
+          + " player=" + entityId + " reason=" + session.rejection);
+      player.remove(packet.id, Engine.INVALID_ENTITY);
+      world.delete(entityId);
+      return;
+    }
     Integer previousEntityId = disconnectedOwnerEntities.remove(charData.name);
     if (previousEntityId != null) {
       int rebound = com.riiablo.engine.server.item.GroundDropOwnership
@@ -6829,6 +6866,7 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private synchronized void Disconnect(int id) {
+    commandAdapter.disconnect(id, simulation == null ? 0L : simulation.tickNumber());
     int entityId = player.get(id, Engine.INVALID_ENTITY);
     if (entityId != Engine.INVALID_ENTITY) {
       TradeSession disconnectedTrade = playerTrades.getPlayerSession(entityId);
@@ -6955,20 +6993,58 @@ public class D2GS extends ApplicationAdapter {
     // measure queue delay even when several packets arrive between ticks.
     input = input.withReceivedTick(simulation.tickNumber());
 
-    MovementIntentScheduler.Result result = movementIntents[packet.id].submit(
-        input, simulation.tickNumber());
+    submitD2gsIngress(packet.id, "movement",
+        new IngressCommand(packet.id, entityId, input),
+        input.targetKind == MovementIntent.TargetKind.ENTITY ? input.targetEntityId : -1);
+  }
+
+  private void drainD2gsIngress(long currentTick) {
+    commandAdapter.drain(currentTick, command -> {
+      if (!(command.payload instanceof IngressCommand)) return;
+      IngressCommand ingress = (IngressCommand) command.payload;
+      if (ingress.intent instanceof MovementIntent) {
+        enqueueMovementIntent(ingress.connectionId, ingress.entityId,
+            (MovementIntent) ingress.intent, currentTick);
+      } else if (ingress.intent instanceof CombatIntent) {
+        enqueueCombatIntent(ingress.connectionId, ingress.entityId,
+            (CombatIntent) ingress.intent, currentTick);
+      }
+    });
+  }
+
+  private void submitD2gsIngress(int connectionId, String kind, IngressCommand ingress,
+      int targetEntityId) {
+    // Unknown targets stay in the domain scheduler so it can emit the
+    // protocol-specific rejection/ACK. Known targets pass the adapter's
+    // ownership gate before entering the fixed-tick queue.
+    int admissionTarget = targetEntityId >= 0 && world != null
+        && world.getMapper(com.riiablo.engine.server.component.Class.class)
+            .has(targetEntityId) ? targetEntityId : -1;
+    D2gsCommandAdapter.Result result = commandAdapter.submit(connectionId, kind, ingress,
+        simulation.tickNumber(), nextIngressRequestId++, admissionTarget);
+    if (!result.accepted) {
+      Gdx.app.log(TAG, "[NET_INGRESS] phase=reject connection=" + connectionId
+          + " kind=" + kind + " reason="
+          + (result.rejection != D2gsCommandAdapter.Rejection.NONE
+              ? result.rejection : result.admissionRejection));
+    }
+  }
+
+  private void enqueueMovementIntent(int connectionId, int entityId, MovementIntent input,
+      long currentTick) {
+    MovementIntentScheduler.Result result = movementIntents[connectionId].submit(
+        input, currentTick);
     if (result != MovementIntentScheduler.Result.ACCEPTED) {
-      Gdx.app.log(TAG, "[NET_MOVE] phase=intent_drop connection=" + packet.id
+      Gdx.app.log(TAG, "[NET_MOVE] phase=intent_drop connection=" + connectionId
           + " player=" + entityId + " sequence=" + input.sequence
           + " result=" + result.name().toLowerCase());
       return;
     }
     long now = TimeUtils.millis();
-    if (now >= nextMovementQueueLogTime[packet.id]) {
-      nextMovementQueueLogTime[packet.id] = now + 1000L;
-      long currentTick = simulation.tickNumber();
+    if (now >= nextMovementQueueLogTime[connectionId]) {
+      nextMovementQueueLogTime[connectionId] = now + 1000L;
       long lead = input.targetTick == 0L ? 0L : input.targetTick - currentTick;
-      Gdx.app.log(TAG, "[NET_MOVE] phase=intent_queue connection=" + packet.id
+      Gdx.app.log(TAG, "[NET_MOVE] phase=intent_queue connection=" + connectionId
           + " player=" + entityId + " sequence=" + input.sequence
           + " observedTick=" + input.observedServerTick
           + " targetTick=" + input.targetTick + " receiveTick=" + input.receivedTick
@@ -7226,25 +7302,31 @@ public class D2GS extends ApplicationAdapter {
     CombatIntent input = new CombatIntent(
         request.sequence(), request.observedServerTick(), request.targetTick(),
         request.skillId(), request.targetId(), request.targetX(), request.targetY());
-    CombatIntentScheduler.Result result = combatIntents[packet.id].submit(
-        input, simulation.tickNumber());
+    submitD2gsIngress(packet.id, "cast_skill",
+        new IngressCommand(packet.id, entityId, input), input.targetEntityId);
+  }
+
+  private void enqueueCombatIntent(int connectionId, int entityId, CombatIntent input,
+      long currentTick) {
+    CombatIntentScheduler.Result result = combatIntents[connectionId].submit(
+        input, currentTick);
     if (result == CombatIntentScheduler.Result.DUPLICATE) {
       // A retransmit is already represented by the original authoritative
       // result. A non-final positive response lets the client retire the
       // duplicate without cancelling a cast that is still in flight.
-      sendCombatResult(packet.id, input, true, "duplicate", simulation.tickNumber(),
+      sendCombatResult(connectionId, input, true, "duplicate", currentTick,
           entityId, input.targetEntityId, false);
       return;
     }
     if (result != CombatIntentScheduler.Result.ACCEPTED) {
-      Gdx.app.log(TAG, "[NET_CAST] phase=intent_drop connection=" + packet.id
+      Gdx.app.log(TAG, "[NET_CAST] phase=intent_drop connection=" + connectionId
           + " player=" + entityId + " sequence=" + input.sequence
           + " result=" + result.name().toLowerCase());
-      sendCombatResult(packet.id, input, false, result.name().toLowerCase(),
-          simulation.tickNumber(), entityId, input.targetEntityId);
+      sendCombatResult(connectionId, input, false, result.name().toLowerCase(),
+          currentTick, entityId, input.targetEntityId);
       return;
     }
-    Gdx.app.log(TAG, "[NET_CAST] phase=intent_queue connection=" + packet.id
+    Gdx.app.log(TAG, "[NET_CAST] phase=intent_queue connection=" + connectionId
         + " player=" + entityId + " sequence=" + input.sequence
         + " observedTick=" + input.observedServerTick
         + " targetTick=" + input.targetTick);

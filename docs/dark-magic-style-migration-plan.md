@@ -1336,6 +1336,37 @@ git diff --check
 下一迁移：进入 M8-A/M8-D 的真实 ECS checkpoint/replay 与 D2GS handler 唯一入口批次；优先选择能
 同时增加真实网络验收和可恢复状态门禁的一组 handler，不再继续拆分 M8-C 端口微批次。
 
+### M8-D 第 1 批：Movement/CastSkill 统一 D2GS ingress（2026-10-25）
+
+本批把 D2GS 中最成熟的 Movement/CastSkill 固定 Tick 路径接入统一
+`D2gsCommandAdapter`，不改 FlatBuffer 字段、移动/战斗规则或原有 scheduler 语义。
+
+实现与边界：
+
+- D2GS 连接建立/断开现在绑定 `AuthoritativeSessionRegistry`；断开会取消该 actor 尚未
+  消费的 ingress 命令，避免迟到网络包进入权威 ECS。
+- Movement/CastSkill 入站先经过 `D2gsCommandAdapter` 的连接身份、网络 authority、请求
+  元数据和固定 Tick queue，再转交既有 `MovementIntentScheduler`/
+  `CombatIntentScheduler`；原有序号去重、目标/技能校验、ACK、replay command 记录保持在
+  原权威路径中。
+- 已知实体目标经过 adapter target gate；未知目标仍交给领域 scheduler 产生原协议拒绝，
+  保留客户端可观察的错误/ACK 行为。其他 D2GS handler 尚未迁移，不能宣称 M8-D 完成。
+
+验证：
+
+```powershell
+./gradlew :server:d2gs:compileJava :core:test --tests com.riiablo.engine.D2gsCommandAdapterTest --no-daemon --console=plain
+./gradlew :core:m8ReplayRegression :server:d2gs:compileJava --no-daemon --console=plain
+git diff --check
+```
+
+结果：上述编译、adapter 会话/命令准入测试和 M8 replay 回归全部通过；本批未使用
+`G:\\BaiduNetdiskDownload\\Diablo II 1.10F`，未修改暗黑规则。真实双客户端 Movement/CastSkill
+重连与可恢复 checkpoint 仍需后续批次验收。
+
+下一迁移：扩展同一 ingress 到其余 D2GS authoritative handler，并把真实 ECS checkpoint
+restore、RNG/D2S 和跨进程重连验收接入同一网络门禁；不把本批写成 M8-A/M8-D 完成。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
