@@ -1183,6 +1183,37 @@ git diff --check
 
 下一迁移：收口 `HoveredManager` 的表现组件与上下文依赖，或在 M2/M3 输入意图端口完成后统一处理。
 
+### M8-C 第 7 批：悬停命中表现适配器（2026-10-24）
+
+提交：`b7c217fca`。
+
+本批新增 engine-side 的 `ClientHoverPresentationPort`/`ClientHoverBounds`，并由
+`ClientHoverPresentationAdapter` 统一持有 `BBoxWrapper`、动画/overlay 高亮、标签边界和
+Unsummon 状态。`HoveredManager` 现在只依赖 `Selectable`、`Position` 与窄端口，保留实体筛选、
+可交互目标优先级、距离排序、Alt 下地面物品标签命中、召唤物 Unsummon 命中和 DT 模式清理语义。
+客户端装配显式注册适配器；标签边界纯数学回归迁移到 presentation 测试。
+
+验证：
+
+```powershell
+./gradlew :core:compileJava :core:compileTestJava :core:test `
+  --tests com.riiablo.engine.client.HoveredManagerTest `
+  --tests com.riiablo.presentation.ClientHoverPresentationAdapterTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest --no-daemon --max-workers=1 --console=plain
+python tools/architecture/migration_boundaries.py --mode check
+& tools/architecture/check-client-presentation-boundary.ps1 -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、悬停/适配器/客户端装配定向回归、模块边界和 M1-A 表现边界通过；M8-C 债务由
+12 条降至 6 条。剩余 6 条均为 `ClientGameplayContext` 的物品、网络副本、鼠标/键盘输入兼容读取，
+留待后续状态/输入端口批次处理。M8-C/M8 整体继续标记为进行中。
+
+真实资源：未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；本批不修改暗黑规则。
+
+下一迁移：继续收口 `ClientItemManager`/`NetworkedClientItemManager`/`ClientNetworkReceiver` 的
+状态出口，或在输入意图端口批次中处理 `CursorMovementSystem` 与 `KeyboardMovementSystem` 的剩余 context 依赖。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
