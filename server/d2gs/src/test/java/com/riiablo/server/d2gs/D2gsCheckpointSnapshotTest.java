@@ -1,0 +1,126 @@
+package com.riiablo.server.d2gs;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import com.artemis.World;
+import com.artemis.WorldConfigurationBuilder;
+import com.google.flatbuffers.FlatBufferBuilder;
+import com.riiablo.engine.server.SerializationManager;
+import com.riiablo.engine.server.component.Networked;
+import com.riiablo.net.packet.d2gs.D2GS;
+import com.riiablo.net.packet.d2gs.EntitySync;
+import java.util.HashMap;
+import java.util.Map;
+import org.junit.Test;
+
+/** Verifies the D2GS checkpoint adapter without loading native maps or MPQs. */
+public class D2gsCheckpointSnapshotTest {
+  @Test public void captureRestoreCaptureKeepsSummaryStable() {
+    World world = worldWithEntities(2);
+    FakeSerializer serializer = new FakeSerializer();
+    for (int id : networkedIds(world)) serializer.states.put(id, id + 10);
+
+    D2gsCheckpointSnapshot before = D2gsCheckpointSnapshot.capture(world, serializer, 42L);
+    for (int id : networkedIds(world)) serializer.states.put(id, -id);
+
+    D2gsCheckpointSnapshot.RestoreResult result = before.restoreExisting(world, serializer);
+    D2gsCheckpointSnapshot after = D2gsCheckpointSnapshot.capture(world, serializer, 42L);
+
+    assertTrue(result.success());
+    assertEquals(2, result.appliedEntities);
+    assertFalse(result.rolledBack);
+    assertEquals(before.summary().canonical(), after.summary().canonical());
+  }
+
+  @Test public void rejectsMissingAndUnexpectedEntitiesBeforeApplying() {
+    World world = worldWithEntities(1);
+    FakeSerializer serializer = new FakeSerializer();
+    int original = networkedIds(world)[0];
+    serializer.states.put(original, 7);
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(world, serializer, 3L);
+
+    world.delete(original);
+    world.process();
+    D2gsCheckpointSnapshot.RestoreResult missing = checkpoint.restoreExisting(world, serializer);
+    assertFalse(missing.success());
+    assertEquals(java.util.Arrays.asList(original), missing.missingEntities);
+    assertTrue(missing.unexpectedEntities.isEmpty());
+
+    World extraWorld = worldWithEntities(2);
+    FakeSerializer extraSerializer = new FakeSerializer();
+    int[] ids = networkedIds(extraWorld);
+    for (int id : ids) extraSerializer.states.put(id, 1);
+    D2gsCheckpointSnapshot extraCheckpoint =
+        D2gsCheckpointSnapshot.capture(extraWorld, extraSerializer, 3L);
+    int extra = extraWorld.create();
+    extraWorld.getEntity(extra).edit().add(new Networked());
+    extraWorld.process();
+    D2gsCheckpointSnapshot.RestoreResult unexpected =
+        extraCheckpoint.restoreExisting(extraWorld, extraSerializer);
+    assertFalse(unexpected.success());
+    assertEquals(java.util.Arrays.asList(extra), unexpected.unexpectedEntities);
+  }
+
+  @Test public void componentFailureRollsBackAllAppliedEntities() {
+    World world = worldWithEntities(2);
+    FakeSerializer serializer = new FakeSerializer();
+    int[] ids = networkedIds(world);
+    for (int id : ids) serializer.states.put(id, id + 100);
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(world, serializer, 9L);
+
+    for (int id : ids) serializer.states.put(id, id + 200);
+    serializer.failOnce = ids[1];
+    D2gsCheckpointSnapshot.RestoreResult result = checkpoint.restoreExisting(world, serializer);
+
+    assertFalse(result.success());
+    assertEquals(java.util.Arrays.asList(ids[1]), result.failedEntities);
+    assertTrue(result.rolledBack);
+    assertEquals(ids[0] + 200, (int) serializer.states.get(ids[0]));
+    assertEquals(ids[1] + 200, (int) serializer.states.get(ids[1]));
+  }
+
+  private static World worldWithEntities(int count) {
+    World world = new World(new WorldConfigurationBuilder().build());
+    for (int i = 0; i < count; i++) {
+      int id = world.create();
+      world.getEntity(id).edit().add(new Networked());
+    }
+    world.process();
+    return world;
+  }
+
+  private static int[] networkedIds(World world) {
+    com.artemis.utils.IntBag entities = world.getAspectSubscriptionManager()
+        .get(com.artemis.Aspect.all(Networked.class)).getEntities();
+    int[] ids = new int[entities.size()];
+    System.arraycopy(entities.getData(), 0, ids, 0, ids.length);
+    java.util.Arrays.sort(ids);
+    return ids;
+  }
+
+  private static final class FakeSerializer extends SerializationManager {
+    final Map<Integer, Integer> states = new HashMap<>();
+    int failOnce = -1;
+
+    @Override public int serialize(FlatBufferBuilder builder, int entityId, long tick,
+        long serverTimeMillis) {
+      int types = EntitySync.createComponentTypeVector(builder, new byte[0]);
+      int components = EntitySync.createComponentVector(builder, new int[0]);
+      int sync = EntitySync.createEntitySync(builder, entityId,
+          states.getOrDefault(entityId, 0), 0, types, components, tick, serverTimeMillis,
+          0L, 0L, 0L, -1);
+      return sync;
+    }
+
+    @Override public void deserialize(int entityId, D2GS packet) {
+      EntitySync sync = (EntitySync) packet.data(new EntitySync());
+      states.put(entityId, sync.type());
+      if (entityId == failOnce) {
+        failOnce = -1;
+        throw new IllegalStateException("injected component failure");
+      }
+    }
+  }
+}

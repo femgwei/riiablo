@@ -33,13 +33,15 @@ public final class D2gsCheckpointSnapshot {
     public final List<Integer> missingEntities;
     public final List<Integer> failedEntities;
     public final List<Integer> unexpectedEntities;
+    public final boolean rolledBack;
 
     private RestoreResult(int appliedEntities, List<Integer> missingEntities,
-        List<Integer> failedEntities, List<Integer> unexpectedEntities) {
+        List<Integer> failedEntities, List<Integer> unexpectedEntities, boolean rolledBack) {
       this.appliedEntities = appliedEntities;
       this.missingEntities = Collections.unmodifiableList(new ArrayList<>(missingEntities));
       this.failedEntities = Collections.unmodifiableList(new ArrayList<>(failedEntities));
       this.unexpectedEntities = Collections.unmodifiableList(new ArrayList<>(unexpectedEntities));
+      this.rolledBack = rolledBack;
     }
 
     public boolean success() {
@@ -124,6 +126,11 @@ public final class D2gsCheckpointSnapshot {
   public RestoreResult restoreExisting(World world, SerializationManager serializer) {
     if (world == null) throw new NullPointerException("world");
     if (serializer == null) throw new NullPointerException("serializer");
+    return restoreExisting(world, serializer, true);
+  }
+
+  private RestoreResult restoreExisting(World world, SerializationManager serializer,
+      boolean captureRollback) {
     List<Integer> missing = new ArrayList<>();
     List<Integer> failed = new ArrayList<>();
     List<Integer> unexpected = new ArrayList<>();
@@ -133,25 +140,37 @@ public final class D2gsCheckpointSnapshot {
       int entityId = active.get(i);
       if (!payloads.containsKey(entityId)) unexpected.add(entityId);
     }
-    int applied = 0;
     for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
       int entityId = entry.getKey();
       if (!world.getEntityManager().isActive(entityId)) {
         missing.add(entityId);
-        continue;
-      }
-      try {
-        Packet packet = Packet.obtain(1, ByteBuffer.wrap(entry.getValue()).duplicate());
-        serializer.deserialize(entityId, packet.data);
-        applied++;
-      } catch (Throwable ignored) {
-        failed.add(entityId);
       }
     }
     Collections.sort(missing);
     Collections.sort(failed);
     Collections.sort(unexpected);
-    return new RestoreResult(applied, missing, failed, unexpected);
+    if (!missing.isEmpty() || !unexpected.isEmpty()) {
+      return new RestoreResult(0, missing, failed, unexpected, false);
+    }
+    D2gsCheckpointSnapshot before = captureRollback
+        ? capture(world, serializer, tick) : null;
+    for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
+      int entityId = entry.getKey();
+      try {
+        Packet packet = Packet.obtain(1, ByteBuffer.wrap(entry.getValue()).duplicate());
+        serializer.deserialize(entityId, packet.data);
+      } catch (Throwable ignored) {
+        failed.add(entityId);
+        boolean rolledBack = false;
+        if (before != null) {
+          RestoreResult rollback = before.restoreExisting(world, serializer, false);
+          rolledBack = rollback.success();
+        }
+        Collections.sort(failed);
+        return new RestoreResult(0, missing, failed, unexpected, rolledBack);
+      }
+    }
+    return new RestoreResult(payloads.size(), missing, failed, unexpected, false);
   }
 
   private static byte[] serialize(SerializationManager serializer, int entityId,
