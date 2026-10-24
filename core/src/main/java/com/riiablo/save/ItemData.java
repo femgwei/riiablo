@@ -7,6 +7,7 @@ import com.badlogic.gdx.utils.IntIntMap;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.AttributesUpdater;
+import com.riiablo.attributes.ItemStatProjection;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.attributes.UpdateSequence;
@@ -1572,6 +1573,11 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
 
   /** Revision of the last completed equipment aggregate rebuild. */
   public long equipmentRevision() { return equipmentRevision; }
+
+  /** Read-only aggregate equipment stats at the last committed revision. */
+  public ItemStatProjection equipmentStatProjection() {
+    return ItemStatProjection.from(stats);
+  }
 
   private float currentResource(short statId) {
     StatRef current = stats.aggregate().get(statId, StatRef.obtain());
