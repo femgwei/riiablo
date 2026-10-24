@@ -615,6 +615,33 @@ git diff --check
 
 下一迁移：继续 M4-A 调用方审计与命名 stream 迁移；M4-B 内容包按计划暂停。
 
+### M6 第 1/4 批：库存领域事务边界（2026-10-24）
+
+本批与 M5 并行启动。M4 已提供不可变数据来源、严格缺失策略和固定点门禁，
+但 M4-A 的全部规则调用方迁移仍在继续；因此本批只建立不依赖具体战斗结算的物品事务边界，
+不修改 M5 的技能、命中、伤害或导弹入口。
+
+范围：
+
+- 将拾取、装备、存储、药剂和交易所需的物品变更表示为可验证的领域操作；操作提交前只读取
+  稳定物品 ID、当前位置、尺寸、所有权和钱包快照。
+- 预检失败时不得修改 `ItemData`、金币、装备属性或任务记录；提交阶段保留现有
+  `ItemData`/D2GS 规则作为唯一实际变更入口，避免并行期间出现第二套结算逻辑。
+- 为事务预检记录来源 Tick、请求序号和操作摘要，供后续 M3 事件屏障、M5 战斗快照和 M8
+  回放使用；本批不新增 FlatBuffer 字段。
+- 现有 `ItemDataTradeAuthority`、`AuthoritativeItemMoveService` 和客户端意图入口只作为
+  适配层接入，生产调用切换和完整回滚留在本批后半段验收，不与 M5 同时改写。
+
+出口：
+
+- 纯数据测试覆盖重复物品 ID、非法位置/尺寸、所有权失效、容量不足、金币不足和重复提交；
+- ECS/D2GS 测试证明预检失败不改变库存和钱包，成功提交只产生一次变更；
+- 与 M5 的并行边界固定为：M5 负责战斗结算及其快照，M6 负责物品/钱包事务及属性聚合输入，
+  双方通过稳定 item ID 和已提交 Tick 交接，不直接互相调用内部实现。
+
+当前状态：已启动，尚未宣称 M6 完成。下一步为实现事务预检模型并接入现有交易/物品移动测试；
+M4-A 调用方审计、M5 战斗垂直切片和本批 M6 事务可以并行推进。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
@@ -681,7 +708,7 @@ D2MOO/原版依据：Fire Bolt 伤害仍由第 1 批 D2MOO `D2Skills.cpp:2459/26
 - 新增 `:server:d2gs:headlessFireBall`，复用真实双 TCP 客户端 area-skill 入口，使用真实 1.10f 资源验证 Fire Ball parent/`explodingarrowexp` child 的共享观察、目标生命变化和观察端一致性。
 - Fire Ball 双客户端命中后生成 `CombatCheckpoint`；owner/peer canonical 摘要必须一致，并输出稳定 digest。没有修改 FlatBuffer 协议，也没有把该摘要当作 M8 完整回放/恢复格式。
 
-提交：待本批验证后生成。
+提交：`514e9d2ba`。
 
 验证：
 
@@ -699,6 +726,31 @@ D2MOO/原版依据：Fire Ball 的 `MISSMODE_SrvHit01` 爆炸 fan-out 与 child 
 剩余问题：M5 仍需普通攻击/物理伤害、表现快照事件出口、旧兼容入口清理和最终全量出口复核；checkpoint 仍是摘要而非可恢复 replay。M3/M4 的全量网络事件与 RNG 调用方债务不在本批伪装解决。
 
 下一迁移：M5 第 4 批，完成普通攻击/物理伤害链路并纳入同一数据、ECS、D2GS 和双客户端门禁，再评估 M5 最终收口批次。
+
+### M5 第 4 批：物理投射物与普通武器伤害结算（2026-10-24）
+
+完成日期：2026-10-24；本批完成物理投射物/Throw 与普通武器投射物的 ECS 结算、真实 D2GS headless 门禁和固定检查点回归；不宣称近战普通攻击、表现快照或 M5 整体已完成。
+
+实现与边界：
+
+- 新增 `m5PhysicalCombatRegression`，覆盖物理投射物碰撞、攻击评级/伤害所有权、普通武器伤害快照、Amazon Throw/普通弓箭生命周期以及 CombatSystem/native fixed physical damage 回归；只纳入与本批直接相关且稳定的 Amazon 普通武器测试方法，不把未稳定的 Immolation Arrow 专项资源测试扩大为本批门禁。
+- `D2GSHeadlessClient` 增加 `--require-physical` 校验，`:server:d2gs:headlessPhysicalThrow` 使用生成 Amazon 的真实 Throw skill=2，通过 1.10f TCP/D2GS 导弹链路验证 owner missile 与物理生命结算。
+- 该 gate 输出可复核的 canonical `CombatCheckpoint`；没有修改 FlatBuffer 协议，也没有把摘要当作 M8 可恢复 replay/完整表现快照。
+
+验证：
+
+```powershell
+./gradlew.bat :core:m5PhysicalCombatRegression --no-daemon
+$env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:headlessPhysicalThrow --no-daemon
+git diff --check
+```
+
+结果：`m5PhysicalCombatRegression` 100 项测试通过（0 失败、0 跳过）；真实 1.10f `headlessPhysicalThrow` gate 通过，观察到 Amazon Throw skill=2、1 个 owner missile、目标生命 `1000.00→991.10`，并输出 canonical `26|117|119|2|256000|253722|1` 与 digest `2e537ca6ce7286cc4e9da7956f8940d5f7e45fc2c05b0ad28f6c299c4a41bff3`。使用资源路径 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；未启动图形客户端，未修改 D2GS FlatBuffer 字段。
+
+剩余问题：近战普通攻击的完整 ECS/D2GS 链路、表现快照事件出口、旧兼容入口清理和 M5 最终全量出口复核仍未完成；checkpoint 仍是摘要而非可恢复 replay。M3/M4 的全量网络事件与 RNG 调用方债务不在本批伪装解决。
+
+下一迁移：M5 第 5 批或最终收口批，集中完成近战普通攻击/表现快照与旧入口复核；只有相关门禁和真实资源验证完成后才更新为完成。
 
 ### M0 完成记录（2026-10-21）
 
