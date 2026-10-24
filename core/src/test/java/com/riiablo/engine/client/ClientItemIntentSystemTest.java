@@ -7,6 +7,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.item.Item;
 import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.presentation.ClientItemContextAdapter;
 import com.riiablo.save.CharData;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +20,8 @@ class ClientItemIntentSystemTest extends RiiabloTest {
     assertEquals(before, data.getItems().getAlternate());
     local.intents().processSystem();
     assertNotEquals(before, data.getItems().getAlternate());
-    NetworkedClientItemManager remote = new NetworkedClientItemManager(context(data));
+    NetworkedClientItemManager remote = new NetworkedClientItemManager(
+        new ClientItemContextAdapter(context(data)));
     assertFalse(remote.intents().swapWeapons());
     remote.intents().processSystem();
     assertNotEquals(before, data.getItems().getAlternate());
@@ -77,7 +79,8 @@ class ClientItemIntentSystemTest extends RiiabloTest {
     CharData data = character();
     Item item = ClientInventoryQuestReceiverTest.item(22); data.getItems().addToInventory(item);
     ClientGameplayContext context = context(data);
-    NetworkedClientItemManager remote = new NetworkedClientItemManager(context);
+    NetworkedClientItemManager remote = new NetworkedClientItemManager(
+        new ClientItemContextAdapter(context));
     remote.socket = mock(com.badlogic.gdx.net.Socket.class);
     try {
       when(remote.socket.getOutputStream()).thenReturn(new java.io.ByteArrayOutputStream());
@@ -94,5 +97,7 @@ class ClientItemIntentSystemTest extends RiiabloTest {
     when(context.charData()).thenReturn(data); when(context.playerId()).thenReturn(1);
     return context;
   }
-  private static ClientItemManager owner(CharData data) { return spy(new ClientItemManager(context(data))); }
+  private static ClientItemManager owner(CharData data) {
+    return spy(new ClientItemManager(new ClientItemContextAdapter(context(data))));
+  }
 }

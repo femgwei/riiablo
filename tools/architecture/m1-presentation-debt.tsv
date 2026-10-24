@@ -1,3 +1,1 @@
 file	target	count	owner	migration	remove_when
-core/src/main/java/com/riiablo/engine/client/ClientItemManager.java	com.riiablo.presentation.ClientGameplayContext	1	client-inventory-adapter	M2/M6/M8-C	Inventory transactions publish committed changes consumed by item effects and label presentation
-core/src/main/java/com/riiablo/engine/client/NetworkedClientItemManager.java	com.riiablo.presentation.ClientGameplayContext	1	client-network-inventory	M2/M6/M8-C	Submit inventory intents and consume committed result snapshots through a narrow adapter

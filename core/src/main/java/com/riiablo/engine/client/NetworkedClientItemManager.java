@@ -1,7 +1,5 @@
 package com.riiablo.engine.client;
 
-import com.riiablo.presentation.ClientGameplayContext;
-
 import com.google.flatbuffers.FlatBufferBuilder;
 
 import com.artemis.ComponentMapper;
@@ -53,7 +51,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
     super();
   }
 
-  public NetworkedClientItemManager(ClientGameplayContext clientContext) {
+  public NetworkedClientItemManager(ClientItemContextPort clientContext) {
     super(clientContext);
   }
 

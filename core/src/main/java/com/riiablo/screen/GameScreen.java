@@ -83,6 +83,7 @@ import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.presentation.ClientPointerUiAdapter;
 import com.riiablo.presentation.ClientGameplayInputAdapter;
 import com.riiablo.presentation.ClientNetworkPresentationAdapter;
+import com.riiablo.presentation.ClientItemContextAdapter;
 import com.riiablo.presentation.ClientSimulationAssembly;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.ServerGameplayContext;
@@ -333,13 +334,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         Riiablo.fonts, Riiablo.colors, Riiablo.string, Riiablo.saves, Riiablo.home,
         Riiablo.language == null ? null : Riiablo.language.resourceCode, Riiablo.mpqs,
         Riiablo.palettes);
+    ClientItemContextAdapter itemContext = new ClientItemContextAdapter(clientGameplayContext);
     // Create the item controller before any HUD/panel captures it.  The
     // mercenary portrait accepts cursor potions through this controller; the
     // previous order constructed MercenaryHud first and permanently retained
     // a null reference.
     itemController = socket == null
-        ? new ClientItemManager(clientGameplayContext)
-        : new NetworkedClientItemManager(clientGameplayContext);
+        ? new ClientItemManager(itemContext)
+        : new NetworkedClientItemManager(itemContext);
 
     // Native Diablo II key bindings are character-scoped (unlike the
     // preferences fallback used by the controls screen).  Load them as soon

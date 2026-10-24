@@ -1,7 +1,5 @@
 package com.riiablo.engine.client;
 
-import com.riiablo.presentation.ClientGameplayContext;
-
 import java.util.HashSet;
 import java.util.Set;
 
@@ -50,7 +48,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   @Wire(name = "townPortalRegistry")
   protected TownPortalRegistry townPortalRegistry;
 
-  protected final ClientGameplayContext clientContext;
+  protected final ClientItemContextPort clientContext;
   @com.artemis.annotations.SkipWire
   private ClientItemIntentSystem intents;
 
@@ -61,15 +59,15 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
   /** Legacy construction is retained for isolated fixtures; GameScreen supplies a context. */
   public ClientItemManager() {
-    this(ClientGameplayContext.fromGlobals());
+    this(ClientItemContextPort.fromGlobals());
   }
 
-  public ClientItemManager(ClientGameplayContext clientContext) {
+  public ClientItemManager(ClientItemContextPort clientContext) {
     this.clientContext = java.util.Objects.requireNonNull(clientContext, "clientContext");
   }
 
   /** Read-only context access for the presentation-owned client host recipe. */
-  public ClientGameplayContext clientContext() {
+  public ClientItemContextPort clientContext() {
     return clientContext;
   }
 

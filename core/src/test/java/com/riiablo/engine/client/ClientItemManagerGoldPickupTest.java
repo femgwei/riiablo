@@ -18,6 +18,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.presentation.ClientItemContextAdapter;
 import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.item.ItemGenerator;
@@ -40,7 +41,7 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
       when(context.charData()).thenReturn(data);
       when(context.playerId()).thenReturn(42);
       when(context.inventoryVisible()).thenReturn(manual);
-      ClientItemManager manager = new ClientItemManager(context);
+      ClientItemManager manager = new ClientItemManager(new ClientItemContextAdapter(context));
       PickupRecorder recorder = new PickupRecorder();
       World world = intentWorld(manager, recorder);
       try {
@@ -71,8 +72,9 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
       when(context.inventoryVisible()).thenReturn(true);
       // A full cursor rejects the local mutation. The network owner only sends intent.
       if (!remote) data.groundToCursor(generated("cap", 900));
-      ClientItemManager manager = remote ? new NetworkedClientItemManager(context)
-          : new ClientItemManager(context);
+      ClientItemManager manager = remote
+          ? new NetworkedClientItemManager(new ClientItemContextAdapter(context))
+          : new ClientItemManager(new ClientItemContextAdapter(context));
       PickupRecorder recorder = new PickupRecorder();
       World world = intentWorld(manager, recorder);
       try {
