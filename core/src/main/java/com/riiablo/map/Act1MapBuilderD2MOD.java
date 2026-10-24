@@ -201,6 +201,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
   // 简化版 DRLG 上下文与 Level 映射，仅用于调试和后续 DRLGOUTDOORS 移植。
   private DrlgContext drlgContext;
   private IntMap<DrlgLevel> drlgLevels = new IntMap<>();
+  /** Native D2MOO DRLG retained for post-generation ownership checks. */
+  private D2DrlgStrc nativeDrlg;
 
   // LvlSub DS1 文件缓存（对应 D2MOO 的 DRLGTILESUB_InitializeDrlgFile）
   // Key: LvlSub.Entry 的 File 路径，Value: 加载的 DS1 对象
@@ -232,6 +234,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
       Gdx.app.debug(TAG, String.format("Seed: 0x%08X (%d), Difficulty: %d", seed, seed, diff));
     }
     drlgContext = new DrlgContext(seed, diff, 0);
+    nativeDrlg = null;
     drlgLevels.clear();
     levelsFilledByExport.clear();
     levelsWithNativeDirtPaths.clear();
@@ -269,6 +272,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     } else {
       result = layoutAndDrlg.result;
       drlg = layoutAndDrlg.drlg;
+      nativeDrlg = drlg;
     }
 
     if (DEBUG_BUILD) {
@@ -4173,6 +4177,23 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
   }
 
   /**
+   * Reports whether an accepted native export owns an outdoor level in this
+   * session.  The export set is deliberately intersected with the map zones;
+   * a cached/native level that is not part of the current world must not
+   * suppress compatibility generation for that world.
+   */
+  boolean hasNativeOutdoorExport(Map map) {
+    if (map == null || map.zones == null || nativeDrlg == null) return false;
+    for (Zone zone : map.zones) {
+      if (zone == null || zone.level == null
+          || !levelsFilledByExport.contains(zone.level.Id)) continue;
+      D2DrlgLevel level = DrlgDrlg.getLevel(nativeDrlg, zone.level.Id);
+      if (level != null && level.getOutdoors() != null) return true;
+    }
+    return false;
+  }
+
+  /**
    * 在所有 zone 生成完成后，在 TileGrid 上生成路径系统。
    * 
    * 参考 D2MOO: DRLGOUTDOORS_SpawnAct1DirtPaths
@@ -4193,12 +4214,17 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     // D2MOO has already converted the native endpoint topology into floor
     // tile flags before export. Re-running the old straight-line approximation
     // would replace those tiles and can create discontinuities at level links.
-    if (levelsWithNativeDirtPaths.contains(LEVEL_BLOODMOOR)
-        && levelsWithNativeDirtPaths.contains(LEVEL_COLDPLAINS)
-        && levelsWithNativeDirtPaths.contains(LEVEL_STONYFIELD)) {
+    boolean nativeOutdoorExport = hasNativeOutdoorExport(map);
+    boolean allowCompatibilityPath = map.generationPolicy()
+        .usesCompatibilityPath(nativeOutdoorExport);
+    if (!allowCompatibilityPath) {
       map.clearPathDebugPoints();
       Gdx.app.log(TAG,
-          "[PathDebug] native D2MOO dirt paths already exported; compatibility fallback skipped");
+          "[PathDebug] native D2MOO outdoor export owns path/collision; compatibility fallback skipped");
+      if (levelsWithNativeDirtPaths.size == 0) {
+        Gdx.app.debug(TAG,
+            "[PathDebug] native outdoor export has no detected dirt-path floor flags; no compatibility overwrite permitted");
+      }
       return;
     }
 

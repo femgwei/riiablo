@@ -38,6 +38,18 @@ public final class MapGenerationPolicy {
 
   public boolean usesLegacyCompatibility() { return mode == Mode.LEGACY_COMPATIBILITY; }
 
+  /**
+   * Returns whether the compatibility straight-line path generator may run.
+   *
+   * <p>Native outdoor exports own both the path floor rasterization and the
+   * collision footprint.  A native session must therefore not let the legacy
+   * path pass run after an export was accepted.  The legacy mode remains an
+   * explicit escape hatch, including when a native export is available.</p>
+   */
+  public boolean usesCompatibilityPath(boolean hasNativeOutdoorExport) {
+    return usesLegacyCompatibility() || !hasNativeOutdoorExport;
+  }
+
   @Override
   public String toString() { return mode.name(); }
 }

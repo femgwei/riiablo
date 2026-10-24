@@ -720,6 +720,21 @@ builder 与原生 post-generation 处理产生分叉。新增 `MapGenerationPoli
 怪物 AI policy、Quest/NPC handlers 和 Act I 双客户端/真实 MPQ 验收；M7-B 的 map/map2/map5
 代际删除条件仍未达到。
 
+### M7 第 2 批：原生道路/碰撞所有权边界（2026-10-24）
+
+本批收口 Act I 原生 D2MOO outdoor export 与旧兼容直线道路之间的策略边界。此前
+`generatePathsOnTileGrid` 只有在 Blood Moor、Cold Plains、Stony Field 三个关卡都检测到
+原生 dirt path 时才跳过兼容路径；当 native export 只覆盖部分 Act I 关卡，旧路径仍可能写入
+已由 D2MOO RoomEx floor/collision 接管的 TileGrid。现在 `MapGenerationPolicy` 提供统一的
+`usesCompatibilityPath` 判断，builder 按当前 map 的已接受 native outdoor export 判定所有权：
+native export 一旦存在就禁止兼容路径覆盖；没有 native export 时仍允许 fallback，显式 legacy
+模式仍可用于历史兼容和对照测试。没有检测到原生 dirt-path floor flag 时只记录诊断，不回退覆盖
+原生地图。
+
+验证：`./gradlew.bat :core:m7WorldRegression --no-daemon` 通过，共 77 项；`verifyModuleBoundaries`
+和 `git diff --check` 通过。该批未修改 D2MOO 道路生成公式、碰撞标志或协议；仍需后续批次完成
+怪物 AI policy、Quest/NPC handlers 以及 Act I 双客户端/真实 MPQ 验收。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

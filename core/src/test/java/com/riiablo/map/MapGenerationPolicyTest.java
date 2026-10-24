@@ -22,4 +22,22 @@ class MapGenerationPolicyTest {
     assertFalse(policy.usesNativeD2Moo());
     assertTrue(policy.usesLegacyCompatibility());
   }
+
+  @Test
+  void nativeExportOwnsCompatibilityPathAndCollisionLayers() {
+    MapGenerationPolicy policy = MapGenerationPolicy.nativeDefault();
+    assertFalse(policy.usesCompatibilityPath(true));
+  }
+
+  @Test
+  void nativeSessionMayUseCompatibilityPathOnlyWithoutNativeExport() {
+    MapGenerationPolicy policy = MapGenerationPolicy.nativeDefault();
+    assertTrue(policy.usesCompatibilityPath(false));
+  }
+
+  @Test
+  void explicitLegacyModeMayUseCompatibilityPathWithNativeExport() {
+    MapGenerationPolicy policy = MapGenerationPolicy.fromNativeToggle(false);
+    assertTrue(policy.usesCompatibilityPath(true));
+  }
 }
