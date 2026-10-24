@@ -37,6 +37,18 @@ class ClientUiBoundaryTest {
         "ClientEntityFactory must use a presentation port");
   }
 
+  @Test void clientEngineHasNoConcretePresentationContextEdges() throws IOException {
+    Path source = repository().resolve("core/src/main/java/com/riiablo/engine/client");
+    Pattern forbidden = Pattern.compile(
+        "com\\.riiablo\\.presentation\\.|ClientGameplayContext|ClientUiServices");
+    try (java.util.stream.Stream<Path> paths = Files.walk(source)) {
+      for (Path path : (Iterable<Path>) paths.filter(p -> p.toString().endsWith(".java"))::iterator) {
+        assertFalse(forbidden.matcher(code(path)).find(),
+            path + " must consume presentation facts through engine-owned ports");
+      }
+    }
+  }
+
   @Test void dedicatedServerRecipesCannotInstallClientUiSystems() throws IOException {
     Path source = repository().resolve("server/d2gs/src/main/java/com/riiablo/server/d2gs");
     Pattern ui = Pattern.compile("com\\.riiablo\\.(?:engine\\.client|presentation|screen|widget)\\.");
