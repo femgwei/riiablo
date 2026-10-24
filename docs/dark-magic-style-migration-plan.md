@@ -1445,6 +1445,46 @@ git diff --check
 下一迁移：收口 ItemMove/Gold 事务 ingress，再进行全量 D2GS handler 唯一入口审计，并把
 真实 ECS checkpoint restore、RNG/D2S 和跨进程重连接入网络验收；不把本批写成 M8-D 完成。
 
+### M8-D 第 4 批：ItemMove/Gold 事务 handler ingress（2026-10-25）
+
+本批把统一物品事务和金币请求接入 `D2gsCommandAdapter` fixed-tick ingress；保留库存
+revision、地面物品所有权、原子事务、金币掉落/拾取以及既有响应行为。
+
+实现与边界：
+
+- `ItemMoveRequest` 和 `GoldRequest` 从 `process` 分支直接执行改为进入统一 adapter，
+  再在当前 simulation Tick 调用原有 `AuthoritativeItemMoveService`/金币逻辑。
+- ItemMove 的协议 request cache 仍在原 handler 中处理精确重放和 `REQUEST_ID_REUSED`；
+  adapter 使用内部 ingress 序列，避免在入口层吞掉重复协议请求。
+- 地面拾取的已知实体目标经过 adapter target gate；距离、revision、party gold share、
+  ground ownership 和事务结果仍由原领域服务校验。旧 cursor/item 包仍是兼容路径，尚未纳入
+  M8-D 唯一 ingress。
+
+验证：
+
+```powershell
+./gradlew :core:test `
+  --tests com.riiablo.engine.server.item.ItemMoveRequestCacheTest `
+  --tests com.riiablo.engine.server.item.AuthoritativeItemMoveServiceTest `
+  --tests com.riiablo.engine.server.item.GoldPickupServiceTest `
+  --tests com.riiablo.engine.server.item.GroundDropPositionTest `
+  --tests com.riiablo.engine.server.item.GroundDropOwnershipMetadataTest `
+  --tests com.riiablo.engine.client.ClientItemManagerGoldPickupTest `
+  --tests com.riiablo.engine.client.AuthoritativeInventoryStateTest `
+  :core:m8ReplayRegression `
+  :server:d2gs:test --tests com.riiablo.server.d2gs.InventorySnapshotTransportTest `
+  --no-daemon --max-workers=1 --console=plain
+./gradlew :server:d2gs:compileJava --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：物品事务/金币/库存快照定向回归、M8 replay、D2GS 库存传输测试和生产编译全部通过；
+本批未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`，未修改暗黑规则。
+
+下一迁移：进行 D2GS authoritative handler 全量唯一入口审计，处理 SnapshotResync/EntitySync
+及旧 cursor/item 兼容边界，再接入真实 ECS checkpoint restore、RNG/D2S 和跨进程重连验收；
+不把本批写成 M8-D 完成。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

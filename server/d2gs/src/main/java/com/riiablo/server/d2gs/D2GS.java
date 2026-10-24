@@ -6578,10 +6578,10 @@ public class D2GS extends ApplicationAdapter {
         SwapBeltItem(packet);
         break;
       case D2GSData.ItemMoveRequest:
-        ItemMoveRequest(packet);
+        submitD2gsHandler(packet, "item_move", itemMoveTarget(packet));
         break;
       case D2GSData.GoldRequest:
-        GoldRequest(packet);
+        submitD2gsHandler(packet, "gold", -1);
         break;
       case D2GSData.PlayerLifecycleRequest:
         submitD2gsHandler(packet, "player_lifecycle", -1);
@@ -7030,6 +7030,8 @@ public class D2GS extends ApplicationAdapter {
           case "npc_service": NpcServiceRequest(handler.packet); break;
           case "quest": QuestRequest(handler.packet); break;
           case "player_lifecycle": PlayerLifecycleRequest(handler.packet); break;
+          case "item_move": ItemMoveRequest(handler.packet); break;
+          case "gold": GoldRequest(handler.packet); break;
           default: throw new AssertionError(command.kind);
         }
       }
@@ -7093,6 +7095,12 @@ public class D2GS extends ApplicationAdapter {
   private static int questTarget(Packet packet) {
     QuestRequest request = (QuestRequest) packet.data.data(new QuestRequest());
     return request.targetEntityId();
+  }
+
+  private static int itemMoveTarget(Packet packet) {
+    ItemMoveRequest request = (ItemMoveRequest) packet.data.data(new ItemMoveRequest());
+    return request.operation() == ItemMoveOperation.GROUND_TO_CURSOR
+        ? request.groundEntityId() : -1;
   }
 
   private void enqueueMovementIntent(int connectionId, int entityId, MovementIntent input,
