@@ -30,6 +30,51 @@ public final class NativeRng {
     return drawCount;
   }
 
+  /** Immutable state suitable for an authoritative checkpoint. */
+  public Snapshot snapshot() {
+    return new Snapshot(streamName, contextId, state, drawCount);
+  }
+
+  /** Restores this stream without reseeding or consuming a draw. */
+  public void restore(int state, long drawCount) {
+    if (drawCount < 0L) throw new IllegalArgumentException("drawCount");
+    this.state = state;
+    this.drawCount = drawCount;
+  }
+
+  /** Restores a snapshot captured from this stream identity. */
+  public void restore(Snapshot snapshot) {
+    if (snapshot == null) throw new NullPointerException("snapshot");
+    if (!streamName.equals(snapshot.stream) || contextId != snapshot.contextId) {
+      throw new IllegalArgumentException("snapshot stream identity mismatch");
+    }
+    restore(snapshot.state, snapshot.drawCount);
+  }
+
+  /** Creates a stream directly from checkpoint state. */
+  public static NativeRng fromSnapshot(Snapshot snapshot) {
+    if (snapshot == null) throw new NullPointerException("snapshot");
+    NativeRng rng = new NativeRng(snapshot.state, snapshot.stream, snapshot.contextId);
+    rng.restore(snapshot.state, snapshot.drawCount);
+    return rng;
+  }
+
+  public static final class Snapshot {
+    public final String stream;
+    public final long contextId;
+    public final int state;
+    public final long drawCount;
+
+    public Snapshot(String stream, long contextId, int state, long drawCount) {
+      if (stream == null || stream.trim().isEmpty()) throw new IllegalArgumentException("stream");
+      if (drawCount < 0L) throw new IllegalArgumentException("drawCount");
+      this.stream = stream;
+      this.contextId = contextId;
+      this.state = state;
+      this.drawCount = drawCount;
+    }
+  }
+
   /** Stable diagnostic name; it does not affect the compatibility sequence. */
   public String streamName() {
     return streamName;

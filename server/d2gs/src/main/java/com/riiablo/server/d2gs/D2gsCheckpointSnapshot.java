@@ -84,6 +84,12 @@ public final class D2gsCheckpointSnapshot {
   /** Captures the same EntitySync state used for an authoritative baseline. */
   public static D2gsCheckpointSnapshot capture(World world, SerializationManager serializer,
       long tick) {
+    return capture(world, serializer, tick, null);
+  }
+
+  /** Captures ECS state and the named compatibility RNG streams at the same tick. */
+  public static D2gsCheckpointSnapshot capture(World world, SerializationManager serializer,
+      long tick, List<SimulationCheckpoint.RngState> rngStates) {
     if (world == null) throw new NullPointerException("world");
     if (serializer == null) throw new NullPointerException("serializer");
     if (tick < 0L) throw new IllegalArgumentException("tick");
@@ -97,11 +103,17 @@ public final class D2gsCheckpointSnapshot {
     // a process restart with a different wall-clock epoch.
     for (int entityId : ids) payloads.put(entityId,
         serialize(serializer, entityId, 0L, 0L));
-    return fromPayloads(tick, payloads);
+    return fromPayloads(tick, payloads, rngStates);
   }
 
   /** Builds a snapshot from serialized EntitySync envelopes for deterministic tests/tools. */
   public static D2gsCheckpointSnapshot fromPayloads(long tick, Map<Integer, byte[]> payloads) {
+    return fromPayloads(tick, payloads, null);
+  }
+
+  /** Builds a snapshot from payloads and explicit RNG checkpoint state. */
+  public static D2gsCheckpointSnapshot fromPayloads(long tick, Map<Integer, byte[]> payloads,
+      List<SimulationCheckpoint.RngState> rngStates) {
     if (tick < 0L) throw new IllegalArgumentException("tick");
     if (payloads == null) throw new NullPointerException("payloads");
     TreeMap<Integer, String> entityDigests = new TreeMap<>();
@@ -121,7 +133,7 @@ public final class D2gsCheckpointSnapshot {
           .append(entry.getValue());
     }
     SimulationCheckpoint summary = SimulationCheckpoint.of(tick, digest(canonical.toString()),
-        entityDigests, null);
+        entityDigests, rngStates);
     return new D2gsCheckpointSnapshot(tick, summary, copy);
   }
 

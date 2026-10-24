@@ -11177,15 +11177,16 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
   耗尽移除路径。
 - [x] `NativeAmazonAmmoReplenishTest` 覆盖装备槽保留、原生恢复间隔和恢复后重新选弹。
 - [x] 真实 1.10f MPQ 双客户端 bow/Fire Arrow gate 已完成：导弹共享、命中伤害、箭袋
-  耗尽保留、恢复和 observer 重连均通过；D2S `item_replenish_quantity` 持久化仍单独
-  保留为限制项。
+  耗尽保留、恢复和 observer 重连均通过；D2S writer 现已保留可恢复箭袋的零数量和
+  可保存 `item_replenish_quantity` 属性，运行时 100-rate 仍由 ECS 门禁覆盖。
 
 ## 2026-10-01 Amazon Fire Arrow 真实 MPQ 弹药 gate
 
 - [x] `headlessAmazonBow` 通过真实双客户端连接、Fire Arrow 原生导弹创建/共享、
   `BOWQ` 箭袋耗尽保留、stat-regeneration 恢复和 observer reconnect。
-- [x] 由于 `item_replenish_quantity` 尚未由当前 D2S writer 持久化，测试在连接后通过
-  权威模拟线程注入 stat；该限制已记录，不能视为存档序列化完成。
+- [x] D2S writer/reader round-trip 已验证 `aqv` 的 `quantity=0` 与可保存的
+  `item_replenish_quantity` 属性；真实双客户端 gate 仍在连接后注入运行时 100-rate，
+  因该值超出 1.10f ItemStatCost 的六位保存范围。
 - [x] Fire Arrow 导弹对 headless 目标的命中/伤害已通过双客户端真实门槛；门槛等待
   实际目标生命下降，并保留 owner/observer/reconnect 校验。测试 fixture 仅注入
   确定性的 ToHit/弓物理伤害，生产 Fire Arrow 的 D2MOO 转换路径未被改写。
@@ -11198,7 +11199,7 @@ aura 目标传播、跨区域清理和重连快照；随后转入 Paladin Aura �
 - [x] gate 还验证权威箭袋在 observer 断开及重连后仍为空；首发动画的延迟 keyframe
   会先由测试桥接等待完成，避免把同一施法的迟到导弹误判为第二次施法。
 - [x] 本项只覆盖运行时空弹药拒绝；可恢复箭袋的 `quantity=0` 保留与恢复路径仍由前述
-  `item_replenish_quantity` gate 覆盖，D2S writer 属性持久化仍是独立限制项。
+  `item_replenish_quantity` gate 覆盖，D2S 属性持久化已由独立 round-trip 门禁覆盖。
 
 验证命令：`:server:d2gs:headlessAmazonBow -PamazonBowSkill=7
 -PamazonBowTimeout=15 -PamazonBowAmmoGate=true --no-daemon`。

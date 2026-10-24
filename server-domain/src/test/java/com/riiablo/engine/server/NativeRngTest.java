@@ -2,6 +2,7 @@ package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 
 class NativeRngTest {
@@ -21,5 +22,27 @@ class NativeRngTest {
       int roll = a.nextInt(13);
       assertEquals(true, roll >= 0 && roll < 13);
     }
+  }
+
+  @Test
+  void snapshotRestoreContinuesWithoutReseeding() {
+    NativeRng source = NamedRngStreams.open(0x110F, "combat.hit", 17L);
+    source.nextInt();
+    source.nextInt();
+    NativeRng.Snapshot checkpoint = source.snapshot();
+    int expected = source.nextInt();
+    long expectedDraws = source.drawCount();
+
+    NativeRng restored = NativeRng.fromSnapshot(checkpoint);
+    assertEquals(expected, restored.nextInt());
+    assertEquals(expectedDraws, restored.drawCount());
+    assertEquals(source.nextInt(), restored.nextInt());
+  }
+
+  @Test
+  void restoreRejectsDifferentStreamIdentity() {
+    NativeRng source = NamedRngStreams.open(7, "combat.hit", 1L);
+    NativeRng other = NamedRngStreams.open(7, "drop.quality", 1L);
+    assertThrows(IllegalArgumentException.class, () -> other.restore(source.snapshot()));
   }
 }

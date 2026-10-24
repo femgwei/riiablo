@@ -9,6 +9,7 @@ import com.artemis.WorldConfigurationBuilder;
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.component.Networked;
+import com.riiablo.engine.replay.SimulationCheckpoint;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import java.util.HashMap;
@@ -32,6 +33,24 @@ public class D2gsCheckpointSnapshotTest {
     assertEquals(2, result.appliedEntities);
     assertFalse(result.rolledBack);
     assertEquals(before.summary().canonical(), after.summary().canonical());
+  }
+
+  @Test public void checkpointCarriesRngStateAndReportsContinuationDrift() {
+    World world = worldWithEntities(1);
+    FakeSerializer serializer = new FakeSerializer();
+    int id = networkedIds(world)[0];
+    serializer.states.put(id, 10);
+    java.util.List<SimulationCheckpoint.RngState> rng = java.util.Collections.singletonList(
+        new SimulationCheckpoint.RngState("combat.hit", id, 1234, 8));
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(world, serializer, 7L, rng);
+
+    assertEquals(rng, checkpoint.summary().rngStates());
+    D2gsCheckpointSnapshot drifted = D2gsCheckpointSnapshot.fromPayloads(
+        7L, checkpoint.payloads(), java.util.Collections.singletonList(
+            new SimulationCheckpoint.RngState("combat.hit", id, 1235, 9)));
+    assertEquals(1, checkpoint.summary().diff(drifted.summary()).size());
+    assertEquals("rng:combat.hit#" + id,
+        checkpoint.summary().diff(drifted.summary()).get(0).field);
   }
 
   @Test public void rejectsMissingAndUnexpectedEntitiesBeforeApplying() {

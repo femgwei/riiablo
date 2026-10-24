@@ -943,17 +943,17 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - `BOWQ/XBOQ` 的 `item_replenish_quantity` 零数量保留与恢复已完成纯逻辑/ECS 门槛，
   对应测试为 `NativeAmazonAmmoReplenishTest`。
 - 普通箭袋耗尽移除行为未改变；真实 MPQ 双客户端 bow/Fire Arrow gate、目标命中和
-  observer reconnect 已通过，装备切换与 D2S `item_replenish_quantity` 持久化仍是
-  独立限制项。
+  observer reconnect 已通过；D2S writer 现在保留可恢复箭袋的零数量和可保存的
+  `item_replenish_quantity` 属性，装备切换仍由独立 gate 覆盖。
 
 ### 2026-10-01 Amazon Fire Arrow 真实资源增量
 
 - `headlessAmazonBow` 已完成真实 MPQ 的 Fire Arrow 导弹共享、箭袋 `1->0`、可恢复
-  物品保留、恢复和 observer reconnect；测试桥接注入的 `item_replenish_quantity` 不
-  代表 D2S 序列化已完成。
+  物品保留、恢复和 observer reconnect；D2S round-trip 另有 `aqv` 零数量/恢复属性
+  门禁覆盖。
 - Fire Arrow 目标命中/伤害已通过：门槛等待实际模拟碰撞而非只看到导弹创建，并在
   owner/observer 两端观察到目标生命下降；测试 fixture 显式提供弓的 ToHit/物理伤害，
-  不改变生产技能公式。D2S `item_replenish_quantity` 持久化限制仍单独保留。
+  不改变生产技能公式。
 
 ### 2026-10-01 Amazon Cold Arrow 真实 gate
 
@@ -962,7 +962,7 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
 - owner/observer 两端均观察到目标 `COLD(state=11)`，没有误判为 `FREEZE`；该断言对应
   D2MOO 的 `SrvDmgFunc=1` 物理转换和独立冷状态应用链。
 - 这一步只扩展测试入口和断言，没有用 dark-magic 或测试逻辑覆盖用户已验证的 Amazon
-  生产技能公式；D2S 恢复属性持久化仍需另行处理。
+  生产技能公式；D2S 恢复属性由独立 `aqv` round-trip 门禁覆盖。
 
 ### 2026-10-01 Amazon Ice Arrow Boss gate
 
@@ -985,7 +985,7 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   日志确认 `srv=explodingarrow`、`pSrvHitFunc=4`、`HitSubMissile=[explodingarrowexp2]`、
   火焰技能字段 `fire:2..6`。
 - 该步只扩展验证入口并复用已有 `spawnAmazonExplosion`，没有用 dark-magic 行为覆盖
-  用户已验证的 Amazon 生产公式；D2S 可恢复属性持久化限制仍独立保留。
+  用户已验证的 Amazon 生产公式；D2S 可恢复属性由独立 round-trip 门禁覆盖。
 
 ### 2026-10-01 Amazon Freezing Arrow Boss 范围子导弹 gate
 

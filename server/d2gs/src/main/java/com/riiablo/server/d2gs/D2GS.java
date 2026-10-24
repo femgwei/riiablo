@@ -6141,6 +6141,12 @@ public class D2GS extends ApplicationAdapter {
 
   /** Captures the authoritative ECS/network baseline on the simulation thread. */
   public D2gsCheckpointSnapshot captureReplayCheckpoint() {
+    return captureReplayCheckpoint(null);
+  }
+
+  /** Captures a baseline together with named RNG stream state supplied by the host. */
+  public D2gsCheckpointSnapshot captureReplayCheckpoint(
+      java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.RngState> rngStates) {
     if (world == null || simulation == null) return null;
     Thread owner = simulation.ownerThread();
     if (owner != null && owner != Thread.currentThread()) {
@@ -6148,7 +6154,7 @@ public class D2GS extends ApplicationAdapter {
     }
     SerializationManager serializer = world.getSystem(SerializationManager.class);
     if (serializer == null) return null;
-    return D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber());
+    return D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber(), rngStates);
   }
 
   public D2gsCheckpointSnapshot replayCheckpoint() { return replayCheckpoint; }

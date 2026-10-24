@@ -167,8 +167,25 @@ public class ItemWriter {
     writeBook(item, bits);
     writeQuantity(item, bits);
 
+    ensurePersistedReplenishQuantity(item);
     listFlags |= (writeSetFlags(item, bits) << StatListFlags.ITEM_SET_LIST);
     statListWriter.write(item.attrs.list(), bits, listFlags);
+  }
+
+  /**
+   * Replenishing quivers carry their rate in the authoritative base stats in
+   * server-created items.  D2S stores that value in the item property list,
+   * so materialize it in the first magic list before serializing.  Existing
+   * generated magic properties are left untouched.
+   */
+  private static void ensurePersistedReplenishQuantity(Item item) {
+    StatRef replenish = item.attrs.base().get(Stat.item_replenish_quantity);
+    if (replenish == null || replenish.asInt() <= 0) return;
+    com.riiablo.attributes.StatListRef properties = item.attrs.list().contains(0)
+        ? item.attrs.list(0) : item.attrs.buildList();
+    if (properties.get(Stat.item_replenish_quantity) == null) {
+      properties.put(Stat.item_replenish_quantity, replenish.asInt());
+    }
   }
 
   private static void writeQualityData(Item item, BitOutput bits) {
@@ -308,10 +325,21 @@ public class ItemWriter {
     boolean hasQuantity = item.base.stackable;
     if (hasQuantity) {
       StatRef quantity = item.attrs.base().get(Stat.quantity);
+      // StatListRef reuses a mutable cursor, so capture this before looking
+      // up another stat on the same list.
+      int quantityValue = quantity == null ? 1 : quantity.asInt();
+      StatRef replenish = item.attrs.base().get(Stat.item_replenish_quantity);
       // Legacy saves can omit quantity on stackable consumables. Emitting a
       // native minimum stack keeps the following fields bit-aligned instead
       // of dropping the entire item from an authoritative snapshot.
-      bits.write15u(quantity == null ? 1 : Math.max(1, quantity.asInt()), 9);
+      // Native 1.10f keeps an exhausted replenishing quiver in the save with
+      // quantity zero. Ordinary stackables still use the historical minimum
+      // of one when their quantity is missing or corrupt.
+      int replenishValue = replenish == null ? 0 : replenish.asInt();
+      int value = quantityValue;
+      if (replenishValue <= 0) value = Math.max(1, value);
+      else value = Math.max(0, value);
+      bits.write15u(value, 9);
     }
     return hasQuantity;
   }

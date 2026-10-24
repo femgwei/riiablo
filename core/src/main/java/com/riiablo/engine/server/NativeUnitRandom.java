@@ -74,7 +74,25 @@ public final class NativeUnitRandom implements IntUnaryOperator {
   }
   public int state() { return seed.getNLowSeed(); }
   public int high() { return seed.getNHighSeed(); }
+  /** Captures both native D2Seed words; the low-word mirror alone is not sufficient. */
+  public Snapshot snapshot() { return new Snapshot(state(), high()); }
+  /** Restores both native D2Seed words and updates the legacy low-word mirror. */
+  public void restore(Snapshot snapshot) {
+    if (snapshot == null) throw new NullPointerException("snapshot");
+    seed.setSeeds(snapshot.lowSeed, snapshot.highSeed);
+    mirror();
+  }
   public boolean roll(int numerator, int denominator) {
     return numerator > 0 && denominator > 0 && nextInt(denominator) < numerator;
+  }
+
+  public static final class Snapshot {
+    public final int lowSeed;
+    public final int highSeed;
+
+    public Snapshot(int lowSeed, int highSeed) {
+      this.lowSeed = lowSeed;
+      this.highSeed = highSeed;
+    }
   }
 }

@@ -112,6 +112,47 @@ class NewCharacterStartItemsTest extends RiiabloTest {
   }
 
   @Test
+  void exhaustedReplenishingQuiverRoundTripsThroughD2S() {
+    CharData character = newCharacter(CharacterClass.AMAZON);
+    Item quiver = new Item();
+    quiver.reset();
+    quiver.setBase(Riiablo.files.misc.get("aqv"));
+    quiver.id = 0x12345678;
+    quiver.version = Item.VERSION_110;
+    quiver.quality = Quality.NORMAL;
+    quiver.flags |= Item.ITEMFLAG_IDENTIFIED;
+    quiver.location = Location.STORED;
+    quiver.storeLoc = StoreLoc.INVENTORY;
+    quiver.gridX = 9;
+    quiver.gridY = 0;
+    quiver.attrs.base().put(Stat.quantity, 0);
+    // ItemStatCost.txt gives this native saved stat six value bits; 60 is a
+    // valid 1.10f rate while the runtime-only regeneration tests use 100.
+    quiver.attrs.base().put(Stat.item_replenish_quantity, 60);
+    quiver.attrs.reset();
+    assertTrue(quiver.base.stackable, "native quiver must carry inline quantity");
+    assertEquals(0, quiver.attrs.base().get(Stat.quantity).asInt());
+    character.getItems().add(quiver);
+
+    D2S encoded = D2SWriter96.createD2S(character);
+    assertEquals(0, encoded.items.items.get(encoded.items.items.size - 1).attrs.base()
+        .get(Stat.quantity).asInt());
+    byte[] bytes = new D2SWriter96().writeD2S(encoded);
+    D2S decoded = D2SReader.INSTANCE.readComplete(bytes, new StatListReader(), new ItemReader());
+
+    Item restored = null;
+    for (Item item : decoded.items.items) {
+      if (item.id == quiver.id) {
+        restored = item;
+        break;
+      }
+    }
+    assertNotNull(restored, "exhausted quiver must remain in D2S item list");
+    assertEquals(0, restored.attrs.base().get(Stat.quantity).asInt());
+    assertEquals(60, restored.attrs.list(0).get(Stat.item_replenish_quantity).asInt());
+  }
+
+  @Test
   void mercenaryHeaderAndCorpseSectionsRoundTrip() {
     CharData character = newCharacter(CharacterClass.AMAZON);
     D2S encoded = D2SWriter96.createD2S(character);

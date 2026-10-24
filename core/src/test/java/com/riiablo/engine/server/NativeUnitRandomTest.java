@@ -37,6 +37,25 @@ class NativeUnitRandomTest {
     assertEquals(59,ai.decide());
   }
 
+  @Test void checkpointRestoresBothNativeSeedWords() {
+    Monster source = new Monster();
+    source.nativeSeed = new D2Seed(0x13572468, 0x24681357);
+    source.rngState = source.nativeSeed.getNLowSeed();
+    NativeUnitRandom rng = NativeUnitRandom.monster(source, 1, 42);
+    rng.nextUnsigned();
+    NativeUnitRandom.Snapshot checkpoint = rng.snapshot();
+    long expected = rng.nextUnsigned();
+
+    Monster restored = new Monster();
+    restored.nativeSeed = new D2Seed(1, 2);
+    restored.rngState = 1;
+    NativeUnitRandom restoredRng = NativeUnitRandom.monster(restored, 999, 42);
+    restoredRng.restore(checkpoint);
+    assertEquals(expected, restoredRng.nextUnsigned());
+    assertEquals(restoredRng.state(), restored.rngState);
+    assertEquals(restoredRng.high(), restored.nativeSeed.getNHighSeed());
+  }
+
   @Test void unsignedOracleChecksAlternatingConsumersAndAllBoundClasses() {
     for (int seed : new int[]{0,1,-1,Integer.MIN_VALUE,777,0x110f}) {
       Monster unit = new Monster(); unit.nativeSeed = new D2Seed(seed,666); unit.rngState = seed;

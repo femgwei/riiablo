@@ -975,6 +975,38 @@ git diff --check
 结果：D2GS 生产编译、authoritative simulation 时钟恢复和 replay 回归通过；当前恢复契约
 明确限定为“已有实体的网络状态恢复”，完整断线重建与持久化存档往返仍待后续批次。
 
+### M8 第 8 批：RNG、D2S 与重连验收（2026-10-24）
+
+本批收口 checkpoint 边界之外的三个验收缺口。`NativeRng` 现在提供不可变
+snapshot、同身份 restore 和从 snapshot 重建，保留 stream/context、state 与 draw count；
+`NativeUnitRandom` 同时捕获/恢复 D2Common 两字 `pSeed`，不会只恢复低字导致后续原生
+序列漂移。`D2gsCheckpointSnapshot` 新增显式 RNG 状态入口，摘要 diff 会报告
+`rng:<stream>#<context>` 的继续运行偏差。
+
+`ItemWriter` 对可恢复堆叠物品允许原生 `quantity=0`，并把服务端 base 中的
+`item_replenish_quantity` materialize 到 D2S 属性列表；普通堆叠物品仍保持最小数量 1。
+真实 D2S round-trip 已验证 Amazon `aqv` 保留物品、零数量和可保存的 1.10f rate（该 stat
+在 `ItemStatCost.txt` 中为 6 位保存值，运行时测试仍可使用 100）。
+
+真实 1.10f MPQ 的 `headlessAmazonBow` 双客户端 gate 已重新通过，覆盖导弹/命中、弹药
+状态和 observer reconnect；重连日志为 `amazon_bow_reconnect_pass`，活动实体未复活为
+陈旧状态。该 gate 仍是 headless 角色 D2S 入口生成的真实网络验收，完整跨进程 session
+重绑和全部 RNG stream 的统一注册表不在本批虚构完成。
+
+验证：
+
+```powershell
+./gradlew.bat :server-domain:test --tests com.riiablo.engine.server.NativeRngTest
+./gradlew.bat :core:test --tests com.riiablo.save.NewCharacterStartItemsTest --tests com.riiablo.engine.server.NativeUnitRandomTest
+./gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest
+./gradlew.bat :core:m8ReplayRegression :core:m6FinalRegression
+./gradlew.bat :server:d2gs:headlessAmazonBow -Pd2Home="G:\\BaiduNetdiskDownload\\Diablo II 1.10F"
+git diff --check
+```
+
+结果：上述定向测试、M8 replay、M6 final 和真实 MPQ Amazon bow/reconnect gate 通过；完整
+`ItemWriterTest` 的旧 `.d2i` 样例在当前工作区缺失，因此未把缺少 fixture 误报为实现失败。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
