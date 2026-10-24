@@ -6137,6 +6137,16 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  private static final class HandlerIngress {
+    final int connectionId;
+    final Packet packet;
+
+    HandlerIngress(int connectionId, Packet packet) {
+      this.connectionId = connectionId;
+      this.packet = packet;
+    }
+  }
+
   protected ComponentMapper<Networked> mNetworked;
 
   D2GS(FileHandle home, int seed, int diff) {
@@ -6547,22 +6557,22 @@ public class D2GS extends ApplicationAdapter {
         CastSkillRequest(packet);
         break;
       case D2GSData.SelectSkillRequest:
-        SelectSkillRequest(packet);
+        submitD2gsHandler(packet, "select_skill", -1);
         break;
       case D2GSData.SpendSkillPointRequest:
-        SpendSkillPointRequest(packet);
+        submitD2gsHandler(packet, "spend_skill_point", -1);
         break;
       case D2GSData.SpendStatPointRequest:
-        SpendStatPointRequest(packet);
+        submitD2gsHandler(packet, "spend_stat_point", -1);
         break;
       case D2GSData.NpcServiceRequest:
         NpcServiceRequest(packet);
         break;
       case D2GSData.PartyRequest:
-        PartyRequest(packet);
+        submitD2gsHandler(packet, "party", partyTarget(packet));
         break;
       case D2GSData.TradeRequest:
-        TradeRequest(packet);
+        submitD2gsHandler(packet, "trade", tradeTarget(packet));
         break;
       case D2GSData.SwapBeltItem:
         SwapBeltItem(packet);
@@ -7009,6 +7019,17 @@ public class D2GS extends ApplicationAdapter {
         enqueueCombatIntent(ingress.connectionId, ingress.entityId,
             (CombatIntent) ingress.intent, currentTick);
       }
+      if (command.payload instanceof HandlerIngress) {
+        HandlerIngress handler = (HandlerIngress) command.payload;
+        switch (command.kind) {
+          case "select_skill": SelectSkillRequest(handler.packet); break;
+          case "spend_skill_point": SpendSkillPointRequest(handler.packet); break;
+          case "spend_stat_point": SpendStatPointRequest(handler.packet); break;
+          case "party": PartyRequest(handler.packet); break;
+          case "trade": TradeRequest(handler.packet); break;
+          default: throw new AssertionError(command.kind);
+        }
+      }
     });
   }
 
@@ -7028,6 +7049,37 @@ public class D2GS extends ApplicationAdapter {
           + (result.rejection != D2gsCommandAdapter.Rejection.NONE
               ? result.rejection : result.admissionRejection));
     }
+  }
+
+  private void submitD2gsHandler(Packet packet, String kind, int targetEntityId) {
+    int entityId = player.get(packet.id, Engine.INVALID_ENTITY);
+    submitD2gsHandler(packet, kind, entityId, targetEntityId);
+  }
+
+  private void submitD2gsHandler(Packet packet, String kind, int entityId,
+      int targetEntityId) {
+    int admissionTarget = targetEntityId >= 0 && world != null
+        && world.getMapper(com.riiablo.engine.server.component.Class.class)
+            .has(targetEntityId) ? targetEntityId : -1;
+    D2gsCommandAdapter.Result result = commandAdapter.submit(packet.id, kind,
+        new HandlerIngress(packet.id, packet), simulation.tickNumber(),
+        nextIngressRequestId++, admissionTarget);
+    if (!result.accepted) {
+      Gdx.app.log(TAG, "[NET_INGRESS] phase=reject connection=" + packet.id
+          + " player=" + entityId + " kind=" + kind + " reason="
+          + (result.rejection != D2gsCommandAdapter.Rejection.NONE
+              ? result.rejection : result.admissionRejection));
+    }
+  }
+
+  private static int partyTarget(Packet packet) {
+    PartyRequest request = (PartyRequest) packet.data.data(new PartyRequest());
+    return request.targetEntityId();
+  }
+
+  private static int tradeTarget(Packet packet) {
+    TradeRequest request = (TradeRequest) packet.data.data(new TradeRequest());
+    return request.targetEntityId();
   }
 
   private void enqueueMovementIntent(int connectionId, int entityId, MovementIntent input,

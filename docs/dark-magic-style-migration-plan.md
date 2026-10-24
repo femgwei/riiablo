@@ -1367,6 +1367,47 @@ git diff --check
 下一迁移：扩展同一 ingress 到其余 D2GS authoritative handler，并把真实 ECS checkpoint
 restore、RNG/D2S 和跨进程重连验收接入同一网络门禁；不把本批写成 M8-A/M8-D 完成。
 
+### M8-D 第 2 批：技能点、属性点与 Party/Trade handler ingress（2026-10-25）
+
+本批继续沿用第 1 批的 D2GS fixed-tick ingress，把五类已有请求缓存/权限边界的
+authoritative handler 接到同一入口；不改协议字段、领域规则或原有幂等缓存。
+
+实现与边界：
+
+- `SelectSkillRequest`、`SpendSkillPointRequest`、`SpendStatPointRequest`、`PartyRequest`
+  和 `TradeRequest` 不再从 FlatBuffer `process` 分支直接执行，而是先进入
+  `D2gsCommandAdapter`，在当前 simulation Tick 统一消费。
+- adapter 使用内部 ingress 序列避免吞掉协议层重复 request；技能点、Party、Trade 的既有
+  request cache 继续负责响应重放和 `REQUEST_ID_REUSED` 判定，成功命令仍由原
+  `recordAuthoritativeCommand` 记录。
+- Party/Trade 的已知实体目标经过 adapter target gate；非法/未知目标保留给原领域服务，
+  继续生成原协议错误结果。NPC、任务、物品、金币和生命周期 handler 尚未迁移，M8-D 仍未完成。
+
+验证：
+
+```powershell
+./gradlew :core:test `
+  --tests com.riiablo.engine.server.party.PartyServiceProtocolTest `
+  --tests com.riiablo.engine.server.party.PartyRequestCacheTest `
+  --tests com.riiablo.engine.server.player.SkillPointRequestCacheTest `
+  --tests com.riiablo.engine.server.player.PlayerSkillPointAuthorityTest `
+  --tests com.riiablo.engine.server.player.PlayerStatPointAuthorityTest `
+  --tests com.riiablo.engine.server.trade.TradeRequestCacheTest `
+  --tests com.riiablo.engine.server.trade.TradeManagerTest `
+  :core:m8ReplayRegression `
+  :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest `
+  --tests com.riiablo.server.d2gs.NativeSeamNetworkVisibilityTest `
+  --no-daemon --max-workers=1 --console=plain
+./gradlew :server:d2gs:compileJava --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：技能点、属性点、Party、Trade 领域回归，M8 replay、D2GS 装配/网络可见性测试和
+D2GS 编译全部通过；本批未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`，未修改暗黑规则。
+
+下一迁移：把 NPC/任务/物品/金币/生命周期请求按事务复杂度分组接入同一 ingress，并在其后
+接入真实 ECS checkpoint restore、RNG/D2S 和跨进程重连网络门禁；不把本批写成 M8-D 完成。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
