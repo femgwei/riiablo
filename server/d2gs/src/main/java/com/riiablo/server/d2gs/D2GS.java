@@ -205,6 +205,7 @@ import com.riiablo.net.MovementInputSequenceTracker;
 import com.riiablo.net.MovementIntent;
 import com.riiablo.net.MovementIntentScheduler;
 import com.riiablo.save.CharData;
+import com.riiablo.save.D2SCheckpointRegistry;
 import com.riiablo.util.DebugUtils;
 
 public class D2GS extends ApplicationAdapter {
@@ -6079,6 +6080,7 @@ public class D2GS extends ApplicationAdapter {
   private D2gsCheckpointSnapshot.EntityLifecycle replayEntityLifecycle;
   private CheckpointRngRegistry replayRngRegistry;
   private NativeUnitRandomRegistry replayNativeUnitRngRegistry;
+  private D2SCheckpointRegistry replayD2sRegistry;
   /** Single fixed-tick ingress for authenticated movement/combat packets. */
   private final AuthoritativeSessionRegistry authoritativeSessions =
       new AuthoritativeSessionRegistry();
@@ -6198,6 +6200,15 @@ public class D2GS extends ApplicationAdapter {
     return replayNativeUnitRngRegistry;
   }
 
+  /** Installs the optional authoritative player D2S checkpoint registry. */
+  public void setReplayD2sRegistry(D2SCheckpointRegistry registry) {
+    replayD2sRegistry = registry;
+  }
+
+  public D2SCheckpointRegistry replayD2sRegistry() {
+    return replayD2sRegistry;
+  }
+
   /** Captures the authoritative ECS/network baseline on the simulation thread. */
   public D2gsCheckpointSnapshot captureReplayCheckpoint() {
     return captureReplayCheckpoint(null);
@@ -6216,9 +6227,11 @@ public class D2GS extends ApplicationAdapter {
     java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.NativeUnitRngState>
         nativeUnitRngStates = replayNativeUnitRngRegistry == null
         ? null : replayNativeUnitRngRegistry.snapshot();
+    com.riiablo.save.D2SCheckpoint d2sCheckpoint = replayD2sRegistry == null
+        ? null : replayD2sRegistry.capture();
     if (rngStates == null && replayRngRegistry != null) rngStates = replayRngRegistry.snapshot();
     return D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber(), rngStates,
-        nativeUnitRngStates);
+        nativeUnitRngStates, d2sCheckpoint);
   }
 
   public D2gsCheckpointSnapshot replayCheckpoint() { return replayCheckpoint; }
@@ -6250,6 +6263,7 @@ public class D2GS extends ApplicationAdapter {
         checkpoint.summary().rngStates();
     java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.NativeUnitRngState>
         nativeUnitRngStates = checkpoint.summary().nativeUnitRngStates();
+    com.riiablo.save.D2SCheckpoint d2sCheckpoint = checkpoint.d2sCheckpoint();
     if (replayRngRegistry != null && !rngStates.isEmpty()) {
       // Validate before touching ECS so a missing/duplicate RNG stream cannot
       // leave the world half-restored.
@@ -6257,6 +6271,9 @@ public class D2GS extends ApplicationAdapter {
     }
     if (replayNativeUnitRngRegistry != null && !nativeUnitRngStates.isEmpty()) {
       replayNativeUnitRngRegistry.validate(nativeUnitRngStates);
+    }
+    if (replayD2sRegistry != null && d2sCheckpoint != null) {
+      replayD2sRegistry.validate(d2sCheckpoint);
     }
     D2gsCheckpointSnapshot.RestoreResult result = lifecycle == null
         ? checkpoint.restoreExisting(world, serializer)
@@ -6267,6 +6284,14 @@ public class D2GS extends ApplicationAdapter {
       }
       if (replayNativeUnitRngRegistry != null && !nativeUnitRngStates.isEmpty()) {
         replayNativeUnitRngRegistry.restore(nativeUnitRngStates);
+      }
+      if (replayD2sRegistry != null && d2sCheckpoint != null) {
+        com.riiablo.save.D2SCheckpointRegistry.RestoreResult d2sResult =
+            replayD2sRegistry.restore(d2sCheckpoint);
+        if (!d2sResult.success()) {
+          throw new IllegalStateException("D2S checkpoint restore failed: "
+              + d2sResult.failedEntities);
+        }
       }
       // Replaying an archived checkpoint is the one explicit operation allowed
       // to move the fixed clock backwards; ordinary callers retain the

@@ -1620,6 +1620,36 @@ session authority rebind 和真实跨进程重连仍未完成。
 下一迁移：建立角色 D2S checkpoint adapter（序列化字节、校验和、恢复回滚）并与 ECS/RNG
 恢复组成单一事务；随后接入 session rebind/reconnect gate。
 
+### M8-A 第 12 批：D2S 角色 checkpoint adapter 与回滚边界（2026-10-25）
+
+本批新增 `D2SCheckpoint` / `D2SCheckpointRegistry`。角色状态以严格读取器验证过的 1.10f
+D2S 完整字节保存，记录实体 id、difficulty、原生 checksum 和 SHA-256；恢复前先解码全部
+角色，确认缺失实体有显式 factory，再一次性替换 `Player.data` 绑定。任一绑定回调失败时，
+已替换角色会回滚，registry 不提交半成品。
+
+D2GS checkpoint 现在可选携带 D2S 角色快照；安装 `replayD2sRegistry` 后，capture 自动收集，
+restore 在 ECS/RNG 变更前验证 D2S，并在 ECS 成功后应用角色绑定。D2S 重编码可能产生新的
+保存时间/校验和，因此恢复门禁以原始快照字节的校验和/摘要和恢复后的角色语义为准，不把
+“重新写出字节完全相同”误作 1.10f 要求。
+
+验证：
+
+```powershell
+./gradlew.bat :core:test `
+  --tests com.riiablo.save.D2SCheckpointRegistryTest `
+  --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:compileJava :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：D2S 字节校验、缺失角色 factory、角色恢复和绑定失败回滚测试通过；D2GS checkpoint
+编译与 ECS/RNG 回归通过。session authority rebind、真实跨进程 D2S + ECS 同时恢复仍待下一批。
+
+下一迁移：把 session identity/authority rebind 纳入 checkpoint transaction，并运行真实双进程
+断线恢复 gate；完成后再评估 M8-A 收尾条件。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

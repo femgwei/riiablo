@@ -18,6 +18,7 @@ import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.replay.SimulationCheckpoint;
+import com.riiablo.save.D2SCheckpoint;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 
@@ -69,9 +70,10 @@ public final class D2gsCheckpointSnapshot {
   private final long tick;
   private final SimulationCheckpoint summary;
   private final Map<Integer, byte[]> payloads;
+  private final D2SCheckpoint d2sCheckpoint;
 
   private D2gsCheckpointSnapshot(long tick, SimulationCheckpoint summary,
-      Map<Integer, byte[]> payloads) {
+      Map<Integer, byte[]> payloads, D2SCheckpoint d2sCheckpoint) {
     this.tick = tick;
     this.summary = summary;
     TreeMap<Integer, byte[]> copy = new TreeMap<>();
@@ -79,6 +81,7 @@ public final class D2gsCheckpointSnapshot {
       copy.put(entry.getKey(), Arrays.copyOf(entry.getValue(), entry.getValue().length));
     }
     this.payloads = Collections.unmodifiableMap(copy);
+    this.d2sCheckpoint = d2sCheckpoint;
   }
 
   /** Captures the same EntitySync state used for an authoritative baseline. */
@@ -97,6 +100,14 @@ public final class D2gsCheckpointSnapshot {
   public static D2gsCheckpointSnapshot capture(World world, SerializationManager serializer,
       long tick, List<SimulationCheckpoint.RngState> rngStates,
       List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates) {
+    return capture(world, serializer, tick, rngStates, nativeUnitRngStates, null);
+  }
+
+  /** Captures ECS/RNG state and an optional authoritative D2S role snapshot. */
+  public static D2gsCheckpointSnapshot capture(World world, SerializationManager serializer,
+      long tick, List<SimulationCheckpoint.RngState> rngStates,
+      List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates,
+      D2SCheckpoint d2sCheckpoint) {
     if (world == null) throw new NullPointerException("world");
     if (serializer == null) throw new NullPointerException("serializer");
     if (tick < 0L) throw new IllegalArgumentException("tick");
@@ -110,7 +121,7 @@ public final class D2gsCheckpointSnapshot {
     // a process restart with a different wall-clock epoch.
     for (int entityId : ids) payloads.put(entityId,
         serialize(serializer, entityId, 0L, 0L));
-    return fromPayloads(tick, payloads, rngStates, nativeUnitRngStates);
+    return fromPayloads(tick, payloads, rngStates, nativeUnitRngStates, d2sCheckpoint);
   }
 
   /** Builds a snapshot from serialized EntitySync envelopes for deterministic tests/tools. */
@@ -128,6 +139,14 @@ public final class D2gsCheckpointSnapshot {
   public static D2gsCheckpointSnapshot fromPayloads(long tick, Map<Integer, byte[]> payloads,
       List<SimulationCheckpoint.RngState> rngStates,
       List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates) {
+    return fromPayloads(tick, payloads, rngStates, nativeUnitRngStates, null);
+  }
+
+  /** Builds a snapshot with ECS/RNG payloads and an optional D2S role snapshot. */
+  public static D2gsCheckpointSnapshot fromPayloads(long tick, Map<Integer, byte[]> payloads,
+      List<SimulationCheckpoint.RngState> rngStates,
+      List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates,
+      D2SCheckpoint d2sCheckpoint) {
     if (tick < 0L) throw new IllegalArgumentException("tick");
     if (payloads == null) throw new NullPointerException("payloads");
     TreeMap<Integer, String> entityDigests = new TreeMap<>();
@@ -148,11 +167,12 @@ public final class D2gsCheckpointSnapshot {
     }
     SimulationCheckpoint summary = SimulationCheckpoint.of(tick, digest(canonical.toString()),
         entityDigests, rngStates, nativeUnitRngStates);
-    return new D2gsCheckpointSnapshot(tick, summary, copy);
+    return new D2gsCheckpointSnapshot(tick, summary, copy, d2sCheckpoint);
   }
 
   public long tick() { return tick; }
   public SimulationCheckpoint summary() { return summary; }
+  public D2SCheckpoint d2sCheckpoint() { return d2sCheckpoint; }
   public Map<Integer, byte[]> payloads() {
     Map<Integer, byte[]> copy = new TreeMap<>();
     for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
