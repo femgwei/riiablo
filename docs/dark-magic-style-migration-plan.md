@@ -1485,6 +1485,47 @@ git diff --check
 及旧 cursor/item 兼容边界，再接入真实 ECS checkpoint restore、RNG/D2S 和跨进程重连验收；
 不把本批写成 M8-D 完成。
 
+### M8-D 第 5 批：SnapshotResync/EntitySync ingress 与全量 handler 审计（2026-10-25）
+
+本批完成当前 D2GS `process(Packet)` 的 authoritative 入站审计，并把快照重同步与兼容
+EntitySync 输入纳入统一 fixed-tick ingress；出站 EntitySync 仍由 `NetworkSynchronizer`
+和 `SerializationManager` 负责，不改变网络副本生成链。
+
+实现与边界：
+
+- `SnapshotResyncRequest`、`EntitySync` 进入 `D2gsCommandAdapter` 后，在固定 Tick 调用
+  原有 baseline/legacy movement validator；EntitySync 目标必须与认证 actor 一致，生产环境
+  仍由 `ALLOW_LEGACY_ENTITY_SYNC` 明确控制绝对位置兼容桥。
+- `process` 中除 Connection/Ping、固定 Tick adapter ingress 和显式 legacy cursor/item
+  拒绝外，不再直接调用 authoritative mutation handler。旧 cursor/item 包继续记录并拒绝，
+  不形成第二套权威库存路径。
+- Snapshot baseline 的重复 request、双客户端隔离、EntitySync tick/ACK 和生命周期语义
+  保持不变；本批没有修改 FlatBuffer 字段或客户端快照格式。
+
+验证：
+
+```powershell
+./gradlew :core:test `
+  --tests com.riiablo.engine.client.SnapshotResyncProtocolTest `
+  --tests com.riiablo.net.packet.d2gs.EntitySyncClockTest `
+  --tests com.riiablo.engine.client.ClientNetworkReceiverTickBoundaryTest `
+  --tests com.riiablo.engine.client.ClientLifecycleReceiverTest `
+  :core:m8ReplayRegression `
+  :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest `
+  --tests com.riiablo.server.d2gs.InventorySnapshotTransportTest `
+  --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest `
+  --no-daemon --max-workers=1 --console=plain
+./gradlew :server:d2gs:compileJava --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：SnapshotResync/EntitySync/客户端生命周期定向回归、M8 replay、D2GS 装配/库存/实体
+生命周期测试和生产编译全部通过；本批未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`，
+未修改暗黑规则。
+
+下一迁移：进入真实 ECS checkpoint restore、RNG/D2S 与跨进程重连网络验收；若发现旧 transport
+仍有生产入口，再按完整 handler 组收敛，不把本批写成 M8-A/M8-D 完成。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

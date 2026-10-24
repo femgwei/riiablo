@@ -6515,7 +6515,7 @@ public class D2GS extends ApplicationAdapter {
         Connection(packet);
         break;
       case D2GSData.EntitySync:
-        Synchronize(packet);
+        submitD2gsHandler(packet, "entity_sync", entitySyncTarget(packet));
         break;
       case D2GSData.WalkToLocation:
       case D2GSData.WalkToEntity:
@@ -6590,7 +6590,7 @@ public class D2GS extends ApplicationAdapter {
         submitD2gsHandler(packet, "quest", questTarget(packet));
         break;
       case D2GSData.SnapshotResyncRequest:
-        SnapshotResyncRequest(packet);
+        submitD2gsHandler(packet, "snapshot_resync", -1);
         break;
       case D2GSData.Ping:
         Ping(packet);
@@ -7032,6 +7032,8 @@ public class D2GS extends ApplicationAdapter {
           case "player_lifecycle": PlayerLifecycleRequest(handler.packet); break;
           case "item_move": ItemMoveRequest(handler.packet); break;
           case "gold": GoldRequest(handler.packet); break;
+          case "entity_sync": Synchronize(handler.packet); break;
+          case "snapshot_resync": SnapshotResyncRequest(handler.packet); break;
           default: throw new AssertionError(command.kind);
         }
       }
@@ -7101,6 +7103,11 @@ public class D2GS extends ApplicationAdapter {
     ItemMoveRequest request = (ItemMoveRequest) packet.data.data(new ItemMoveRequest());
     return request.operation() == ItemMoveOperation.GROUND_TO_CURSOR
         ? request.groundEntityId() : -1;
+  }
+
+  private static int entitySyncTarget(Packet packet) {
+    EntitySync request = (EntitySync) packet.data.data(new EntitySync());
+    return request.entityId();
   }
 
   private void enqueueMovementIntent(int connectionId, int entityId, MovementIntent input,
