@@ -838,6 +838,29 @@ git diff --check
 世界恢复、断线继续运行或离线重放。下一批接入 `SimulationTickCoordinator`/D2GS 的
 命令录制和权威 checkpoint 发布，再验证录制→恢复→继续运行的一致性。
 
+### M8 第 2 批：固定 Tick 回放录制接入（2026-10-24）
+
+本批完成 M8-A 的第二个实现批次，提交 `m8: connect replay capture to fixed tick execution`。
+`SimulationTickCoordinator` 现在在命令队列实际 drain、且已通过 admission 后记录命令，
+并提供只接受当前已完成 Tick 的 checkpoint 发布接口；提交时不会把尚未执行的 pending
+命令写入日志。新增 `SimulationReplayRecorder` 与 `SimulationReplayCapture`，用调用方提供
+的显式 payload encoder 生成稳定字符串；日志命令可重建为新的 coordinator 入队命令，保留
+Tick、authority、actor/request/target 等准入元数据。
+
+新增确定性回归：录制两个固定 Tick 命令和两个 checkpoint，在新的 coordinator 中按日志
+重放，逐 checkpoint 的 `diff` 为空且最终状态一致；同时覆盖 pending 命令不提前录制。
+
+验证：
+
+```powershell
+./gradlew.bat :core:m8ReplayRegression --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：M8 回放门禁 10 项通过（日志/检查点 5 项、固定 Tick 协调器 5 项）；没有修改
+D2GS/FlatBuffer 协议，也没有宣称 ECS 世界恢复、D2GS 实际录制、断线继续运行或完整离线
+回放已经完成。下一批再处理 D2GS 命令适配与权威网络会话边界。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

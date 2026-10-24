@@ -46,6 +46,16 @@ public final class SimulationReplayLog {
           + SimulationCheckpoint.encode(source) + "|" + SimulationCheckpoint.encode(kind)
           + "|" + SimulationCheckpoint.encode(payload);
     }
+
+    /** Recreates an admitted command for deterministic submission to another coordinator. */
+    public SimulationCommandEnvelope.Builder toBuilder() {
+      SimulationCommandEnvelope.Builder result = SimulationCommandEnvelope.builder(
+          source, kind, payload).tick(tick).authority(authority);
+      if (actorId >= 0) result.actor(actorId);
+      if (requestId > 0L) result.request(requestId);
+      if (targetEntityId >= 0) result.target(targetEntityId);
+      return result;
+    }
   }
 
   public static final class Builder {
