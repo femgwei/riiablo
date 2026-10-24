@@ -6566,7 +6566,7 @@ public class D2GS extends ApplicationAdapter {
         submitD2gsHandler(packet, "spend_stat_point", -1);
         break;
       case D2GSData.NpcServiceRequest:
-        NpcServiceRequest(packet);
+        submitD2gsHandler(packet, "npc_service", npcTarget(packet));
         break;
       case D2GSData.PartyRequest:
         submitD2gsHandler(packet, "party", partyTarget(packet));
@@ -6584,10 +6584,10 @@ public class D2GS extends ApplicationAdapter {
         GoldRequest(packet);
         break;
       case D2GSData.PlayerLifecycleRequest:
-        PlayerLifecycleRequest(packet);
+        submitD2gsHandler(packet, "player_lifecycle", -1);
         break;
       case D2GSData.QuestRequest:
-        QuestRequest(packet);
+        submitD2gsHandler(packet, "quest", questTarget(packet));
         break;
       case D2GSData.SnapshotResyncRequest:
         SnapshotResyncRequest(packet);
@@ -7027,6 +7027,9 @@ public class D2GS extends ApplicationAdapter {
           case "spend_stat_point": SpendStatPointRequest(handler.packet); break;
           case "party": PartyRequest(handler.packet); break;
           case "trade": TradeRequest(handler.packet); break;
+          case "npc_service": NpcServiceRequest(handler.packet); break;
+          case "quest": QuestRequest(handler.packet); break;
+          case "player_lifecycle": PlayerLifecycleRequest(handler.packet); break;
           default: throw new AssertionError(command.kind);
         }
       }
@@ -7079,6 +7082,16 @@ public class D2GS extends ApplicationAdapter {
 
   private static int tradeTarget(Packet packet) {
     TradeRequest request = (TradeRequest) packet.data.data(new TradeRequest());
+    return request.targetEntityId();
+  }
+
+  private static int npcTarget(Packet packet) {
+    NpcServiceRequest request = (NpcServiceRequest) packet.data.data(new NpcServiceRequest());
+    return request.npcEntityId();
+  }
+
+  private static int questTarget(Packet packet) {
+    QuestRequest request = (QuestRequest) packet.data.data(new QuestRequest());
     return request.targetEntityId();
   }
 

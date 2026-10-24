@@ -1408,6 +1408,43 @@ D2GS 编译全部通过；本批未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1
 下一迁移：把 NPC/任务/物品/金币/生命周期请求按事务复杂度分组接入同一 ingress，并在其后
 接入真实 ECS checkpoint restore、RNG/D2S 和跨进程重连网络门禁；不把本批写成 M8-D 完成。
 
+### M8-D 第 3 批：NPC、Quest 与 PlayerLifecycle handler ingress（2026-10-25）
+
+本批把 NPC 服务、任务交互和玩家死亡/复活请求接入同一 D2GS fixed-tick ingress；不改
+quest/NPC 规则、重生条件或现有协议响应。
+
+实现与边界：
+
+- `NpcServiceRequest`、`QuestRequest` 和 `PlayerLifecycleRequest` 从 FlatBuffer `process`
+  分支直接执行改为先进入 `D2gsCommandAdapter`，再在当前 simulation Tick 消费。
+- NPC/Quest 的 request cache 仍由原 handler 负责响应重放、库存/任务快照发布和
+  `REQUEST_ID_REUSED`；PlayerLifecycle 的死亡、重生、位置和 ACK 逻辑保持原路径。
+- NPC/Quest 已知目标经过 adapter target gate；非法/未知目标仍交给原领域校验，保留
+  原协议错误结果。物品/金币及旧 cursor/item handler 仍未迁移，M8-D 继续进行中。
+
+验证：
+
+```powershell
+./gradlew :core:test `
+  --tests com.riiablo.engine.server.npc.NpcServiceRequestCacheTest `
+  --tests com.riiablo.engine.server.npc.NpcServiceProtocolTest `
+  --tests com.riiablo.engine.server.quest.QuestRequestCacheTest `
+  --tests com.riiablo.engine.server.PlayerLifecycleProtocolTest `
+  --tests com.riiablo.engine.client.ClientPlayerRespawnResultTest `
+  --tests com.riiablo.engine.client.ClientLifecycleReceiverTest `
+  :core:m8ReplayRegression `
+  :server:d2gs:test --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest `
+  --no-daemon --max-workers=1 --console=plain
+./gradlew :server:d2gs:compileJava --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：NPC/Quest/Lifecycle 定向回归、M8 replay、D2GS 实体生命周期测试和生产编译全部通过；
+本批未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`，未修改暗黑规则。
+
+下一迁移：收口 ItemMove/Gold 事务 ingress，再进行全量 D2GS handler 唯一入口审计，并把
+真实 ECS checkpoint restore、RNG/D2S 和跨进程重连接入网络验收；不把本批写成 M8-D 完成。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
