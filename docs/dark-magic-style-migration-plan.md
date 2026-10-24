@@ -46,7 +46,7 @@
 | M3-C 相位与结构屏障 | `ecs/schedule.go` 的 phase 拓扑和 deferred structural changes | 在现有 `SimulationSystemGroups` 外增加 phase contract、读写集登记和实体/组件变更 barrier | 未开始 | phase 顺序可检查；系统内不直接破坏当前遍历；屏障后一次性应用创建/删除/组件变更 |
 | M4-A 命名 RNG | `simulation/random.go` 按名称/上下文隔离 RNG stream | 为 AI、战斗、掉落、地图和表现随机分别提供显式 stream；禁止规则层共享全局 RNG | 未开始 | stream 名称、种子和消费次数进入测试/诊断；新增系统不会改变其他系统随机序列 |
 | M4-B 内容/Mod 分层 | dark-magic 的内容包、digest、版本锁和命名空间 | 当前不引入 Lua/Go Mod；保留可选的 data-pack/version/digest 接口，避免未来内容污染核心规则 | 暂停 | 只有在 Mod 成为目标后启动；启动前先定义包签名、版本兼容和多人会话锁定 |
-| M8-A 回放与检查点 | `simulation/replay.go`、`ecs/snapshot.go`、校验和/恢复 | 记录命令、权威 Tick、随机 stream 状态和快照摘要；支持断线恢复与离线回放 | 未开始 | 录制→恢复→继续运行结果一致；检查点校验失败可定位到 Tick/实体/字段 |
+| M8-A 回放与检查点 | `simulation/replay.go`、`ecs/snapshot.go`、校验和/恢复 | 记录命令、权威 Tick、随机 stream 状态和快照摘要；支持断线恢复与离线回放 | 进行中 | 录制→恢复→继续运行结果一致；检查点校验失败可定位到 Tick/实体/字段 |
 | M8-B 声音语义事件 | 服务端只发语义，客户端负责资源和设备表现 | `SoundEvent`、客户端 `SoundEventSystem`、D2GS `SoundP`，含可见性和发声坐标 | 已完成 | 服务端无 `MonsterAudio` 调用；本地和 D2GS 远程声音测试通过；实体同 Tick 删除仍可按坐标播放 |
 | M8-C 表现层剥离 | `internal/presentation` 与仿真分离 | 继续收口 `ClientGameplayContext`、NPC/UI、标签、渲染和音频资源依赖；表现只能订阅事件/快照 | 进行中 | engine/server 不依赖 UI/音频设备；客户端表现替换不改变权威 Tick/结果 |
 | M8-D 网络三层收敛 | protocol / transport / authoritative session | 收敛 FlatBuffers、Netty、D2GS session 和旧网络实现；禁止规则系统直接操作 socket | 未开始 | 协议、传输、会话各有唯一 owner；重连、快照和命令路径不再存在多套权威实现 |
@@ -813,6 +813,30 @@ D2MOO path/collision 公式、mask 数值或单位行为，只统一读取边界
 这些结果不能反推地图规则失败，也不能写成完整巡游通过。`map5` 仍只是 `Ds1Loader`/
 `Dt1Loader` 的 MPQ 解码桥，未删除；M7-B 的多代地图最终删除和 M7-A 的全部规则策略
 搬迁仍待后续批次，M7 总状态保持“进行中”。
+
+### M8 第 1 批：确定性回放日志与检查点基础（2026-10-24）
+
+本批正式启动 M8，先处理不依赖具体传输实现的 M8-A 基础。新增不可变
+`SimulationReplayLog` 与 `SimulationCheckpoint`：回放日志记录游戏 seed、已准入命令的
+权威 Tick/sequence、actor/request/target、authority、命令类型和调用方提供的 canonical
+payload；检查点记录 Tick、世界摘要、按实体排序的摘要以及命名 RNG stream 的
+`context/state/drawCount`。所有字段都有稳定 canonical 编码和 SHA-256 摘要，避免 Java
+对象身份或 Map 遍历顺序污染跨进程比较。
+
+检查点比较不会只返回一个失败 hash，而是逐项报告 `tick/entity/field/expected/actual`，
+可以定位世界摘要、实体摘要或 RNG stream 的第一处差异。新增回归覆盖相同命令/检查点的
+跨实例 digest 稳定性、payload 变化、实体/RNG/Tick 差异和重复检查点拒绝。
+
+验证：
+
+```powershell
+./gradlew.bat :core:test --tests com.riiablo.engine.SimulationReplayLogTest --no-daemon
+git diff --check
+```
+
+结果：M8-A 第一批定向测试通过；本批只建立录制与校验数据边界，不伪装成完整 ECS
+世界恢复、断线继续运行或离线重放。下一批接入 `SimulationTickCoordinator`/D2GS 的
+命令录制和权威 checkpoint 发布，再验证录制→恢复→继续运行的一致性。
 
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
