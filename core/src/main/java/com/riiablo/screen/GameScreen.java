@@ -82,6 +82,7 @@ import com.riiablo.presentation.ClientAudioSession;
 import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.presentation.ClientPointerUiAdapter;
 import com.riiablo.presentation.ClientGameplayInputAdapter;
+import com.riiablo.presentation.ClientNetworkPresentationAdapter;
 import com.riiablo.presentation.ClientSimulationAssembly;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.ServerGameplayContext;
@@ -800,6 +801,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .register("clientContext", clientGameplayContext)
         .register("clientActionInput", (com.riiablo.engine.client.ClientActionInputPort) gameplayInput)
         .register("clientKeyboardInput", (com.riiablo.engine.client.ClientKeyboardInputPort) gameplayInput)
+        .register("networkPresentation", new ClientNetworkPresentationAdapter(clientGameplayContext))
         .register("clientActTransition", (com.riiablo.engine.client.ClientActTransitionPort)
             clientGameplayContext::transitionAct)
         .register("clientPlayer", (com.riiablo.engine.client.ClientPlayerPort)
