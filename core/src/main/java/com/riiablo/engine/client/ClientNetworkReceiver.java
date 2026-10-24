@@ -1358,7 +1358,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
       com.riiablo.net.packet.d2gs.MercenaryP data, long tick, long serverTimeMillis) {
     if (data == null) return;
     int owner = syncIds.get(data.ownerId());
-    if (!authoritativeMercenaries.accepts(entityId, tick, serverTimeMillis)) return;
+    if (!authoritativeMercenaries.accepts(entityId, tick, serverTimeMillis,
+        data.progressionRevision(), data.equipmentRevision())) return;
     AuthoritativeMercenaryState.Snapshot snapshot =
         AuthoritativeMercenaryState.capture(data.ownerId(), tick, serverTimeMillis, data);
     if (!ClientMercenarySnapshotWriter.apply(mMercenary, entityId, owner, snapshot)) return;

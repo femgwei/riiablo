@@ -66,6 +66,7 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
     equipListeners.clear();
     equippedSets.clear();
     setItemsOwned.clear();
+    equipmentRevision = 0L;
     updateListeners.clear();
   }
 

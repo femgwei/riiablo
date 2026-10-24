@@ -23,6 +23,8 @@ public final class MercenaryP extends Table {
   public int nameId() { int o = __offset(14); return o != 0 ? bb.getInt(o + bb_pos) : 0; }
   public long experience() { int o = __offset(16); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
   public long flags() { int o = __offset(18); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0L; }
+  public long progressionRevision() { int o = __offset(20); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long equipmentRevision() { int o = __offset(22); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
 
   public static int createMercenaryP(FlatBufferBuilder builder,
       int ownerId,
@@ -32,8 +34,12 @@ public final class MercenaryP extends Table {
       int seed,
       int nameId,
       long experience,
-      long flags) {
-    builder.startTable(8);
+      long flags,
+      long progressionRevision,
+      long equipmentRevision) {
+    builder.startTable(10);
+    MercenaryP.addEquipmentRevision(builder, equipmentRevision);
+    MercenaryP.addProgressionRevision(builder, progressionRevision);
     MercenaryP.addExperience(builder, experience);
     MercenaryP.addFlags(builder, flags);
     MercenaryP.addNameId(builder, nameId);
@@ -45,7 +51,7 @@ public final class MercenaryP extends Table {
     return MercenaryP.endMercenaryP(builder);
   }
 
-  public static void startMercenaryP(FlatBufferBuilder builder) { builder.startTable(8); }
+  public static void startMercenaryP(FlatBufferBuilder builder) { builder.startTable(10); }
   public static void addOwnerId(FlatBufferBuilder builder, int ownerId) { builder.addInt(0, ownerId, 0); }
   public static void addMercType(FlatBufferBuilder builder, int mercType) { builder.addInt(1, mercType, 0); }
   public static void addHirelingId(FlatBufferBuilder builder, int hirelingId) { builder.addInt(2, hirelingId, 0); }
@@ -54,6 +60,8 @@ public final class MercenaryP extends Table {
   public static void addNameId(FlatBufferBuilder builder, int nameId) { builder.addInt(5, nameId, 0); }
   public static void addExperience(FlatBufferBuilder builder, long experience) { builder.addLong(6, experience, 0L); }
   public static void addFlags(FlatBufferBuilder builder, long flags) { builder.addInt(7, (int)flags, (int)0L); }
+  public static void addProgressionRevision(FlatBufferBuilder builder, long progressionRevision) { builder.addLong(8, progressionRevision, 0L); }
+  public static void addEquipmentRevision(FlatBufferBuilder builder, long equipmentRevision) { builder.addLong(9, equipmentRevision, 0L); }
   public static int endMercenaryP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

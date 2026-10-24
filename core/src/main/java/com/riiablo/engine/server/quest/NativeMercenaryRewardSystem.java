@@ -256,9 +256,17 @@ public class NativeMercenaryRewardSystem extends ContextualQuestSystem
     MercenaryManager.ActiveMercenary active = mercenaries.getPlayerMercenary(playerId);
     if (active == null || active.entityId != entityId || level < active.level) return false;
     int oldLevel = active.level;
+    int normalizedLevel = Math.max(1, Math.min(98, level));
     active.experience = Math.max(0L, Math.min(0xFFFFFFFFL, experience));
-    if (mMercenary.has(entityId)) mMercenary.get(entityId).experience = active.experience;
-    active.level = Math.max(1, Math.min(98, level));
+    if (mMercenary.has(entityId)) {
+      Mercenary runtime = mMercenary.get(entityId);
+      boolean changed = runtime.experience != active.experience
+          || runtime.level != normalizedLevel;
+      runtime.experience = active.experience;
+      runtime.level = normalizedLevel;
+      if (changed) runtime.progressionRevision++;
+    }
+    active.level = normalizedLevel;
     com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
         hirelingTable == null ? null
             : hirelingTable.stats(active.definition.hirelingId(), active.level);
@@ -325,6 +333,7 @@ public class NativeMercenaryRewardSystem extends ContextualQuestSystem
     if (mMercenary.has(merc.entityId)) {
       mMercenary.get(merc.entityId).experience = data.xp;
       mMercenary.get(merc.entityId).flags = data.flags;
+      mMercenary.get(merc.entityId).equipmentRevision = data.getItems().equipmentRevision();
     }
     log.info("[MERC_RESTORE] phase=restored player={} entity={} type={} level={} xp={} "
             + "dead={} items={}",
@@ -390,6 +399,11 @@ public class NativeMercenaryRewardSystem extends ContextualQuestSystem
         .bindNativeTargetNode(NativeTargetNodes.get(world, entityId))
         .set(playerId, def.mercType, level, seed, nameId);
     component.hirelingId = def.hirelingId;
+    if (mPlayer.has(playerId) && mPlayer.get(playerId).data != null) {
+      com.riiablo.save.CharData.MercData saved = mPlayer.get(playerId).data.getMerc();
+      component.experience = saved.xp;
+      component.equipmentRevision = saved.getItems().equipmentRevision();
+    }
     com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
         hirelingTable == null ? null : hirelingTable.stats(def.hirelingId(), level);
     if (mAttributesWrapper.has(entityId)) {
@@ -526,6 +540,7 @@ public class NativeMercenaryRewardSystem extends ContextualQuestSystem
     if (mMercenary.has(merc.entityId)) {
       mMercenary.get(merc.entityId).experience = data.xp;
       mMercenary.get(merc.entityId).flags = data.flags;
+      mMercenary.get(merc.entityId).equipmentRevision = data.getItems().equipmentRevision();
     }
   }
 
@@ -610,10 +625,16 @@ public class NativeMercenaryRewardSystem extends ContextualQuestSystem
       }
     }
     if (mMercenary.has(merc.entityId)) {
-      mMercenary.get(merc.entityId).experience = merc.experience;
-      mMercenary.get(merc.entityId).level = merc.level;
-      com.riiablo.engine.server.NativeHirelingStatsUpdater.applySkills(
-          mMercenary.get(merc.entityId), nativeStats);
+      Mercenary runtime = mMercenary.get(merc.entityId);
+      long equipmentRevision = saved == null ? 0L : saved.getItems().equipmentRevision();
+      boolean changed = runtime.experience != merc.experience
+          || runtime.level != merc.level
+          || runtime.equipmentRevision != equipmentRevision;
+      runtime.experience = merc.experience;
+      runtime.level = merc.level;
+      runtime.equipmentRevision = equipmentRevision;
+      if (changed) runtime.progressionRevision++;
+      com.riiablo.engine.server.NativeHirelingStatsUpdater.applySkills(runtime, nativeStats);
     }
     if (saved != null) {
       saved.xp = merc.experience;

@@ -38,7 +38,7 @@ class AuthoritativeMercenaryStateTest {
       int seed, int name, long xp, long flags) {
     FlatBufferBuilder builder = new FlatBufferBuilder(128);
     builder.finish(MercenaryP.createMercenaryP(builder, owner, type, hireling,
-        level, seed, name, xp, flags));
+        level, seed, name, xp, flags, 0L, 0L));
     return MercenaryP.getRootAsMercenaryP(builder.dataBuffer());
   }
 }

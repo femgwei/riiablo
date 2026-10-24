@@ -92,6 +92,9 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   public boolean managed;
   public CharacterClass classId;
 
+  /** Monotonic runtime revision for committed experience/level/skill progression. */
+  private long progressionRevision;
+
   final IntIntMap            skills = new IntIntMap();
   final Array<StatRef>       chargedSkills = new Array<>(false, 16);
   final Array<SkillListener> skillListeners = new Array<>(false, 16);
@@ -212,6 +215,7 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     classId   = null;
     flags     = 0;
     level     = 0;
+    progressionRevision = 0L;
     createTime = 0;
     lastTime = 0;
     playTime = 0;
@@ -652,6 +656,12 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     // aggregate on every invocation.
     itemData.updateStats();
   }
+
+  /** Revision of the latest committed progression result. */
+  public long progressionRevision() { return progressionRevision; }
+
+  /** Advances progression only after the domain result has been applied. */
+  public long markProgressionCommitted() { return ++progressionRevision; }
 
   @Override
   public void onUpdated(ItemData itemData) {

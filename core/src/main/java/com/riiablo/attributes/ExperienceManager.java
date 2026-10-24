@@ -505,6 +505,10 @@ public class ExperienceManager extends PassiveSystem {
     long newExperience = owner.getMerc().xp;
     if (newExperience == oldExperience) return;
 
+    // The ECS hireling header is a committed progression snapshot. The
+    // lifecycle owner advances its revision exactly once for this award.
+    hireling.experience = newExperience;
+
     int ownerLevel = Math.max(1,
         getInt(owner.getStats().aggregate(), Stat.level, owner.level & 0xFF));
     int newLevel = hirelingExperience == null ? hirelingLevel
@@ -518,15 +522,19 @@ public class ExperienceManager extends PassiveSystem {
       com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(
           owner.getMerc().getStats(), nativeStats);
       owner.getMerc().getItems().updateStats();
+      hireling.equipmentRevision = owner.getMerc().getItems().equipmentRevision();
       com.riiablo.engine.server.NativeHirelingStatsUpdater.applySkills(hireling, nativeStats);
       log.info("[XP_MERC_LEVEL] owner={} merc={} level={}->{} xp={}",
           owner.name, hirelingId, hirelingLevel, newLevel, newExperience);
     }
-    if (mercenaryRewards != null
-        && !mercenaryRewards.synchronizeMercenaryProgress(
-            ownerId, hirelingId, newExperience, newLevel)) {
-      log.warn("[XP_MERC] owner={} merc={} failed to synchronize lifecycle progress",
-          ownerId, hirelingId);
+    if (mercenaryRewards != null) {
+      if (!mercenaryRewards.synchronizeMercenaryProgress(
+          ownerId, hirelingId, newExperience, newLevel)) {
+        log.warn("[XP_MERC] owner={} merc={} failed to synchronize lifecycle progress",
+            ownerId, hirelingId);
+      }
+    } else {
+      hireling.progressionRevision++;
     }
     if (!mAttributesWrapper.has(hirelingId)) return;
 
@@ -621,6 +629,7 @@ public class ExperienceManager extends PassiveSystem {
     // lists. Reassert the current-resource invariant before the resulting
     // player snapshot is serialized, even when this kill did not level up.
     charData.synchronizeCurrentResources();
+    charData.markProgressionCommitted();
     log.info("[XP_SYNC] character={} gained={} total={} oldLevel={} aggregate={} hp={}/{} baseHp={}",
         charData.name, experienceGained, newExp, result.oldLevel,
         charData.getStats().get(Stat.experience).asLong(),

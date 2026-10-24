@@ -11,7 +11,7 @@ public final class MercenarySerializer implements FlatBuffersSerializer<Mercenar
   public int putData(FlatBufferBuilder builder, Mercenary merc) {
     int offset = MercenaryP.createMercenaryP(builder, merc.ownerId, merc.mercType,
         merc.hirelingId(), merc.level, merc.seed, merc.nameId, merc.experience, merc.flags,
-        0L, 0L);
+        merc.progressionRevision, merc.equipmentRevision);
     return offset;
   }
   public MercenaryP getTable(EntitySync sync, int index) {

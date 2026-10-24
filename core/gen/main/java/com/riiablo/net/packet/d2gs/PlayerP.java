@@ -48,6 +48,8 @@ public final class PlayerP extends Table {
   public int ammoItemId() { int o = __offset(30); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
   public int ammoQuantity() { int o = __offset(32); return o != 0 ? bb.getShort(o + bb_pos) & 0xFFFF : 0; }
   public boolean ammoPresent() { int o = __offset(34); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
+  public long progressionRevision() { int o = __offset(36); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long equipmentRevision() { int o = __offset(38); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
 
   public static int createPlayerP(FlatBufferBuilder builder,
       int charClass,
@@ -65,8 +67,12 @@ public final class PlayerP extends Table {
       long questRevision,
       int ammoItemId,
       int ammoQuantity,
-      boolean ammoPresent) {
-    builder.startTable(16);
+      boolean ammoPresent,
+      long progressionRevision,
+      long equipmentRevision) {
+    builder.startTable(18);
+    PlayerP.addEquipmentRevision(builder, equipmentRevision);
+    PlayerP.addProgressionRevision(builder, progressionRevision);
     PlayerP.addQuestRevision(builder, questRevision);
     PlayerP.addExperience(builder, experience);
     PlayerP.addAmmoItemId(builder, ammoItemId);
@@ -86,7 +92,7 @@ public final class PlayerP extends Table {
     return PlayerP.endPlayerP(builder);
   }
 
-  public static void startPlayerP(FlatBufferBuilder builder) { builder.startTable(16); }
+  public static void startPlayerP(FlatBufferBuilder builder) { builder.startTable(18); }
   public static void addCharClass(FlatBufferBuilder builder, int charClass) { builder.addByte(0, (byte)charClass, (byte)0); }
   public static void addCharName(FlatBufferBuilder builder, int charNameOffset) { builder.addOffset(1, charNameOffset, 0); }
   public static void addExperience(FlatBufferBuilder builder, long experience) { builder.addLong(2, experience, 0L); }
@@ -110,6 +116,8 @@ public final class PlayerP extends Table {
   public static void addAmmoItemId(FlatBufferBuilder builder, int ammoItemId) { builder.addInt(13, ammoItemId, -1); }
   public static void addAmmoQuantity(FlatBufferBuilder builder, int ammoQuantity) { builder.addShort(14, (short)ammoQuantity, (short)0); }
   public static void addAmmoPresent(FlatBufferBuilder builder, boolean ammoPresent) { builder.addBoolean(15, ammoPresent, false); }
+  public static void addProgressionRevision(FlatBufferBuilder builder, long progressionRevision) { builder.addLong(16, progressionRevision, 0L); }
+  public static void addEquipmentRevision(FlatBufferBuilder builder, long equipmentRevision) { builder.addLong(17, equipmentRevision, 0L); }
   public static int endPlayerP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

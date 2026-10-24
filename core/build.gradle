@@ -1060,3 +1060,41 @@ task m5FinalCombatRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M6 final batch: inventory transactions, progression/equipment revisions and
+// reconnect snapshot consumers.  The task intentionally stays headless; M8
+// owns the final save/replay and full network-session acceptance.
+task m6FinalRegression(type: Test) {
+  group = 'verification'
+  description = 'M6 final inventory, progression, equipment and reconnect regression gate.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    [
+      'com.riiablo.attributes.InventoryTransactionTest',
+      'com.riiablo.attributes.ItemStatProjectionTest',
+      'com.riiablo.attributes.EquipmentSnapshotTest',
+      'com.riiablo.attributes.ProgressionServiceTest',
+      'com.riiablo.attributes.ProgressionSnapshotTest',
+      'com.riiablo.attributes.ProgressionSnapshotGateTest',
+      'com.riiablo.attributes.ExperienceManagerNativeTest',
+      'com.riiablo.engine.server.item.AuthoritativeItemMoveServiceTest',
+      'com.riiablo.engine.server.item.ItemMoveRequestCacheTest',
+      'com.riiablo.engine.server.item.GoldPickupServiceTest',
+      'com.riiablo.engine.server.item.NativeIdentifyItemIntegrationTest',
+      'com.riiablo.engine.server.NetworkProgressionSerializationTest',
+      'com.riiablo.engine.server.quest.NativeCharacterProgressionTest',
+      'com.riiablo.engine.client.AuthoritativeMercenaryStateTest',
+      'com.riiablo.engine.client.ClientMercenarySnapshotTest',
+      'com.riiablo.engine.client.ClientNetworkReceiverTickBoundaryTest',
+      'com.riiablo.engine.client.ClientItemManagerGoldPickupTest',
+      'com.riiablo.save.ItemDataResourceRefreshTest'
+    ].each { includeTestsMatching it }
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

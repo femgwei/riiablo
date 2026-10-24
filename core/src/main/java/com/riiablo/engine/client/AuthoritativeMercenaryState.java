@@ -9,8 +9,15 @@ public final class AuthoritativeMercenaryState {
 
   public Snapshot get(int entityId) { return snapshots.get(entityId); }
   boolean accepts(int entityId, long tick, long serverTimeMillis) {
+    return accepts(entityId, tick, serverTimeMillis, 0L, 0L);
+  }
+  boolean accepts(int entityId, long tick, long serverTimeMillis,
+      long progressionRevision, long equipmentRevision) {
     Snapshot previous = snapshots.get(entityId);
-    return previous == null || tick == 0L
+    if (previous == null) return true;
+    if (progressionRevision < previous.progressionRevision
+        || equipmentRevision < previous.equipmentRevision) return false;
+    return tick == 0L
         || tick >= previous.tick && serverTimeMillis >= previous.serverTimeMillis;
   }
   void commit(int entityId, Snapshot snapshot) { snapshots.put(entityId, snapshot); }
@@ -24,6 +31,7 @@ public final class AuthoritativeMercenaryState {
   public static final class Snapshot {
     public final int ownerId, mercType, hirelingId, level, seed, nameId, flags;
     public final long tick, serverTimeMillis, experience;
+    public final long progressionRevision, equipmentRevision;
 
     private Snapshot(int ownerId, long tick, long serverTimeMillis, MercenaryP data) {
       this.ownerId = ownerId;
@@ -36,6 +44,8 @@ public final class AuthoritativeMercenaryState {
       nameId = data.nameId();
       experience = data.experience();
       flags = (int) data.flags();
+      progressionRevision = data.progressionRevision();
+      equipmentRevision = data.equipmentRevision();
     }
   }
 }

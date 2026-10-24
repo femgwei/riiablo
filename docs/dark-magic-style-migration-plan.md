@@ -31,7 +31,7 @@
 | M3 | Tick、命令与事件 | 固定 40ms Tick、输入意图、技能、移动、死亡、实体删除、阶段调度和结构屏障 | 统一执行顺序和副作用边界，令渲染帧率不影响仿真 Tick | Command envelope、Event、结构变更队列、固定步进运行时、Tick/phase 调度图 | 固定步进可脱离渲染运行；非法意图被拒绝；阶段末统一冲刷结构变更；普通移动、拾取、一个交互流程通过纯逻辑和 ECS 测试 | M2 | 进行中 |
 | M4 | 数据层 | TXT、MPQ、D2 数据表、固定点数值、RNG/Seed、版本和可选内容包 | 使用不可变记录和显式数据来源，规则层不直接操作解析器；为每个系统/实体建立可复现 RNG 流 | typed record、数据版本、命名 RNG stream、数据审计工具、可选内容包边界 | 缺失数据、版本差异、RNG 消耗都有明确测试；合法数据不走隐式常量回退；同一输入可重放得到相同随机序列 | M1 | 进行中 |
 | M5 | 战斗垂直切片 | 普通攻击或 Fire Bolt 的完整链路 | 验证新边界能够承载真实 D2 行为，并能被快照/回放复核 | 命令→准入→结算→导弹/命中→伤害→快照→表现→回放 | 纯数据、ECS、D2GS、真实 1.10f 资源测试全部通过；旧入口不再结算；关键 Tick 有检查点和校验值 | M2、M3、M4 | 进行中 |
-| M6 | 物品与成长 | 物品生成、装备、背包、库存事务、经验、升级、佣兵成长 | 将交易和属性聚合变成可回滚、可验证的领域事务 | Item domain、Inventory transaction、Progression service、存档字段映射 | 拾取、装备、交易、升级和重连状态无重复提交或双重结算 | M2、M4、M5 | 未开始 |
+| M6 | 物品与成长 | 物品生成、装备、背包、库存事务、经验、升级、佣兵成长 | 将交易和属性聚合变成可回滚、可验证的领域事务 | Item domain、Inventory transaction、Progression service、存档字段映射 | 拾取、装备、交易、升级和重连状态无重复提交或双重结算 | M2、M4、M5 | 已完成 |
 | M7 | 世界规则 | 地图生成、碰撞、寻路、怪物 AI、任务、NPC、Warp、对象 | 将 D2 规则从通用地图/ECS 机制中分离 | World policy、AI policy、Quest/NPC command handlers | Act 1 关键链路通过 headless、双客户端和真实 MPQ 验收 | M2、M3、M4、M5、M6 | 未开始 |
 | M8 | 网络、存档与表现收口 | FlatBuffers/Netty、快照、重连、D2S、声音/视觉表现和 LibGDX UI/渲染 | 让客户端成为纯表现层，统一协议、持久化和表现适配边界 | semantic protocol、snapshot/replay/checkpoint、versioned save、presentation adapter、SoundEvent | 重连、回放、存档往返和客户端显示通过；服务端不直接访问音频/渲染；旧直连入口已删除 | M3、M5、M6、M7 | 进行中 |
 
@@ -683,8 +683,25 @@ M5 只接收投影结果，不读取 M6 内部的可变属性列表。
 统计、等级变更和资源不变量只在提交边界写入，避免调用方重复计算或重复结算。现有击杀奖励
 调用保持兼容，但不再直接维护经验/等级公式。
 
-定向 `ExperienceManagerNativeTest`、`ProgressionServiceTest` 通过。M6 仍未完成；装备事务
-revision、套装计数、库存回滚和玩家/佣兵快照仍待接入。
+定向 `ExperienceManagerNativeTest`、`ProgressionServiceTest` 通过。玩家经验 revision、装备
+revision 和佣兵生命周期快照在后续收口批统一接入；本段记录的是单一提交边界的历史状态。
+
+### M6 最终收口批：事务、成长、装备与重连 revision（2026-10-24）
+
+本批完成 M6 在当前代码范围内可独立完成的剩余工作，并把玩家/佣兵的 progression 与
+equipment revision 接到服务端快照、客户端接收门禁和 ECS 表现副本。库存事务继续由
+`InventoryTransaction`/`AuthoritativeItemMoveService` 作为唯一预检与提交边界；经验升级由
+`ProgressionService.Result` → `ExperienceManager.commitExperience` 提交，提交成功后只推进一次
+玩家 progression revision；佣兵经验、升级、恢复和装备聚合使用同一生命周期 owner，避免重复推进。
+
+本批还修正了角色池化时 `ItemData.equipmentRevision` 的清零，并补齐 FlatBuffers 生成接口、
+玩家/佣兵序列化字段、客户端 revision gate 及 snapshot writer。`core:m6FinalRegression` 覆盖
+库存事务、属性投影、经验/升级、玩家/佣兵快照、物品移动/鉴定/金币和客户端 tick 边界；
+最终回归共 85 项通过，`git diff --check` 通过，未修改 D2 数值公式或 M8 的 replay/save 协议。
+
+出口判断：M6 的库存、装备聚合、经验升级、佣兵成长和重连快照在本仓库范围内已完成，
+可满足“无重复提交或双重结算”的验收要求。完整 D2S 存档往返、可恢复 replay、网络三层
+统一出口及最终真实双客户端验收仍属于 M8，不作为 M6 未完成项回填。
 
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 

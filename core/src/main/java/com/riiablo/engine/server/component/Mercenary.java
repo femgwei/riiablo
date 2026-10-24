@@ -22,6 +22,10 @@ public class Mercenary extends Component {
   public int nameId;
   public long experience;
   public int flags;
+  /** Monotonic runtime revision for committed hireling progression. */
+  public long progressionRevision;
+  /** Revision of the committed hireling equipment aggregate. */
+  public long equipmentRevision;
   /** Native Hireling.txt skills and their current levels. */
   public final int[] skills = new int[6];
   public final int[] skillLevels = new int[6];
@@ -63,6 +67,8 @@ public class Mercenary extends Component {
     this.nameId = nameId;
     this.experience = 0;
     this.flags = 0;
+    this.progressionRevision = 0L;
+    this.equipmentRevision = 0L;
     this.aiRngState = seed == 0 ? 0x6D2B79F5 : seed;
     this.aiChanceParam = 0;
     this.targetId = -1;

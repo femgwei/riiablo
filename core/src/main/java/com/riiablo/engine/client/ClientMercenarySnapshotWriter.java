@@ -24,6 +24,8 @@ final class ClientMercenarySnapshotWriter {
     merc.nameId = snapshot.nameId;
     merc.experience = snapshot.experience;
     merc.flags = snapshot.flags;
+    merc.progressionRevision = snapshot.progressionRevision;
+    merc.equipmentRevision = snapshot.equipmentRevision;
     return true;
   }
 }
