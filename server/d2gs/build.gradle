@@ -185,6 +185,17 @@ tasks.register('headlessMissileCombat', JavaExec) {
   }
 }
 
+tasks.register('headlessFireBolt', JavaExec) {
+  group = 'verification'
+  description = 'Runs a generated Sorceress Fire Bolt through the real D2GS TCP missile path.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-fire-bolt', '--skill', '36', '--require-missile', '--test-timeout', '60'
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessCombatEntityEdges') {
   group = 'verification'
   description = 'Runs the projectile lifecycle and death-idempotency edge gates.'

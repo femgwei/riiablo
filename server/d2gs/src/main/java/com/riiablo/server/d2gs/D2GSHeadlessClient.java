@@ -57,6 +57,7 @@ import com.riiablo.item.Quality;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.combat.CombatCheckpoint;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 
 import java.io.BufferedInputStream;
@@ -342,6 +343,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAreaSave(config.areaSkillId, config.areaSkillLevel)
         : config.requireVineScenario
         ? createGeneratedAreaSave(config.vineSkillId)
+        : config.generatedFireBolt
+        ? createGeneratedAreaSave(SkillId.FIRE_BOLT, 20)
         : config.generatedAmazon
         ? createGeneratedAmazonSave(
             config.requireMercenarySkill || config.requireMercenaryProgression
@@ -650,6 +653,14 @@ public final class D2GSHeadlessClient {
               + " deleted=" + deleted + " damageTick=" + lastDamageTick
               + " ordered=true");
         }
+        float finalLife = result == null ? initialLife : result.life;
+        CombatCheckpoint checkpoint = CombatCheckpoint.of(
+            Math.max(0L, lastDamageTick > 0L ? lastDamageTick : lastSnapshotTick),
+            playerId, target.entityId, config.skillId,
+            Math.round(initialLife * 256f), Math.round(finalLife * 256f),
+            playerMissiles.size());
+        log("combat_checkpoint", "canonical=" + checkpoint.canonical()
+            + " digest=" + checkpoint.digest());
         log("pass", String.format(
             "player=%d target=%d skill=%d life=%.2f->%.2f damaged=%s attackMode=%s missiles=%d",
             playerId, target.entityId, config.skillId, initialLife,
@@ -12914,7 +12925,7 @@ public final class D2GSHeadlessClient {
     boolean sorceress = !assassin && (hydra || skillId == SkillId.METEOR
         || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
         || skillId == SkillId.FROZEN_ORB || skillId == SkillId.FIRE_BALL
-        || skillId == SkillId.NOVA);
+        || skillId == SkillId.NOVA || skillId == SkillId.FIRE_BOLT);
     int characterClass = assassin ? Riiablo.ASSASSIN : sorceress ? Riiablo.SORCERESS
         : necromancer ? Riiablo.NECROMANCER : Riiablo.DRUID;
     CharacterClass classData = assassin ? CharacterClass.ASSASSIN
@@ -13200,6 +13211,7 @@ public final class D2GSHeadlessClient {
     int difficulty;
     int skillId = SkillCodes.attack;
     boolean generatedAmazon;
+    boolean generatedFireBolt;
     boolean requireMissile;
     boolean requirePeer;
     boolean requireMonsterMovement;
@@ -13305,6 +13317,7 @@ public final class D2GSHeadlessClient {
         else if ("--difficulty".equals(arg)) config.difficulty = integer(args, ++i, arg);
         else if ("--skill".equals(arg)) config.skillId = integer(args, ++i, arg);
         else if ("--generated-amazon".equals(arg)) config.generatedAmazon = true;
+        else if ("--generated-fire-bolt".equals(arg)) config.generatedFireBolt = true;
         else if ("--require-missile".equals(arg)) config.requireMissile = true;
         else if ("--require-peer".equals(arg)) config.requirePeer = true;
         else if ("--require-monster-movement".equals(arg)) config.requireMonsterMovement = true;

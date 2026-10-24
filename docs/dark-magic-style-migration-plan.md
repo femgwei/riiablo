@@ -625,7 +625,7 @@ git diff --check
 - 通过真实 `SkillDoEvent` 和 Skills/Missiles 表创建 Fire Bolt 导弹，检查技能伤害在发射时固定到导弹快照，并由 `MissileCollisionSystem` 完成固定点火焰伤害和生命变化。
 - 新增 `m5FireBoltRegression` 门禁，组合 Fire Bolt 1--20 级 D2MOO 黄金值、Fire Bolt 垂直切片和元素导弹/生命快照回归；不修改 D2GS 协议，不提前实现 M8 replay/checkpoint，也保留旧兼容测试装配。
 
-提交：待本批验证后生成。
+提交：`049d20e7f`。
 
 验证：
 
@@ -641,6 +641,35 @@ D2MOO 依据：Fire Bolt 等级伤害沿用 `D2Skills.cpp:2459`、`2623`、`2685
 剩余问题：M5 仍未完成普通攻击、其他技能族、D2GS/真实 1.10f 端到端验收和关键 Tick 检查点/完整回放；M3/M4 的全量网络事件及 RNG 调用方迁移债务仍按原记录保留。当前垂直切片仍允许旧兼容事件装配用于离线测试，不能视为“旧入口已全部删除”。
 
 下一迁移：M5 第 2 批，继续扩展 Fire Bolt 相邻技能/普通攻击前先补 D2GS headless 命令入口和可复核的最小检查点摘要。
+
+### M5 第 2 批：Fire Bolt D2GS headless 与最小检查点摘要（2026-10-24）
+
+完成日期：2026-10-24；本批把第 1 批的 Fire Bolt 链路接到真实 D2GS TCP headless 入口，并增加可复核的命中摘要；仍不宣称 M5 整体完成。
+
+实现与边界：
+
+- `D2GSHeadlessClient` 新增 `--generated-fire-bolt`，生成 1.10f Sorceress 等级 30、Fire Bolt 等级 20 的确定性 D2S；通过真实 `CastSkillRequest`，不直接调用服务端 `SkillDoEvent`。
+- 新增 `:server:d2gs:headlessFireBolt`，在真实 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F` 资源下验证 TCP 准入、Blood Moor 目标、Fire Bolt 导弹同步、命中生命变化和导弹生命周期顺序。
+- 新增不可变 `CombatCheckpoint`，以 Tick、caster/target、skill、8.8 生命前后值和导弹数量生成 canonical 摘要及 SHA-256；headless 命中后输出摘要。它只用于诊断/比对，不是 M8 完整世界快照或恢复格式。
+
+提交：待本批验证后生成。
+
+验证：
+
+```powershell
+./gradlew.bat :server-domain:test --tests com.riiablo.engine.server.combat.CombatCheckpointTest --no-daemon
+$env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:headlessFireBolt --no-daemon
+git diff --check
+```
+
+结果：`CombatCheckpointTest` 3 项通过；真实 1.10f headless 门禁通过，观察到 Fire Bolt skill=36、2 个 owner missile、目标生命 `1000.00→888.10`，命中 Tick 与导弹创建顺序一致，并输出 canonical `25|117|119|36|256000|227353|2` 及稳定 SHA-256 摘要。未修改 D2GS FlatBuffer 字段，未启动图形客户端。
+
+D2MOO/原版依据：Fire Bolt 伤害仍由第 1 批 D2MOO `D2Skills.cpp:2459/2623/2685` 与 `Units/Missile.cpp:467` 黄金值约束；本批只扩展真实网络入口和摘要，不改规则公式。
+
+剩余问题：M5 仍需普通攻击/其他技能族、双客户端观察、真实命中事件与表现快照收口；checkpoint 尚不能恢复/继续仿真，M8 replay/network 三层仍未完成。旧兼容事件装配仍服务离线测试，不能视为旧入口已删除。
+
+下一迁移：M5 第 3 批，扩展 Fire Bolt 相邻火系技能或普通攻击，并把命中结果摘要接入双客户端观察门禁。
 
 ### M0 完成记录（2026-10-21）
 
