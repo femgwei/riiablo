@@ -1,7 +1,5 @@
 package com.riiablo.engine.client;
 
-import com.riiablo.presentation.ClientGameplayContext;
-
 import com.artemis.BaseSystem;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
@@ -19,8 +17,10 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 public final class ClientSystemHarness implements AutoCloseable {
   private final World world;
 
-  public ClientSystemHarness(ClientGameplayContext context, BaseSystem... systems) {
-    Objects.requireNonNull(context, "context");
+  public ClientSystemHarness(ClientActTransitionPort clientActTransition,
+      ClientPlayerPort clientPlayer, BaseSystem... systems) {
+    Objects.requireNonNull(clientActTransition, "clientActTransition");
+    Objects.requireNonNull(clientPlayer, "clientPlayer");
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         .with(new EventSystem());
     if (systems != null) {
@@ -29,9 +29,8 @@ public final class ClientSystemHarness implements AutoCloseable {
       }
     }
     this.world = new World(builder.build()
-        .register("clientContext", context)
-        .register("clientActTransition", (ClientActTransitionPort) context::transitionAct)
-        .register("clientPlayer", (ClientPlayerPort) context::playerId));
+        .register("clientActTransition", clientActTransition)
+        .register("clientPlayer", clientPlayer));
   }
 
   public World world() { return world; }

@@ -20,7 +20,8 @@ class ClientGameplayContextTest {
         null, null, null, null, null, null, null, null, null, null);
 
     try (ClientSystemHarness harness =
-        new ClientSystemHarness(context, new ActTransitionSystem())) {
+        new ClientSystemHarness(value -> { act.set(value); return true; }, () -> player[0],
+            new ActTransitionSystem())) {
       NativeActTransitionEvent event = NativeActTransitionEvent.obtain(
           player[0], com.d2moo.common.drlg.D2LevelIds.LEVEL_LUTGHOLEIN);
       harness.world().getSystem(EventSystem.class).dispatch(event);

@@ -4,9 +4,9 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
 
-import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.PlayerCorpse;
+import com.riiablo.engine.client.event.ClientCorpseLifecycleEvent;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -20,7 +20,6 @@ public class CorpseManager extends IteratingSystem {
 
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<PlayerCorpse> mPlayerCorpse;
-  protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Networked> mNetworked;
 
   @Override
@@ -37,17 +36,10 @@ public class CorpseManager extends IteratingSystem {
       // Handle fade out
       corpse.fadeTime += delta;
       
-      // Apply alpha fade to the animation if available
-      if (mAnimationWrapper.has(entityId)) {
-        float alpha = 1.0f - (corpse.fadeTime / Corpse.FADE_DURATION);
-        if (alpha < 0) alpha = 0;
-        // Note: Animation alpha handling would need to be implemented
-        // For now, we just delete when fade completes
-      }
-      
       if (corpse.fadeTime >= Corpse.FADE_DURATION) {
         // Fade complete, delete the entity
         log.debug("Corpse {} fade complete, removing entity", entityId);
+        dispatch(ClientCorpseLifecycleEvent.removed(entityId));
         world.delete(entityId);
       }
     } else if (Float.isFinite(corpse.timeRemaining)) {
@@ -58,8 +50,15 @@ public class CorpseManager extends IteratingSystem {
         // Start fading out
         corpse.fading = true;
         corpse.usable = false; // Can no longer be used by skills
+        dispatch(ClientCorpseLifecycleEvent.fading(entityId));
         log.debug("Corpse {} starting to fade", entityId);
       }
     }
+  }
+
+  private void dispatch(ClientCorpseLifecycleEvent event) {
+    net.mostlyoriginal.api.event.common.EventSystem events = world.getSystem(
+        net.mostlyoriginal.api.event.common.EventSystem.class);
+    if (events != null) events.dispatch(event);
   }
 }

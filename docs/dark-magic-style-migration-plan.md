@@ -1094,6 +1094,38 @@ git diff --check
 下一迁移：M8-C 第 4 批，收口 `ClientItemManager`/`NetworkedClientItemManager` 的物品表现事件
 出口和窄接口，再处理输入/交互及 debug 适配器残余依赖。
 
+### M8-C 第 4 批：尸体生命周期与测试 host 窄边界（2026-10-24）
+
+提交：待本批提交。
+
+`CorpseManager` 不再读取表现侧 `AnimationWrapper`；尸体开始淡出和完成删除时发布不可变的
+`ClientCorpseLifecycleEvent`，后续表现适配器可在固定 Tick 事件阶段订阅。网络尸体和玩家尸体
+仍由原有权威生命周期保护，普通尸体的计时、淡出和删除语义不变。
+
+`ClientSystemHarness` 改为显式接收 `ClientActTransitionPort` 与 `ClientPlayerPort`，不再把
+完整 `ClientGameplayContext` 注册进测试世界；对应换 Act 回归使用窄端口验证，生产 screen 的
+端口注册保持不变。
+
+验证：
+
+```powershell
+./gradlew.bat :core:compileJava :core:compileTestJava `
+  :core:test --tests com.riiablo.engine.client.CorpseManagerTest `
+  --tests com.riiablo.engine.client.ClientGameplayContextTest --no-daemon --max-workers=1 --console=plain
+python tools/architecture/migration_boundaries.py --mode check
+& tools/architecture/check-client-presentation-boundary.ps1 -FailOnDrift
+git diff --check
+```
+
+结果：定向尸体/测试 host 回归、core 编译、模块边界和 M1-A 表现边界通过；M8-C 债务由 19 条
+降至 17 条。物品、网络接收、鼠标/键盘输入和悬停仍需等待其对应 M2/M3/M6/M8-D 端口完成，
+M8-C/M8 整体继续标记为进行中。
+
+真实资源：未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；本批不修改暗黑规则。
+
+下一迁移：M8-C 第 5 批，处理 `ClientItemManager` 与 `NetworkedClientItemManager` 的音效、
+cursor 和物品表现事件出口。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
