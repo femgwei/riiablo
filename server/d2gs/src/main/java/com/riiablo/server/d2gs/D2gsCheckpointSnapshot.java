@@ -28,19 +28,36 @@ import com.riiablo.net.packet.d2gs.D2GSData;
  * same-world restore adapter.
  */
 public final class D2gsCheckpointSnapshot {
+  /**
+   * Native ECS lifecycle bridge used when a checkpoint crosses an entity-set
+   * boundary. Implementations must attach all components required by the
+   * serializer before returning from createEntity, and must preserve the
+   * requested entity id; a newly allocated id cannot be remapped safely inside
+   * an authoritative world.
+   */
+  public interface EntityLifecycle {
+    int createEntity(World world, int expectedEntityId, ByteBuffer payload);
+    boolean deleteEntity(World world, int entityId);
+  }
+
   public static final class RestoreResult {
     public final int appliedEntities;
     public final List<Integer> missingEntities;
     public final List<Integer> failedEntities;
     public final List<Integer> unexpectedEntities;
+    public final List<Integer> createdEntities;
+    public final List<Integer> deletedEntities;
     public final boolean rolledBack;
 
     private RestoreResult(int appliedEntities, List<Integer> missingEntities,
-        List<Integer> failedEntities, List<Integer> unexpectedEntities, boolean rolledBack) {
+        List<Integer> failedEntities, List<Integer> unexpectedEntities,
+        List<Integer> createdEntities, List<Integer> deletedEntities, boolean rolledBack) {
       this.appliedEntities = appliedEntities;
       this.missingEntities = Collections.unmodifiableList(new ArrayList<>(missingEntities));
       this.failedEntities = Collections.unmodifiableList(new ArrayList<>(failedEntities));
       this.unexpectedEntities = Collections.unmodifiableList(new ArrayList<>(unexpectedEntities));
+      this.createdEntities = Collections.unmodifiableList(new ArrayList<>(createdEntities));
+      this.deletedEntities = Collections.unmodifiableList(new ArrayList<>(deletedEntities));
       this.rolledBack = rolledBack;
     }
 
@@ -120,20 +137,31 @@ public final class D2gsCheckpointSnapshot {
 
   /**
    * Applies serialized component state to existing ECS entities only. Entity
-   * creation/deletion is deliberately rejected until a native factory restore
-   * contract exists, preventing an accidental partial world resurrection.
+   * creation/deletion remains rejected unless an explicit native lifecycle
+   * bridge is supplied.
    */
   public RestoreResult restoreExisting(World world, SerializationManager serializer) {
     if (world == null) throw new NullPointerException("world");
     if (serializer == null) throw new NullPointerException("serializer");
-    return restoreExisting(world, serializer, true);
+    return restoreExisting(world, serializer, null, true);
+  }
+
+  /** Restores component state and reconciles the entity set through a bridge. */
+  public RestoreResult restoreExisting(World world, SerializationManager serializer,
+      EntityLifecycle lifecycle) {
+    if (world == null) throw new NullPointerException("world");
+    if (serializer == null) throw new NullPointerException("serializer");
+    if (lifecycle == null) throw new NullPointerException("lifecycle");
+    return restoreExisting(world, serializer, lifecycle, true);
   }
 
   private RestoreResult restoreExisting(World world, SerializationManager serializer,
-      boolean captureRollback) {
+      EntityLifecycle lifecycle, boolean captureRollback) {
     List<Integer> missing = new ArrayList<>();
     List<Integer> failed = new ArrayList<>();
     List<Integer> unexpected = new ArrayList<>();
+    List<Integer> created = new ArrayList<>();
+    List<Integer> deleted = new ArrayList<>();
     IntBag active = world.getAspectSubscriptionManager()
         .get(Aspect.all(Networked.class)).getEntities();
     for (int i = 0; i < active.size(); i++) {
@@ -149,28 +177,136 @@ public final class D2gsCheckpointSnapshot {
     Collections.sort(missing);
     Collections.sort(failed);
     Collections.sort(unexpected);
-    if (!missing.isEmpty() || !unexpected.isEmpty()) {
-      return new RestoreResult(0, missing, failed, unexpected, false);
+    if (lifecycle == null && (!missing.isEmpty() || !unexpected.isEmpty())) {
+      return result(0, missing, failed, unexpected, created, deleted, false);
     }
     D2gsCheckpointSnapshot before = captureRollback
         ? capture(world, serializer, tick) : null;
+
+    if (lifecycle != null) {
+      for (Integer entityId : missing) {
+        try {
+          int createdId = lifecycle.createEntity(world, entityId,
+              ByteBuffer.wrap(payloads.get(entityId)).duplicate());
+          if (createdId != entityId || !world.getEntityManager().isActive(entityId)) {
+            if (createdId >= 0 && world.getEntityManager().isActive(createdId)) {
+              lifecycle.deleteEntity(world, createdId);
+            }
+            failed.add(entityId);
+            break;
+          }
+          created.add(entityId);
+        } catch (Throwable ignored) {
+          failed.add(entityId);
+          break;
+        }
+      }
+      if (!failed.isEmpty()) {
+        return failure(world, serializer, lifecycle, before, missing, failed, unexpected,
+            created, deleted);
+      }
+      missing.clear();
+    }
+
     for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
       int entityId = entry.getKey();
       try {
+        if (!world.getEntityManager().isActive(entityId)) {
+          missing.add(entityId);
+          throw new IllegalStateException("entity was not active after lifecycle restore");
+        }
         Packet packet = Packet.obtain(1, ByteBuffer.wrap(entry.getValue()).duplicate());
         serializer.deserialize(entityId, packet.data);
       } catch (Throwable ignored) {
         failed.add(entityId);
-        boolean rolledBack = false;
-        if (before != null) {
-          RestoreResult rollback = before.restoreExisting(world, serializer, false);
-          rolledBack = rollback.success();
-        }
-        Collections.sort(failed);
-        return new RestoreResult(0, missing, failed, unexpected, rolledBack);
+        return failure(world, serializer, lifecycle, before, missing, failed, unexpected,
+            created, deleted);
       }
     }
-    return new RestoreResult(payloads.size(), missing, failed, unexpected, false);
+    if (lifecycle != null) {
+      for (Integer entityId : unexpected) {
+        try {
+          if (!lifecycle.deleteEntity(world, entityId)) {
+            failed.add(entityId);
+            break;
+          }
+          deleted.add(entityId);
+        } catch (Throwable ignored) {
+          failed.add(entityId);
+          break;
+        }
+      }
+      if (!failed.isEmpty()) {
+        return failure(world, serializer, lifecycle, before, missing, failed, unexpected,
+            created, deleted);
+      }
+      unexpected.clear();
+    }
+    return result(payloads.size(), missing, failed, unexpected, created, deleted, false);
+  }
+
+  private RestoreResult failure(World world, SerializationManager serializer,
+      EntityLifecycle lifecycle, D2gsCheckpointSnapshot before, List<Integer> missing,
+      List<Integer> failed, List<Integer> unexpected, List<Integer> created,
+      List<Integer> deleted) {
+    boolean rolledBack = before != null
+        && rollback(world, serializer, lifecycle, before, created);
+    if (rolledBack) {
+      created.clear();
+      deleted.clear();
+    }
+    return result(0, missing, failed, unexpected, created, deleted, rolledBack);
+  }
+
+  private static boolean rollback(World world, SerializationManager serializer,
+      EntityLifecycle lifecycle, D2gsCheckpointSnapshot before, List<Integer> created) {
+    try {
+      if (lifecycle == null) {
+        for (Map.Entry<Integer, byte[]> entry : before.payloads.entrySet()) {
+          if (!world.getEntityManager().isActive(entry.getKey())) return false;
+          Packet packet = Packet.obtain(1, ByteBuffer.wrap(entry.getValue()).duplicate());
+          serializer.deserialize(entry.getKey(), packet.data);
+        }
+        return true;
+      }
+      for (Integer entityId : created) {
+        if (world.getEntityManager().isActive(entityId)
+            && !lifecycle.deleteEntity(world, entityId)) return false;
+      }
+      IntBag active = world.getAspectSubscriptionManager()
+          .get(Aspect.all(Networked.class)).getEntities();
+      for (int i = 0; i < active.size(); i++) {
+        int entityId = active.get(i);
+        if (world.getEntityManager().isActive(entityId) && !before.payloads.containsKey(entityId)
+            && !lifecycle.deleteEntity(world, entityId)) return false;
+      }
+      for (Integer entityId : before.payloads.keySet()) {
+        if (!world.getEntityManager().isActive(entityId)) {
+          int createdId = lifecycle.createEntity(world, entityId,
+              ByteBuffer.wrap(before.payloads.get(entityId)).duplicate());
+          if (createdId != entityId || !world.getEntityManager().isActive(entityId)) return false;
+        }
+      }
+      for (Map.Entry<Integer, byte[]> entry : before.payloads.entrySet()) {
+        if (!world.getEntityManager().isActive(entry.getKey())) return false;
+        Packet packet = Packet.obtain(1, ByteBuffer.wrap(entry.getValue()).duplicate());
+        serializer.deserialize(entry.getKey(), packet.data);
+      }
+      return true;
+    } catch (Throwable ignored) {
+      return false;
+    }
+  }
+
+  private static RestoreResult result(int applied, List<Integer> missing,
+      List<Integer> failed, List<Integer> unexpected, List<Integer> created,
+      List<Integer> deleted, boolean rolledBack) {
+    Collections.sort(missing);
+    Collections.sort(failed);
+    Collections.sort(unexpected);
+    Collections.sort(created);
+    Collections.sort(deleted);
+    return new RestoreResult(applied, missing, failed, unexpected, created, deleted, rolledBack);
   }
 
   private static byte[] serialize(SerializationManager serializer, int entityId,

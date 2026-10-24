@@ -6072,6 +6072,7 @@ public class D2GS extends ApplicationAdapter {
   AuthoritativeSimulation simulation;
   private SimulationReplayRecorder replayRecorder = SimulationReplayRecorder.NONE;
   private D2gsCheckpointSnapshot replayCheckpoint;
+  private D2gsCheckpointSnapshot.EntityLifecycle replayEntityLifecycle;
   Map map;
   CombatPositionHistory combatPositionHistory;
   final com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
@@ -6129,6 +6130,15 @@ public class D2GS extends ApplicationAdapter {
 
   public SimulationReplayRecorder replayRecorder() { return replayRecorder; }
 
+  /** Installs the native entity bridge used by checkpoint set reconciliation. */
+  public void setReplayEntityLifecycle(D2gsCheckpointSnapshot.EntityLifecycle lifecycle) {
+    replayEntityLifecycle = lifecycle;
+  }
+
+  public D2gsCheckpointSnapshot.EntityLifecycle replayEntityLifecycle() {
+    return replayEntityLifecycle;
+  }
+
   /** Captures the authoritative ECS/network baseline on the simulation thread. */
   public D2gsCheckpointSnapshot captureReplayCheckpoint() {
     if (world == null || simulation == null) return null;
@@ -6144,12 +6154,18 @@ public class D2GS extends ApplicationAdapter {
   public D2gsCheckpointSnapshot replayCheckpoint() { return replayCheckpoint; }
 
   /**
-   * Applies an archived checkpoint to existing ECS entities and only then
-   * advances the authoritative clock. Missing entity creation/deletion is
-   * rejected by the adapter until a native factory restore contract exists.
+   * Applies an archived checkpoint to the existing ECS entity set and only
+   * then advances the authoritative clock. Entity-set changes remain rejected
+   * unless the caller supplies the native lifecycle bridge overload below.
    */
   public D2gsCheckpointSnapshot.RestoreResult restoreReplayCheckpoint(
       D2gsCheckpointSnapshot checkpoint) {
+    return restoreReplayCheckpoint(checkpoint, replayEntityLifecycle);
+  }
+
+  /** Restores a checkpoint with an explicit native entity create/delete bridge. */
+  public D2gsCheckpointSnapshot.RestoreResult restoreReplayCheckpoint(
+      D2gsCheckpointSnapshot checkpoint, D2gsCheckpointSnapshot.EntityLifecycle lifecycle) {
     if (checkpoint == null) throw new NullPointerException("checkpoint");
     if (world == null || simulation == null) {
       throw new IllegalStateException("D2GS simulation is not initialized");
@@ -6160,7 +6176,9 @@ public class D2GS extends ApplicationAdapter {
     }
     SerializationManager serializer = world.getSystem(SerializationManager.class);
     if (serializer == null) throw new IllegalStateException("serialization manager unavailable");
-    D2gsCheckpointSnapshot.RestoreResult result = checkpoint.restoreExisting(world, serializer);
+    D2gsCheckpointSnapshot.RestoreResult result = lifecycle == null
+        ? checkpoint.restoreExisting(world, serializer)
+        : checkpoint.restoreExisting(world, serializer, lifecycle);
     if (result.success()) {
       simulation.restoreFromCheckpoint(checkpoint.tick());
       replayCheckpoint = checkpoint;

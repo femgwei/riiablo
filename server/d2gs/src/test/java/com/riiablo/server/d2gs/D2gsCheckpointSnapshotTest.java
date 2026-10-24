@@ -81,6 +81,55 @@ public class D2gsCheckpointSnapshotTest {
     assertEquals(ids[1] + 200, (int) serializer.states.get(ids[1]));
   }
 
+  @Test public void lifecycleBridgeReconcilesMissingAndUnexpectedEntities() {
+    World world = worldWithEntities(2);
+    FakeSerializer serializer = new FakeSerializer();
+    int[] ids = networkedIds(world);
+    for (int id : ids) serializer.states.put(id, id + 10);
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(world, serializer, 12L);
+
+    int extra = world.create();
+    world.getEntity(extra).edit().add(new Networked());
+    world.process();
+    world.delete(ids[1]);
+    world.process();
+    D2gsCheckpointSnapshot.RestoreResult result = checkpoint.restoreExisting(
+        world, serializer, new FakeLifecycle());
+    world.process();
+    D2gsCheckpointSnapshot after = D2gsCheckpointSnapshot.capture(world, serializer, 12L);
+
+    assertTrue(result.success());
+    assertEquals(java.util.Arrays.asList(ids[1]), result.createdEntities);
+    assertEquals(java.util.Arrays.asList(extra), result.deletedEntities);
+    assertEquals(java.util.Arrays.toString(ids), java.util.Arrays.toString(networkedIds(world)));
+    assertEquals(checkpoint.summary().canonical(), after.summary().canonical());
+  }
+
+  @Test public void lifecycleFailureRollsBackEntitySetAndComponents() {
+    World world = worldWithEntities(2);
+    FakeSerializer serializer = new FakeSerializer();
+    int[] ids = networkedIds(world);
+    for (int id : ids) serializer.states.put(id, id + 10);
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(world, serializer, 15L);
+
+    int extra = world.create();
+    world.getEntity(extra).edit().add(new Networked());
+    world.process();
+    world.delete(ids[1]);
+    world.process();
+    serializer.failOnce = ids[1];
+    D2gsCheckpointSnapshot.RestoreResult result = checkpoint.restoreExisting(
+        world, serializer, new FakeLifecycle());
+    world.process();
+
+    assertFalse(result.success());
+    assertTrue(result.rolledBack);
+    assertTrue(result.createdEntities.isEmpty());
+    assertTrue(result.deletedEntities.isEmpty());
+    assertEquals(java.util.Arrays.toString(new int[] {0, extra}),
+        java.util.Arrays.toString(networkedIds(world)));
+  }
+
   private static World worldWithEntities(int count) {
     World world = new World(new WorldConfigurationBuilder().build());
     for (int i = 0; i < count; i++) {
@@ -121,6 +170,21 @@ public class D2gsCheckpointSnapshotTest {
         failOnce = -1;
         throw new IllegalStateException("injected component failure");
       }
+    }
+  }
+
+  private static final class FakeLifecycle implements D2gsCheckpointSnapshot.EntityLifecycle {
+    @Override public int createEntity(World world, int expectedEntityId,
+        java.nio.ByteBuffer payload) {
+      int id = world.create();
+      world.getEntity(id).edit().add(new Networked());
+      return id;
+    }
+
+    @Override public boolean deleteEntity(World world, int entityId) {
+      if (!world.getEntityManager().isActive(entityId)) return false;
+      world.delete(entityId);
+      return true;
     }
   }
 }
