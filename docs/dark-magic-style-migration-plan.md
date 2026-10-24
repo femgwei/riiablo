@@ -1274,6 +1274,38 @@ git diff --check
 下一迁移：收口本地/联网物品管理器的角色物品端口，并保持 `ClientItemIntentSystem` 的固定 Tick 准入与
 联网 `ItemMoveResult` 快照顺序不变。
 
+### M8-C 第 10 批：物品事务上下文端口（2026-10-25）
+
+提交：`9944e000a`。
+
+本批新增 engine-owned 的 `ClientItemContextPort` 与 presentation 侧 `ClientItemContextAdapter`。
+`ClientItemManager`、`NetworkedClientItemManager` 及其 `ClientItemIntentSystem` 现在通过窄端口读取角色、
+物品、游标、表数据和客户端状态；GameScreen 为真实客户端注入适配器，旧无参测试构造保留全局兼容源。
+本地拾取/金币、联网物品请求、固定 Tick 意图重新校验和 `ItemMoveResult` 快照顺序均保持不变。
+
+验证：
+
+```powershell
+./gradlew :core:compileJava :core:compileTestJava :core:test `
+  --tests com.riiablo.engine.client.ClientItemManagerGoldPickupTest `
+  --tests com.riiablo.engine.client.ClientItemIntentSystemTest `
+  --tests com.riiablo.engine.client.NetworkedClientItemManagerTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests com.riiablo.architecture.ClientUiBoundaryTest --no-daemon --max-workers=1 --console=plain
+python tools/architecture/migration_boundaries.py --mode check
+& tools/architecture/check-client-presentation-boundary.ps1 -FailOnDrift
+git diff --check
+```
+
+结果：物品事务/联网意图定向回归、core 编译、模块边界和 M1-A 表现边界通过；M8-C 清单中的直接
+`ClientGameplayContext` 债务已清零。M8-C/M8 整体仍不宣称完成，事件/快照出口、真实网络重连和完整
+表现替换验收继续按 M8-A/M8-D 及后续门禁推进。
+
+真实资源：未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；本批不修改暗黑规则。
+
+下一迁移：转入 M8-C 收尾审计，检查剩余表现兼容调用和事件/快照出口；若仍有可独立收口的边界，再按
+完整验收批次处理，不新增微批次。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
