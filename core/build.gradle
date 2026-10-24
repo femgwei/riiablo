@@ -1098,3 +1098,32 @@ task m6FinalRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M7 first batch: native world-generation policy and Act I map boundaries.
+task m7WorldRegression(type: Test) {
+  group = 'verification'
+  description = 'M7 native world-generation policy, Act I topology, collision and population gate.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    [
+      'com.riiablo.map.MapGenerationPolicyTest',
+      'com.riiablo.map.MapBuilderIsolationTest',
+      'com.riiablo.map.MapHeadlessLayoutResourceTest',
+      'com.riiablo.map.MapManagerWaypointTest',
+      'com.riiablo.map.Act1MapBuilderD2MooLayersTest',
+      'com.riiablo.map.d2moo.Act1D2MOOLayoutBridgeTest',
+      'com.riiablo.map.NativeRoomMonsterPopulationResourceTest',
+      'com.riiablo.map.NativeWaypointResourceTest'
+    ].each { includeTestsMatching it }
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

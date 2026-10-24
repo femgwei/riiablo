@@ -32,7 +32,7 @@
 | M4 | 数据层 | TXT、MPQ、D2 数据表、固定点数值、RNG/Seed、版本和可选内容包 | 使用不可变记录和显式数据来源，规则层不直接操作解析器；为每个系统/实体建立可复现 RNG 流 | typed record、数据版本、命名 RNG stream、数据审计工具、可选内容包边界 | 缺失数据、版本差异、RNG 消耗都有明确测试；合法数据不走隐式常量回退；同一输入可重放得到相同随机序列 | M1 | 进行中 |
 | M5 | 战斗垂直切片 | 普通攻击或 Fire Bolt 的完整链路 | 验证新边界能够承载真实 D2 行为，并能被快照/回放复核 | 命令→准入→结算→导弹/命中→伤害→快照→表现→回放 | 纯数据、ECS、D2GS、真实 1.10f 资源测试全部通过；旧入口不再结算；关键 Tick 有检查点和校验值 | M2、M3、M4 | 进行中 |
 | M6 | 物品与成长 | 物品生成、装备、背包、库存事务、经验、升级、佣兵成长 | 将交易和属性聚合变成可回滚、可验证的领域事务 | Item domain、Inventory transaction、Progression service、存档字段映射 | 拾取、装备、交易、升级和重连状态无重复提交或双重结算 | M2、M4、M5 | 已完成 |
-| M7 | 世界规则 | 地图生成、碰撞、寻路、怪物 AI、任务、NPC、Warp、对象 | 将 D2 规则从通用地图/ECS 机制中分离 | World policy、AI policy、Quest/NPC command handlers | Act 1 关键链路通过 headless、双客户端和真实 MPQ 验收 | M2、M3、M4、M5、M6 | 未开始 |
+| M7 | 世界规则 | 地图生成、碰撞、寻路、怪物 AI、任务、NPC、Warp、对象 | 将 D2 规则从通用地图/ECS 机制中分离 | World policy、AI policy、Quest/NPC command handlers | Act 1 关键链路通过 headless、双客户端和真实 MPQ 验收 | M2、M3、M4、M5、M6 | 进行中 |
 | M8 | 网络、存档与表现收口 | FlatBuffers/Netty、快照、重连、D2S、声音/视觉表现和 LibGDX UI/渲染 | 让客户端成为纯表现层，统一协议、持久化和表现适配边界 | semantic protocol、snapshot/replay/checkpoint、versioned save、presentation adapter、SoundEvent | 重连、回放、存档往返和客户端显示通过；服务端不直接访问音频/渲染；旧直连入口已删除 | M3、M5、M6、M7 | 进行中 |
 
 ## dark-magic 对应子项与补充范围
@@ -702,6 +702,23 @@ equipment revision 接到服务端快照、客户端接收门禁和 ECS 表现�
 出口判断：M6 的库存、装备聚合、经验升级、佣兵成长和重连快照在本仓库范围内已完成，
 可满足“无重复提交或双重结算”的验收要求。完整 D2S 存档往返、可恢复 replay、网络三层
 统一出口及最终真实双客户端验收仍属于 M8，不作为 M6 未完成项回填。
+
+### M7 第 1 批：世界生成策略边界与 Act I 原生地图门禁（2026-10-24）
+
+本批开始 M7 的世界规则收敛。当前 Act I 的 D2MOO DRLG、道路拓扑、碰撞层、Warp 和
+人口装配已经存在，但 `Map` 的生产入口仍在多个阶段直接读取兼容 cvar，容易让 legacy
+builder 与原生 post-generation 处理产生分叉。新增 `MapGenerationPolicy` 作为单一 session
+策略：默认使用 native D2MOO，只有显式关闭旧 cvar 时才进入 legacy compatibility；后续
+世界规则不再自行判断 builder 或读取 cvar。
+
+新增 `:core:m7WorldRegression`，覆盖策略默认值、地图生成边界、Act I D2MOO layout/道路/楼层
+导出、碰撞层、Waypoint、RoomEx 和原生怪物人口装配，并继续依赖模块边界与 M1-B map/entity
+门禁。该批不修改 D2 数值公式、AI 行为公式或协议，不把现有 native bridge 误报为完整 M7。
+
+验证：`./gradlew.bat :core:m7WorldRegression --no-daemon` 已通过，共 74 项；同时通过
+`verifyModuleBoundaries`。M7 后续批继续处理 native path/collision 的全量策略出口、
+怪物 AI policy、Quest/NPC handlers 和 Act I 双客户端/真实 MPQ 验收；M7-B 的 map/map2/map5
+代际删除条件仍未达到。
 
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 

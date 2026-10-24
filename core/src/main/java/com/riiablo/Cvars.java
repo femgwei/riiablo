@@ -314,7 +314,7 @@ public class Cvars {
     interface Map {
       Cvar<Boolean> UseD2MODImplementation = Cvar.builder(Boolean.class)
           .alias("Client.Map.UseD2MODImplementation")
-          .description("Whether to use D2MOD map generation implementation instead of the original one")
+          .description("Compatibility override: disable the native D2MOO world-generation policy")
           .defaultValue(Boolean.TRUE)
           .validator(Validator.ACCEPT_NON_NULL)
           .build();

@@ -329,6 +329,7 @@ public class Map implements Disposable {
 
   private boolean remoteClient;
   private boolean clientPresentation;
+  private MapGenerationPolicy generationPolicy = MapGenerationPolicy.nativeDefault();
   private MapPopulationPlan populationPlan = new MapPopulationPlan();
   private java.util.function.IntUnaryOperator warpIndex = entityId -> Integer.MIN_VALUE;
 
@@ -366,6 +367,8 @@ public class Map implements Disposable {
 
   public boolean isRemoteClient() { return remoteClient; }
   public boolean hasClientPresentation() { return clientPresentation; }
+  /** Policy selected for the current map generation session. */
+  public MapGenerationPolicy generationPolicy() { return generationPolicy; }
   public MapPopulationPlan populationPlan() { return populationPlan; }
 
   /** Runtime metadata lookup owned and installed by the assembly adapter. */
@@ -461,14 +464,7 @@ public class Map implements Disposable {
       // outdoor monster spawns (and never applies the final native collision
       // footprint). Network clients then render monsters that have no
       // authoritative server entity and therefore never move.
-      boolean useD2MOD = true;
-      if (cvars() != null) {
-        com.riiablo.cvar.Cvar<Boolean> cvar =
-            cvars().get("Client.Map.UseD2MODImplementation");
-        if (cvar != null) useD2MOD = Boolean.TRUE.equals(cvar.get());
-      }
-      
-      if (useD2MOD) {
+      if (generationPolicy.usesNativeD2Moo()) {
         try {
           // 在所有 zone 生成完成后，统一调用 addSecondaryBorder
           // 这会更新 TileGrid，然后如果 RenderFromTileGrid 为 true，applyTileGridToZone 会应用这些更改
@@ -503,13 +499,7 @@ public class Map implements Disposable {
     // entities.  This is deliberately isolated from the Act I post-process
     // so legacy map builders and combat/entity registration remain untouched.
     if (act == 1) {
-      boolean useD2MOD = true;
-      if (cvars() != null) {
-        com.riiablo.cvar.Cvar<Boolean> cvar =
-            cvars().get("Client.Map.UseD2MODImplementation");
-        if (cvar != null) useD2MOD = Boolean.TRUE.equals(cvar.get());
-      }
-      if (useD2MOD) {
+      if (generationPolicy.usesNativeD2Moo()) {
         try {
           act2Builder().configureAct2OutdoorWarps(this);
           com.riiablo.map.d2moo.NativeTownExit.materialize(this);
@@ -524,13 +514,7 @@ public class Map implements Disposable {
     // native DRLG_LINKS path.  Keep this post-generation so both endpoint
     // special cells already exist before they are paired.
     if (act == 2) {
-      boolean useD2MOD = true;
-      if (cvars() != null) {
-        com.riiablo.cvar.Cvar<Boolean> cvar =
-            cvars().get("Client.Map.UseD2MODImplementation");
-        if (cvar != null) useD2MOD = Boolean.TRUE.equals(cvar.get());
-      }
-      if (useD2MOD) {
+      if (generationPolicy.usesNativeD2Moo()) {
         try {
           act3Builder().configureAct3OutdoorWarps(this);
           com.riiablo.map.d2moo.NativeTownExit.materialize(this);
@@ -544,12 +528,7 @@ public class Map implements Disposable {
     // Act IV native progression links are injected after level generation,
     // matching D2Common's runtime DRLG_SetWarpId behaviour.
     if (act == 3) {
-      boolean useD2MOD = true;
-      if (cvars() != null) {
-        com.riiablo.cvar.Cvar<Boolean> cvar = cvars().get("Client.Map.UseD2MODImplementation");
-        if (cvar != null) useD2MOD = Boolean.TRUE.equals(cvar.get());
-      }
-      if (useD2MOD) {
+      if (generationPolicy.usesNativeD2Moo()) {
         try {
           act4Builder().configureAct4Warps(this);
           act4Builder().linkNativeWarpSpecials(this);
@@ -563,13 +542,7 @@ public class Map implements Disposable {
     // pair their exported/synthetic markers before MapManager creates Warp
     // entities, matching the Act II/III post-generation path.
     if (act == 4) {
-      boolean useD2MOD = true;
-      if (cvars() != null) {
-        com.riiablo.cvar.Cvar<Boolean> cvar =
-            cvars().get("Client.Map.UseD2MODImplementation");
-        if (cvar != null) useD2MOD = Boolean.TRUE.equals(cvar.get());
-      }
-      if (useD2MOD) {
+      if (generationPolicy.usesNativeD2Moo()) {
         try {
           act5Builder().configureAct5OutdoorWarps(this);
           act5Builder().configureAct5QuestWarps(this);
@@ -623,19 +596,19 @@ public class Map implements Disposable {
     // systems that query getAct(); leaving this at -1 skips native collision,
     // warp linking, and pending outdoor monster creation.
     this.act = act;
+    Boolean useNative = null;
+    if (cvars() != null) {
+      com.riiablo.cvar.Cvar<Boolean> cvar =
+          cvars().get("Client.Map.UseD2MODImplementation");
+      if (cvar != null) useNative = cvar.get();
+    }
+    generationPolicy = MapGenerationPolicy.fromNativeToggle(useNative);
     MathUtils.random.setSeed(seed);
     if (cofs() != null) cofs().active = updateCofs(act);
     switch (act) {
       case 0:
         // Act1：默认使用 D2MOD 实现（与 Act2–Act5 一致），可通过 Client.Map.UseD2MODImplementation 关闭
-        boolean useD2MOD = true;
-        if (cvars() != null) {
-          com.riiablo.cvar.Cvar<Boolean> cvar = cvars().get("Client.Map.UseD2MODImplementation");
-          if (cvar != null) {
-            useD2MOD = cvar.get();
-          }
-        }
-        if (useD2MOD) {
+        if (generationPolicy.usesNativeD2Moo()) {
           act1Builder().generate(this, seed, diff);
         } else {
           legacyBuilders[0].generate(this, seed, diff);
@@ -658,14 +631,7 @@ public class Map implements Disposable {
         break;
       case 1: 
         // Act2: 优先使用 D2MOD 实现
-        boolean useD2MOD_Act2 = true; // 默认使用 D2MOD 实现
-        if (cvars() != null) {
-          com.riiablo.cvar.Cvar<Boolean> cvar = cvars().get("Client.Map.UseD2MODImplementation");
-          if (cvar != null) {
-            useD2MOD_Act2 = cvar.get();
-          }
-        }
-        if (useD2MOD_Act2) {
+        if (generationPolicy.usesNativeD2Moo()) {
           act2Builder().generate(this, seed, diff);
         } else {
           legacyBuilders[1].generate(this, seed, diff);
@@ -673,14 +639,7 @@ public class Map implements Disposable {
         break;
       case 2: 
         // Act3: 优先使用 D2MOD 实现
-        boolean useD2MOD_Act3 = true;
-        if (cvars() != null) {
-          com.riiablo.cvar.Cvar<Boolean> cvar = cvars().get("Client.Map.UseD2MODImplementation");
-          if (cvar != null) {
-            useD2MOD_Act3 = cvar.get();
-          }
-        }
-        if (useD2MOD_Act3) {
+        if (generationPolicy.usesNativeD2Moo()) {
           act3Builder().generate(this, seed, diff);
         } else {
           legacyBuilders[2].generate(this, seed, diff);
@@ -688,14 +647,7 @@ public class Map implements Disposable {
         break;
       case 3: 
         // Act4: 优先使用 D2MOD 实现
-        boolean useD2MOD_Act4 = true;
-        if (cvars() != null) {
-          com.riiablo.cvar.Cvar<Boolean> cvar = cvars().get("Client.Map.UseD2MODImplementation");
-          if (cvar != null) {
-            useD2MOD_Act4 = cvar.get();
-          }
-        }
-        if (useD2MOD_Act4) {
+        if (generationPolicy.usesNativeD2Moo()) {
           act4Builder().generate(this, seed, diff);
         } else {
           legacyBuilders[3].generate(this, seed, diff);
@@ -703,14 +655,7 @@ public class Map implements Disposable {
         break;
       case 4: 
         // Act5: 优先使用 D2MOD 实现
-        boolean useD2MOD_Act5 = true;
-        if (cvars() != null) {
-          com.riiablo.cvar.Cvar<Boolean> cvar = cvars().get("Client.Map.UseD2MODImplementation");
-          if (cvar != null) {
-            useD2MOD_Act5 = cvar.get();
-          }
-        }
-        if (useD2MOD_Act5) {
+        if (generationPolicy.usesNativeD2Moo()) {
           act5Builder().generate(this, seed, diff);
         } else {
           legacyBuilders[4].generate(this, seed, diff);
