@@ -1,9 +1,7 @@
 package com.riiablo.engine.server.ai;
 
-import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
@@ -81,32 +79,7 @@ public abstract class AI implements Interactable.Interactor {
   public void onNativeHit(int attackerId) {}
 
   public static AI findAI(int entityId, String ai) {
-    if ("7TIllusion".equals(ai)) return new SevenTIllusion(entityId);
-    // MonStats names containing '-' cannot be Java class names.
-    if ("Trap-Melee".equals(ai)) return new TrapMelee(entityId);
-    if ("Trap-Missile".equals(ai)) return new TrapMissile(entityId);
-    if ("Trap-Nova".equals(ai)) return new TrapNova(entityId);
-    if ("Trap-Poison".equals(ai)) return new TrapPoison(entityId);
-    if ("Trap-RightArrow".equals(ai)) return new TrapRightArrow(entityId);
-    if ("Trap-LeftArrow".equals(ai)) return new TrapLeftArrow(entityId);
-    String fullClassName = "com.riiablo.engine.server.ai." + ai;
-    try {
-      java.lang.Class<?> clazz = java.lang.Class.forName(fullClassName);
-      if (clazz == Idle.class) return AI.IDLE;
-      Constructor constructor = clazz.getConstructor(int.class);
-      return (AI) constructor.newInstance(entityId);
-    } catch (ClassNotFoundException e) {
-      // A missing native AI must not silently turn a spawned monster into a
-      // shared idle singleton. Use the generic server-authoritative AI so it
-      // can still acquire targets, move and perform the basic attack loop.
-      log.warn("[AI_FALLBACK] entityId={} ai={} className={} using GenericMonster",
-          entityId, ai, fullClassName);
-      return new GenericMonster(entityId, ai);
-    } catch (Throwable t) {
-      log.error("[AI_FALLBACK] failed to load entityId={} ai={} className={} error={} using GenericMonster",
-          entityId, ai, fullClassName, ExceptionUtils.getRootCauseMessage(t), t);
-      return new GenericMonster(entityId, ai);
-    }
+    return MonsterAiPolicy.create(entityId, ai);
   }
 
   protected ComponentMapper<Monster> mMonster;

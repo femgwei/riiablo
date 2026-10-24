@@ -5,7 +5,8 @@
  *
  * <h2>核心类</h2>
  * <ul>
- *   <li>{@link com.riiablo.engine.server.ai.AI} - AI 基类，findAI 按 MonStats.AI 反射加载具体实现</li>
+ *   <li>{@link com.riiablo.engine.server.ai.AI} - AI 基类与通用机制</li>
+ *   <li>{@link com.riiablo.engine.server.ai.MonsterAiPolicy} - MonStats.AI token 到实现/fallback 的规则策略</li>
  *   <li>{@link com.riiablo.engine.server.ai.Idle} - 空闲/默认 AI</li>
  *   <li>{@link com.riiablo.engine.server.ai.Npc} - NPC AI</li>
  *   <li>{@link com.riiablo.engine.server.ai.AiContext} - AI 决策上下文（MonsterData 使用）</li>
@@ -13,7 +14,7 @@
  *
  * <h2>怪物 AI 实现</h2>
  * <p>各怪物类型对应 MonStats.txt 的 AI 列，如 QuillRat、Fallen、Zombie、Skeleton 等，
- * 通过 {@link com.riiablo.engine.server.ai.AI#findAI(int, String)} 动态加载。
+ * 通过 {@link com.riiablo.engine.server.ai.MonsterAiPolicy} 解析后动态加载。
  *
  * <h2>参考来源</h2>
  * <p>本模块参考了 D2MOD 项目的以下文件：

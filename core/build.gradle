@@ -1099,7 +1099,8 @@ task m6FinalRegression(type: Test) {
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
 
-// M7 first batch: native world-generation policy and Act I map boundaries.
+// M7 world-rule regression: native generation policy, Act I map boundaries,
+// and the MonStats AI resolution policy.
 task m7WorldRegression(type: Test) {
   group = 'verification'
   description = 'M7 native world-generation policy, Act I topology, collision and population gate.'
@@ -1116,7 +1117,10 @@ task m7WorldRegression(type: Test) {
       'com.riiablo.map.Act1MapBuilderD2MooLayersTest',
       'com.riiablo.map.d2moo.Act1D2MOOLayoutBridgeTest',
       'com.riiablo.map.NativeRoomMonsterPopulationResourceTest',
-      'com.riiablo.map.NativeWaypointResourceTest'
+      'com.riiablo.map.NativeWaypointResourceTest',
+      'com.riiablo.engine.server.ai.MonsterAiPolicyTest',
+      'com.riiablo.engine.server.ai.NativeAiDecisionTest',
+      'com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest'
     ].each { includeTestsMatching it }
   }
   def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''

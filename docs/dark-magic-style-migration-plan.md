@@ -735,6 +735,20 @@ native export 一旦存在就禁止兼容路径覆盖；没有 native export 时
 和 `git diff --check` 通过。该批未修改 D2MOO 道路生成公式、碰撞标志或协议；仍需后续批次完成
 怪物 AI policy、Quest/NPC handlers 以及 Act I 双客户端/真实 MPQ 验收。
 
+### M7 第 3 批：MonStats AI 策略入口收口（2026-10-24）
+
+本批将怪物 AI token 的世界规则解析从通用 `AI` 机制中分离。新增
+`MonsterAiPolicy`，集中维护 `MonStats.AI` 到 Java 实现名的 D2 特殊别名（包括
+`7TIllusion` 和 `Trap-*`），并统一处理 Idle 单例、专用 AI 构造和缺失实现的
+`GenericMonster` 权威 fallback。原有 AI 行为、随机流、动作时序和 fallback 语义不变；
+`AI.findAI` 仅保留兼容入口，实际解析由 policy 负责，避免新规则继续散落在反射机制中。
+
+`m7WorldRegression` 扩展纳入 `MonsterAiPolicyTest`、`NativeAiDecisionTest` 和
+`Act1NativeAiIntegrationTest`，覆盖 token 别名、专用 AI、Idle/fallback、D2 参数及
+Act I 原生 AI 行为。验证共 118 项通过，失败/错误/跳过均为 0；同时通过
+`verifyModuleBoundaries` 与 `git diff --check`。本批未修改 D2 AI 公式或技能数值，
+Quest/NPC handlers、真实双客户端和 MPQ 行为验收仍待后续批次。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
