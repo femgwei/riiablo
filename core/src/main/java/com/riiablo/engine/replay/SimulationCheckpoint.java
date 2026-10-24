@@ -36,6 +36,18 @@ public final class SimulationCheckpoint {
     String canonical() {
       return encode(stream) + ":" + contextId + ":" + state + ":" + drawCount;
     }
+
+    @Override public boolean equals(Object other) {
+      if (this == other) return true;
+      if (!(other instanceof RngState)) return false;
+      RngState that = (RngState) other;
+      return contextId == that.contextId && state == that.state
+          && drawCount == that.drawCount && stream.equals(that.stream);
+    }
+
+    @Override public int hashCode() {
+      return Objects.hash(stream, contextId, state, drawCount);
+    }
   }
 
   public static final class Mismatch {

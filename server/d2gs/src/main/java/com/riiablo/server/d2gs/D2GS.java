@@ -64,6 +64,7 @@ import com.riiablo.engine.SimulationSession;
 import com.riiablo.engine.SimulationCommandEnvelope;
 import com.riiablo.engine.AuthoritativeSessionRegistry;
 import com.riiablo.engine.D2gsCommandAdapter;
+import com.riiablo.engine.replay.CheckpointRngRegistry;
 import com.riiablo.engine.replay.SimulationReplayRecorder;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.RoomActivationSystem;
@@ -6075,6 +6076,7 @@ public class D2GS extends ApplicationAdapter {
   private SimulationReplayRecorder replayRecorder = SimulationReplayRecorder.NONE;
   private D2gsCheckpointSnapshot replayCheckpoint;
   private D2gsCheckpointSnapshot.EntityLifecycle replayEntityLifecycle;
+  private CheckpointRngRegistry replayRngRegistry;
   /** Single fixed-tick ingress for authenticated movement/combat packets. */
   private final AuthoritativeSessionRegistry authoritativeSessions =
       new AuthoritativeSessionRegistry();
@@ -6176,6 +6178,15 @@ public class D2GS extends ApplicationAdapter {
     return replayEntityLifecycle;
   }
 
+  /** Installs the optional compatibility-RNG registry used by checkpoint capture/restore. */
+  public void setReplayRngRegistry(CheckpointRngRegistry registry) {
+    replayRngRegistry = registry;
+  }
+
+  public CheckpointRngRegistry replayRngRegistry() {
+    return replayRngRegistry;
+  }
+
   /** Captures the authoritative ECS/network baseline on the simulation thread. */
   public D2gsCheckpointSnapshot captureReplayCheckpoint() {
     return captureReplayCheckpoint(null);
@@ -6191,6 +6202,9 @@ public class D2GS extends ApplicationAdapter {
     }
     SerializationManager serializer = world.getSystem(SerializationManager.class);
     if (serializer == null) return null;
+    if (rngStates == null && replayRngRegistry != null) {
+      rngStates = replayRngRegistry.snapshot();
+    }
     return D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber(), rngStates);
   }
 
@@ -6219,10 +6233,20 @@ public class D2GS extends ApplicationAdapter {
     }
     SerializationManager serializer = world.getSystem(SerializationManager.class);
     if (serializer == null) throw new IllegalStateException("serialization manager unavailable");
+    java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.RngState> rngStates =
+        checkpoint.summary().rngStates();
+    if (replayRngRegistry != null && !rngStates.isEmpty()) {
+      // Validate before touching ECS so a missing/duplicate RNG stream cannot
+      // leave the world half-restored.
+      replayRngRegistry.validate(rngStates);
+    }
     D2gsCheckpointSnapshot.RestoreResult result = lifecycle == null
         ? checkpoint.restoreExisting(world, serializer)
         : checkpoint.restoreExisting(world, serializer, lifecycle);
     if (result.success()) {
+      if (replayRngRegistry != null && !rngStates.isEmpty()) {
+        replayRngRegistry.restore(rngStates);
+      }
       // Replaying an archived checkpoint is the one explicit operation allowed
       // to move the fixed clock backwards; ordinary callers retain the
       // monotonic restore guard.

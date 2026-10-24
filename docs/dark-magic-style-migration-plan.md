@@ -1556,6 +1556,38 @@ M8-A 仍未完成完整跨进程恢复，M8-D 仍未完成所有旧 transport ow
 下一迁移：接入 checkpoint 的显式 RNG registry restore，并把 D2S/角色状态与 ECS continuation
 绑定到同一恢复事务；之后再做真实跨进程 session rebind/reconnect gate。
 
+### M8-A 第 10 批：NativeRng checkpoint registry restore（2026-10-25）
+
+本批新增 `CheckpointRngRegistry`，把 checkpoint 中的 `NativeRng` 列表从诊断摘要提升为可
+恢复的权威 registry：按 `(stream, contextId)` 稳定排序和去重，恢复前先完整校验，缺失 stream
+可直接由捕获的 state/drawCount 在新进程重建，检查点之外的注册 stream 会被清除。恢复前的
+异常不会改变现有 registry；`SimulationCheckpoint.RngState` 同时补齐值对象语义，便于跨进程
+恢复验收比较。
+
+D2GS 增加可选 `replayRngRegistry`。安装后，checkpoint capture 自动带出 registry 状态，
+restore 会在 ECS 变更前校验 RNG payload，并在 ECS 恢复成功后应用 registry；没有安装 registry
+或 checkpoint 没有 RNG 状态时保持旧行为。该批明确只覆盖一字 `NativeRng` 兼容流，未把
+`NativeUnitRandom` 的 D2Common 双字 `pSeed`、D2S/角色状态、跨进程 session rebind 伪装成完成。
+
+验证：
+
+```powershell
+./gradlew.bat :core:test `
+  --tests com.riiablo.engine.replay.CheckpointRngRegistryTest `
+  --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:compileJava :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：registry 捕获/原地恢复、缺失 stream 重建、重复身份拒绝和空 checkpoint 清理测试通过；
+D2GS checkpoint 编译与既有 ECS 恢复回归通过。M8-A 仍待双字 native-unit RNG、D2S/角色事务和
+真实跨进程重连 gate。
+
+下一迁移：为 `NativeUnitRandom` 建立带 low/high seed 的 native-unit registry，并将其与 D2S
+角色状态纳入同一 checkpoint transaction；完成后再验收 session authority rebind。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
