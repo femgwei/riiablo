@@ -1096,7 +1096,7 @@ git diff --check
 
 ### M8-C 第 4 批：尸体生命周期与测试 host 窄边界（2026-10-24）
 
-提交：待本批提交。
+提交：`c341f9d29`。
 
 `CorpseManager` 不再读取表现侧 `AnimationWrapper`；尸体开始淡出和完成删除时发布不可变的
 `ClientCorpseLifecycleEvent`，后续表现适配器可在固定 Tick 事件阶段订阅。网络尸体和玩家尸体
