@@ -1157,7 +1157,7 @@ git diff --check
 
 ### M8-C 第 6 批：鼠标输入与 UI 命中适配器（2026-10-24）
 
-提交：待本批提交。
+提交：`ff4e3c87e`。
 
 本批新增 `ClientPointerUiPort` 与 presentation-owned `ClientPointerUiAdapter`。`CursorMovementSystem`
 不再直接依赖 Scene2D `Stage`/`Actor`、`UIUtils`、`DialogManager` 或 `MenuManager`，改由适配器提供
