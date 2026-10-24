@@ -66,6 +66,20 @@ public final class SimulationCommandQueue {
   public int pendingCount() { return pending.size(); }
   public long lastDrainedTick() { return lastDrainedTick; }
   public SimulationCommandAdmission.Rejection lastRejection() { return lastRejection; }
+
+  /** Removes pending commands for an actor whose authenticated session closed. */
+  public int cancelActor(int actorId) {
+    if (actorId < 0) throw new IllegalArgumentException("actorId must be non-negative");
+    int removed = 0;
+    for (int i = pending.size() - 1; i >= 0; i--) {
+      if (pending.get(i).actorId == actorId) {
+        pending.remove(i);
+        removed++;
+      }
+    }
+    return removed;
+  }
+
   public void clear() { pending.clear(); acceptedRequests.clear(); lastRejection =
       SimulationCommandAdmission.Rejection.NONE; }
 

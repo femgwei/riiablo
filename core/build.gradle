@@ -1136,17 +1136,18 @@ task m7WorldRegression(type: Test) {
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
 
-// M8-A batch 1: deterministic replay manifest and checkpoint diagnostics.
+// M8-A batches 1-3: deterministic replay, checkpoint and authority ingress gates.
 task m8ReplayRegression(type: Test) {
   group = 'verification'
-  description = 'M8 deterministic command replay and checkpoint digest gate.'
+  description = 'M8 deterministic replay and authoritative D2GS ingress gate.'
   dependsOn testClasses, ':verifyModuleBoundaries'
   testClassesDirs = sourceSets.test.output.classesDirs
   classpath = sourceSets.test.runtimeClasspath
   useJUnitPlatform()
   filter {
     ['com.riiablo.engine.SimulationReplayLogTest',
-     'com.riiablo.engine.SimulationTickCoordinatorTest'].each { includeTestsMatching it }
+     'com.riiablo.engine.SimulationTickCoordinatorTest',
+     'com.riiablo.engine.D2gsCommandAdapterTest'].each { includeTestsMatching it }
   }
   maxHeapSize = test.maxHeapSize
   systemProperty 'java.awt.headless', 'true'

@@ -861,6 +861,29 @@ git diff --check
 D2GS/FlatBuffer 协议，也没有宣称 ECS 世界恢复、D2GS 实际录制、断线继续运行或完整离线
 回放已经完成。下一批再处理 D2GS 命令适配与权威网络会话边界。
 
+### M8 第 3 批：D2GS 权威会话与命令入口边界（2026-10-24）
+
+本批建立可由 D2GS 接入的协议中立 ingress，不直接把 socket 线程变成仿真写入者。新增
+`AuthoritativeSessionRegistry`，统一连接槽、稳定角色标识、actor 身份和 ACTIVE/
+DISCONNECTED 生命周期；同一角色的并发连接被拒绝，断线后可用新的连接槽重连，旧连接的
+待执行命令会被清除。新增 `D2gsCommandAdapter`，所有网络命令必须先通过活动会话身份、
+正数 request id、网络 authority 和目标授权，再进入 `SimulationCommandQueue`，只能由
+固定 Tick drain 执行。
+
+回归覆盖并发角色连接拒绝、断线重连、重复 request、未授权目标、未认证连接，以及断线
+命令不能继续 drain。该批提供了 D2GS handler 迁移所需的唯一入口契约；现有 D2GS 多类
+FlatBuffer handler 尚未全部改接，不能宣称 M8-D 网络三层收敛或完整 D2GS replay 已完成。
+
+验证：
+
+```powershell
+./gradlew.bat :core:m8ReplayRegression --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：M8 回放/权威入口门禁 12 项通过；下一批可将 Movement、CastSkill 及物品/任务等
+D2GS handler 分组接入该 adapter，并为每组补充真实 FlatBuffer ingress 验收。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
