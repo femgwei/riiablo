@@ -1306,6 +1306,36 @@ git diff --check
 下一迁移：转入 M8-C 收尾审计，检查剩余表现兼容调用和事件/快照出口；若仍有可独立收口的边界，再按
 完整验收批次处理，不新增微批次。
 
+### M8-C 收尾审计：engine/client 表现端口边界（2026-10-25）
+
+提交：`f0c54b759`。
+
+本次审计把 `ClientUiBoundaryTest` 扩展为扫描整个 `engine/client` source set，禁止重新引入
+`ClientGameplayContext`、`ClientUiServices` 或任意 `com.riiablo.presentation` 直接边；客户端输入、悬停、
+网络副本和物品事务只能通过 engine-owned port 接收表现事实。审计没有发现新的独立 M8-C 迁移点，
+`m1-presentation-debt.tsv` 当前为零条旧边。
+
+验证：
+
+```powershell
+./gradlew :core:compileTestJava :core:test `
+  --tests com.riiablo.architecture.ClientUiBoundaryTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest `
+  :core:m8ReplayRegression :server:d2gs:compileJava --no-daemon --max-workers=1 --console=plain
+python tools/architecture/migration_boundaries.py --mode check
+& tools/architecture/check-client-presentation-boundary.ps1 -FailOnDrift
+git diff --check
+```
+
+结果：边界审计、客户端装配、M8 replay 回归和 D2GS 编译全部通过。M8-C 的直接 context/表现包依赖
+已完成收口，但 M8-C 总目标仍与 M8-A/M8-D 的事件/快照、真实恢复、网络唯一入口和重连验收相关，
+因此不把本次审计写成 M8-C 或 M8 整体完成声明。
+
+真实资源：本次未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；未修改暗黑规则。
+
+下一迁移：进入 M8-A/M8-D 的真实 ECS checkpoint/replay 与 D2GS handler 唯一入口批次；优先选择能
+同时增加真实网络验收和可恢复状态门禁的一组 handler，不再继续拆分 M8-C 端口微批次。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
