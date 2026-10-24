@@ -884,6 +884,29 @@ git diff --check
 结果：M8 回放/权威入口门禁 12 项通过；下一批可将 Movement、CastSkill 及物品/任务等
 D2GS handler 分组接入该 adapter，并为每组补充真实 FlatBuffer ingress 验收。
 
+### M8 第 4 批：D2GS 移动/技能 drain 回放接入（2026-10-24）
+
+本批把 replay recorder 接入现有 D2GS 的权威 scheduler drain 点：MovementIntent 和
+CombatIntent 只有在目标 Tick 到达、实体仍属于已认证玩家并即将进入权威 apply 前才记录；
+网络线程收到包或 scheduler submit 时不会提前写入 replay。命令使用显式 canonical payload，
+保留 actor、request/sequence、target、authority 和实际 apply Tick；没有修改 Movement/CastSkill
+的 D2 结算、目标重算、ACK 或 FlatBuffer 字段。
+
+`SimulationCommandEnvelope.Builder.build(sequence)` 现在向协议适配器公开稳定 sequence
+构造能力，D2GS 可将已有 scheduler 的序号直接转换为 replay 元数据。D2GS 仍默认使用
+`SimulationReplayRecorder.NONE`，只有宿主显式安装 recorder 才产生日志，因此生产行为和
+资源开销保持兼容。
+
+验证：
+
+```powershell
+./gradlew.bat :server:d2gs:compileJava :core:m8ReplayRegression --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：D2GS 生产编译和 M8 回放/权威入口 12 项回归通过。物品、任务、NPC、交易等其他
+FlatBuffer handler 以及实际 checkpoint 世界摘要仍待后续批次接入；M8-A/M8-D 继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

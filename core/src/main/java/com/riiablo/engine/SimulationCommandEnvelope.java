@@ -82,7 +82,8 @@ public final class SimulationCommandEnvelope {
       return this;
     }
 
-    SimulationCommandEnvelope build(long sequence) {
+    /** Builds an envelope with a caller-owned stable sequence for protocol adapters. */
+    public SimulationCommandEnvelope build(long sequence) {
       if (tick < 1L) throw new IllegalStateException("tick must be set");
       return new SimulationCommandEnvelope(tick, sequence, actorId, requestId,
           targetEntityId, authority, source, kind, payload);

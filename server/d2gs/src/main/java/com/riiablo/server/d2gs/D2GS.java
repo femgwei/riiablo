@@ -61,6 +61,8 @@ import com.riiablo.codec.StringTBLs;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.SimulationMode;
 import com.riiablo.engine.SimulationSession;
+import com.riiablo.engine.SimulationCommandEnvelope;
+import com.riiablo.engine.replay.SimulationReplayRecorder;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.RoomActivationSystem;
 import com.riiablo.engine.server.RoomEntityTrackingSystem;
@@ -6067,6 +6069,7 @@ public class D2GS extends ApplicationAdapter {
   World world;
   private com.riiablo.engine.server.ServerGameplayContext serverContext;
   AuthoritativeSimulation simulation;
+  private SimulationReplayRecorder replayRecorder = SimulationReplayRecorder.NONE;
   Map map;
   CombatPositionHistory combatPositionHistory;
   final com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
@@ -6116,6 +6119,13 @@ public class D2GS extends ApplicationAdapter {
       combatIntents[i] = new CombatIntentScheduler();
     }
   }
+
+  /** Installs an optional recorder; command recording never changes D2GS behavior. */
+  public void setReplayRecorder(SimulationReplayRecorder recorder) {
+    replayRecorder = recorder == null ? SimulationReplayRecorder.NONE : recorder;
+  }
+
+  public SimulationReplayRecorder replayRecorder() { return replayRecorder; }
 
   @Override
   public void create() {
@@ -6903,6 +6913,7 @@ public class D2GS extends ApplicationAdapter {
       int entityId = player.get(connectionId, Engine.INVALID_ENTITY);
       if (entityId == Engine.INVALID_ENTITY) continue;
       for (MovementIntent input : readyMovementIntents) {
+        recordMovementCommand(currentTick, entityId, input);
         applyMovementIntent(connectionId, entityId, input, currentTick);
       }
     }
@@ -7181,10 +7192,38 @@ public class D2GS extends ApplicationAdapter {
         continue;
       }
       for (CombatIntent input : readyCombatIntents) {
+        recordCombatCommand(currentTick, entityId, input);
         applyCombatIntent(connectionId, entityId, input, currentTick);
       }
     }
     readyCombatIntents.clear();
+  }
+
+  private void recordMovementCommand(long tick, int entityId, MovementIntent input) {
+    String payload = "running=" + input.running + "|targetKind=" + input.targetKind
+        + "|targetType=" + input.targetType + "|targetEntity=" + input.targetEntityId
+        + "|x=" + Float.toString(input.x) + "|y=" + Float.toString(input.y)
+        + "|observedTick=" + input.observedServerTick + "|targetTick=" + input.targetTick;
+    SimulationCommandEnvelope.Builder builder = SimulationCommandEnvelope.builder(
+        "d2gs", "movement", payload).tick(tick).actor(entityId)
+        .authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT);
+    if (input.sequence > 0L) builder.request(input.sequence);
+    if (input.targetKind == MovementIntent.TargetKind.ENTITY && input.targetEntityId >= 0) {
+      builder.target(input.targetEntityId);
+    }
+    replayRecorder.recordCommand(builder.build(input.sequence));
+  }
+
+  private void recordCombatCommand(long tick, int entityId, CombatIntent input) {
+    String payload = "skill=" + input.skillId + "|target=" + input.targetEntityId
+        + "|x=" + Float.toString(input.targetX) + "|y=" + Float.toString(input.targetY)
+        + "|observedTick=" + input.observedServerTick + "|targetTick=" + input.targetTick;
+    SimulationCommandEnvelope.Builder builder = SimulationCommandEnvelope.builder(
+        "d2gs", "cast_skill", payload).tick(tick).actor(entityId)
+        .authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT);
+    if (input.sequence > 0L) builder.request(input.sequence);
+    if (input.targetEntityId >= 0) builder.target(input.targetEntityId);
+    replayRecorder.recordCommand(builder.build(input.sequence));
   }
 
   private void applyCombatIntent(
