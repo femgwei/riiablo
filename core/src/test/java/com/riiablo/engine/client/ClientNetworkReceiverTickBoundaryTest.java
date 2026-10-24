@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.riiablo.engine.SimulationTickCoordinator;
+import com.riiablo.engine.client.event.ClientObjectStateEvent;
 import com.riiablo.engine.server.event.SoundEvent;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,20 @@ class ClientNetworkReceiverTickBoundaryTest {
     SoundEvent event = SoundEvent.obtain(7, "door", true);
 
     receiver.publishEvent("network.sound", event);
+    verifyNoInteractions(receiver.events);
+
+    receiver.simulationTickCoordinator.advance(ignored -> {}, ignored -> {},
+        queued -> ((Runnable) queued.payload).run());
+    verify(receiver.events).dispatch(event);
+  }
+
+  @Test void replicaPresentationEventWaitsForEventsPhase() {
+    ClientNetworkReceiver receiver = new ClientNetworkReceiver();
+    receiver.simulationTickCoordinator = new SimulationTickCoordinator();
+    receiver.events = mock(EventSystem.class);
+    ClientObjectStateEvent event = ClientObjectStateEvent.obtain(11, 2, 4);
+
+    receiver.publishEvent("network.object_state", event);
     verifyNoInteractions(receiver.events);
 
     receiver.simulationTickCoordinator.advance(ignored -> {}, ignored -> {},

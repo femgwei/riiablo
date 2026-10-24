@@ -33,6 +33,8 @@ import com.riiablo.save.ItemController;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
+import com.riiablo.engine.client.event.ClientItemPickupEvent;
 
 public class ClientItemManager extends PassiveSystem implements ItemController {
   private static final String TAG = "ClientItemManager";
@@ -144,6 +146,12 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   /** Native D2 uses one generic sound when an item is taken by the player. */
   public void playPickupSound() {
     if (clientContext.audio() != null) clientContext.audio().play("item_pickup", true);
+  }
+
+  /** Handles a committed network pickup after the receiver's simulation phase. */
+  @Subscribe
+  public void onNetworkPickup(ClientItemPickupEvent event) {
+    if (event != null) playPickupSound();
   }
 
   protected boolean prefersCursorPickup(com.riiablo.item.Item item) {

@@ -23,6 +23,11 @@ class ClientUiBoundaryTest {
         "ClientItemManager.java", "ClientNetworkReceiver.java")) {
       assertFalse(ui.matcher(code(source.resolve(file))).find(), file + " must use a presentation port");
     }
+    String receiver = code(source.resolve("ClientNetworkReceiver.java"));
+    Pattern directReplicaHandlers = Pattern.compile(
+        "com\\.riiablo\\.presentation\\.(?:ClientEntityFactory|ItemEffectManager|PlayerHitSound)\\b");
+    assertFalse(directReplicaHandlers.matcher(receiver).find(),
+        "network replicas must publish presentation events instead of calling handlers");
     assertFalse(ui.matcher(code(repository().resolve(
         "core/src/main/java/com/riiablo/presentation/NativeShrinePresentationSystem.java"))).find(),
         "NativeShrinePresentationSystem must use a presentation port");

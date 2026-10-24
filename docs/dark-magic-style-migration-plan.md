@@ -1007,6 +1007,33 @@ git diff --check
 结果：上述定向测试、M8 replay、M6 final 和真实 MPQ Amazon bow/reconnect gate 通过；完整
 `ItemWriterTest` 的旧 `.d2i` 样例在当前工作区缺失，因此未把缺少 fixture 误报为实现失败。
 
+### M8-C 第 1 批：网络副本表现事件出口（2026-10-24）
+
+本批把网络副本接收与表现处理进一步隔离。`ClientNetworkReceiver` 在验证并提交对象、
+生命和物品结果后，只发布不可变的 `ClientObjectStateEvent`、`ClientPlayerHitEvent`、
+`ClientItemPickupEvent` 和 `ClientItemDropReplayEvent`；不再直接调用 `ClientEntityFactory`、
+`PlayerHitSound` 或 `ItemEffectManager`。实体工厂、伤害表现和物品表现系统分别订阅这些事件，
+仍沿用既有 EventSystem/固定 Tick 边界，未修改 FlatBuffers、D2 结算或权威组件写入。
+
+本批同时把网络对象的基础 mode/stateFlags 先保留在 ECS 权威副本，再由表现 owner 投影
+Interactable/Selectable，兼容无表现工厂的 headless 测试装配。物品拾取音效和失败后的地面
+物品 bounce 也改为在事件阶段执行，避免网络接收线程直接触碰表现资源。
+
+验证：
+
+```powershell
+./gradlew.bat :core:compileJava :core:compileTestJava --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :core:test --tests com.riiablo.architecture.ClientUiBoundaryTest `
+  --tests com.riiablo.engine.client.ClientNetworkReceiverTickBoundaryTest `
+  --tests com.riiablo.engine.client.ClientObjectSnapshotStateTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：core 生产/测试编译通过，架构、网络事件 Tick 边界、对象状态和客户端装配定向回归
+通过。表现扫描中的 `ClientNetworkReceiver` 直接 handler 依赖已清除；`ClientGameplayContext`、
+`Label` 以及 host 装配兼容债务仍待后续 M8-C 批次处理，不能据此宣称 M8-C 或 M8 整体完成。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

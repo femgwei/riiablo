@@ -7,8 +7,10 @@ import com.artemis.annotations.Wire;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
+import com.riiablo.engine.client.event.ClientItemDropReplayEvent;
 import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.Item;
+import net.mostlyoriginal.api.event.common.Subscribe;
 
 @All({Item.class, AnimationWrapper.class})
 public class ItemEffectManager extends BaseEntitySystem {
@@ -47,6 +49,12 @@ public class ItemEffectManager extends BaseEntitySystem {
     animation.restart();
     if (clientContext.audio() != null) clientContext.audio().play("item_flippy", true);
     return true;
+  }
+
+  /** Replays the native drop presentation after an authoritative rejection. */
+  @Subscribe
+  public void onNetworkDropReplay(ClientItemDropReplayEvent event) {
+    if (event != null) replayDrop(event.entityId);
   }
 
   @Override

@@ -42,6 +42,8 @@ import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import com.riiablo.engine.server.object.NativeShrineResolver;
 import com.riiablo.engine.server.pet.PetType;
+import com.riiablo.engine.client.event.ClientObjectStateEvent;
+import net.mostlyoriginal.api.event.common.Subscribe;
 
 public class ClientEntityFactory extends ServerEntityFactory {
   private static final String TAG = "ClientEntityFactory";
@@ -455,6 +457,13 @@ public class ClientEntityFactory extends ServerEntityFactory {
     }) {
       cofs.setComponent(entityId, c, CofComponents.COMPONENT_LIT);
     }
+  }
+
+  /** Projects a validated network object snapshot at the presentation boundary. */
+  @Subscribe
+  public void onAuthoritativeObjectState(ClientObjectStateEvent event) {
+    if (event == null) return;
+    applyAuthoritativeObjectState(event.entityId, event.mode, event.stateFlags);
   }
 
   private byte applyValkyrieComposite(int entityId, int skillLevel) {

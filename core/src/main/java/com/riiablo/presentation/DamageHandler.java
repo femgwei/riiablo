@@ -14,6 +14,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DamageAppliedEvent;
+import com.riiablo.engine.client.event.ClientPlayerHitEvent;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -122,6 +123,13 @@ public class DamageHandler extends PassiveSystem {
       if (sound == null || sound.isEmpty()) sound = "impact_blunt_1";
       if (clientContext.audio() != null) clientContext.audio().play(sound, true);
     }
+  }
+
+  /** Plays local pain feedback only after the network vitals snapshot is committed. */
+  @Subscribe
+  public void onNetworkPlayerHit(ClientPlayerHitEvent event) {
+    if (event == null || !mPlayer.has(event.entityId)) return;
+    PlayerHitSound.play(clientContext, mPlayer.get(event.entityId));
   }
 }
 

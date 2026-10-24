@@ -1,9 +1,5 @@
 package com.riiablo.engine.client;
 
-import com.riiablo.presentation.ClientEntityFactory;
-import com.riiablo.presentation.ItemEffectManager;
-
-import com.riiablo.presentation.PlayerHitSound;
 import com.riiablo.presentation.ClientGameplayContext;
 
 import com.google.flatbuffers.Table;
@@ -57,6 +53,10 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.engine.server.event.SoundEvent;
+import com.riiablo.engine.client.event.ClientItemDropReplayEvent;
+import com.riiablo.engine.client.event.ClientItemPickupEvent;
+import com.riiablo.engine.client.event.ClientObjectStateEvent;
+import com.riiablo.engine.client.event.ClientPlayerHitEvent;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
 import com.riiablo.map.EnvironmentCycle;
@@ -802,10 +802,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void applyObjectSnapshot(int entityId, com.riiablo.net.packet.d2gs.ObjectP snapshot) {
     if (entityId == Engine.INVALID_ENTITY || snapshot == null) return;
     boolean hasState = hasObjectStateSnapshot(snapshot);
-    if (hasState && factory instanceof ClientEntityFactory) {
-      ((ClientEntityFactory) factory).applyAuthoritativeObjectState(
-          entityId, snapshot.mode(), snapshot.stateFlags());
-    } else if (hasState) {
+    if (hasState) {
       // Test and compatibility factories may not own the client presentation
       // components. Still retain the complete authoritative state locally.
       com.riiablo.engine.server.component.Object object =
@@ -822,6 +819,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
           mSelectable.remove(entityId);
         }
       }
+      // The accepted state is projected by the presentation owner after the
+      // simulation boundary. The ECS copy above remains authoritative and is
+      // available even when a headless/compatibility factory is installed.
+      publishEvent("network.object_state", ClientObjectStateEvent.obtain(
+          entityId, snapshot.mode(), snapshot.stateFlags()));
     }
     if (hasState && mCofReference.has(entityId)
         && snapshot.mode() >= Engine.Object.MODE_NU
@@ -1589,7 +1591,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     // signal for the character's class-specific pain voice.  Do not trigger on
     // healing, max-hp changes, or an initial snapshot.
     if (hitpoints < oldHitpoints && mPlayer.has(entityId)) {
-      PlayerHitSound.play(clientContext, mPlayer.get(entityId));
+      publishEvent("network.player_hit", ClientPlayerHitEvent.obtain(entityId));
     }
     if (oldHitpoints != hitpoints || data.dead) {
           Gdx.app.log(TAG, String.format(
@@ -1663,8 +1665,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       if (snapshot.success
           && snapshot.operation == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR
           && cursorItem == null) {
-        ClientItemManager pickupManager = world.getSystem(ClientItemManager.class);
-        if (pickupManager != null) pickupManager.playPickupSound();
+        publishEvent("network.item_pickup", ClientItemPickupEvent.obtain());
       }
     }
     if (snapshot.groundEntityId >= 0 && !snapshot.hasGroundItem()) {
@@ -1715,9 +1716,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         && snapshot.failure == com.riiablo.net.packet.d2gs.ItemMoveFailure.INVENTORY_OCCUPIED
         && snapshot.groundEntityId >= 0) {
       int localEntityId = syncIds.get(snapshot.groundEntityId);
-      ItemEffectManager effects = world.getSystem(ItemEffectManager.class);
-      if (localEntityId != Engine.INVALID_ENTITY && effects != null) {
-        effects.replayDrop(localEntityId);
+      if (localEntityId != Engine.INVALID_ENTITY) {
+        publishEvent("network.item_drop_replay",
+            ClientItemDropReplayEvent.obtain(localEntityId));
       }
     }
     if (!snapshot.success) {
