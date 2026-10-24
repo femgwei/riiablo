@@ -773,6 +773,8 @@ git diff --check
 
 完成日期：2026-10-24；本批把 Amazon 普通 Attack（skill=0）接入既有权威近战链路，补齐 ECS keyframe/物理结算、双客户端观察、重连恢复和 checkpoint 一致性门禁；不宣称 M5 的表现事件出口、旧兼容入口清理或完整 replay 已完成。
 
+提交：`9df82404f`。
+
 实现与边界：
 
 - `D2GSHeadlessClient` 的 Amazon melee fixture 允许原生 Attack(0)，生成存档保留 CharData 默认普通攻击，不把 Attack 伪造为技能等级；既有 Jab/Impale 等专用技能路径保持不变。
