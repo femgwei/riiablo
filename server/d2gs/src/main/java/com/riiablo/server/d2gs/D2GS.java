@@ -6303,6 +6303,10 @@ public class D2GS extends ApplicationAdapter {
     mNetworked = world.getMapper(Networked.class);
     world.delta = Animation.FRAME_DURATION;
     simulation = new AuthoritativeSimulation(world);
+    // Checkpoint entity-set reconciliation must use the same native factory
+    // that owns ordinary D2GS creation.  Installing it after World wiring
+    // guarantees all factory mappers and server context bindings are live.
+    setReplayEntityLifecycle(new ServerEntityLifecycle(world, factory, serverContext.files()));
 
     clientThreads = new ThreadGroup("D2GSClients");
 

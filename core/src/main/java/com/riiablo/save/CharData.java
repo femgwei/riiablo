@@ -663,6 +663,13 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   /** Advances progression only after the domain result has been applied. */
   public long markProgressionCommitted() { return ++progressionRevision; }
 
+  /** Restores an authoritative progression revision from an ECS checkpoint. */
+  public CharData restoreProgressionRevision(long revision) {
+    if (revision < 0L) throw new IllegalArgumentException("revision");
+    progressionRevision = revision;
+    return this;
+  }
+
   @Override
   public void onUpdated(ItemData itemData) {
     assert itemData.stats == statData;

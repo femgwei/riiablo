@@ -27,6 +27,8 @@ import com.riiablo.logger.Logger;
 @All(CofReference.class)
 public class CofManager extends BaseEntitySystem {
   private static final Logger log = LogManager.getLogger(CofManager.class);
+  /** Entity ids created from an authoritative checkpoint before insertion is processed. */
+  private final java.util.Set<Integer> checkpointInsertions = new java.util.HashSet<>();
   @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)
   protected ServerGameplayContext serverContext;
   @com.artemis.annotations.Wire(name = "simulationSession", failOnNull = false)
@@ -50,8 +52,28 @@ public class CofManager extends BaseEntitySystem {
   @Override
   protected void inserted(int entityId) {
     CofReference reference = mCofReference.get(entityId);
-    setMode(entityId, reference.mode, true);
+    // A checkpoint lifecycle creates the native component graph first and the
+    // serializer applies the authoritative CofReference before Artemis flushes
+    // insertions.  Do not count that insertion as a new animation restart;
+    // the serialized restart id must survive the round-trip verbatim.
+    boolean checkpointRestore = checkpointInsertions.remove(entityId);
+    setMode(entityId, reference.mode, !checkpointRestore);
     setWClass(entityId, reference.wclass, true);
+  }
+
+  /** Marks a just-created entity so insertion processing preserves its snapshot restart id. */
+  public void markCheckpointInsertion(int entityId) {
+    checkpointInsertions.add(entityId);
+  }
+
+  /** Cancels a pending checkpoint insertion when creation is rolled back before flush. */
+  public void cancelCheckpointInsertion(int entityId) {
+    checkpointInsertions.remove(entityId);
+  }
+
+  @Override
+  protected void removed(int entityId) {
+    checkpointInsertions.remove(entityId);
   }
 
   @Override

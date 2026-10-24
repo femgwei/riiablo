@@ -1575,6 +1575,13 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
   /** Revision of the last completed equipment aggregate rebuild. */
   public long equipmentRevision() { return equipmentRevision; }
 
+  /** Restores an authoritative equipment revision from an ECS checkpoint. */
+  public ItemData restoreEquipmentRevision(long revision) {
+    if (revision < 0L) throw new IllegalArgumentException("revision");
+    equipmentRevision = revision;
+    return this;
+  }
+
   /** Read-only aggregate equipment stats at the last committed revision. */
   public ItemStatProjection equipmentStatProjection() {
     return ItemStatProjection.from(stats);
