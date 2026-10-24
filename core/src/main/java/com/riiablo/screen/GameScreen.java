@@ -80,6 +80,7 @@ import com.riiablo.engine.SimulationSession;
 import com.riiablo.engine.SimulationTickCoordinator;
 import com.riiablo.presentation.ClientAudioSession;
 import com.riiablo.presentation.ClientGameplayContext;
+import com.riiablo.presentation.ClientPointerUiAdapter;
 import com.riiablo.presentation.ClientSimulationAssembly;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.ServerGameplayContext;
@@ -813,6 +814,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .register("shapes", Riiablo.shapes)
         .register("stage", stage)
         .register("scaledStage", scaledStage)
+        .register("pointerUi", new ClientPointerUiAdapter(stage, scaledStage,
+            clientGameplayContext, () -> engine == null ? null : engine.getSystem(MenuManager.class),
+            () -> engine == null ? null : engine.getSystem(DialogManager.class)))
         .register("input", input)
         .register("output", output)
         .register("clientMessages", (java.util.function.Consumer<String>) output::appendText)

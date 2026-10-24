@@ -1155,6 +1155,34 @@ git diff --check
 
 下一迁移：继续处理物品 cursor/状态端口，或在 M2/M6 物品事务端口完成后删除剩余 context 依赖。
 
+### M8-C 第 6 批：鼠标输入与 UI 命中适配器（2026-10-24）
+
+提交：待本批提交。
+
+本批新增 `ClientPointerUiPort` 与 presentation-owned `ClientPointerUiAdapter`。`CursorMovementSystem`
+不再直接依赖 Scene2D `Stage`/`Actor`、`UIUtils`、`DialogManager` 或 `MenuManager`，改由适配器提供
+UI 命中来源、修饰键、佣兵肖像、cursor 状态和面板阻塞/关闭意图；GameScreen 显式注册适配器，
+保留固定 Tick 点击队列、Alt 物品标签、佣兵药水和菜单/对话点击语义。
+
+验证：
+
+```powershell
+./gradlew.bat :core:compileJava :core:compileTestJava `
+  :core:test --tests com.riiablo.screen.GameScreenAssemblyTest `
+  --tests com.riiablo.engine.client.HoveredManagerTest --no-daemon --max-workers=1 --console=plain
+python tools/architecture/migration_boundaries.py --mode check
+& tools/architecture/check-client-presentation-boundary.ps1 -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、客户端装配/悬停定向回归、模块边界和 M1-A 表现边界通过；M8-C 债务由 17 条
+降至 12 条。`CursorMovementSystem` 仍保留角色技能/物品数据读取用的 `ClientGameplayContext`，
+悬停系统的表现组件依赖和网络/物品状态依赖留待后续端口批次。
+
+真实资源：未使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F`；本批不修改暗黑规则。
+
+下一迁移：收口 `HoveredManager` 的表现组件与上下文依赖，或在 M2/M3 输入意图端口完成后统一处理。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

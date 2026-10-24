@@ -2,8 +2,6 @@ package com.riiablo.engine.client;
 
 
 import com.riiablo.presentation.ClientGameplayContext;
-import com.riiablo.presentation.MenuManager;
-import com.riiablo.presentation.DialogManager;
 
 import com.artemis.Aspect;
 import com.artemis.BaseSystem;
@@ -15,9 +13,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.net.Socket;
-import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
 import com.badlogic.gdx.utils.TimeUtils;
 
 import com.riiablo.camera.IsometricCamera;
@@ -61,13 +56,13 @@ public class CursorMovementSystem extends BaseSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
   protected RenderSystem renderer;
-  protected MenuManager menuManager;
-  protected DialogManager dialogManager;
   protected ProfilerSystem profiler;
   protected Actioneer actioneer;
   protected HoveredManager hoveredManager;
   protected ClientUnitLifecycleSystem lifecycle;
   protected ClientNetworkReceiver networkReceiver;
+  @Wire(name = "pointerUi", failOnNull = false)
+  protected ClientPointerUiPort pointerUi;
   @Wire(name = "simulationTickCoordinator", failOnNull = false)
   protected com.riiablo.engine.SimulationTickCoordinator simulationTickCoordinator;
   @Wire(name = "clientContext")
@@ -81,12 +76,6 @@ public class CursorMovementSystem extends BaseSystem {
 
   @Wire(name = "map")
   protected Map map;
-
-  @Wire(name = "stage")
-  protected Stage stage;
-
-  @Wire(name = "scaledStage")
-  protected Stage scaledStage;
 
   @Wire(name = "itemController")
   protected ItemController itemController;
@@ -124,7 +113,7 @@ public class CursorMovementSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
-    if (clientContext.cursor() != null && clientContext.cursor().blocksWorldInput()) return;
+    if (pointerUi != null && pointerUi.blocksWorldInput()) return;
     if (profiler != null && profiler.hit()) {
       traceBlockedClick("profiler");
       return;
@@ -146,20 +135,15 @@ public class CursorMovementSystem extends BaseSystem {
     if (consumePendingLeftPress(playerId)) return;
     if (consumePendingRightPress(playerId)) return;
     
-    stage.screenToStageCoordinates(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY()));
-    Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
-    scaledStage.screenToStageCoordinates(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY()));
-    Actor hit2 = scaledStage.hit(tmpVec2.x, tmpVec2.y, true);
-    boolean hit = hit1 != null || hit2 != null;
-    if (hit) {
-      traceBlockedClick(hit1 != null ? "stage:" + hit1.getClass().getSimpleName()
-          : "scaledStage:" + hit2.getClass().getSimpleName());
+    String hitSource = uiHitSource(Gdx.input.getX(), Gdx.input.getY());
+    if (hitSource != null) {
+      traceBlockedClick(hitSource);
       return;
     }
 
     final boolean leftPressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
     final boolean rightPressed = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
-    final boolean shiftDown = UIUtils.shift();
+    final boolean shiftDown = pointerUi != null && pointerUi.shiftDown();
     if ((leftPressed && shiftDown) || rightPressed) {
       final int targetId = getHovered(playerId);
       if (targetId != Engine.INVALID_ENTITY && (isTargetDead(targetId) || actioneer.didLastAttackTargetDie(playerId))) {
@@ -203,7 +187,7 @@ public class CursorMovementSystem extends BaseSystem {
   /** Samples the input edge once per render frame, before the fixed-step loop. */
   public void capturePointerInput() {
     if (Gdx.input == null) return;
-    if (clientContext.cursor() != null && clientContext.cursor().blocksWorldInput()) {
+    if (pointerUi != null && pointerUi.blocksWorldInput()) {
       pendingLeftClicks.poll();
       pendingRightClicks.poll();
       pendingLeftRelease = false;
@@ -219,13 +203,15 @@ public class CursorMovementSystem extends BaseSystem {
     }
     if (leftDown && !sampledLeftDown) {
       pendingLeftClicks.capture(Gdx.input.getX(), Gdx.input.getY(), TimeUtils.millis(),
-          networkReceiver == null ? 0L : networkReceiver.latestServerTick(), UIUtils.shift());
+          networkReceiver == null ? 0L : networkReceiver.latestServerTick(),
+          pointerUi != null && pointerUi.shiftDown());
     }
     sampledLeftDown = leftDown;
     boolean rightDown = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
     if (rightDown && !sampledRightDown) {
       pendingRightClicks.capture(Gdx.input.getX(), Gdx.input.getY(), TimeUtils.millis(),
-          networkReceiver == null ? 0L : networkReceiver.latestServerTick(), UIUtils.shift());
+          networkReceiver == null ? 0L : networkReceiver.latestServerTick(),
+          pointerUi != null && pointerUi.shiftDown());
     }
     sampledRightDown = rightDown;
   }
@@ -238,11 +224,11 @@ public class CursorMovementSystem extends BaseSystem {
   private boolean consumePendingMercenaryPotionDrop() {
     if (!pendingLeftRelease) return false;
     pendingLeftRelease = false;
-    stage.screenToStageCoordinates(tmpVec2.set(pendingLeftReleaseX, pendingLeftReleaseY));
-    if (!clientContext.mercenaryPortraitContains(tmpVec2.x, tmpVec2.y)) return false;
+    if (pointerUi == null || !pointerUi.mercenaryPortraitContains(
+        pendingLeftReleaseX, pendingLeftReleaseY)) return false;
     // Keep the UI click consumed even if the item is not a healing potion; the
     // invalid item remains on the cursor instead of being dropped on the map.
-    clientContext.useMercenaryCursorPotion();
+    pointerUi.useMercenaryCursorPotion();
     return true;
   }
 
@@ -254,26 +240,22 @@ public class CursorMovementSystem extends BaseSystem {
 
     // UI clicks must remain owned by Stage. Use the captured coordinates rather
     // than the current cursor, which may already have moved by this tick.
-    stage.screenToStageCoordinates(tmpVec2.set(pendingLeftX, pendingLeftY));
     // A potion is commonly picked up in an inventory slot and then released on
     // the portrait.  The Stage hit-test only reports that the HUD owns the
     // click; it does not dispatch the Scene2D listener because this queue is
     // consumed by the simulation loop.  Route that specific case explicitly
     // before returning from the generic UI-click branch.
-    if (clientContext.mercenaryPortraitContains(tmpVec2.x, tmpVec2.y)
-        && clientContext.cursor() != null && clientContext.cursor().getItem() != null) {
-      int itemId = clientContext.cursor().getItem().id;
-      boolean used = clientContext.useMercenaryCursorPotion();
+    if (pointerUi != null && pointerUi.mercenaryPortraitContains(pendingLeftX, pendingLeftY)
+        && pointerUi.cursorHasItem()) {
+      int itemId = pointerUi.cursorItemId();
+      boolean used = pointerUi.useMercenaryCursorPotion();
       Gdx.app.log(TAG, "[MERC_POTION_UI] phase=queued-click used=" + used
           + " item=" + itemId);
       return true;
     }
-    Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
-    scaledStage.screenToStageCoordinates(tmpVec2.set(pendingLeftX, pendingLeftY));
-    Actor hit2 = scaledStage.hit(tmpVec2.x, tmpVec2.y, true);
-    if (hit1 != null || hit2 != null) {
-      traceBlockedClick(hit1 != null ? "queued-stage:" + hit1.getClass().getSimpleName()
-          : "queued-scaledStage:" + hit2.getClass().getSimpleName());
+    String hitSource = uiHitSource(pendingLeftX, pendingLeftY);
+    if (hitSource != null) {
+      traceBlockedClick("queued-" + hitSource);
       return true;
     }
 
@@ -283,8 +265,7 @@ public class CursorMovementSystem extends BaseSystem {
     // otherwise one click first picks up the old item and then drops the held
     // item, which is not how the native client behaves.
     if (shouldDropHeldItemOnWorldClick(
-        clientContext.cursor() != null && clientContext.cursor().getItem() != null,
-        hit1 != null || hit2 != null)) {
+        pointerUi != null && pointerUi.cursorHasItem(), hitSource != null)) {
       itemController.cursorToGround();
       requireRelease = true;
       return true;
@@ -343,19 +324,15 @@ public class CursorMovementSystem extends BaseSystem {
 
     // Right-click starts a new action even when it lands on the world. Clear
     // any vendor cursor mode before the UI/world handler processes that action.
-    clientContext.cancelVendorTradeMode();
+    if (pointerUi != null) pointerUi.cancelVendorTradeMode();
 
-    stage.screenToStageCoordinates(tmpVec2.set(click.screenX, click.screenY));
-    if (clientContext.mercenaryPortraitContains(tmpVec2.x, tmpVec2.y)) {
+    if (pointerUi != null && pointerUi.mercenaryPortraitContains(click.screenX, click.screenY)) {
       // The simulation-side pointer queue can consume the click before
       // Scene2D's ClickListener sees it. Route the portrait action here too.
-      clientContext.showHirelingPanel();
+      pointerUi.showHirelingPanel();
       return true;
     }
-    Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
-    scaledStage.screenToStageCoordinates(tmpVec2.set(click.screenX, click.screenY));
-    Actor hit2 = scaledStage.hit(tmpVec2.x, tmpVec2.y, true);
-    if (hit1 != null || hit2 != null) return true;
+    if (uiHitSource(click.screenX, click.screenY) != null) return true;
 
     if (!canStartCast(src)) {
       pendingRightClicks.restore(click);
@@ -405,24 +382,24 @@ public class CursorMovementSystem extends BaseSystem {
     return cursorHasItem && !stageHit;
   }
 
+  private String uiHitSource(float screenX, float screenY) {
+    return pointerUi == null ? null : pointerUi.hitSource(screenX, screenY);
+  }
+
   private void updateLeft() {
     int src = renderer.getSrc();
     boolean pressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
     if (pressed && !requireRelease) {
-      Item cursor = clientContext.cursor() == null ? null : clientContext.cursor().getItem();
-      if (cursor != null) {
+      if (pointerUi != null && pointerUi.cursorHasItem()) {
         itemController.cursorToGround();
         requireRelease = true;
         return;
       }
 
       // exiting dialog should block all input until button is released to prevent menu from closing the following frame
-      if (dialogManager.getDialog() != null) {
-        dialogManager.setDialog(null);
+      if (pointerUi != null && pointerUi.dismissDialogOrMenu()) {
         requireRelease = true;
         return;
-      } else if (menuManager.getMenu() != null) {
-        menuManager.setMenu(null, Engine.INVALID_ENTITY);
       }
 
       // set target entity -- unsets and interacts when within range
@@ -579,7 +556,7 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private void closeTradePanelsForMovement() {
-    clientContext.closeTradePanelsForMovement();
+    if (pointerUi != null) pointerUi.closeTradePanelsForMovement();
   }
 
   static boolean shouldRefreshHeldGroundPath(
