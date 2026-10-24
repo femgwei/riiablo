@@ -6024,6 +6024,7 @@ public class D2GS extends ApplicationAdapter {
   final Client[] clients = new Client[MAX_CLIENTS];
   int numClients = 0;
   int connected = 0;
+  private long nextTransportToken = 1L;
 
   final BlockingQueue<Packet> packets = new ArrayBlockingQueue<>(32);
   final Collection<Packet> cache = new ArrayList<>(1024);
@@ -6288,38 +6289,86 @@ public class D2GS extends ApplicationAdapter {
       // registry is changed only after all other checkpoint payloads succeed.
       new AuthoritativeSessionRegistry().restore(sessionSnapshot);
     }
+    // Keep a complete owner-thread image so a later RNG/D2S/session failure
+    // cannot leave ECS ahead of the other authoritative registries.
+    long liveTick = simulation.tickNumber();
+    java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.RngState> liveRngStates =
+        replayRngRegistry == null ? null : replayRngRegistry.snapshot();
+    java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.NativeUnitRngState>
+        liveNativeUnitRngStates = replayNativeUnitRngRegistry == null
+        ? null : replayNativeUnitRngRegistry.snapshot();
+    com.riiablo.save.D2SCheckpoint liveD2sCheckpoint = replayD2sRegistry == null
+        ? null : replayD2sRegistry.capture();
+    AuthoritativeSessionRegistry.Snapshot liveSessionSnapshot = authoritativeSessions.snapshot();
+    java.util.Set<String> livePendingRebindKeys = new HashSet<>(pendingSessionRebindKeys);
+    D2gsCheckpointSnapshot previousReplayCheckpoint = replayCheckpoint;
+    D2gsCheckpointSnapshot before = D2gsCheckpointSnapshot.capture(world, serializer, liveTick,
+        liveRngStates, liveNativeUnitRngStates, liveD2sCheckpoint, liveSessionSnapshot);
     D2gsCheckpointSnapshot.RestoreResult result = lifecycle == null
         ? checkpoint.restoreExisting(world, serializer)
         : checkpoint.restoreExisting(world, serializer, lifecycle);
     if (result.success()) {
-      if (replayRngRegistry != null && !rngStates.isEmpty()) {
-        replayRngRegistry.restore(rngStates);
-      }
-      if (replayNativeUnitRngRegistry != null && !nativeUnitRngStates.isEmpty()) {
-        replayNativeUnitRngRegistry.restore(nativeUnitRngStates);
-      }
-      if (replayD2sRegistry != null && d2sCheckpoint != null) {
-        com.riiablo.save.D2SCheckpointRegistry.RestoreResult d2sResult =
-            replayD2sRegistry.restore(d2sCheckpoint);
-        if (!d2sResult.success()) {
-          throw new IllegalStateException("D2S checkpoint restore failed: "
-              + d2sResult.failedEntities);
+      try {
+        if (replayRngRegistry != null && !rngStates.isEmpty()) {
+          replayRngRegistry.restore(rngStates);
         }
-      }
-      if (sessionSnapshot != null) {
-        authoritativeSessions.restore(sessionSnapshot);
-        pendingSessionRebindKeys.clear();
-        for (AuthoritativeSessionRegistry.Session session : sessionSnapshot.sessions()) {
-          if (session.state == AuthoritativeSessionRegistry.State.ACTIVE) {
-            pendingSessionRebindKeys.add(session.stableKey);
+        if (replayNativeUnitRngRegistry != null && !nativeUnitRngStates.isEmpty()) {
+          replayNativeUnitRngRegistry.restore(nativeUnitRngStates);
+        }
+        if (replayD2sRegistry != null && d2sCheckpoint != null) {
+          com.riiablo.save.D2SCheckpointRegistry.RestoreResult d2sResult =
+              replayD2sRegistry.restore(d2sCheckpoint);
+          if (!d2sResult.success()) {
+            throw new IllegalStateException("D2S checkpoint restore failed: "
+                + d2sResult.failedEntities);
           }
         }
+        if (sessionSnapshot != null) {
+          authoritativeSessions.restore(sessionSnapshot);
+          pendingSessionRebindKeys.clear();
+          for (AuthoritativeSessionRegistry.Session session : sessionSnapshot.sessions()) {
+            if (session.state == AuthoritativeSessionRegistry.State.ACTIVE) {
+              pendingSessionRebindKeys.add(session.stableKey);
+            }
+          }
+        }
+        // Replaying an archived checkpoint is the one explicit operation allowed
+        // to move the fixed clock backwards; ordinary callers retain the
+        // monotonic restore guard.
+        simulation.restoreFromCheckpoint(checkpoint.tick(), true);
+        replayCheckpoint = checkpoint;
+      } catch (Throwable failure) {
+        try {
+          D2gsCheckpointSnapshot.RestoreResult ecsRollback = lifecycle == null
+              ? before.restoreExisting(world, serializer)
+              : before.restoreExisting(world, serializer, lifecycle);
+          if (!ecsRollback.success()) {
+            throw new IllegalStateException("ECS rollback failed: " + ecsRollback.failedEntities);
+          }
+          if (replayRngRegistry != null) replayRngRegistry.restore(
+              liveRngStates == null ? java.util.Collections.emptyList() : liveRngStates);
+          if (replayNativeUnitRngRegistry != null) replayNativeUnitRngRegistry.restore(
+              liveNativeUnitRngStates == null ? java.util.Collections.emptyList()
+                  : liveNativeUnitRngStates);
+          if (replayD2sRegistry != null && liveD2sCheckpoint != null) {
+            com.riiablo.save.D2SCheckpointRegistry.RestoreResult d2sRollback =
+                replayD2sRegistry.restore(liveD2sCheckpoint);
+            if (!d2sRollback.success()) {
+              throw new IllegalStateException("D2S rollback failed: "
+                  + d2sRollback.failedEntities);
+            }
+          }
+          authoritativeSessions.restore(liveSessionSnapshot);
+          pendingSessionRebindKeys.clear();
+          pendingSessionRebindKeys.addAll(livePendingRebindKeys);
+          simulation.restoreFromCheckpoint(liveTick, true);
+          replayCheckpoint = previousReplayCheckpoint;
+        } catch (Throwable rollbackFailure) {
+          failure.addSuppressed(rollbackFailure);
+          throw new IllegalStateException("checkpoint restore transaction rollback failed", failure);
+        }
+        throw new IllegalStateException("checkpoint restore transaction rolled back", failure);
       }
-      // Replaying an archived checkpoint is the one explicit operation allowed
-      // to move the fixed clock backwards; ordinary callers retain the
-      // monotonic restore guard.
-      simulation.restoreFromCheckpoint(checkpoint.tick(), true);
-      replayCheckpoint = checkpoint;
     }
     return result;
   }
@@ -6537,6 +6586,14 @@ public class D2GS extends ApplicationAdapter {
     int cached = packets.drainTo(cache);
     if (DEBUG_RECEIVED_CACHE && cached > 0) Gdx.app.log(TAG, "processing " + cached + " packets");
     for (Packet packet : cache) {
+      if (packet.transportToken != 0L) {
+        Client current = packet.id < 0 || packet.id >= clients.length ? null : clients[packet.id];
+        if (current == null || current.transportToken != packet.transportToken) {
+          Gdx.app.log(TAG, "[NET_FRAME] phase=stale_transport_drop connection="
+              + packet.id + " token=" + packet.transportToken);
+          continue;
+        }
+      }
       if (DEBUG_RECEIVED_PACKETS && !ignoredPackets.get(packet.data.dataType())) Gdx.app.log(TAG, "processing " + D2GSData.name(packet.data.dataType()) + " packet from " + packet.id);
       process(packet);
     }
@@ -6979,7 +7036,13 @@ public class D2GS extends ApplicationAdapter {
     assert success;
   }
 
-  private synchronized void Disconnect(int id) {
+  private synchronized void Disconnect(int id, long transportToken) {
+    Client currentClient = id < 0 || id >= clients.length ? null : clients[id];
+    if (currentClient == null || currentClient.transportToken != transportToken) {
+      Gdx.app.log(TAG, "[NET_FRAME] phase=stale_transport_disconnect connection=" + id
+          + " token=" + transportToken);
+      return;
+    }
     commandAdapter.disconnect(id, simulation == null ? 0L : simulation.tickNumber());
     int entityId = player.get(id, Engine.INVALID_ENTITY);
     if (entityId != Engine.INVALID_ENTITY) {
@@ -9656,6 +9719,7 @@ public class D2GS extends ApplicationAdapter {
     final String TAG;
 
     int id;
+    final long transportToken;
     Socket socket;
     final byte[] readBuffer = new byte[1 << 16];
     final SizePrefixedPacketAccumulator inbound =
@@ -9667,6 +9731,10 @@ public class D2GS extends ApplicationAdapter {
       super(clientThreads, generateClientName());
       TAG = D2GS.TAG + "{" + id + "}";
       this.id = id;
+      synchronized (D2GS.this) {
+        if (nextTransportToken == Long.MAX_VALUE) throw new IllegalStateException("transport token overflow");
+        this.transportToken = nextTransportToken++;
+      }
       this.socket = socket;
     }
 
@@ -9700,7 +9768,7 @@ public class D2GS extends ApplicationAdapter {
       }
 
       closeSocket();
-      Disconnect(id);
+      Disconnect(id, transportToken);
     }
 
     /** Serializes disposal against send() so the libGDX socket cannot vanish mid-write. */
@@ -9714,7 +9782,7 @@ public class D2GS extends ApplicationAdapter {
     private void receive(ByteBuffer frame) {
       ByteBuffer copy = ByteBuffer.allocate(frame.remaining());
       copy.put(frame.duplicate()).flip();
-      Packet packet = Packet.obtainPayload(id, copy);
+      Packet packet = Packet.obtainPayload(id, copy, transportToken);
       if (DEBUG_RECEIVED_PACKETS && !ignoredPackets.get(packet.data.dataType())) {
         Gdx.app.log(TAG, "received " + D2GSData.name(packet.data.dataType())
             + " packet from " + socket.getRemoteAddress());

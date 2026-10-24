@@ -1681,6 +1681,33 @@ session authority 失败时的完整跨系统回滚验证。
 下一迁移：在可用的 headless 双进程环境运行跨进程 checkpoint restore/reconnect gate；随后
 补齐失败回滚事务并复核旧 transport 的 generation 注入，之后再评估 M8-A 收尾条件。
 
+### M8-A 第 14 批：checkpoint 事务回滚与旧 transport 代际隔离（2026-10-25）
+
+本批继续收口恢复安全边界，仍不宣称 M8-A/M8 整体完成。
+
+- D2GS checkpoint restore 在 ECS 成功后才应用 RNG、D2S、session authority；任一后续阶段
+  抛错会用恢复前的 ECS/RNG/native-unit RNG/D2S/session 快照回滚，并恢复 fixed-tick 时钟和
+  上一次 replay checkpoint 引用。
+- `Packet`/D2GS `Client` 增加 socket transport token。入站包和断开回调都校验当前连接代际，
+  旧 socket 的迟到包不能操作新复用的 connection slot，也不能误删新连接。
+- 保留上一批 generation-aware command admission；transport token 解决连接槽位复用，session
+  generation 解决 stable identity 接管，两层都不改变现有 D2GS 协议字段。
+
+验证：
+
+```powershell
+./gradlew.bat :core:test --tests com.riiablo.engine.D2gsCommandAdapterTest `
+  :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：core/D2GS 定向测试与编译通过。真实双进程 checkpoint 恢复、D2S factory 失败注入和
+旧 transport 延迟包的 socket 级门禁仍需在 headless 运行环境中验收；因此 M8-A 继续进行中。
+
+下一迁移：运行真实双进程 reconnect gate，确认旧 socket、旧 generation、旧 actor 三者均被
+拒绝且新连接可继续发命令；通过后再评估 M8-A 的最终收尾与剩余回滚故障注入。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
