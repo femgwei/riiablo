@@ -676,6 +676,16 @@ M5 只接收投影结果，不读取 M6 内部的可变属性列表。
 当前状态：M6 第 3/4 批的纯投影部分完成，M6 整体仍进行中。下一步是将投影与装备事务的
 提交 revision、套装激活计数和玩家/佣兵快照连接起来，同时保持与 M5 的战斗读取边界稳定。
 
+### M6 第 4 批：经验单一提交边界（2026-10-24）
+
+本批将 `ExperienceManager` 的经验写入收敛到 `ProgressionService.Result` →
+`commitExperience` 单一提交边界。经验计算仍由纯规则服务完成，CharData 的 base/aggregate
+统计、等级变更和资源不变量只在提交边界写入，避免调用方重复计算或重复结算。现有击杀奖励
+调用保持兼容，但不再直接维护经验/等级公式。
+
+定向 `ExperienceManagerNativeTest`、`ProgressionServiceTest` 通过。M6 仍未完成；装备事务
+revision、套装计数、库存回滚和玩家/佣兵快照仍待接入。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
@@ -814,6 +824,45 @@ D2MOO/原版依据：普通 Attack 使用 `SkillCodes.attack=0` 的原生 `SrvDo
 剩余问题：M5 仍需最终复核表现快照事件出口、旧兼容入口删除范围以及摘要 checkpoint 到 M8 可恢复 replay 的转换；本批只完成普通近战权威结算和网络观察，不把这些依赖提前宣称完成。
 
 下一迁移：M5 最终收口批，集中清理/登记战斗旧入口并把表现快照与 replay 依赖交给 M8；若旧入口仍有明确生产结算职责，继续保留为未完成项。
+
+### M5 最终收口批：生产结算/快照/表现出口复核（2026-10-24）
+
+完成日期：2026-10-24；本批完成 M5 战斗垂直切片在当前代码范围内可独立完成的最终复核，
+不把 M8 的可恢复 replay、完整网络事件统一出口提前计入。
+
+实现与门禁：
+
+- 新增 `M5CombatBoundaryAuditTest`，审计专用 D2GS 是否在构造 `World` 前注册
+  `ServerGameplayContext`；Fire Bolt、Fire Ball、物理投射物和普通攻击涉及的生产结算类均必须
+  经过 `DamageSettlement.commit`，不能直接写入生命损失。
+- 审计 `NetworkSynchronizer` 只发送 `SerializationManager` 生成的权威实体快照，并保留
+  `MissileImpactEvent`/`SoundEvent` 作为表现事件出口；它不得订阅或传输可变的
+  `DamageEvent`/`DamageAppliedEvent`。`VitalsSerializer` 仍是生命、法力和耐力的唯一快照投影。
+- 审计客户端表现系统只订阅已提交的 `DamageAppliedEvent`；旧兼容常量仅用于解释已提交事实，
+  不作为新的事件入口。`ServerGameplayContext.legacyCombatContext` 保留给无上下文的离线
+  测试/工具，真实 D2GS 生产装配始终注入世界上下文。
+- 新增 `:core:m5FinalCombatRegression`，集中运行前五批的技能、物理、近战和表现回归及本批审计。
+
+验证：
+
+```powershell
+./gradlew.bat :core:m5FinalCombatRegression --no-daemon
+git diff --check
+```
+
+结果：最终 M5 回归 214 项通过、0 失败；包含生产出口审计、`DamageAppliedEvent` 表现边界、
+Fire Bolt/Fire Ball、物理投射物、普通武器和普通 Attack 门禁。未修改 FlatBuffer 字段，未启动
+图形客户端；真实 1.10f 双客户端证据沿用第 2～5 批已通过的 gate。
+
+D2MOO/原版依据：本批不改伤害公式或 1.10f 行为，只锁定既有 `SUNITDMG` 对应的单一结算边界、
+`VitalsP` 快照和已提交命中事实出口；规则证据仍以各批已有 D2MOO 行号与原版资源回归为准。
+
+剩余问题：M5 的战斗链路和当前可独立完成的快照/表现出口已完成；摘要 checkpoint 转换为可恢复
+replay、完整网络事件统一出口和回放校验仍属于 M8，不能在 M5 中宣称完成。M5 计划行因此继续
+标记为“进行中”，直到 M8 依赖收口。
+
+下一迁移：继续 M6/M7 领域批次；M8 再接管可恢复 checkpoint/replay、统一网络表现事件和最终旧
+直连入口删除。
 
 ### M0 完成记录（2026-10-21）
 

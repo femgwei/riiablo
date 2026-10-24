@@ -1018,3 +1018,45 @@ task m5MeleeCombatRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// M5 final batch: production settlement, snapshot and presentation exits.
+task m5FinalCombatRegression(type: Test) {
+  group = 'verification'
+  description = 'M5 final combat boundary audit plus all vertical-slice regressions.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    [
+      'com.riiablo.engine.server.M5CombatBoundaryAuditTest',
+      'com.riiablo.engine.client.DamagePresentationBoundaryTest',
+      'com.riiablo.engine.server.FireBoltGoldenDamageTest',
+      'com.riiablo.engine.server.FireBoltVerticalSliceTest',
+      'com.riiablo.engine.server.MonsterMissileElementalIntegrationTest',
+      'com.riiablo.engine.server.FireBallGoldenDamageTest',
+      'com.riiablo.engine.server.SorceressFireBallIntegrationTest',
+      'com.riiablo.engine.server.NativeExplosionLifecycleTest',
+      'com.riiablo.engine.server.NativeSorceressProjectileDataTest',
+      'com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest',
+      'com.riiablo.engine.server.AmazonDamageOwnershipTest',
+      'com.riiablo.engine.server.AmazonSkillSpecializationTest.ordinaryWeaponLaunchAndCollisionKeepCreationPacketAndFractionalDamage',
+      'com.riiablo.engine.server.AmazonSkillSpecializationTest.localEffectsModeCreatesAuthoritativeArrowForNormalBowAttack',
+      'com.riiablo.engine.server.AmazonMeleeSkillLifecycleTest',
+      'com.riiablo.engine.server.combat.CombatSystemTest',
+      'com.riiablo.engine.server.combat.NativeFixedPhysicalDamageTest',
+      'com.riiablo.engine.server.CombatPipelineIntegrationTest.playerMeleeAttackKeyframeDamagesAndKillsMonster',
+      'com.riiablo.engine.server.CombatPipelineIntegrationTest.ordinaryPlayerMeleeHitsDrainWeaponDurability',
+      'com.riiablo.engine.server.CombatPipelineIntegrationTest.ordinaryMonsterMeleeHitsDrainPlayerArmorDurability',
+      'com.riiablo.engine.server.CombatPipelineIntegrationTest.javelinNormalAttackRemainsMeleeAndCannotHitAtThrowRange',
+      'com.riiablo.engine.server.CombatPipelineIntegrationTest.bowNormalAttackCreatesArrowAndDamagesAtRange',
+      'com.riiablo.engine.server.combat.WeaponSkillLifecycleTest',
+      'com.riiablo.engine.server.combat.OrdinaryWeaponDamageTest',
+      'com.riiablo.engine.server.MonsterModeMeleeIntegrationTest'
+    ].each { includeTestsMatching it }
+  }
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
