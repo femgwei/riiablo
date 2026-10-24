@@ -8,7 +8,6 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.Engine;
-import com.riiablo.presentation.component.Label;
 import com.riiablo.engine.shared.component.Selectable;
 import com.riiablo.engine.server.NativeHirelingExperienceTable;
 import com.riiablo.engine.server.component.Mercenary;
@@ -92,7 +91,6 @@ class ClientMercenarySnapshotTest extends RiiabloTest {
     void attach(World attached) {
       world = attached;
       mMercenary = world.getMapper(Mercenary.class);
-      mLabel = world.getMapper(Label.class);
       mSelectable = world.getMapper(Selectable.class);
       syncIds = world.getSystem(NetworkIdManager.class);
     }

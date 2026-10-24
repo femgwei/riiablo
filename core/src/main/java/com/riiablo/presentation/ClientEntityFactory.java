@@ -43,6 +43,7 @@ import com.riiablo.save.CharData;
 import com.riiablo.engine.server.object.NativeShrineResolver;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.client.event.ClientObjectStateEvent;
+import com.riiablo.engine.client.event.ClientLabelRemovalEvent;
 import net.mostlyoriginal.api.event.common.Subscribe;
 
 public class ClientEntityFactory extends ServerEntityFactory {
@@ -464,6 +465,12 @@ public class ClientEntityFactory extends ServerEntityFactory {
   public void onAuthoritativeObjectState(ClientObjectStateEvent event) {
     if (event == null) return;
     applyAuthoritativeObjectState(event.entityId, event.mode, event.stateFlags);
+  }
+
+  /** Removes a stale label only after the replica event reaches presentation. */
+  @Subscribe
+  public void onLabelRemoval(ClientLabelRemovalEvent event) {
+    if (event != null && mLabel.has(event.entityId)) mLabel.remove(event.entityId);
   }
 
   private byte applyValkyrieComposite(int entityId, int skillLevel) {

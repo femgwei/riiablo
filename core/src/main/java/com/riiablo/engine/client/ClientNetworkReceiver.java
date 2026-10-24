@@ -48,13 +48,13 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.shared.component.Selectable;
-import com.riiablo.presentation.component.Label;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.engine.server.event.SoundEvent;
 import com.riiablo.engine.client.event.ClientItemDropReplayEvent;
 import com.riiablo.engine.client.event.ClientItemPickupEvent;
+import com.riiablo.engine.client.event.ClientLabelRemovalEvent;
 import com.riiablo.engine.client.event.ClientObjectStateEvent;
 import com.riiablo.engine.client.event.ClientPlayerHitEvent;
 import com.riiablo.item.Item;
@@ -133,7 +133,6 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Selectable> mSelectable;
-  protected ComponentMapper<Label> mLabel;
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<com.riiablo.engine.server.component.Mercenary> mMercenary;
   private com.riiablo.engine.server.NativeHirelingExperienceTable clientHirelingTable;
@@ -1318,7 +1317,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void applySummonedPetSnapshot(int entityId, SummonedPetP data) {
     if (data == null || mSummonedPet == null) return;
-    if (mLabel != null && mLabel.has(entityId)) mLabel.remove(entityId);
+    publishEvent("network.label_remove", ClientLabelRemovalEvent.obtain(entityId));
     int owner = syncIds.get(data.ownerId());
     if (owner == Engine.INVALID_ENTITY) owner = data.ownerId();
     String type = data.petType();
@@ -1367,7 +1366,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (!ClientMercenarySnapshotWriter.apply(mMercenary, entityId, owner, snapshot)) return;
     authoritativeMercenaries.commit(entityId, snapshot);
     com.riiablo.engine.server.component.Mercenary merc = mMercenary.get(entityId);
-    if (mLabel.has(entityId)) mLabel.remove(entityId);
+    publishEvent("network.label_remove", ClientLabelRemovalEvent.obtain(entityId));
     if (mSelectable.has(entityId)) mSelectable.remove(entityId);
     world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).remove(entityId);
     world.getMapper(com.riiablo.engine.server.component.Interactable.class).remove(entityId);

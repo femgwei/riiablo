@@ -7,6 +7,7 @@ import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.riiablo.engine.SimulationTickCoordinator;
 import com.riiablo.engine.client.event.ClientObjectStateEvent;
+import com.riiablo.engine.client.event.ClientLabelRemovalEvent;
 import com.riiablo.engine.server.event.SoundEvent;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,20 @@ class ClientNetworkReceiverTickBoundaryTest {
     SoundEvent event = SoundEvent.obtain(7, "door", true);
 
     receiver.publishEvent("network.sound", event);
+    verifyNoInteractions(receiver.events);
+
+    receiver.simulationTickCoordinator.advance(ignored -> {}, ignored -> {},
+        queued -> ((Runnable) queued.payload).run());
+    verify(receiver.events).dispatch(event);
+  }
+
+  @Test void labelRemovalEventWaitsForEventsPhase() {
+    ClientNetworkReceiver receiver = new ClientNetworkReceiver();
+    receiver.simulationTickCoordinator = new SimulationTickCoordinator();
+    receiver.events = mock(EventSystem.class);
+    ClientLabelRemovalEvent event = ClientLabelRemovalEvent.obtain(12);
+
+    receiver.publishEvent("network.label_remove", event);
     verifyNoInteractions(receiver.events);
 
     receiver.simulationTickCoordinator.advance(ignored -> {}, ignored -> {},

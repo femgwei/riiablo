@@ -25,7 +25,8 @@ class ClientUiBoundaryTest {
     }
     String receiver = code(source.resolve("ClientNetworkReceiver.java"));
     Pattern directReplicaHandlers = Pattern.compile(
-        "com\\.riiablo\\.presentation\\.(?:ClientEntityFactory|ItemEffectManager|PlayerHitSound)\\b");
+        "com\\.riiablo\\.presentation\\.(?:ClientEntityFactory|ItemEffectManager|PlayerHitSound)\\b"
+            + "|com\\.riiablo\\.presentation\\.component\\.Label\\b");
     assertFalse(directReplicaHandlers.matcher(receiver).find(),
         "network replicas must publish presentation events instead of calling handlers");
     assertFalse(ui.matcher(code(repository().resolve(

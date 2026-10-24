@@ -1034,6 +1034,28 @@ git diff --check
 通过。表现扫描中的 `ClientNetworkReceiver` 直接 handler 依赖已清除；`ClientGameplayContext`、
 `Label` 以及 host 装配兼容债务仍待后续 M8-C 批次处理，不能据此宣称 M8-C 或 M8 整体完成。
 
+### M8-C 第 2 批：网络副本标签生命周期事件（2026-10-24）
+
+本批继续收口网络副本生命周期的表现写入。召唤物和佣兵快照在需要清理旧世界标签时，
+`ClientNetworkReceiver` 只发布不可变的 `ClientLabelRemovalEvent`，不再直接引用
+`presentation.component.Label` 或修改表现组件；`ClientEntityFactory` 在事件阶段负责移除
+标签。权威实体、佣兵所有权和网络包字段保持不变，事件仍遵守固定 Tick 的 EventSystem 边界。
+
+验证：
+
+```powershell
+./gradlew.bat :core:compileJava :core:compileTestJava --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :core:test --tests com.riiablo.architecture.ClientUiBoundaryTest `
+  --tests com.riiablo.engine.client.ClientNetworkReceiverTickBoundaryTest `
+  --tests com.riiablo.engine.client.ClientObjectSnapshotStateTest `
+  --tests com.riiablo.screen.GameScreenAssemblyTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：网络副本标签事件边界和客户端定向回归通过；`ClientNetworkReceiver` 的直接表现组件
+依赖已清零。`ClientGameplayContext`、物品适配器和 host 装配兼容债务仍待后续 M8-C 批次，
+M8-C/M8 整体继续标记为进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
