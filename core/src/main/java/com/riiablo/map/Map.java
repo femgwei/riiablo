@@ -1000,7 +1000,13 @@ public class Map implements Disposable {
       }
       return null;
     }
-    for (Zone zone : zones) {
+    // LibGDX Array's iterator is a single mutable instance.  A zone lookup
+    // can be re-entered from collision/AI code while the outer lookup is
+    // still resolving a zone; using enhanced-for here then throws
+    // "#iterator() cannot be used nested."  Keep this query allocation-free
+    // and re-entrant just like the native-collision branch above.
+    for (int i = 0; i < zones.size; i++) {
+      Zone zone = zones.get(i);
       if (zone.contains(x, y) || zone.containsBoundaryWall(x, y)) return zone;
     }
     return null;

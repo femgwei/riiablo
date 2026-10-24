@@ -1113,6 +1113,7 @@ task m7WorldRegression(type: Test) {
       'com.riiablo.map.MapGenerationPolicyTest',
       'com.riiablo.map.MapBuilderIsolationTest',
       'com.riiablo.map.MapHeadlessLayoutResourceTest',
+      'com.riiablo.map.MapZoneLookupTest',
       'com.riiablo.map.MapManagerWaypointTest',
       'com.riiablo.map.Act1MapBuilderD2MooLayersTest',
       'com.riiablo.map.d2moo.Act1D2MOOLayoutBridgeTest',

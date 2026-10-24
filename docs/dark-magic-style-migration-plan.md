@@ -791,6 +791,29 @@ DT1/DS1 兼容层，不会把未完成的 native grid 当作权威结果。动�
 D2MOO path/collision 公式、mask 数值或单位行为，只统一读取边界；真实 MPQ/headless 和
 双客户端验收仍留在 M7 第 7 批。
 
+### M7 第 7 批：真实资源与双客户端收尾（2026-10-24）
+
+本批完成当前 M7 世界规则链可以独立收口的真实验收。真实 1.10f MPQ 下的
+`:core:m7WorldRegression -Pd2Home="G:\BaiduNetdiskDownload\Diablo II 1.10F"` 共 130 项通过，
+失败、错误和跳过均为 0。Act I 城镇↔血腥荒地的真实 TCP seam 门禁通过：`planned=2`、
+`visited=2`、`transitions=1`、`failures=0`；native terrain、`staticPath` 和 `dynamicPath`
+均在生产 D2GS 线程中验证。
+
+真实三客户端 `headlessDenQuestDual` 通过，覆盖双人死亡/复活、第三客户端隔离、Den
+任务目标/奖励待结算和重连快照；此前暴露的 LibGDX `Array` 嵌套迭代器崩溃已修复，
+`Map.getZone(int,int)` 的兼容查询改为索引遍历，保持原有区域和 boundary-wall 优先级。
+新增 `MapZoneLookupTest` 直接覆盖查询重入，防止共享 iterator 回归。
+真实双客户端 `headlessA4IzualDual` 也通过，确认 A4 Plains of Despair/Outer Steppes
+任务入口和双客户端区域同步仍可用。
+
+收尾时也复测了 `headlessAreaTransitionDual` 和较长的 `headlessMapTour`，两者不作
+全绿声明：前者在原生连续 seam `104→105` 处仍要求不存在的静态 Warp entity，属于
+验收夹具与 native seam 契约不一致；后者在 Blood Moor/Cold Plains 动态怪物密集位置
+出现 runner 清障超时，诊断显示 `nativeCollisionMismatches=0`，属于夹具清障/超时边界。
+这些结果不能反推地图规则失败，也不能写成完整巡游通过。`map5` 仍只是 `Ds1Loader`/
+`Dt1Loader` 的 MPQ 解码桥，未删除；M7-B 的多代地图最终删除和 M7-A 的全部规则策略
+搬迁仍待后续批次，M7 总状态保持“进行中”。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
