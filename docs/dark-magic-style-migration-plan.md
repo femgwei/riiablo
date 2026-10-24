@@ -1734,6 +1734,37 @@ $env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II'
 部分金币拾取/旧 owner window 的命令 gate，再继续旧 socket/generation 延迟包和跨进程
 checkpoint 恢复验收。
 
+### M8-A 第 16 批：固定 Tick handler 入站收口与物品重连门禁（2026-10-25）
+
+本批修复真实门禁中 `ItemMoveRequest` 无响应的根因，并完成统一物品协议与延迟删除的
+回归收口；仍不把 M8-A/M8 整体标记为完成。
+
+- 修正 `D2GS.drainD2gsIngress` 的 payload 分支：此前先要求所有 payload 是
+  `IngressCommand`，实际 `HandlerIngress` 会在固定 Tick 排空时直接返回，导致
+  `item_move` 等 D2GS handler 被静默丢弃。现在 movement/combat 与 handler 两类命令都在
+  同一固定 Tick 队列中正确排空。
+- `:server:d2gs:headlessReconnectGroundLoot` 通过：部分金币 `20 -> 5`、玩家入账 `15`，
+  竞争客户端收到完整 ground correction，断线后旧 owner window 和新连接 baseline 保持。
+- `:server:d2gs:headlessItemFailureCorrections` 通过：成功拾取快照、重复请求重放、距离、
+  背包占满、死亡三类失败均返回完整 ground item 数据/owner/坐标，且成功物品完成 D2S
+  round-trip。
+- `:server:d2gs:headlessDelayedDeleteFrames` 通过：延迟三 Tick 的旧删除帧被忽略，随后
+  重连金币门禁仍通过。
+- headless correction fixture 保留生产自动装备规则；为避免 `cap` 触发原版自动装备而
+  误测“背包存放”断言，测试夹具只清除该夹具物品的可选装备类型元数据，不改变生产逻辑。
+
+验证命令：
+
+```powershell
+./gradlew.bat :server:d2gs:headlessReconnectGroundLoot --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:headlessItemFailureCorrections --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:headlessDelayedDeleteFrames --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+下一迁移：继续真实旧 socket/generation 延迟命令拒绝与跨进程 checkpoint restore 验收，
+并在这些边界通过后再评估 M8-A 收尾条件。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

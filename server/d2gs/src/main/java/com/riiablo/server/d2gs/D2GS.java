@@ -2654,6 +2654,10 @@ public class D2GS extends ApplicationAdapter {
         com.riiablo.item.Item item = generator.generateLootItem(code, 1,
             com.riiablo.item.Quality.NORMAL, 0x49544658, server.diff);
         if (item == null) return;
+        // The correction gate needs an ordinary inventory placement.  Keep
+        // the generated cap's native payload intact while omitting its
+        // optional type metadata so automatic ground pickup does not equip it.
+        if ("cap".equalsIgnoreCase(code)) item.typeEntry = null;
         int entityId = server.factory.createItem(item, position.x, position.y);
         if (entityId < 0) return;
         item.id = entityId;
@@ -7177,16 +7181,16 @@ public class D2GS extends ApplicationAdapter {
 
   private void drainD2gsIngress(long currentTick) {
     commandAdapter.drain(currentTick, command -> {
-      if (!(command.payload instanceof IngressCommand)) return;
-      IngressCommand ingress = (IngressCommand) command.payload;
-      if (ingress.intent instanceof MovementIntent) {
-        enqueueMovementIntent(ingress.connectionId, ingress.entityId,
-            (MovementIntent) ingress.intent, currentTick);
-      } else if (ingress.intent instanceof CombatIntent) {
-        enqueueCombatIntent(ingress.connectionId, ingress.entityId,
-            (CombatIntent) ingress.intent, currentTick);
-      }
-      if (command.payload instanceof HandlerIngress) {
+      if (command.payload instanceof IngressCommand) {
+        IngressCommand ingress = (IngressCommand) command.payload;
+        if (ingress.intent instanceof MovementIntent) {
+          enqueueMovementIntent(ingress.connectionId, ingress.entityId,
+              (MovementIntent) ingress.intent, currentTick);
+        } else if (ingress.intent instanceof CombatIntent) {
+          enqueueCombatIntent(ingress.connectionId, ingress.entityId,
+              (CombatIntent) ingress.intent, currentTick);
+        }
+      } else if (command.payload instanceof HandlerIngress) {
         HandlerIngress handler = (HandlerIngress) command.payload;
         switch (command.kind) {
           case "select_skill": SelectSkillRequest(handler.packet); break;

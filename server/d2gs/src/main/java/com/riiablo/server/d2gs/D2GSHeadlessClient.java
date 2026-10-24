@@ -10765,6 +10765,8 @@ public final class D2GSHeadlessClient {
       }
       Thread.sleep(300L);
 
+      // Use a non-equippable ordinary item so the correction gate verifies
+      // inventory snapshot round-trip rather than native auto-equip policy.
       int farItem = D2GS.headlessCreateRoomItemFixture(client.playerId, 10, rooms[0], "cap");
       Snapshot farDrop = awaitVisibleGroundEntity(client, input, farItem, deadline());
       if (farDrop == null) throw new IOException("far-item baseline was not visible");
