@@ -87,4 +87,23 @@ public final class AuthoritativeSimulation {
   public long serverTimeMillis() {
     return serverTimeMillis;
   }
+
+  /**
+   * Restores the simulation clock after an authoritative ECS checkpoint has
+   * been applied on the owning thread.  The world mutation itself remains the
+   * responsibility of the checkpoint adapter.
+   */
+  public synchronized void restoreFromCheckpoint(long checkpointTick) {
+    if (checkpointTick < 0L) throw new IllegalArgumentException("checkpointTick");
+    Thread current = Thread.currentThread();
+    if (ownerThread != null && ownerThread != current) {
+      throw new IllegalStateException("checkpoint restore must run on the owner thread");
+    }
+    if (ownerThread != null && checkpointTick < tick) {
+      throw new IllegalStateException("checkpoint restore cannot move the clock backwards");
+    }
+    if (ownerThread == null) ownerThread = current;
+    tick = checkpointTick;
+    serverTimeMillis = epochMillis + checkpointTick * SimulationClock.STEP_MILLIS;
+  }
 }

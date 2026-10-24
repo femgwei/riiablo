@@ -951,6 +951,30 @@ git diff --check
 结果：M8 replay 回归门禁通过；M8-A 仍待真实 ECS checkpoint/restore，M8-D 仍待网络三层
 唯一 owner 和剩余旧 handler 的统一迁移。
 
+### M8 第 7 批：真实 D2GS/ECS checkpoint 摘要与恢复边界（2026-10-24）
+
+本批把 checkpoint 从抽象摘要接到 D2GS 的实际 ECS/网络状态：`D2gsCheckpointSnapshot`
+枚举当前 `Networked` 实体，复用 `SerializationManager` 生成与 EntitySync baseline 相同的
+权威 FlatBuffer 状态，并按实体生成稳定 SHA-256 digest，再组合成带 Tick 的 world digest。
+EntitySync payload 的时钟字段固定为零，避免不同进程启动时间污染跨进程比较；Tick 仍由
+checkpoint envelope 单独记录。
+
+D2GS 在安装 replay recorder 时于每个 authoritative Tick 的 outgoing 阶段发布真实摘要，
+并保留最近 checkpoint。新增恢复边界可把归档 payload 应用到仍存在的 ECS 实体，全部成功后
+才恢复 `AuthoritativeSimulation` 时钟；缺失实体或应用失败会拒绝恢复，不会半恢复后继续运行。
+实体创建/删除、跨进程 native factory 重建和完整 RNG stream 反序列化尚未伪装完成，仍需
+后续原生工厂与 RNG adapter。
+
+验证：
+
+```powershell
+./gradlew.bat :server:d2gs:compileJava :core:test --tests com.riiablo.engine.server.AuthoritativeSimulationTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：D2GS 生产编译、authoritative simulation 时钟恢复和 replay 回归通过；当前恢复契约
+明确限定为“已有实体的网络状态恢复”，完整断线重建与持久化存档往返仍待后续批次。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

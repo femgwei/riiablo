@@ -71,6 +71,7 @@ import com.riiablo.engine.server.AuraEcsSystem;
 import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.ServerPlayerDeathSystem;
 import com.riiablo.engine.server.AuthoritativeSimulation;
+import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.ObjectInteractor;
@@ -6070,6 +6071,7 @@ public class D2GS extends ApplicationAdapter {
   private com.riiablo.engine.server.ServerGameplayContext serverContext;
   AuthoritativeSimulation simulation;
   private SimulationReplayRecorder replayRecorder = SimulationReplayRecorder.NONE;
+  private D2gsCheckpointSnapshot replayCheckpoint;
   Map map;
   CombatPositionHistory combatPositionHistory;
   final com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
@@ -6126,6 +6128,45 @@ public class D2GS extends ApplicationAdapter {
   }
 
   public SimulationReplayRecorder replayRecorder() { return replayRecorder; }
+
+  /** Captures the authoritative ECS/network baseline on the simulation thread. */
+  public D2gsCheckpointSnapshot captureReplayCheckpoint() {
+    if (world == null || simulation == null) return null;
+    Thread owner = simulation.ownerThread();
+    if (owner != null && owner != Thread.currentThread()) {
+      throw new IllegalStateException("checkpoint capture must run on the owner thread");
+    }
+    SerializationManager serializer = world.getSystem(SerializationManager.class);
+    if (serializer == null) return null;
+    return D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber());
+  }
+
+  public D2gsCheckpointSnapshot replayCheckpoint() { return replayCheckpoint; }
+
+  /**
+   * Applies an archived checkpoint to existing ECS entities and only then
+   * advances the authoritative clock. Missing entity creation/deletion is
+   * rejected by the adapter until a native factory restore contract exists.
+   */
+  public D2gsCheckpointSnapshot.RestoreResult restoreReplayCheckpoint(
+      D2gsCheckpointSnapshot checkpoint) {
+    if (checkpoint == null) throw new NullPointerException("checkpoint");
+    if (world == null || simulation == null) {
+      throw new IllegalStateException("D2GS simulation is not initialized");
+    }
+    Thread owner = simulation.ownerThread();
+    if (owner != null && owner != Thread.currentThread()) {
+      throw new IllegalStateException("checkpoint restore must run on the owner thread");
+    }
+    SerializationManager serializer = world.getSystem(SerializationManager.class);
+    if (serializer == null) throw new IllegalStateException("serialization manager unavailable");
+    D2gsCheckpointSnapshot.RestoreResult result = checkpoint.restoreExisting(world, serializer);
+    if (result.success()) {
+      simulation.restoreFromCheckpoint(checkpoint.tick());
+      replayCheckpoint = checkpoint;
+    }
+    return result;
+  }
 
   @Override
   public void create() {
@@ -6349,6 +6390,10 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private void dispatchOutgoingPackets() {
+    if (replayRecorder != SimulationReplayRecorder.NONE) {
+      replayCheckpoint = captureReplayCheckpoint();
+      if (replayCheckpoint != null) replayRecorder.recordCheckpoint(replayCheckpoint.summary());
+    }
     flushDelayedDeletions();
     cache.clear();
     outPackets.drainTo(cache);

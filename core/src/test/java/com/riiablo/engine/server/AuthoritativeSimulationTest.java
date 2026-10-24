@@ -113,6 +113,21 @@ class AuthoritativeSimulationTest {
     }
   }
 
+  @Test
+  void restoresClockOnlyAfterCheckpointAdapterHasAppliedState() {
+    World world = new World(new WorldConfigurationBuilder().build());
+    try {
+      AuthoritativeSimulation simulation = new AuthoritativeSimulation(world);
+      simulation.restoreFromCheckpoint(17L);
+      assertEquals(17L, simulation.tickNumber());
+      assertSame(Thread.currentThread(), simulation.ownerThread());
+      simulation.tick(null, null);
+      assertEquals(18L, simulation.tickNumber());
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static final class RecordingSystem extends BaseSystem {
     private final List<String> phases;
     float delta;
