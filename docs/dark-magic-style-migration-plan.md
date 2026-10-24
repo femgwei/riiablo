@@ -1708,6 +1708,32 @@ git diff --check
 下一迁移：运行真实双进程 reconnect gate，确认旧 socket、旧 generation、旧 actor 三者均被
 拒绝且新连接可继续发命令；通过后再评估 M8-A 的最终收尾与剩余回滚故障注入。
 
+### M8-A 第 15 批：真实双客户端 reconnect gate 复跑（2026-10-25）
+
+本批运行现有 1.10f 资源下的真实 TCP 双客户端重连门禁，结果分开记录，不把局部通过扩大
+为 M8-A 完成声明。
+
+- `:server:d2gs:headlessReconnectVisibility` 通过：旧玩家/普通召唤物删除，掉落和对象保持，
+  同一角色新连接完成 baseline，输出 `reconnect_visibility_disconnect_pass` 与
+  `reconnect_visibility_pass`。
+- `:server:d2gs:headlessReconnectGroundLoot` 连续两次在第一次部分金币拾取响应处超时
+  （`partial gold pickup mismatch: result=timeout`），因此当前不能确认重连后旧 actor/new
+  actor 的掉落命令继续执行；这不是通过证据，需单独收口 item-move/reconnect gate。
+- 本批没有把失败门禁改成宽松超时，也没有宣称真实跨进程 checkpoint restore 已完成；当前
+  已验证的是同一 D2GS 进程内的真实 TCP disconnect/reconnect 生命周期。
+
+验证命令：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II'
+./gradlew.bat :server:d2gs:headlessReconnectVisibility --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:headlessReconnectGroundLoot --no-daemon --max-workers=1 --console=plain
+```
+
+下一迁移：定位 `ItemMoveRequest` 在真实 reconnect fixture 中未返回结果的路径，先完成
+部分金币拾取/旧 owner window 的命令 gate，再继续旧 socket/generation 延迟包和跨进程
+checkpoint 恢复验收。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
