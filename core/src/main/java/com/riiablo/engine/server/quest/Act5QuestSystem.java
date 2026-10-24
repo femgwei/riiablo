@@ -41,6 +41,7 @@ import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.engine.server.monster.MonsterRank;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -459,23 +460,24 @@ public class Act5QuestSystem extends ContextualQuestSystem {
     Player player = mPlayer.get(event.entityId);
     Monster npc = mMonster.get(event.npcId);
     if (player == null || player.data == null || npc == null || npc.monstats == null) return;
-    if (isQualKehk(npc.monstats)) {
+    int npcType = QuestNpcPolicy.resolve(npc.monstats);
+    if (npcType == MonsterType.QUAL_KEHK) {
       onQualKehkMessage(event, player);
       return;
     }
-    if (isMalah(npc.monstats)) {
+    if (npcType == MonsterType.MALAH) {
       onMalahMessage(event, player);
       return;
     }
-    if (isDrehya(npc.monstats)) {
+    if (npcType == MonsterType.DREHYA) {
       onDrehyaMessage(event, player);
       return;
     }
-    if (Act5BaalQuest.isTyrael3(npc.monstats.hcIdx, npc.monstats.Id)) {
+    if (npcType == MonsterType.TYRAEL3) {
       onBaalTyraelMessage(event, player, npc);
       return;
     }
-    if (!isLarzuk(npc.monstats)) return;
+    if (npcType != MonsterType.LARZUK) return;
     if (event.messageIndex == Act5ShenkQuest.MESSAGE_LARZUK_INIT) {
       updateRecord(player.data, Act5ShenkQuest::start, "larzuk-shenk-init");
       return;
@@ -558,8 +560,9 @@ public class Act5QuestSystem extends ContextualQuestSystem {
     int[] ids = monsters.getData();
     for (int i = 0; i < monsters.size(); i++) {
       int id = ids[i];
-      if (levelId(id) == D2LevelIds.LEVEL_HARROGATH && isDrehya(
-          mMonster.get(id) == null ? null : mMonster.get(id).monstats)) return id;
+      if (levelId(id) == D2LevelIds.LEVEL_HARROGATH
+          && QuestNpcPolicy.resolve(mMonster.get(id) == null ? null : mMonster.get(id).monstats)
+              == MonsterType.DREHYA) return id;
     }
     return Engine.INVALID_ENTITY;
   }
@@ -2323,31 +2326,6 @@ public class Act5QuestSystem extends ContextualQuestSystem {
       if (unique != null && unique.id == Act5ShenkQuest.SUPERUNIQUE_SIEGE_BOSS) return true;
     }
     return false;
-  }
-
-  private boolean isLarzuk(MonStats.Entry stats) {
-    if (stats == null) return false;
-    if ("Larzuk".equalsIgnoreCase(stats.Id)) return true;
-    return stats.NameStr != null && stats.NameStr.toLowerCase().contains("larzuk");
-  }
-
-  private boolean isQualKehk(MonStats.Entry stats) {
-    if (stats == null) return false;
-    if ("Qual-Kehk".equalsIgnoreCase(stats.Id)
-        || "Qual-Kehk".equalsIgnoreCase(stats.NameStr)) return true;
-    return stats.NameStr != null && stats.NameStr.toLowerCase().contains("qual");
-  }
-
-  private boolean isMalah(MonStats.Entry stats) {
-    if (stats == null) return false;
-    if ("Malah".equalsIgnoreCase(stats.Id) || "Malah".equalsIgnoreCase(stats.NameStr)) return true;
-    return stats.NameStr != null && stats.NameStr.toLowerCase().contains("malah");
-  }
-
-  private boolean isDrehya(MonStats.Entry stats) {
-    if (stats == null) return false;
-    return "Drehya".equalsIgnoreCase(stats.Id) || "Drehya".equalsIgnoreCase(stats.NameStr)
-        || containsName(stats.NameStr, "drehya");
   }
 
   private boolean isAncientSummit(int levelId) {

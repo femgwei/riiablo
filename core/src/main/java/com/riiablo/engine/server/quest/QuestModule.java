@@ -27,10 +27,11 @@ public final class QuestModule {
   public static boolean isNpcMessageAllowed(Files files, MonStats.Entry npc, CharData data,
       int playerLevel, boolean hasMalus, int levelId, int message) {
     if (npc == null || data == null || message < 0 || message > 0xFFFF) return false;
-    return Act1QuestMessageValidator.isAllowed(npc.hcIdx, data, playerLevel, hasMalus, message)
-        || Act2QuestMessageValidator.isAllowed(npc.hcIdx, data, message)
-        || Act3QuestMessageValidator.isAllowed(npc.hcIdx, data, message)
-        || Act4QuestMessageValidator.isAllowed(npc.hcIdx, data, message)
+    int npcType = QuestNpcPolicy.resolve(npc);
+    return Act1QuestMessageValidator.isAllowed(npcType, data, playerLevel, hasMalus, message)
+        || Act2QuestMessageValidator.isAllowed(npcType, data, message)
+        || Act3QuestMessageValidator.isAllowed(npcType, data, message)
+        || Act4QuestMessageValidator.isAllowed(npcType, data, message)
         || Act5QuestMessageValidator.isAllowed(files, npc.hcIdx, data, levelId, message);
   }
 }

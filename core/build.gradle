@@ -1120,7 +1120,9 @@ task m7WorldRegression(type: Test) {
       'com.riiablo.map.NativeWaypointResourceTest',
       'com.riiablo.engine.server.ai.MonsterAiPolicyTest',
       'com.riiablo.engine.server.ai.NativeAiDecisionTest',
-      'com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest'
+      'com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest',
+      'com.riiablo.engine.server.quest.QuestNpcPolicyTest',
+      'com.riiablo.engine.server.quest.QuestModuleIntegrationTest'
     ].each { includeTestsMatching it }
   }
   def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''

@@ -169,31 +169,32 @@ public class Act1QuestSystem extends ContextualQuestSystem {
     if (npc.monstats == null) return;
     Player player = mPlayer.get(event.entityId);
     if (player.data == null) return;
+    int npcType = QuestNpcPolicy.resolve(npc.monstats);
 
-    if (npc.monstats.hcIdx == MonsterType.KASHYA) {
+    if (npcType == MonsterType.KASHYA) {
       onKashyaMessage(event, player);
       return;
     }
-    if (npc.monstats.hcIdx == MonsterType.CHARSI) {
+    if (npcType == MonsterType.CHARSI) {
       onCharsiMessage(event, player);
       return;
     }
-    if (npc.monstats.hcIdx == MonsterType.DECKARDCAIN_TOWN) {
+    if (npcType == MonsterType.DECKARDCAIN_TOWN) {
       onCainTownMessage(event, player);
       return;
     }
-    if (npc.monstats.hcIdx == MonsterType.DECKARDCAIN) {
+    if (npcType == MonsterType.DECKARDCAIN) {
       if (event.messageIndex == Act1CainQuest.MESSAGE_INIT) {
         updateAndarielRecord(player.data, Act1AndarielQuest::start, "cain-act1q6-init");
       }
       return;
     }
-    if (npc.monstats.hcIdx == MonsterType.WARRIV) {
+    if (npcType == MonsterType.WARRIV) {
       onWarrivMessage(event, player);
       return;
     }
-    if (npc.monstats.hcIdx == MonsterType.NAVI) return;
-    if (npc.monstats.hcIdx != MonsterType.AKARA) return;
+    if (npcType == MonsterType.NAVI) return;
+    if (npcType != MonsterType.AKARA) return;
 
     if (event.messageIndex == Act1CainQuest.MESSAGE_DECIPHER_SCROLL) {
       decipherInifussScroll(event.entityId, player);

@@ -749,6 +749,22 @@ Act I 原生 AI 行为。验证共 118 项通过，失败/错误/跳过均为 0�
 `verifyModuleBoundaries` 与 `git diff --check`。本批未修改 D2 AI 公式或技能数值，
 Quest/NPC handlers、真实双客户端和 MPQ 行为验收仍待后续批次。
 
+### M7 第 4 批：Quest/NPC canonical identity 与消息边界（2026-10-24）
+
+本批新增统一 `QuestNpcPolicy`，将 `MonStats` NPC 行解析为任务系统使用的 canonical
+NPC 类型。Act I--IV 的命令准入和 Act I--V 的 Quest handler 消息路由统一经过该入口；
+Act V 的消息 validator 继续接收原始兼容 ordinal，再由既有 validator 做表行重映射，
+以兼容扩展表的额外零行和项目自定义 ordinal。移除了 QuestPlayerView 与 Act V handler
+中重复的 NPC 名称/ordinal 判断，保留 D2 原有任务状态、消息编号、数值和协议语义不变。
+
+新增 `QuestNpcPolicyTest`，并将其与 `QuestModuleIntegrationTest` 纳入
+`m7WorldRegression`。验证：`./gradlew.bat :core:test --tests
+com.riiablo.engine.server.quest.QuestNpcPolicyTest --tests
+com.riiablo.engine.server.quest.QuestModuleIntegrationTest --no-daemon` 通过；
+`./gradlew.bat :core:m7WorldRegression --no-daemon` 共 126 项通过，失败/错误/跳过均为 0；
+同时通过 `verifyModuleBoundaries` 与 `git diff --check`。本批不宣称真实双客户端或 MPQ
+验收完成，也未修改 D2 任务规则和数值公式。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

@@ -200,7 +200,7 @@ public class Act2DurielQuestSystem extends ContextualQuestSystem {
     Player player = mPlayer.get(event.entityId);
     Monster npc = mMonster.get(event.npcId);
     if (player == null || player.data == null || npc == null || npc.monstats == null) return;
-    int npcType = npc.monstats.hcIdx;
+    int npcType = QuestNpcPolicy.resolve(npc.monstats);
     if (npcType == MonsterType.TYRAEL1
         && event.messageIndex == Act2DurielQuest.MESSAGE_TYRAEL_PORTAL) {
       if (!isInLevel(event.entityId, D2LevelIds.LEVEL_DURIELSLAIR)

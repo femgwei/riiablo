@@ -566,7 +566,7 @@ public class Act3QuestSystem extends ContextualQuestSystem {
     Player player = mPlayer.get(event.entityId);
     Monster npc = mMonster.get(event.npcId);
     if (player == null || player.data == null || npc == null || npc.monstats == null) return;
-    int npcType = npc.monstats.hcIdx;
+    int npcType = QuestNpcPolicy.resolve(npc.monstats);
     if (Act3GoldenBirdQuest.isCain(npcType)) {
       onCainMessage(event, player);
     } else if (Act3GoldenBirdQuest.isMeshif(npcType)) {

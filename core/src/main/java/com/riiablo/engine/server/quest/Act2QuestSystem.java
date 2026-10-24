@@ -150,7 +150,7 @@ public class Act2QuestSystem extends ContextualQuestSystem {
     Monster npc = mMonster.get(event.npcId);
     if (player == null || player.data == null || npc == null || npc.monstats == null) return;
 
-    int npcType = npc.monstats.hcIdx;
+    int npcType = QuestNpcPolicy.resolve(npc.monstats);
     if (Act2SummonerQuest.isRewardNpc(npcType)
         && Act2SummonerQuest.isRewardMessage(event.messageIndex)) {
       onSummonerRewardMessage(event, player);

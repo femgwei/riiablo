@@ -563,7 +563,8 @@ public class Act4QuestSystem extends ContextualQuestSystem {
     // player's pending reward state.  The callback is intentionally scoped to
     // the requesting player: party members retain REWARD_PENDING until they
     // perform their own conversation, matching D2MOO's per-player quest bits.
-    if (npc.monstats.hcIdx == MonsterType.CAIN4) {
+    int npcType = QuestNpcPolicy.resolve(npc.monstats);
+    if (npcType == MonsterType.CAIN4) {
       if (event.messageIndex == Act4HellforgeQuest.MESSAGE_CAIN_REWARD) {
         short hellforge = hellforgeRecord(player.data);
         if (!Act4HellforgeQuest.canClaimReward(hellforge)) {
@@ -585,7 +586,7 @@ public class Act4QuestSystem extends ContextualQuestSystem {
       }
       return;
     }
-    if (npc.monstats.hcIdx != MonsterType.TYRAEL2) return;
+    if (npcType != MonsterType.TYRAEL2) return;
     short record = record(player.data);
     if (event.messageIndex == Act4IzualQuest.MESSAGE_TYRAEL_INIT) {
       updateRecord(player.data, Act4IzualQuest::start, "tyrael-init");
