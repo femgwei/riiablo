@@ -37,6 +37,54 @@ public class D2gsCheckpointSnapshotTest {
     assertEquals(before.summary().canonical(), after.summary().canonical());
   }
 
+  @Test public void portableEcsEnvelopeRestoresIntoAnotherWorldInstance() {
+    World source = worldWithEntities(2);
+    FakeSerializer sourceSerializer = new FakeSerializer();
+    int[] ids = networkedIds(source);
+    for (int id : ids) sourceSerializer.states.put(id, id + 40);
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(
+        source, sourceSerializer, 55L);
+
+    byte[] encoded = checkpoint.toEcsBytes();
+    D2gsCheckpointSnapshot transferred = D2gsCheckpointSnapshot.fromEcsBytes(encoded);
+    World resumed = worldWithEntities(2);
+    FakeSerializer resumedSerializer = new FakeSerializer();
+    for (int id : networkedIds(resumed)) resumedSerializer.states.put(id, 900);
+
+    D2gsCheckpointSnapshot.RestoreResult result = transferred.restoreExisting(
+        resumed, resumedSerializer);
+    D2gsCheckpointSnapshot restored = D2gsCheckpointSnapshot.capture(
+        resumed, resumedSerializer, 55L);
+    assertTrue(result.success());
+    assertEquals(ids.length, result.appliedEntities);
+    assertEquals(checkpoint.summary().canonical(), transferred.summary().canonical());
+    assertEquals(checkpoint.summary().canonical(), restored.summary().canonical());
+  }
+
+  @Test public void portableEcsEnvelopeRejectsTamperingAndTrailingBytes() {
+    World world = worldWithEntities(1);
+    FakeSerializer serializer = new FakeSerializer();
+    int id = networkedIds(world)[0];
+    serializer.states.put(id, 77);
+    byte[] encoded = D2gsCheckpointSnapshot.capture(world, serializer, 8L).toEcsBytes();
+
+    byte[] tampered = java.util.Arrays.copyOf(encoded, encoded.length);
+    tampered[tampered.length - 1] ^= 1;
+    assertIllegalArgument(() -> D2gsCheckpointSnapshot.fromEcsBytes(tampered));
+
+    byte[] trailing = java.util.Arrays.copyOf(encoded, encoded.length + 1);
+    assertIllegalArgument(() -> D2gsCheckpointSnapshot.fromEcsBytes(trailing));
+  }
+
+  private static void assertIllegalArgument(Runnable action) {
+    try {
+      action.run();
+    } catch (IllegalArgumentException expected) {
+      return;
+    }
+    throw new AssertionError("expected IllegalArgumentException");
+  }
+
   @Test public void checkpointCarriesRngStateAndReportsContinuationDrift() {
     World world = worldWithEntities(1);
     FakeSerializer serializer = new FakeSerializer();

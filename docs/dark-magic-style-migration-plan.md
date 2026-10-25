@@ -1815,6 +1815,31 @@ git diff --check
 transport 帧被丢弃，重连后的当前 generation 命令完成 snapshot baseline。M8-A 仍待跨进程
 ECS checkpoint restore，以及 RNG、D2S 和 session authority 的组合恢复验收。
 
+### M8-A 第 19 批：ECS checkpoint process-independent envelope（2026-10-25）
+
+本批补齐跨进程 ECS payload 的可传输格式，但只覆盖 ECS 子集，不把可选 RNG、D2S 或
+session authority 元数据伪装成已完成。
+
+- `D2gsCheckpointSnapshot` 新增版本化 `toEcsBytes/fromEcsBytes` envelope，包含 tick、
+  按 entity id 排序的完整 `EntitySync` payload、长度边界和 world digest；解码拒绝错误
+  magic/version、乱序/重复实体、截断、尾随数据和 digest 篡改。
+- ECS-only 编解码若发现 checkpoint 携带 RNG、D2S 或 session metadata 会显式失败，避免
+  跨进程传输时静默丢失后续恢复所需状态。
+- `D2gsCheckpointSnapshotTest` 增加独立 Artemis World 恢复、摘要一致性和篡改/尾随字节
+  拒绝门禁，验证恢复不依赖原进程中的 snapshot 对象引用。
+
+验证命令：
+
+```powershell
+./gradlew.bat :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：D2GS checkpoint 测试通过。当前 envelope 已能跨进程传输 ECS 世界状态；下一批继续
+把 RNG、D2S 和 session authority 纳入同一版本化 envelope，并做真实进程重启后的组合恢复。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

@@ -1,6 +1,12 @@
 package com.riiablo.server.d2gs;
 
 import java.nio.ByteBuffer;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -30,6 +36,11 @@ import com.riiablo.net.packet.d2gs.D2GSData;
  * same-world restore adapter.
  */
 public final class D2gsCheckpointSnapshot {
+  private static final int ECS_WIRE_MAGIC = 0x44324745; // "D2GE"
+  private static final int ECS_WIRE_VERSION = 1;
+  private static final int MAX_ECS_ENTITIES = 1_000_000;
+  private static final int MAX_ECS_PAYLOAD = 16 * 1024 * 1024;
+
   /**
    * Native ECS lifecycle bridge used when a checkpoint crosses an entity-set
    * boundary. Implementations must attach all components required by the
@@ -206,6 +217,87 @@ public final class D2gsCheckpointSnapshot {
       copy.put(entry.getKey(), Arrays.copyOf(entry.getValue(), entry.getValue().length));
     }
     return Collections.unmodifiableMap(copy);
+  }
+
+  /**
+   * Encodes the ECS-only portion as a deterministic, process-independent
+   * envelope. Optional RNG/D2S/session metadata is deliberately rejected here
+   * until the combined checkpoint codec is introduced; callers must not lose
+   * those fields by accidentally using this narrow transport.
+   */
+  public byte[] toEcsBytes() {
+    if (!summary.rngStates().isEmpty() || !summary.nativeUnitRngStates().isEmpty()
+        || d2sCheckpoint != null || sessionSnapshot != null) {
+      throw new IllegalStateException("ECS envelope cannot discard checkpoint metadata");
+    }
+    try {
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      DataOutputStream output = new DataOutputStream(bytes);
+      output.writeInt(ECS_WIRE_MAGIC);
+      output.writeInt(ECS_WIRE_VERSION);
+      output.writeLong(tick);
+      output.writeInt(payloads.size());
+      for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
+        output.writeInt(entry.getKey());
+        output.writeInt(entry.getValue().length);
+        output.write(entry.getValue());
+      }
+      byte[] worldDigest = summary.worldDigest().getBytes(
+          java.nio.charset.StandardCharsets.US_ASCII);
+      output.writeInt(worldDigest.length);
+      output.write(worldDigest);
+      output.flush();
+      return bytes.toByteArray();
+    } catch (IOException e) {
+      throw new IllegalStateException("unable to encode ECS checkpoint", e);
+    }
+  }
+
+  /** Decodes and integrity-checks an ECS-only checkpoint produced by {@link #toEcsBytes()}. */
+  public static D2gsCheckpointSnapshot fromEcsBytes(byte[] encoded) {
+    if (encoded == null) throw new NullPointerException("encoded");
+    try {
+      DataInputStream input = new DataInputStream(new ByteArrayInputStream(encoded));
+      if (input.readInt() != ECS_WIRE_MAGIC) throw new IllegalArgumentException("ECS checkpoint magic");
+      if (input.readInt() != ECS_WIRE_VERSION) throw new IllegalArgumentException("ECS checkpoint version");
+      long tick = input.readLong();
+      if (tick < 0L) throw new IllegalArgumentException("tick");
+      int count = input.readInt();
+      if (count < 0 || count > MAX_ECS_ENTITIES) throw new IllegalArgumentException("entity count");
+      Map<Integer, byte[]> payloads = new LinkedHashMap<>();
+      int previousId = -1;
+      for (int i = 0; i < count; i++) {
+        int entityId = input.readInt();
+        if (entityId < 0 || entityId <= previousId) {
+          throw new IllegalArgumentException("entity ordering");
+        }
+        previousId = entityId;
+        int length = input.readInt();
+        if (length <= 0 || length > MAX_ECS_PAYLOAD) {
+          throw new IllegalArgumentException("entity payload length");
+        }
+        byte[] payload = new byte[length];
+        input.readFully(payload);
+        payloads.put(entityId, payload);
+      }
+      int digestLength = input.readInt();
+      if (digestLength <= 0 || digestLength > 128) {
+        throw new IllegalArgumentException("world digest length");
+      }
+      byte[] digestBytes = new byte[digestLength];
+      input.readFully(digestBytes);
+      if (input.read() != -1) throw new IllegalArgumentException("trailing ECS checkpoint bytes");
+      String expectedDigest = new String(digestBytes, java.nio.charset.StandardCharsets.US_ASCII);
+      D2gsCheckpointSnapshot result = fromPayloads(tick, payloads);
+      if (!result.summary.worldDigest().equals(expectedDigest)) {
+        throw new IllegalArgumentException("ECS checkpoint digest mismatch");
+      }
+      return result;
+    } catch (EOFException e) {
+      throw new IllegalArgumentException("truncated ECS checkpoint", e);
+    } catch (IOException e) {
+      throw new IllegalArgumentException("invalid ECS checkpoint", e);
+    }
   }
 
   /**
