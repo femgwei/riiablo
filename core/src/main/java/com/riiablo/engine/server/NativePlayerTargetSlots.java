@@ -31,6 +31,71 @@ public class NativePlayerTargetSlots extends BaseEntitySystem {
   private final IntIntMap slots = new IntIntMap();
   private final IntSet allocationAttempts = new IntSet();
   private EntitySubscription targetNodes;
+  /** Only this world's target insertion domain. Detached compatibility lists
+   * keep their legacy counter, but cannot enter this registry implicitly. */
+  private long nextOrder;
+
+  public long nextOrder() {
+    if (nextOrder == Long.MAX_VALUE) throw new IllegalStateException("target order exhausted");
+    return ++nextOrder;
+  }
+
+  public static final class Checkpoint {
+    public final long sequence;
+    private final int[] heads, attempts;
+    private final long[] orders;
+    public Checkpoint(long sequence, int[] heads, long[] orders, int[] attempts) {
+      if (sequence < 0 || heads.length != SLOT_COUNT || orders.length != SLOT_COUNT
+          || attempts.length > 1000000) throw new IllegalArgumentException("target slots");
+      this.sequence = sequence; this.heads = heads.clone();
+      this.orders = orders.clone(); this.attempts = attempts.clone();
+      java.util.Set<Integer> owners = new java.util.HashSet<>();
+      java.util.Set<Long> events = new java.util.HashSet<>();
+      int previous = -1;
+      for (int id : attempts) {
+        if (id < 0 || id <= previous) throw new IllegalArgumentException("target allocation attempts");
+        previous = id;
+      }
+      for (int i = 0; i < SLOT_COUNT; i++) {
+        if (heads[i] < -1 || (heads[i] == -1) != (orders[i] == 0)
+            || orders[i] < 0 || orders[i] > sequence
+            || heads[i] >= 0 && (!owners.add(heads[i]) || !events.add(orders[i])
+                || Arrays.binarySearch(attempts, heads[i]) < 0)) {
+          throw new IllegalArgumentException("target head identity/order");
+        }
+      }
+    }
+    public int[] heads() { return heads.clone(); }
+    public long[] orders() { return orders.clone(); }
+    public int[] attempts() { return attempts.clone(); }
+  }
+
+  public Checkpoint captureCheckpoint() {
+    int[] attempts = new int[allocationAttempts.size]; int index = 0;
+    IntSet.IntSetIterator iterator = allocationAttempts.iterator();
+    while (iterator.hasNext) attempts[index++] = iterator.next();
+    Arrays.sort(attempts);
+    Checkpoint result = new Checkpoint(nextOrder, heads, headOrders, attempts);
+    validateCheckpoint(result);
+    return result;
+  }
+
+  public void validateCheckpoint(Checkpoint state) {
+    for (int id : state.attempts) if (!mPlayer.has(id)) {
+      throw new IllegalStateException("target slot player missing: " + id);
+    }
+  }
+
+  /** Call after structural subscriptions have settled, never registerPlayer. */
+  public void restoreCheckpoint(Checkpoint state) {
+    validateCheckpoint(state);
+    System.arraycopy(state.heads, 0, heads, 0, SLOT_COUNT);
+    System.arraycopy(state.orders, 0, headOrders, 0, SLOT_COUNT);
+    slots.clear(); allocationAttempts.clear();
+    for (int i = 0; i < SLOT_COUNT; i++) if (heads[i] >= 0) slots.put(heads[i], i);
+    for (int id : state.attempts) allocationAttempts.add(id);
+    nextOrder = state.sequence;
+  }
 
   public NativePlayerTargetSlots() {
     Arrays.fill(heads, Engine.INVALID_ENTITY);
@@ -63,8 +128,9 @@ public class NativePlayerTargetSlots extends BaseEntitySystem {
     if (mode == Engine.Player.MODE_DD) return;
     for (int slot = 0; slot < SLOT_COUNT; slot++) {
       if (heads[slot] != Engine.INVALID_ENTITY) continue;
+      long order = nextOrder();
       heads[slot] = entityId;
-      headOrders[slot] = NativeTargetOrder.inserted();
+      headOrders[slot] = order;
       slots.put(entityId, slot);
       return;
     }

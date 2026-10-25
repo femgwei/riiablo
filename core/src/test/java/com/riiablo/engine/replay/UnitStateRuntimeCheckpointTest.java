@@ -10,6 +10,37 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 
 class UnitStateRuntimeCheckpointTest {
+  @Test void legacyV1EmptyHolderAndAbsentHolderStillRestore() {
+    try (TestWorld source = new TestWorld(); TestWorld target = new TestWorld()) {
+      source.create(); source.create(); target.create(); target.create();
+      source.getMapper(UnitStates.class).create(0).init(source, 0);
+      Map<Integer, UnitStateRuntimeCheckpoint> current = UnitStateRuntimeCheckpoint.capture(source, new int[] {0, 1});
+      byte[] bytes = current.get(0).bytes();
+      byte[] legacy = new byte[bytes.length - 2];
+      System.arraycopy(bytes, 0, legacy, 0, 5);
+      System.arraycopy(bytes, 6, legacy, 5, bytes.length - 7);
+      legacy[3] = 1; // v1 has neither requiresTargets nor Monster overlay presence.
+      Map<Integer, UnitStateRuntimeCheckpoint> records = new TreeMap<>();
+      records.put(0, UnitStateRuntimeCheckpoint.fromBytes(legacy));
+      records.put(1, UnitStateRuntimeCheckpoint.fromBytes(new byte[] {0, 0, 0, 1, 0}));
+      UnitStateRuntimeCheckpoint.restore(target, records);
+      assertEquals(0, target.getMapper(UnitStates.class).get(0).stateList.size());
+      assertFalse(target.getMapper(UnitStates.class).has(1));
+    }
+  }
+
+  @Test void specialStatesWithoutHooksDoNotAcquireAnInventedLifecycle() {
+    try (TestWorld source = new TestWorld(); TestWorld target = new TestWorld()) {
+      source.create(); target.create();
+      StateList states = source.getMapper(UnitStates.class).create(0).init(source, 0).stateList;
+      states.addState(StateId.CONVERSION, 5); states.addState(StateId.PREGNANT, 4);
+      states.detachNativeTargetNode();
+      UnitStateRuntimeCheckpoint.restore(target, UnitStateRuntimeCheckpoint.capture(source, new int[] {0}));
+      StateList restored = target.getMapper(UnitStates.class).get(0).stateList;
+      assertNull(restored.getState(StateId.CONVERSION).removalCallback);
+      assertNull(restored.getState(StateId.PREGNANT).removalCallback);
+    }
+  }
   @Test void schemaAndEveryScalarIncludePrivateCompatibilityProjectionBaselines() throws Exception {
     Set<String> expected = new HashSet<>(Arrays.asList(
       "stateId", "level", "duration", "initialDuration",

@@ -14,7 +14,23 @@ public final class NativeConversionLifecycle {
   private NativeConversionLifecycle() {}
 
   public static void bind(UnitState conversion, Monster monster, AttributesWrapper attributes) {
-    conversion.removalCallback = (states, removed) -> restore(states, monster, attributes);
+    conversion.removalCallback = new Callback(monster, attributes);
+  }
+
+  /** Identifiable owner-bound hook; checkpoints rebind to the new components,
+   * never serialize a captured lambda or guess from the state ID alone. */
+  public static final class Callback implements UnitState.RemovalCallback {
+    private final Monster monster;
+    private final AttributesWrapper attributes;
+    private Callback(Monster monster, AttributesWrapper attributes) {
+      this.monster = monster; this.attributes = attributes;
+    }
+    public boolean matches(Monster monster, AttributesWrapper attributes) {
+      return this.monster == monster && this.attributes == attributes;
+    }
+    @Override public void removed(StateList states, UnitState removed) {
+      restore(states, monster, attributes);
+    }
   }
 
   /** Unlinking precedes this call; the save-list must remain readable until it returns. */

@@ -2378,6 +2378,65 @@ DOT 或 RNG 算法；只保存并恢复现有 StateUpdater/UnitState/Attributes/
 结构订阅者系统级副作用的完整回滚，以及真实 socket 跨进程重启接管组合验收。
 M8-A、M8-D 和 M8 总体继续保持进行中。
 
+### M8-A 第 28 批：TARGETS、状态移除生命周期与派生怪物创建恢复（2026-10-25）
+
+本批承接第 27 批的明确缺口，集中保存目标注册表、单位共享节点、Conversion/Pregnant
+回调及其创建依赖；不将两个小型 AI 控制组件的覆盖等同于完整怪物 AI checkpoint。
+
+实现与边界：
+
+- `NativePlayerTargetSlots` 持有 World-local 插入时钟。玩家 head 与绑定的
+  `NativeTargetNode` 共用事件域，恢复不会回拨其他 World 的顺序。
+  保存八个 head/注册事件和完整 allocation-attempt 集合，包括 slot 满员和初始死人失败的尝试；
+  恢复直接写回，不重新注册、不把失败者变成等待晋升队列。
+- 新增显式 `TargetRuntimeCheckpoint` v1：覆盖全部网络 payload ID，保存节点 presence、
+  raw kind/owner/order，以及 `NativeAiState.previousMode`、`NativeAiTargetOverride` 的全部六字段。
+  capture 不调用会惰性摘链的 getter，保留尚未观察到的失效 owner；恢复后原有代际校验仍生效。
+  StateList、SummonedPet、Mercenary 重绑到同一个实际节点，不创建各自独立的顺序副本。
+- 有 TARGETS 系统时，未覆盖的本地目标宿主、不同事件域节点、detached pet/merc/state
+  顺序继续 fail closed。额外 Attributes source lists 和未知移除回调仍不支持。
+- `UnitStateRuntimeCheckpoint` 升为 v2，继续读取 v1。明确编码 Conversion/Pregnant 的
+  typed callback，验证原回调绑定身份，再重绑到目标 World 的 Monster、AttributesWrapper、
+  factory、files、skill row；不序列化闭包，也不凭 stateId 猜测一个不存在的回调。
+  Pregnant 区分 null/current/stale lifetime token，旧实体令牌不会绑定到重用 ID 的新生命期。
+  携带状态的 Monster 另保存 row identity、converted/conversionOwnerId；这不是完整 Monster image。
+- 完整 D2GC envelope 升为 v7，在 v6 unit-state 段后追加可选 TARGETS 段并纳入 canonical witness；
+  保留 v1–v6 读取。活动 state membership 不得脱离 TARGETS owner，旧 ECS envelope 不得静默丢弃元数据。
+  即使未携带 allocator，TARGETS 也走外层事务：先结束 lifecycle scope/冲刷结构订阅，再应用节点和时钟，
+  最后应用可选 allocator。失败回滚遵循同一顺序，不让玩家释放通知清掉刚恢复的子节点。
+- 真实 Pregnant 续跑暴露了怪物出生 HP/外观仍使用全局 `MathUtils.random` 的缺口。
+  `ServerEntityFactory` 的这两个入口改为已纳入 registry 的单位 `NativeUnitRandom`：
+  components → Doom Knight 特例 → inclusive base HP，固定 HP 范围也消费对应抽样。
+  HP 数值公式不变，但出生随机结果/后续种子相位有意改正，不能宣称与旧全局随机轨迹兼容。
+  当前仍是 host 的直接组件选择路径，不覆盖原版 MonRegData 的预生成区域变体池、原版完整出生种子分配。
+
+原版依据：D2MOO `GAME/Targets.cpp` 的 TARGETS_First/UpdateSummonAI/FreeUnitNode/TARGETS_Last，
+`SKILLS/SkillPal.cpp` 的 Conversion 移除回调、`SKILLS/SkillDruid.cpp` 的 SrvDo133/sub_6FD01B00，
+以及 `MONSTER/Monster.cpp` 的 MONSTER_InitializeStatsAndSkills/MONSTER_SetComponents。
+本批不改 Conversion 的既有生命比例公式、不改变存活 Pregnant 移除不生成怪物的规则。
+
+验证覆盖：新 World 与独立 JVM 的真实 ServerEntityFactory 恢复、逐阶段严格 canonical/native RNG/D2S
+对照，Pregnant current/null/stale 三态、存活移除不生成、死亡移除只生成一次、Conversion 到期和死亡清理；
+晚期 D2S 失败后的 live/empty World 回滚；玩家删除/重建及删除额外玩家的订阅时序；
+World-local 时钟、满员/死人失败尝试、失效节点 raw capture、共享节点与刷新不重入、
+codec 截断/非法布尔/重复 ID/事件/未知版本、外层 witness、旧 v6 envelope/v1 state codec 兼容。
+
+真实资源：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。
+沿用第 27 批验收命令，增加 `TargetRuntimeCheckpointTest`、`NativeTargetNodeTest`、
+`NativeTargetOrderTest`、`NativeConversionLifecycleTest`、`NativeConversionDataTest`、
+`MonsterComponentMissileIntegrationTest`、`MonsterStats*Test` 和 `PutridDefilerAiIntegrationTest`。
+最终结果：服务端 61 项、core 144 项，共 205 项通过，0 失败、0 跳过；模块边界与桌面编译通过。
+三个真实 TCP gate 通过：固定 Tick `6→37`（31 步）、部分拾取后剩余 15 金币且 owner window 保持、
+旧 socket 延迟帧丢弃且当前 generation 命令成功。TCP gate 仍为同进程；独立 JVM 的状态/回调
+验收不等于真实 socket 跨进程接管。`git diff --check` 通过。
+
+剩余与下一批：完整 Monster 运行时（包括可变 component ordinals、模式/召唤所属与死亡相位）、
+AI 决策对象/命令队列/路径缓存、pet/merc 其他可变运行时、周期技能及其他未绑定 RNG 消费者、
+本地实体组件、Map/RoomEx、
+任务/交易隐藏运行时、资源内容 digest、其他结构订阅者副作用，以及真实 socket 跨进程重启接管组合验收。
+建议下一批集中处理怪物/AI 的明确标量与队列相位，继续对无法完整重建的对象 fail closed。
+M8-A、M8-D、M8 总体继续保持进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

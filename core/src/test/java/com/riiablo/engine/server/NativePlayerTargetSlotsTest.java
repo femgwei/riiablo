@@ -16,10 +16,10 @@ class NativePlayerTargetSlotsTest {
   void newHeadGenerationRejectsOldAndUnknownInsertionsUntilExplicitRejoin() {
     try (Fixture f = new Fixture()) {
       int player = f.player();
-      long beforeHead = NativeTargetOrder.inserted();
+      long beforeHead = f.slots.nextOrder();
       f.slots.registerPlayer(player);
       long head = f.slots.registrationOrder(player);
-      long child = NativeTargetOrder.inserted();
+      long child = f.slots.nextOrder();
       assertTrue(head > beforeHead);
       assertFalse(f.slots.acceptsChildInsertion(player, 0));
       assertFalse(f.slots.acceptsChildInsertion(player, beforeHead));
@@ -36,7 +36,7 @@ class NativePlayerTargetSlotsTest {
       f.world.process();
       assertTrue(f.slots.registrationOrder(player) > child);
       assertFalse(f.slots.acceptsChildInsertion(player, child));
-      assertTrue(f.slots.acceptsChildInsertion(player, NativeTargetOrder.inserted()));
+      assertTrue(f.slots.acceptsChildInsertion(player, f.slots.nextOrder()));
     }
   }
 

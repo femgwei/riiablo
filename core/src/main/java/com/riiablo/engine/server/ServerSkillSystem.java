@@ -1007,25 +1007,7 @@ public class ServerSkillSystem extends PassiveSystem {
       if (holder.stateList.hasState(StateId.PREGNANT)) return;
       UnitState state = holder.stateList.addStateLayer(StateId.PREGNANT, 0,
           getSkillLevel(event.entityId, skill.Id), event.entityId, skill.Id);
-      com.riiablo.engine.server.component.NativePathIdentity identity = world.getMapper(
-          com.riiablo.engine.server.component.NativePathIdentity.class).get(target);
-      final com.riiablo.engine.server.component.NativePathIdentity.Token token =
-          identity == null ? null : identity.token();
-      state.removalCallback = (list, removed) -> {
-        if (factory == null || !world.getEntityManager().isActive(target)
-            || token != null && !token.isCurrent(world, target)
-            || !mPosition.has(target) || hasPositiveLife(target)) return;
-        MonStats.Entry summon = hasText(skill.summon) ? files().monstats.get(skill.summon) : null;
-        if (summon == null) summon = files().monstats.get("painworm1");
-        if (summon == null) return;
-        Vector2 position = mPosition.get(target).position;
-        int spawned = factory.createMonster(summon, position.x, position.y);
-        int mode = hasText(skill.summode) ? files().MonMode.index(skill.summode) : Engine.Monster.MODE_NU;
-        if (spawned >= 0 && mode >= 0 && mode < 16) {
-          CofManager cofs = world.getSystem(CofManager.class);
-          if (cofs != null) cofs.setMode(spawned, (byte) mode, true);
-        }
-      };
+      NativePregnancyLifecycle.bind(state, world, target, factory, files(), skill);
       return;
     }
     if (skill.srvdofunc == 128) {

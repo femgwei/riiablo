@@ -5,8 +5,8 @@ import static org.mockito.Mockito.*;
 
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.RandomXS128;
+import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.seed.Seed;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
@@ -20,7 +20,6 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.monster.MonsterAffix;
 import com.riiablo.map.Map;
-import java.util.Random;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -36,7 +35,7 @@ class MonsterStatsSnapshotIntegrationTest extends RiiabloTest {
     when(map.getDifficulty()).thenReturn(difficulty);
     when(map.getZone(anyFloat(), anyFloat())).thenReturn(zone);
     ServerEntityFactory factory = new ServerEntityFactory();
-    World previousWorld = Riiablo.engine; Random previousRandom = MathUtils.random;
+    World previousWorld = Riiablo.engine;
     World world = new World(new WorldConfigurationBuilder().with(new EventSystem(), new ItemManager(),
         new ObjectInteractor(), new WarpInteractor(), new ItemInteractor(), new CofManager(),
         new Pathfinder(), factory)
@@ -51,19 +50,25 @@ class MonsterStatsSnapshotIntegrationTest extends RiiabloTest {
       PreviousMonsterStatsCalculator.MonsterStatsInit old = new PreviousMonsterStatsCalculator.MonsterStatsInit();
       assertTrue(PreviousMonsterStatsCalculator.calculateMonsterStatsByLevel(
           Riiablo.files, row.hcIdx, 1, difficulty, baseLevel, (short) 7, old));
-      MathUtils.random = new RandomXS128(789);
+      // Monster.cpp consumes direct component variants before the inclusive HP roll.
+      // Keep the legacy stat-formula oracle; only replace its former global RNG input.
+      D2Seed expectedSeed = new D2Seed(NativeRng.forUnit(1234, players).state(), 666);
+      for (String value : Riiablo.files.monstats2.get(row.MonStatsEx).ComponentV) {
+        if (!value.isEmpty()) Seed.rollLimitedRandomNumber(expectedSeed, value.replace("\"", "").split(",").length);
+      }
       int min = Math.min(old.minHP, old.maxHP), max = Math.max(old.minHP, old.maxHP);
-      int baseHp = min == max ? min : MathUtils.random(min, max);
+      int baseHp = min + Seed.rollLimitedRandomNumber(expectedSeed, max - min + 1);
       int hp = Math.min(baseHp + (int) ((long) baseHp
           * PreviousMonsterStatsCalculator.nativeHpBonus(players) / 100), (1 << 23) - 1);
       hp = PreviousMonsterStatsCalculator.nativeRankHitpoints(hp, rank, difficulty);
-      MathUtils.random.setSeed(789);
       MonsterStatsSnapshot snapshot = MonsterStatsCalculator.spawnSnapshot(
           Riiablo.files, row, 1, difficulty, baseLevel, rank, players);
       int id = factory.createMonster(row.hcIdx, 10, 10, rank, MonsterAffix.STONE_SKIN, -1, -1);
-      assertTrue(id >= 0);
+      assertEquals(players, id);
       Attributes attrs = world.getMapper(AttributesWrapper.class).get(id).attrs;
       Monster monster = world.getMapper(Monster.class).get(id);
+      assertEquals(expectedSeed.getNLowSeed(), monster.nativeSeed.getNLowSeed());
+      assertEquals(expectedSeed.getNHighSeed(), monster.nativeSeed.getNHighSeed());
       assertEquals(hp * 256, attrs.get(Stat.hitpoints).encodedValues());
       assertEquals(hp * 256, attrs.get(Stat.maxhp).encodedValues());
       assertEquals(snapshot.level, attrs.getValue(Stat.level, 0));
@@ -90,7 +95,7 @@ class MonsterStatsSnapshotIntegrationTest extends RiiabloTest {
         assertEquals(flag == 8 ? mode.A1MinD : flag == 16 ? mode.A2MinD : mode.S1MinD, actual.minDamage);
       }
     } finally {
-      world.dispose(); Riiablo.engine = previousWorld; MathUtils.random = previousRandom;
+      world.dispose(); Riiablo.engine = previousWorld;
     }
   }
 }

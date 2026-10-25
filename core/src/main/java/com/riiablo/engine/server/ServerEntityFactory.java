@@ -570,8 +570,6 @@ public class ServerEntityFactory extends EntityFactory {
     int playerCount = stats.playerCount;
     int minHp = stats.baseMinHp;
     int maxHp = stats.baseMaxHp;
-    int baseHp = minHp == maxHp ? minHp : MathUtils.random(minHp, maxHp);
-    int hitpoints = stats.hitpointsForBaseRoll(baseHp);
     int experience = stats.experience;
     int monsterLevel = stats.level;
 
@@ -608,6 +606,12 @@ public class ServerEntityFactory extends EntityFactory {
       mNativeAiPathCache.create(id).allocated();
     }
     monster.rngState = NativeRng.forUnit(gameSeed(), id).state();
+    NativeUnitRandom creationRng = NativeUnitRandom.monster(monster, gameSeed(), id);
+    // Monster.cpp: components/elemental variants precede inclusive base HP,
+    // all from this unit's pSeed. This direct path has no MonRegData pool.
+    initializeMonsterComponents(id, monster, monstats, monstats2, existingId, creationRng);
+    int baseHp = minHp + creationRng.nextInt(maxHp - minHp + 1);
+    int hitpoints = stats.hitpointsForBaseRoll(baseHp);
     monster.setAttack2Profile(stats.attack2.minDamage, stats.attack2.maxDamage, stats.attack2.attackRating);
 
     Attributes attrs = existingId != Engine.INVALID_ENTITY && mAttributesWrapper.has(id)
@@ -700,41 +704,6 @@ public class ServerEntityFactory extends EntityFactory {
       log.info("[MONSTER_ANIMATION] monster={} BaseW={} resolved=HTH reason=unknown_base_weapon",
           monstats.Id, monstats2.BaseW);
     }
-    int[] component = mCofComponents.create(id).component;
-    if (existingId != Engine.INVALID_ENTITY) Arrays.fill(component, CofComponents.COMPONENT_NIL);
-    boolean hasComponentValue = false;
-    for (byte i = 0; i < monstats2.ComponentV.length; i++) {
-      String ComponentV = monstats2.ComponentV[i];
-      if (!ComponentV.isEmpty()) {
-        hasComponentValue = true;
-        String[] v = StringUtils.remove(ComponentV, '"').split(",");
-        int random = MathUtils.random(0, v.length - 1);
-        monster.componentVariants[i] = random;
-        component[i] = files().compcode.index(v[random]);
-      }
-    }
-    // MONSTER_InitializeStatsAndSkills overrides these native class ids after
-    // MONSTER_SetComponents. Oblivion Knight's two elemental layers agree.
-    // Do not apply this override to every monster sharing the same AI/model.
-    if ("doomknight2".equals(monstats.Id) || "doomknight3".equals(monstats.Id)) {
-      int variant = (int) (NativeUnitRandom.monster(monster, gameSeed(), id).nextUnsigned() & 3);
-      setMonsterComponentVariant(monster, component, 10, variant);
-      if ("doomknight3".equals(monstats.Id)) {
-        setMonsterComponentVariant(monster, component, 11, variant);
-      }
-    }
-    // A few native summon rows (most notably Valkyrie/Dopplezon) leave
-    // ComponentV completely empty even though their COF contains a mandatory
-    // TR body layer. D2Common resolves that omitted standalone body to LIT;
-    // keeping it as NIL makes CofLayerCacher clear the only layer and leaves
-    // an ECS monster with valid AI/physics but no visible sprite. Optional
-    // equipment layers remain NIL.
-    if (!hasComponentValue && component[COF.Component.TR] == CofComponents.COMPONENT_NIL) {
-      component[COF.Component.TR] = CofComponents.COMPONENT_LIT;
-      log.debug("[MONSTER_PRESENTATION] entity={} monster={} defaultTR=LIT reason=empty_ComponentV",
-          id, monstats.Id);
-    }
-
     mCofAlphas.create(id);
     CofTransforms transforms = mCofTransforms.create(id);
     if (existingId != Engine.INVALID_ENTITY) {
@@ -777,6 +746,35 @@ public class ServerEntityFactory extends EntityFactory {
     if (spawnCollision != null) spawnCollision.registerMonsterSpawnMarkers(id);
     mNetworked.create(id);
     return id;
+  }
+
+  private void initializeMonsterComponents(int id, Monster monster, MonStats.Entry monstats,
+      MonStats2.Entry monstats2, int existingId, NativeUnitRandom rng) {
+    int[] component = mCofComponents.create(id).component;
+    if (existingId != Engine.INVALID_ENTITY) Arrays.fill(component, CofComponents.COMPONENT_NIL);
+    boolean hasComponentValue = false;
+    for (byte i = 0; i < monstats2.ComponentV.length; i++) {
+      String value = monstats2.ComponentV[i];
+      if (!value.isEmpty()) {
+        hasComponentValue = true;
+        String[] variants = StringUtils.remove(value, '"').split(",");
+        int variant = rng.nextInt(variants.length);
+        monster.componentVariants[i] = variant;
+        component[i] = files().compcode.index(variants[variant]);
+      }
+    }
+    // MONSTER_InitializeStatsAndSkills applies these after MONSTER_SetComponents.
+    if ("doomknight2".equals(monstats.Id) || "doomknight3".equals(monstats.Id)) {
+      int variant = (int) (rng.nextUnsigned() & 3);
+      setMonsterComponentVariant(monster, component, 10, variant);
+      if ("doomknight3".equals(monstats.Id)) setMonsterComponentVariant(monster, component, 11, variant);
+    }
+    // Preserve the existing standalone COF fallback for omitted summon layers.
+    if (!hasComponentValue && component[COF.Component.TR] == CofComponents.COMPONENT_NIL) {
+      component[COF.Component.TR] = CofComponents.COMPONENT_LIT;
+      log.debug("[MONSTER_PRESENTATION] entity={} monster={} defaultTR=LIT reason=empty_ComponentV",
+          id, monstats.Id);
+    }
   }
 
   @Override

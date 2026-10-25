@@ -18,6 +18,16 @@ public class NativeTargetNode extends Component {
   private NativePlayerTargetSlots slots;
 
   public void usePlayerSlots(NativePlayerTargetSlots slots) { this.slots = slots; }
+  public boolean boundTo(NativePlayerTargetSlots slots) { return this.slots == slots; }
+  /** Raw observation must not lazily detach a stale owner during capture. */
+  public long[] checkpoint() { return new long[] {kind, ownerId, order}; }
+  public void restoreCheckpoint(int kind, int ownerId, long order, NativePlayerTargetSlots slots) {
+    if (kind < NONE || kind > ALLIED || ownerId < -1 || order < 0
+        || (kind == NONE) != (order == 0) || kind == NONE && ownerId != -1) {
+      throw new IllegalArgumentException("native target node");
+    }
+    this.kind = kind; this.ownerId = ownerId; this.order = order; this.slots = slots;
+  }
   public long order() { invalidateReleasedGroup(); return order; }
   public long order(int kind) { return order() != 0 && this.kind == kind ? order : 0; }
   public int ownerId() { return order() == 0 || isNode9() || isNode8() ? -1 : ownerId; }
@@ -37,9 +47,10 @@ public class NativeTargetNode extends Component {
     if (kind < SUMMON || kind > ALLIED || order != 0) return false;
     if (kind != CURSE && kind != WALL && kind != ALLIED && slots != null
         && slots.slotOf(ownerId) >= NativePlayerTargetSlots.SLOT_COUNT) return false;
+    long inserted = slots == null ? NativeTargetOrder.inserted() : slots.nextOrder();
     this.kind = kind;
     this.ownerId = ownerId;
-    order = NativeTargetOrder.inserted();
+    order = inserted;
     return true;
   }
 

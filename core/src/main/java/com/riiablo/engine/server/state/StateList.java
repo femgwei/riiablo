@@ -66,6 +66,11 @@ public class StateList {
   public long nativeConversionOrder() {
     return nativeTargetNode == null ? conversionOrder : nativeTargetNode.order(NativeTargetNode.CONVERSION);
   }
+  /** Checkpoint observation must not trigger lazy owner invalidation. */
+  public NativeTargetNode checkpointTargetNode() { return nativeTargetNode; }
+  public boolean hasDetachedTargetOrder() {
+    return nativeTargetNode == null && (node9Order != 0 || conversionOrder != 0);
+  }
 
   /** TARGETS_Last does not itself free stat lists or their payload. Retained
    * state flags (or refreshing a layer) must not resurrect a removed node. */

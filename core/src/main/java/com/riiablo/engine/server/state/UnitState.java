@@ -837,7 +837,12 @@ public class UnitState {
   /** Explicit checkpoint schema; deliberately not the lossy network copy.
    * Unknown runtime hooks cannot be reconstructed and must fail closed. */
   public void writeCheckpoint(java.io.DataOutputStream out) throws java.io.IOException {
-    if (removalCallback != null || stateId == StateId.CONVERSION || stateId == StateId.PREGNANT) {
+    writeCheckpoint(out, false);
+  }
+
+  /** The owner codec must separately validate and encode an explicit lifecycle. */
+  public void writeCheckpoint(java.io.DataOutputStream out, boolean ownedLifecycle) throws java.io.IOException {
+    if (!ownedLifecycle && (removalCallback != null || stateId == StateId.CONVERSION || stateId == StateId.PREGNANT)) {
       throw new IllegalStateException("unsupported state removal lifecycle: " + stateId);
     }
     out.writeInt(stateId);
@@ -909,6 +914,10 @@ public class UnitState {
   }
 
   public static UnitState readCheckpoint(java.io.DataInputStream in) throws java.io.IOException {
+    return readCheckpoint(in, false);
+  }
+
+  public static UnitState readCheckpoint(java.io.DataInputStream in, boolean ownedLifecycle) throws java.io.IOException {
     UnitState state = new UnitState();
     state.stateId = in.readInt();
     state.level = in.readInt();
@@ -985,7 +994,7 @@ public class UnitState {
       previousId = id; previousLayer = layer;
     }
     if (state.stateId != StateId.NONE && !StateId.isValid(state.stateId)
-        || state.stateId == StateId.CONVERSION || state.stateId == StateId.PREGNANT
+        || !ownedLifecycle && (state.stateId == StateId.CONVERSION || state.stateId == StateId.PREGNANT)
         || state.duration < 0 || state.initialDuration < 0
         || state.sourceEntityId < -1 || state.skillId < -1 || state.thunderStormTargetId < -1) {
       throw new IllegalArgumentException("state runtime identity/lifetime");

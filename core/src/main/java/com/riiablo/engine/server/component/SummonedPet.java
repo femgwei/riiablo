@@ -79,6 +79,10 @@ public class SummonedPet extends Component {
         : nativeTargetNode.order(boneWall ? NativeTargetNode.WALL : NativeTargetNode.SUMMON);
   }
 
+  /** Raw checkpoint ownership, without invalidating a released player group. */
+  public NativeTargetNode checkpointTargetNode() { return nativeTargetNode; }
+  public boolean hasDetachedTargetOrder() { return nativeTargetNode == null && nativeTargetOrder != 0; }
+
   public void detachNativeTargetNode() {
     nativeTargetOrder = 0;
     if (nativeTargetNode != null) nativeTargetNode.detach();
