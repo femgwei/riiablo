@@ -7,6 +7,17 @@ import com.riiablo.codec.excel.Skills;
 
 /** D2MOO AiThink.cpp AITHINK_Fn044_Duriel (0x6FCD8FE0). */
 public class Duriel extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeBoolean(holyFreezeSelected);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    boolean savedHolyFreezeSelected = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      holyFreezeSelected = savedHolyFreezeSelected;
+    }
+  }
   static final int PARAM_HOLY_FREEZE_LEVEL = 0;
   static final int PARAM_SMITE_CHANCE = 1;
   static final int PARAM_JAB_CHANCE = 2;

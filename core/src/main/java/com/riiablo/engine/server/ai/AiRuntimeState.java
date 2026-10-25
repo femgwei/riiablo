@@ -86,6 +86,25 @@ public final class AiRuntimeState {
       case "ReanimatedHorde": return new ReanimatedHorde(id);
       case "PutridDefiler": return new PutridDefiler(id);
       case "VileDog": return new VileDog(id);
+      case "BaalCrab": return new BaalCrab(id);
+      case "Diablo": return new Diablo(id);
+      case "Mephisto": return new Mephisto(id);
+      case "Duriel": return new Duriel(id);
+      case "Summoner": return new Summoner(id);
+      case "OblivionKnight": return new OblivionKnight(id);
+      case "AbyssKnight": return new AbyssKnight(id);
+      case "ArcaneTower": return new ArcaneTower(id);
+      case "TrapMissile": return new TrapMissile(id);
+      case "TrapNova": return new TrapNova(id);
+      case "TrapRightArrow": return new TrapRightArrow(id);
+      case "TrappedSoul": return new TrappedSoul(id);
+      case "ThornHulk": return new ThornHulk(id);
+      case "VileMother": return new VileMother(id);
+      case "ZakarumPriest": return new ZakarumPriest(id);
+      case "ZakarumZealot": return new ZakarumZealot(id);
+      case "TrapPoison": return new TrapPoison(id);
+      case "TrapMelee": return new TrapMelee(id);
+      case "TrapLeftArrow": return new TrapLeftArrow(id);
       default: throw new IllegalArgumentException("unsupported AI checkpoint schema: " + type);
     }
   }
@@ -140,12 +159,22 @@ public final class AiRuntimeState {
     throw new IllegalArgumentException("unknown AI state: " + name);
   }
   static void writeTimer(DataOutputStream out, float value) throws IOException {
+    // Positive infinity is a legacy sleep sentinel, unlike the local frame clocks below.
     if (Float.isNaN(value) || value == Float.NEGATIVE_INFINITY) throw new IllegalArgumentException("AI timer");
     out.writeInt(Float.floatToRawIntBits(value));
   }
   static float readTimer(DataInputStream in) throws IOException {
     float value = Float.intBitsToFloat(in.readInt());
     if (Float.isNaN(value) || value == Float.NEGATIVE_INFINITY) throw new IllegalArgumentException("AI timer");
+    return value;
+  }
+  static void writeFiniteDouble(DataOutputStream out, double value) throws IOException {
+    if (!Double.isFinite(value)) throw new IllegalArgumentException("AI frame clock");
+    out.writeDouble(value);
+  }
+  static double readFiniteDouble(DataInputStream in) throws IOException {
+    double value = in.readDouble();
+    if (!Double.isFinite(value)) throw new IllegalArgumentException("AI frame clock");
     return value;
   }
 }

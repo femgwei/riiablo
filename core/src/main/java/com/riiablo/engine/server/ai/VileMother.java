@@ -11,6 +11,17 @@ import com.riiablo.engine.server.component.Monster;
 
 /** D2MOO AITHINK_Fn068_VileMother, including directional spawn probes. */
 public class VileMother extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(spawned);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedSpawned = in.readInt();
+    if (apply) {
+      spawned = savedSpawned;
+    }
+  }
   private int spawned;
   public VileMother(int entityId) { super(entityId); }
 

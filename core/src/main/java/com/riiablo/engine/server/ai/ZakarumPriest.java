@@ -17,6 +17,26 @@ import com.riiablo.map.Map;
 
 /** D2MOO AiThink.cpp AITHINK_Fn049_ZakarumPriest (0x6FCD9A10). */
 public class ZakarumPriest extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, frame);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, teleportAfter);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, blizzardAfter);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, lightningAfter);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    float savedFrame = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float savedTeleportAfter = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float savedBlizzardAfter = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float savedLightningAfter = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    if (apply) {
+      frame = savedFrame;
+      teleportAfter = savedTeleportAfter;
+      blizzardAfter = savedBlizzardAfter;
+      lightningAfter = savedLightningAfter;
+    }
+  }
   static final int PARAM_ATTACK_CHANCE = 0;
   static final int PARAM_BLIZZARD_CHANCE = 1;
   static final int PARAM_LIGHTNING_CHANCE = 2;

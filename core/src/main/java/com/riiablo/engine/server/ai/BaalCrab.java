@@ -29,6 +29,28 @@ import com.riiablo.save.CharData;
 
 /** D2MOO AiBaal.cpp Fn135 / MainSkillHandler, with ECS player-owner target groups. */
 public class BaalCrab extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, anchor.x);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, anchor.y);
+    out.writeBoolean(anchored);
+    out.writeInt(targetCount);
+    out.writeInt(maxTargetScore);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    float anchorX = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float anchorY = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    boolean savedAnchored = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    int savedTargetCount = in.readInt();
+    int savedMaxTargetScore = in.readInt();
+    if (apply) {
+      anchor.set(anchorX, anchorY);
+      anchored = savedAnchored;
+      targetCount = savedTargetCount;
+      maxTargetScore = savedMaxTargetScore;
+    }
+  }
   // Fixed SkillsIds.h constants, NOT zero-based MonStats slots.
   static final int SKILL_TENTACLE = 315;
   static final int SKILL_NOVA = 316;

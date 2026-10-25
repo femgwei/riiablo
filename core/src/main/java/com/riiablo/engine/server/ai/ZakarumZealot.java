@@ -4,6 +4,17 @@ import com.riiablo.engine.Engine;
 
 /** D2MOO AiThink.cpp AITHINK_Fn048_ZakarumZealot (0x6FCD9640). */
 public class ZakarumZealot extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeBoolean(attackArmed);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    boolean savedAttackArmed = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      attackArmed = savedAttackArmed;
+    }
+  }
   static final int PARAM_ATTACK_CHANCE = 0;
   static final int PARAM_ATTACK2_CHANCE = 1;
   static final int PARAM_HURT_PERCENT = 2;

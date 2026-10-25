@@ -12,6 +12,23 @@ import com.riiablo.map.DT1;
 
 /** D2MOO AiThink.cpp AITHINK_Fn050_Mephisto (0x6FCDA300). */
 public class Mephisto extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(burstRemaining);
+    out.writeInt(spellCounter);
+    out.writeInt(phase);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedBurstRemaining = in.readInt();
+    int savedSpellCounter = in.readInt();
+    int savedPhase = in.readInt();
+    if (apply) {
+      burstRemaining = savedBurstRemaining;
+      spellCounter = savedSpellCounter;
+      phase = savedPhase;
+    }
+  }
   static final int PARAM_CAST_OR_MELEE_CHANCE = 0;
   static final int PARAM_LOWEST_LIFE_TARGET_CHANCE = 1;
   // Native callback tests the caster's UNIT_PLAYER type, not the candidate's.

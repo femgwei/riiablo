@@ -4,6 +4,20 @@ import com.riiablo.engine.server.component.NativeUnitFlags;
 
 /** D2MOO AITHINK_Fn077_TrapMissile (AiThink.cpp, 0x6FCDE4D0). */
 public class TrapMissile extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(shots);
+    out.writeBoolean(needsDelay);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedShots = in.readInt();
+    boolean savedNeedsDelay = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      shots = savedShots;
+      needsDelay = savedNeedsDelay;
+    }
+  }
   private int shots;
   private boolean needsDelay;
 

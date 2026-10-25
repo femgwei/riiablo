@@ -16,7 +16,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class AiRuntimeStateTest {
   static final List<IntFunction<AI>> SCHEMAS = Arrays.asList(QuillRat::new, Scarab::new, Fallen::new,
       Brute::new, Zombie::new, Skeleton::new, id -> new GenericMonster(id, "unknown-token"),
-      Andariel::new, DoomKnight::new, FlyingScimitar::new, BaalMinion::new, ReanimatedHorde::new, PutridDefiler::new, VileDog::new);
+      Andariel::new, DoomKnight::new, FlyingScimitar::new, BaalMinion::new, ReanimatedHorde::new, PutridDefiler::new, VileDog::new,
+      BaalCrab::new, Diablo::new, Mephisto::new, Duriel::new, Summoner::new, OblivionKnight::new,
+      AbyssKnight::new, ArcaneTower::new, TrapMissile::new, TrapNova::new, TrapRightArrow::new,
+      TrappedSoul::new, ThornHulk::new, VileMother::new, ZakarumPriest::new, ZakarumZealot::new,
+      TrapPoison::new, TrapMelee::new, TrapLeftArrow::new);
 
   @Test void allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects() throws Exception {
     for (IntFunction<AI> factory : SCHEMAS) {
@@ -41,10 +45,21 @@ class AiRuntimeStateTest {
       Object targetMonster = target.monster;
       AiRuntimeState image = AiRuntimeState.capture(source, 12);
       byte[] original = image.bytes(); byte[] exported = image.bytes(); exported[0] ^= 1;
+      byte[] untouched = AiRuntimeState.capture(target, 12).bytes();
+      image.validateRestore(target, 12);
+      assertArrayEquals(untouched, AiRuntimeState.capture(target, 12).bytes(), "preflight changed " + source.getClass().getSimpleName());
       image.restore(target, 12);
       assertArrayEquals(original, AiRuntimeState.capture(target, 12).bytes(), source.getClass().getName());
       assertArrayEquals(source.params, target.params); assertNotSame(source.params, target.params);
       assertSame(targetMonster, target.monster);
+      for (Class<?> type = source.getClass(); type != Object.class; type = type.getSuperclass()) {
+        for (Field f : type.getDeclaredFields()) {
+          if (Modifier.isStatic(f.getModifiers()) || Modifier.isFinal(f.getModifiers())) continue;
+          if (!f.getType().isPrimitive() && f.getType() != String.class) continue;
+          f.setAccessible(true);
+          assertEquals(f.get(source), f.get(target), type.getSimpleName() + "." + f.getName());
+        }
+      }
       for (int i = 0; i < 25; i++) assertEquals(source.rollAiRandomNumber(), target.rollAiRandomNumber());
       NativeRng s = (NativeRng) get(source, AI.class, "specialAiRng"), t = (NativeRng) get(target, AI.class, "specialAiRng");
       assertNotSame(s, t); assertEquals(41, t.drawCount());
@@ -77,6 +92,25 @@ class AiRuntimeStateTest {
     expected.put(ReanimatedHorde.class, "resurrectionDelay deathScheduled");
     expected.put(PutridDefiler.class, "escapePoint");
     expected.put(VileDog.class, "initialized");
+    expected.put(BaalCrab.class, "anchor destination ray collision anchored targetCount maxTargetScore");
+    expected.put(Diablo.class, "action actionCount");
+    expected.put(Mephisto.class, "burstRemaining spellCounter phase destination ray collision");
+    expected.put(Duriel.class, "holyFreezeSelected");
+    expected.put(Summoner.class, "novaCooldown firewallCooldown escape");
+    expected.put(OblivionKnight.class, "curseDeadline previousTarget");
+    expected.put(AbyssKnight.class, "recovery");
+    expected.put(ArcaneTower.class, "phase remaining nextAction");
+    expected.put(TrapMissile.class, "shots needsDelay");
+    expected.put(TrapNova.class, "casts needsDelay");
+    expected.put(TrapRightArrow.class, "elapsedFrames nextAttackFrame");
+    expected.put(TrappedSoul.class, "awakened frame nextAttackFrame");
+    expected.put(ThornHulk.class, "burst recovery waitAfterFrenzy");
+    expected.put(VileMother.class, "spawned");
+    expected.put(ZakarumPriest.class, "frame teleportAfter blizzardAfter lightningAfter ray collision landing");
+    expected.put(ZakarumZealot.class, "attackArmed");
+    expected.put(TrapPoison.class, "");
+    expected.put(TrapMelee.class, "");
+    expected.put(TrapLeftArrow.class, "");
     for (Class<?> type : Arrays.asList(Andariel.class, DoomKnight.class, FlyingScimitar.class, BaalMinion.class, Idle.class)) expected.put(type, "");
     for (Map.Entry<Class<?>, String> e : expected.entrySet()) {
       Set<String> actual = new TreeSet<>();
@@ -92,7 +126,8 @@ class AiRuntimeStateTest {
   }
 
   @Test void unsupportedTypesAndForeignOwnerOrConfigurationCannotBeRestored() {
-    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new BaalCrab(2), 2));
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new Arach(2), 2));
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new TrapNova(2) {}, 2));
     assertThrows(IllegalStateException.class, () -> AiRuntimeState.capture(new QuillRat(2), 1));
     AiRuntimeState image = AiRuntimeState.capture(new GenericMonster(2, "first"), 2);
     assertThrows(IllegalStateException.class, () -> image.restore(new GenericMonster(2, "second"), 2));
@@ -193,6 +228,40 @@ class AiRuntimeStateTest {
     ((CheckpointStateMachine<?>) target.stateMachine).setOwner(17); target.time = 37;
     assertThrows(IllegalStateException.class, () -> image.restore(target, 2));
     assertEquals(37, target.time);
+  }
+
+  @Test void bossAnchorIsHistoryRatherThanScratchAndKeepsTheTargetVectorIdentity() throws Exception {
+    BaalCrab source = new BaalCrab(4), target = new BaalCrab(4);
+    com.badlogic.gdx.math.Vector2 anchor = (com.badlogic.gdx.math.Vector2) get(source, BaalCrab.class, "anchor");
+    anchor.set(14.125f, -6.5f); put(source, BaalCrab.class, "anchored", true);
+    Object targetAnchor = get(target, BaalCrab.class, "anchor");
+    AiRuntimeState.capture(source, 4).restore(target, 4);
+    assertSame(targetAnchor, get(target, BaalCrab.class, "anchor"));
+    assertNotSame(anchor, targetAnchor); assertEquals(anchor, targetAnchor);
+    assertEquals(true, get(target, BaalCrab.class, "anchored"));
+    anchor.x = Float.NaN;
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(source, 4));
+  }
+
+  @Test void everyExtendedSchemaRejectsEachTruncationAndNonfiniteLocalClocks() throws Exception {
+    for (IntFunction<AI> factory : SCHEMAS) {
+      AI source = factory.apply(3); byte[] bytes = AiRuntimeState.capture(source, 3).bytes();
+      for (int i = 0; i < bytes.length; i++) {
+        byte[] truncated = Arrays.copyOf(bytes, i);
+        assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.fromBytes(truncated), source.getClass().getSimpleName());
+      }
+      for (Class<?> type = source.getClass(); type != AI.class; type = type.getSuperclass()) {
+        for (Field f : type.getDeclaredFields()) {
+          if (f.getType() != double.class || Modifier.isStatic(f.getModifiers())) continue;
+          f.setAccessible(true); double saved = f.getDouble(source);
+          for (double bad : new double[] {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY}) {
+            f.setDouble(source, bad);
+            assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(source, 3));
+          }
+          f.setDouble(source, saved);
+        }
+      }
+    }
   }
 
   enum Observed implements com.badlogic.gdx.ai.fsm.State<Integer> {

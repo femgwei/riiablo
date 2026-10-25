@@ -12,6 +12,20 @@ import com.riiablo.engine.server.component.UnitStates;
 
 /** D2MOO AITHINK_Fn074_OblivionKnight, 0x6FCDDBB0. */
 public class OblivionKnight extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeLong(curseDeadline);
+    out.writeInt(previousTarget);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    long savedCurseDeadline = in.readLong();
+    int savedPreviousTarget = in.readInt();
+    if (apply) {
+      curseDeadline = savedCurseDeadline;
+      previousTarget = savedPreviousTarget;
+    }
+  }
   private long curseDeadline;
   private int previousTarget = Engine.INVALID_ENTITY;
   public OblivionKnight(int entityId) { super(entityId); }

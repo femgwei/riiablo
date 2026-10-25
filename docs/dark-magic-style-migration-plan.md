@@ -2599,6 +2599,61 @@ AI/RNG/D2S 续跑不等于真实 socket 跨进程接管。
 ECS 移动路径；其他 pet/merc 运行时、未绑定 RNG 消费者、Map/RoomEx、本地实体、任务/交易、
 资源 digest、其他结构订阅者副作用及真实 socket 跨进程接管仍保留。M8-A、M8-D、M8 总体继续进行中。
 
+### M8-A 第 32 批：Boss、施法者与机关陷阱 AI 私有状态恢复（2026-10-25）
+
+本批集中扩展 19 类原生 AI 的显式镜像，沿用第 31 批的真实 factory 宿主、全记录预检和
+ECS/RNG/D2S 回滚事务。它是 AI 对象层覆盖扩展，不是 Casting/Sequence、伤害事件或路径镜像。
+
+- 新支持 BaalCrab、Diablo、Mephisto、Duriel、Summoner、OblivionKnight、AbyssKnight、
+  ArcaneTower、TrapMissile、TrapNova、TrapPoison、TrapMelee、TrapRightArrow、TrapLeftArrow、
+  TrappedSoul、ThornHulk、VileMother、ZakarumPriest、ZakarumZealot。精确白名单现为 33 类
+  实体 AI，另有共享 IDLE；未适配类和未声明继承类继续拒绝，不通过反射或通用字段拷贝兜底。
+- Boss 保留 Baal 初始 anchor/anchored 及目标计数/评分、Diablo retained action/actionCount、
+  Mephisto phase/burstRemaining/spellCounter、Duriel 一次性 Holy Freeze 选择标记。
+  anchor 是历史状态，即使恢复时位置已改变也不能重算；原位写入目标对象的既有向量。
+- 施法者保留 Summoner 双冷却、OblivionKnight curseDeadline/previousTarget、AbyssKnight recovery、
+  ZakarumPriest 本地帧钟和三个法术 deadline、ZakarumZealot attackArmed；另外保留 ThornHulk
+  burst/recovery/waitAfterFrenzy 与 VileMother 已生成数量，不重抽 RNG 或重置技能预算。
+- 陷阱保留 ArcaneTower phase/remaining/nextAction、TrapMissile shots/needsDelay、
+  TrapNova（含 TrapPoison）casts/needsDelay、左右箭陷阱的双精度 elapsedFrames/nextAttackFrame、
+  TrappedSoul awakened/双精度 frame/nextAttackFrame。新增局部 double 帧钟只接受有限值，
+  float 冷却使用已有有限值 codec，保持宿主实际精度和计时表示，不借 checkpoint 修改玩法调度。
+- Mephisto/Baal 的 destination/ray/collision、Summoner escape、Priest landing/ray/collision
+  在使用前覆盖，仍属 scratch，不复制旧 World/Map 或探测结果。TrapPoison/TrapLeftArrow 精确
+  类型单独声明，私有数据由其已适配父类读写；不会放开任意派生类。
+- 既有 AI v1、wrapper v1、unit-state v4、D2GC v7 均不变；原有 14 类字节布局不变。
+  新类型加入白名单，私有尾部仍自动纳入原 unit-state canonical witness。
+
+原版依据：D2MOO `AiThink.cpp::AITHINK_Fn077_TrapMissile` 的已用次数/交替延迟、
+Fn078/079 的绝对 deadline、Fn093_ArcaneTower 的 phase/budget/deadline、
+Fn051_Diablo 的 retained action，以及 Fn099_TrappedSoul 的 awakened/deadline。
+本批保留宿主已实现状态，不修改这些 AI 的概率、目标规则、原版差异或路径近似。
+
+验收增加/强化：33 类逐字段标量比对（不只比较重编码镜像）、预检零写入、全部 schema
+逐字节截断、非有限 double 拒绝、Baal 锚点值/向量身份；真实 TrapMissile 在第一发结束后恢复，
+保持 17 帧间隔且第二发后按已耗预算死亡。真实 D2GS factory 的 trap 在新 World/独立 JVM
+续跑 100 步，逐步比较状态/诊断、严格 canonical、原生 RNG 和 D2S；AI-only 变化及 live/empty
+World 晚期 D2S 失败回滚同时覆盖 DoomKnight 和 TrapMissile。用例仍显式完成动作并清理
+Casting/Sequence/Pathfind，不是完整战斗续跑或真实 socket 跨进程接管。
+
+扩大到全部 AI 测试时，BaalCrabTargeting 的 3 项生命周期断言暴露了夹具的事件域混用：
+子单位通过 detached 兼容计数器 set，而 Player head 已使用 World 私有序列。
+将该夹具的子单位统一对齐 factory 的 `NativeTargetNodes.get`/bind-before-set，
+归属切换、移除/重建和 bonewall 改类显式执行 detach/insert，原全部期望值不变。
+这也消除 isolated class 执行依赖其他测试先抬高静态兼容计数器的问题，不修改生产目标选择算法。
+
+最终扩大回归使用真实 1.10f 资源 `G:\BaiduNetdiskDownload\Diablo II 1.10F`，
+core 范围在第 31 批基础上扩大为 `com.riiablo.engine.server.ai.*Test` 全部 AI 测试，
+保留 checkpoint/factory/状态/目标/RNG/D2S 回归。服务端 70 项、core 1008 项，共 1078 项通过，
+0 失败、0 跳过；BaalCrabTargeting 29 项及 AI schema 12 项均通过。
+模块边界、桌面编译和 `git diff --check` 通过。三个真实 TCP gate 通过：固定 Tick `7→38`
+（31 步）、部分拾取后剩余 15 金币且 owner window 保持、旧 socket 延迟帧丢弃且当前
+generation 命令成功。TCP gate 仍为同进程，未扩展成真实 socket 跨进程接管验收。
+
+剩余：其余 AI 类型（含 BaalCrabClone）、Casting/Sequence 与冻结战斗记录、ECS 路径、其他 pet/merc 运行时，
+以及前批 Map/RoomEx、本地实体、未绑定 RNG、任务/交易、资源 digest、结构订阅副作用和
+真实 socket 跨进程接管组合验收。M8-A、M8-D、M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

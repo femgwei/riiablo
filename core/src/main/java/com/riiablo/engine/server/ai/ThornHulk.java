@@ -4,6 +4,23 @@ import com.riiablo.engine.Engine;
 
 /** D2MOO AITHINK_Fn027_ThornHulk, 0x6FCD6D60. */
 public class ThornHulk extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(burst);
+    out.writeInt(recovery);
+    out.writeBoolean(waitAfterFrenzy);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedBurst = in.readInt();
+    int savedRecovery = in.readInt();
+    boolean savedWaitAfterFrenzy = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      burst = savedBurst;
+      recovery = savedRecovery;
+      waitAfterFrenzy = savedWaitAfterFrenzy;
+    }
+  }
   private int burst, recovery;
   private boolean waitAfterFrenzy;
   public ThornHulk(int entityId) { super(entityId); }

@@ -7,6 +7,20 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 
 /** D2MOO AiThink.cpp AITHINK_Fn053_Summoner (0x6FCDAFC0). */
 public class Summoner extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, novaCooldown);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, firewallCooldown);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    float savedNovaCooldown = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float savedFirewallCooldown = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    if (apply) {
+      novaCooldown = savedNovaCooldown;
+      firewallCooldown = savedFirewallCooldown;
+    }
+  }
   static final int PARAM_CAST_CHANCE = 0;
   static final int PARAM_WEAKEN_CHANCE = 1;
   static final int PARAM_PREFERRED_ELEMENT_CHANCE = 2;

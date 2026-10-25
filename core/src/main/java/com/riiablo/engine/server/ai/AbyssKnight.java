@@ -7,6 +7,17 @@ import com.riiablo.engine.server.component.UnitStates;
 
 /** D2MOO AITHINK_Fn073_AbyssKnight, 0x6FCDD850. */
 public class AbyssKnight extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(recovery);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedRecovery = in.readInt();
+    if (apply) {
+      recovery = savedRecovery;
+    }
+  }
   private int recovery;
   public AbyssKnight(int entityId) { super(entityId); }
 

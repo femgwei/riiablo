@@ -4,6 +4,23 @@ import com.riiablo.codec.Animation;
 
 /** D2MOO AiThink.cpp AITHINK_Fn093_ArcaneTower (0x6FCDFA50). */
 public class ArcaneTower extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(phase);
+    out.writeInt(remaining);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, nextAction);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPhase = in.readInt();
+    int savedRemaining = in.readInt();
+    float savedNextAction = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    if (apply) {
+      phase = savedPhase;
+      remaining = savedRemaining;
+      nextAction = savedNextAction;
+    }
+  }
   static final int PARAM_NUM_SKILL_1 = 0;
   static final int PARAM_SKILL_1_STALL = 1;
   static final int PARAM_SKILL_1_LONG_DELAY = 2;

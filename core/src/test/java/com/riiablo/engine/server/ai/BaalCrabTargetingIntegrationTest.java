@@ -139,7 +139,9 @@ class BaalCrabTargetingIntegrationTest extends RiiabloTest {
       for (int i = 1; i < NativePlayerTargetSlots.SLOT_COUNT; i++) player(f, 30, 10);
       int ninth = player(f, 30, 10);
       int child = pet(f, false, 30, 10, 2);
-      f.world.getMapper(SummonedPet.class).get(child).ownerId = ninth;
+      SummonedPet childPet = f.world.getMapper(SummonedPet.class).get(child);
+      childPet.detachNativeTargetNode();
+      childPet.set(ninth, "skeleton", 70, 1, false, 0);
       for (int id : new int[] {ninth, child}) {
         stats(f, id, 100).base().put(Stat.maxdamage, 1000);
         attrs(f, id).reset();
@@ -285,6 +287,7 @@ class BaalCrabTargetingIntegrationTest extends RiiabloTest {
     for (String ai : new String[] {"BaalCrab", "BaalCrabClone"}) {
       try (Act1NativeAiIntegrationTest.Fixture f = fixture(ai)) {
         int merc = pet(f, true, 30, 10, 2);
+        f.world.getMapper(Mercenary.class).get(merc).detachNativeTargetNode();
         f.world.getMapper(Mercenary.class).get(merc).ownerId = -1;
         int summon = pet(f, false, 30, 10, 2);
         for (int id : new int[] {merc, summon}) {
@@ -295,9 +298,12 @@ class BaalCrabTargetingIntegrationTest extends RiiabloTest {
         f.world.process();
         assertEquals(merc, select(f), "lower-ID hireling joins after the higher-ID summon");
         assertEquals(3, baal(f).lastTargetCount());
+        f.world.getMapper(SummonedPet.class).get(summon).detachNativeTargetNode();
         f.world.getMapper(SummonedPet.class).remove(summon);
         f.world.process();
-        f.world.getMapper(SummonedPet.class).create(summon).set(f.target, "skeleton", 70, 1, false, 0);
+        f.world.getMapper(SummonedPet.class).create(summon)
+            .bindNativeTargetNode(com.riiablo.engine.server.NativeTargetNodes.get(f.world, summon))
+            .set(f.target, "skeleton", 70, 1, false, 0);
         assertEquals(summon, select(f), "a later summon insertion shares the same order domain");
       }
     }
@@ -319,7 +325,9 @@ class BaalCrabTargetingIntegrationTest extends RiiabloTest {
       int first = pet(f, false, 30, 10, 2);
       int otherPlayer = player(f, 30, 10);
       int later = pet(f, false, 30, 10, 2);
-      f.world.getMapper(SummonedPet.class).get(later).ownerId = otherPlayer;
+      SummonedPet laterPet = f.world.getMapper(SummonedPet.class).get(later);
+      laterPet.detachNativeTargetNode();
+      laterPet.set(otherPlayer, "skeleton", 70, 1, false, 0);
       for (int id : new int[] {first, later}) {
         attrs(f, id).base().put(Stat.maxdamage, 1000);
         attrs(f, id).reset();
@@ -371,7 +379,9 @@ class BaalCrabTargetingIntegrationTest extends RiiabloTest {
       stats(f, f.target, 0);
       int low = pet(f, false, 11, 10, 1);
       int wall = pet(f, false, 11, 10, 2);
-      f.world.getMapper(SummonedPet.class).get(wall).boneWall = true;
+      SummonedPet wallPet = f.world.getMapper(SummonedPet.class).get(wall);
+      wallPet.detachNativeTargetNode();
+      wallPet.set(f.target, "bonewall", 70, 1, false, 0).boneWall = true;
       f.world.process();
       assertEquals(0, baal(f).targetScore(low));
       assertEquals(Engine.INVALID_ENTITY, select(f));
@@ -592,8 +602,18 @@ class BaalCrabTargetingIntegrationTest extends RiiabloTest {
     row.threat = threat;
     f.world.getMapper(com.riiablo.engine.server.component.Monster.class).get(id).monstats = row;
     f.world.getMapper(Size.class).create(id).size = 1;
-    if (merc) f.world.getMapper(Mercenary.class).create(id).set(f.target, 0, 1, 1, 0);
-    else f.world.getMapper(SummonedPet.class).create(id).set(f.target, "skeleton", 70, 1, false, 0);
+    // Head and children must use the same World-owned domain as the factory.
+    com.riiablo.engine.server.component.NativeTargetNode node =
+        com.riiablo.engine.server.NativeTargetNodes.get(f.world, id);
+    if (merc) {
+      Mercenary component = f.world.getMapper(Mercenary.class).create(id);
+      component.bindNativeTargetNode(node);
+      component.set(f.target, 0, 1, 1, 0);
+    } else {
+      SummonedPet component = f.world.getMapper(SummonedPet.class).create(id);
+      component.bindNativeTargetNode(node);
+      component.set(f.target, "skeleton", 70, 1, false, 0);
+    }
     return id;
   }
   private static Map.Zone zone(int act) {

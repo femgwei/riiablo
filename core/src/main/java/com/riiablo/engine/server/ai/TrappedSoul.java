@@ -7,6 +7,23 @@ import com.riiablo.engine.server.component.NativeUnitFlags;
 
 /** D2MOO AITHINK_Fn099_TrappedSoul (AiThink.cpp, 0x6FCE9980). */
 public class TrappedSoul extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeBoolean(awakened);
+    AiRuntimeState.writeFiniteDouble(out, frame);
+    AiRuntimeState.writeFiniteDouble(out, nextAttackFrame);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    boolean savedAwakened = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    double savedFrame = AiRuntimeState.readFiniteDouble(in);
+    double savedNextAttackFrame = AiRuntimeState.readFiniteDouble(in);
+    if (apply) {
+      awakened = savedAwakened;
+      frame = savedFrame;
+      nextAttackFrame = savedNextAttackFrame;
+    }
+  }
   private boolean awakened;
   // Local frame clock pending native global game-frame/event scheduling.
   private double frame;

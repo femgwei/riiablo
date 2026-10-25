@@ -4,6 +4,20 @@ import com.riiablo.engine.server.component.NativeUnitFlags;
 
 /** D2MOO AITHINK_Fn080_092_TrapPoison_TrapNova (AiThink.cpp, 0x6FCDE8B0). */
 public class TrapNova extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(casts);
+    out.writeBoolean(needsDelay);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedCasts = in.readInt();
+    boolean savedNeedsDelay = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      casts = savedCasts;
+      needsDelay = savedNeedsDelay;
+    }
+  }
   private int casts;
   private boolean needsDelay;
 

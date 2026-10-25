@@ -7,6 +7,20 @@ import com.riiablo.map.Map;
 
 /** D2MOO AITHINK_Fn078_TrapRightArrow (AiThink.cpp, 0x6FCDE570). */
 public class TrapRightArrow extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    AiRuntimeState.writeFiniteDouble(out, elapsedFrames);
+    out.writeLong(nextAttackFrame);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    double savedElapsedFrames = AiRuntimeState.readFiniteDouble(in);
+    long savedNextAttackFrame = in.readLong();
+    if (apply) {
+      elapsedFrames = savedElapsedFrames;
+      nextAttackFrame = savedNextAttackFrame;
+    }
+  }
   private double elapsedFrames;
   private long nextAttackFrame;
 

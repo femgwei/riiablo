@@ -10,6 +10,20 @@ import com.riiablo.engine.server.state.StateId;
 
 /** D2MOO AiThink.cpp AITHINK_Fn051_Diablo (0x6FCE8950). */
 public class Diablo extends NativeDecisionAI {
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(action);
+    out.writeInt(actionCount);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedAction = in.readInt();
+    int savedActionCount = in.readInt();
+    if (apply) {
+      action = savedAction;
+      actionCount = savedActionCount;
+    }
+  }
   // Native action numbers.  The values are the indices consumed by the
   // original 17-entry AI_GetRandomArrayIndex table.
   static final int ACTION_WALK = 1;

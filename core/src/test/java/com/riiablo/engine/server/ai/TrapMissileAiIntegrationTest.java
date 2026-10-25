@@ -13,6 +13,26 @@ import com.riiablo.skill.SkillCodes;
 import org.junit.jupiter.api.Test;
 
 class TrapMissileAiIntegrationTest extends RiiabloTest {
+  @Test void checkpointPreservesInterShotDelayAndSpentBudgetAcrossWorlds() {
+    try (Fixture source = new Fixture(row(), 0, 10); Fixture target = new Fixture(row(), 0, 10)) {
+      configure(source, 2);
+      Riiablo.engine = source.world;
+      source.ai.update(Animation.FRAME_DURATION); assertNotNull(source.casting());
+      source.finishAction(); // Action checkpointing remains a separate boundary.
+      com.riiablo.engine.replay.MonsterRuntimeCheckpoint.capture(source.world, source.actor,
+          java.util.Collections.singleton(source.actor)).restore(target.world, target.actor);
+      AiRuntimeState.capture(source.ai, source.actor).restore(target.ai, target.actor);
+      for (Fixture f : new Fixture[] {source, target}) {
+        Riiablo.engine = f.world;
+        f.ai.update(Animation.FRAME_DURATION); assertNull(f.casting());
+        f.ai.update(16 * Animation.FRAME_DURATION); assertNull(f.casting());
+        f.ai.update(Animation.FRAME_DURATION + .00001f); assertNotNull(f.casting());
+        f.finishAction(); f.ai.update(Animation.FRAME_DURATION); assertExpired(f);
+      }
+      assertArrayEquals(AiRuntimeState.capture(source.ai, source.actor).bytes(), AiRuntimeState.capture(target.ai, target.actor).bytes());
+    }
+  }
+
   private String row() { return "trap-firebolt"; }
 
   private void configure(Fixture f, int shots) {
