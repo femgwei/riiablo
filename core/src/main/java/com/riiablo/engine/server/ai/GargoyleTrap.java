@@ -14,6 +14,21 @@ public class GargoyleTrap extends AI {
   private float nextThink;
   private String state = "IDLE";
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    AiRuntimeState.writeTimer(out, nextThink);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, state);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    float savedNextThink = AiRuntimeState.readTimer(in);
+    String savedState = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    if (apply) {
+      nextThink = savedNextThink;
+      state = savedState;
+    }
+  }
+
   public GargoyleTrap(int entityId) {
     super(entityId);
   }

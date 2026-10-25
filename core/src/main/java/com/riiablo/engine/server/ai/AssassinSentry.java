@@ -15,6 +15,18 @@ package com.riiablo.engine.server.ai;
 public class AssassinSentry extends AI {
   private String state = "TRAP";
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, state);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    String savedState = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    if (apply) {
+      state = savedState;
+    }
+  }
+
   public AssassinSentry(int entityId) {
     super(entityId);
   }

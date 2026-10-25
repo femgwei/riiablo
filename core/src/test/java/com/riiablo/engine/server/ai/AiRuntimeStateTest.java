@@ -31,7 +31,10 @@ class AiRuntimeStateTest {
       MaggotEgg::new, Megademon::new, MinionSpawner::new, Mosquito::new,
       Overseer::new, BaalToStairs::new, PantherJavelin::new, QuillMother::new,
       BloodLord::new, Catapult::new, DeathMauler::new, FrozenHorror::new,
-      Griswold::new, HellMeteor::new, Minion::new, Smith::new);
+      Griswold::new, HellMeteor::new, Minion::new, Smith::new,
+      DarkWanderer::new, Imp::new, Vulture::new, Nihlathak::new,
+      Arach::new, AssassinSentry::new, BonePrison::new, FoulCrowNest::new,
+      GargoyleTrap::new, Vines::new);
 
   @Test void allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects() throws Exception {
     for (IntFunction<AI> factory : SCHEMAS) {
@@ -42,6 +45,7 @@ class AiRuntimeStateTest {
           if (Modifier.isStatic(f.getModifiers()) || Modifier.isFinal(f.getModifiers()) || f.getName().equals("entityId")) continue;
           f.setAccessible(true);
           if (f.getType() == int.class) f.setInt(source, value++);
+          else if (f.getType() == byte.class) f.setByte(source, (byte) (value++ - 80));
           else if (f.getType() == long.class) f.setLong(source, 9007199254740001L);
           else if (f.getType() == double.class) f.setDouble(source, 987654321.1234567);
           else if (f.getType() == float.class) f.setFloat(source, value++ + .00390625f);
@@ -159,6 +163,16 @@ class AiRuntimeStateTest {
     expected.put(Overseer.class, "rallyDeadline lastAttacker");
     expected.put(BaalToStairs.class, "retired");
     expected.put(PantherJavelin.class, "escape");
+    expected.put(DarkWanderer.class, "phase attempts destination");
+    expected.put(Imp.class, "previousTarget mountedSkill");
+    expected.put(Vulture.class, "aiParam0 aiParam1 aiParam2 groundIdle groundWalk groundRun savedModes landingStatus lastTraceFrame");
+    expected.put(Nihlathak.class, "");
+    expected.put(Arach.class, "nextThink aiParam0 aiParam1 aiParam2 state tmp");
+    expected.put(AssassinSentry.class, "state");
+    expected.put(BonePrison.class, "dead");
+    expected.put(FoulCrowNest.class, "elapsedFrames lastSpawnFrame nextThink spawned state");
+    expected.put(GargoyleTrap.class, "nextThink state");
+    expected.put(Vines.class, "nextThink state corpseEntities");
     for (Class<?> type : Arrays.asList(QuillMother.class, BloodLord.class, Catapult.class,
         DeathMauler.class, FrozenHorror.class, Griswold.class, HellMeteor.class, Minion.class, Smith.class)) expected.put(type, "");
     for (Class<?> type : Arrays.asList(Andariel.class, DoomKnight.class, FlyingScimitar.class, BaalMinion.class, Idle.class)) expected.put(type, "");
@@ -181,7 +195,7 @@ class AiRuntimeStateTest {
   }
 
   @Test void unsupportedTypesAndForeignOwnerOrConfigurationCannotBeRestored() {
-    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new Arach(2), 2));
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new Regurgitator(2), 2));
     assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new TrapNova(2) {}, 2));
     assertThrows(IllegalStateException.class, () -> AiRuntimeState.capture(new QuillRat(2), 1));
     AiRuntimeState image = AiRuntimeState.capture(new GenericMonster(2, "first"), 2);
@@ -369,6 +383,33 @@ class AiRuntimeStateTest {
     byte[] bytes = AiRuntimeState.capture(new Megademon(3), 3).bytes();
     java.nio.ByteBuffer.wrap(bytes).putInt(bytes.length - 4, Float.floatToRawIntBits(Float.NaN));
     assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.fromBytes(bytes));
+  }
+
+  @Test void independentAiTimersDistinguishSleepSentinelsFromFiniteNestClocks() throws Exception {
+    for (AI source : new AI[] {new Arach(3), new GargoyleTrap(3), new Vines(3)}) {
+      AI target = source.getClass().getConstructor(int.class).newInstance(3);
+      put(source, source.getClass(), "nextThink", Float.POSITIVE_INFINITY);
+      AiRuntimeState.capture(source, 3).restore(target, 3);
+      assertEquals(Float.POSITIVE_INFINITY, get(target, target.getClass(), "nextThink"));
+      for (float bad : new float[] {Float.NaN, Float.NEGATIVE_INFINITY}) {
+        put(source, source.getClass(), "nextThink", bad);
+        assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(source, 3));
+      }
+    }
+    FoulCrowNest nest = new FoulCrowNest(3);
+    for (String field : new String[] {"elapsedFrames", "lastSpawnFrame", "nextThink"}) {
+      for (float bad : new float[] {Float.NaN, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY}) {
+        put(nest, FoulCrowNest.class, field, bad);
+        assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(nest, 3));
+      }
+      put(nest, FoulCrowNest.class, field, 0f);
+    }
+    byte[] bad = AiRuntimeState.capture(new Vulture(3), 3).bytes();
+    // Byte modes are unrestricted signed bytes; savedModes is a strict boolean.
+    int end = bad.length;
+    int statusBytes = "NOT_REQUESTED".getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+    bad[end - 8 - statusBytes - 4 - 1 - 1] = 2;
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.fromBytes(bad));
   }
 
   enum Observed implements com.badlogic.gdx.ai.fsm.State<Integer> {

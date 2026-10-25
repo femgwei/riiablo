@@ -23,6 +23,42 @@ public class Vulture extends NativeDecisionAI {
   private static final com.riiablo.logger.Logger log =
       com.riiablo.logger.LogManager.getLogger(Vulture.class);
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(aiParam0);
+    out.writeInt(aiParam1);
+    out.writeInt(aiParam2);
+    out.writeByte(groundIdle);
+    out.writeByte(groundWalk);
+    out.writeByte(groundRun);
+    out.writeBoolean(savedModes);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, landingStatus);
+    out.writeLong(lastTraceFrame);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedAiParam0 = in.readInt();
+    int savedAiParam1 = in.readInt();
+    int savedAiParam2 = in.readInt();
+    byte savedGroundIdle = in.readByte();
+    byte savedGroundWalk = in.readByte();
+    byte savedGroundRun = in.readByte();
+    boolean savedSavedModes = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    String savedLandingStatus = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    long savedLastTraceFrame = in.readLong();
+    if (apply) {
+      aiParam0 = savedAiParam0;
+      aiParam1 = savedAiParam1;
+      aiParam2 = savedAiParam2;
+      groundIdle = savedGroundIdle;
+      groundWalk = savedGroundWalk;
+      groundRun = savedGroundRun;
+      savedModes = savedSavedModes;
+      landingStatus = savedLandingStatus;
+      lastTraceFrame = savedLastTraceFrame;
+    }
+  }
+
   public Vulture(int entityId) { super(entityId); }
 
   private void airborne(boolean flying) {

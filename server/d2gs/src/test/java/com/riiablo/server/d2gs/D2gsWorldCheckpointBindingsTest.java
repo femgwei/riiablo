@@ -210,10 +210,11 @@ public class D2gsWorldCheckpointBindingsTest {
   }
 
   @Test public void privateAiOnlyChangeAltersCanonicalAndLateFailureRestoresDecisionPhase() throws Exception {
-    for (String row : new String[] {"doomknight1", "trap-firebolt", spiritRow(), rowForAi("BatDemon")}) {
+    for (String row : new String[] {"doomknight1", "trap-firebolt", spiritRow(), rowForAi("BatDemon"), "gargoyletrap"}) {
       try (Fixture source = new Fixture(); Fixture target = new Fixture(); Fixture empty = new Fixture(); Fixture control = new Fixture()) {
         source.populate();
         if (row.equals(rowForAi("BatDemon"))) source.populateRegeneratingBatAi();
+        else if (row.equals("gargoyletrap")) source.populateRecoveringGargoyleAi();
         else source.populateDecisionAi(row);
         D2gsCheckpointSnapshot before = source.server.captureReplayCheckpoint();
         source.updateDecisionAi(0.013f); // Still before the pending absolute think event; only private elapsed time changes.
@@ -345,6 +346,51 @@ public class D2gsWorldCheckpointBindingsTest {
         assertEquals(80, attrs.getValue(Stat.hpregen, 0));
       } finally { Riiablo.engine = previous; }
     }
+  }
+
+  @Test public void gargoyleRecoveryResumesAcrossFactoryWorldAndIndependentJvm() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("gargoyle-decisions.chk"); String expected;
+    try (Fixture source = new Fixture()) {
+      source.populate(); source.populateRecoveringGargoyleAi();
+      assertEquals("GargoyleTrap", source.server.captureReplayCheckpoint().unitStateRuntime().get(1).aiDecisionRuntime().implementation());
+      source.server.writeReplayCheckpoint(path);
+      expected = continueGargoyleDecisions(source);
+    }
+    assertEquals(expected, resumeGargoyleDecisions(path));
+    Path output = temporary.getRoot().toPath().resolve("gargoyle-decisions-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "gargoyle-decisions").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("gargoyle recovery child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  private static String resumeGargoyleDecisions(Path path) throws Exception {
+    try (Fixture target = new Fixture()) {
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      return continueGargoyleDecisions(target);
+    }
+  }
+
+  private static String continueGargoyleDecisions(Fixture f) {
+    StringBuilder result = new StringBuilder("GARGOYLE_DECISIONS_CONTINUED"); int shots = 0;
+    for (int frame = 0; frame < 60; frame++) {
+      f.server.simulation.tick(null, null);
+      boolean action = f.updateDecisionAi(0.04f);
+      if (frame < 18) assertFalse("gargoyle fired before its remaining recovery", action);
+      if (action) shots++;
+      com.riiablo.engine.server.ai.AI ai = f.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai;
+      D2gsCheckpointSnapshot after = f.server.captureReplayCheckpoint();
+      result.append('|').append(action).append(':').append(ai.getState())
+          .append(':').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
+    }
+    assertTrue("gargoyle never left recovery", shots > 0);
+    return result.toString();
   }
 
   private static String resumeBatDecisions(Path path) throws Exception {
@@ -1500,7 +1546,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "bat-decisions".equals(args[3])
+      try { System.out.println(args.length > 3 && "gargoyle-decisions".equals(args[3])
+          ? resumeGargoyleDecisions(Path.of(args[0])) : args.length > 3 && "bat-decisions".equals(args[3])
           ? resumeBatDecisions(Path.of(args[0])) : args.length > 3 && "spirit-decisions".equals(args[3])
           ? resumeSpiritDecisions(Path.of(args[0])) : args.length > 3 && "trap-decisions".equals(args[3])
           ? resumeTrapDecisions(Path.of(args[0])) : args.length > 3 && "decisions".equals(args[3])
@@ -1611,6 +1658,14 @@ public class D2gsWorldCheckpointBindingsTest {
       updateDecisionAi(0.04f);
       assertEquals(120, attrs.base().getValue(Stat.hpregen, 0));
       assertEquals(120, attrs.getValue(Stat.hpregen, 0));
+    }
+
+    void populateRecoveringGargoyleAi() throws Exception {
+      com.riiablo.engine.server.ai.AI ai = createDecisionAi("gargoyletrap");
+      java.lang.reflect.Field params = com.riiablo.engine.server.ai.AI.class.getDeclaredField("params");
+      params.setAccessible(true); params.set(ai, new int[] {20, 100, 25, 1, 0, 0, 0, 0});
+      assertTrue(updateDecisionAi(0.04f));
+      assertFalse(updateDecisionAi(0.25f)); // Keep three quarters of the post-shot recovery.
     }
 
     boolean updateDecisionAi(float delta) {

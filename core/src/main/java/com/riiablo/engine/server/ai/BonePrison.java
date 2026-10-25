@@ -12,6 +12,18 @@ public class BonePrison extends AI {
   protected ComponentMapper<DiabPrison> mDiabPrison;
   private boolean dead;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeBoolean(dead);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    boolean savedDead = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      dead = savedDead;
+    }
+  }
+
   public BonePrison(int entityId) { super(entityId); }
 
   @Override public void kill() {

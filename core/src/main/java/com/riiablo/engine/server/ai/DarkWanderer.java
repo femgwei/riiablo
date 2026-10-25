@@ -10,7 +10,23 @@ import com.riiablo.engine.server.quest.Act3QuestSystem;
 public class DarkWanderer extends NativeDecisionAI {
   private int phase;
   private int attempts;
+  // Scratch: every successful beforeDecision overwrites this from quest-owned coordinates.
   private final Vector2 destination = new Vector2();
+
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(phase);
+    out.writeInt(attempts);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPhase = in.readInt();
+    int savedAttempts = in.readInt();
+    if (apply) {
+      phase = savedPhase;
+      attempts = savedAttempts;
+    }
+  }
 
   public DarkWanderer(int entityId) { super(entityId); }
 

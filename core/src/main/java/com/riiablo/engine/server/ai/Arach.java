@@ -22,7 +22,32 @@ public class Arach extends AI {
   private int aiParam1;
   private int aiParam2;
   private String state = "IDLE";
+  // Escape scratch, overwritten from current positions before every read.
   private final Vector2 tmp = new Vector2();
+
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    AiRuntimeState.writeTimer(out, nextThink);
+    out.writeInt(aiParam0);
+    out.writeInt(aiParam1);
+    out.writeInt(aiParam2);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, state);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    float savedNextThink = AiRuntimeState.readTimer(in);
+    int savedAiParam0 = in.readInt();
+    int savedAiParam1 = in.readInt();
+    int savedAiParam2 = in.readInt();
+    String savedState = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    if (apply) {
+      nextThink = savedNextThink;
+      aiParam0 = savedAiParam0;
+      aiParam1 = savedAiParam1;
+      aiParam2 = savedAiParam2;
+      state = savedState;
+    }
+  }
 
   public Arach(int entityId) {
     super(entityId);

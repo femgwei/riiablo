@@ -150,6 +150,16 @@ public final class AiRuntimeState {
       case "HellMeteor": return new HellMeteor(id);
       case "Minion": return new Minion(id);
       case "Smith": return new Smith(id);
+      case "DarkWanderer": return new DarkWanderer(id);
+      case "Imp": return new Imp(id);
+      case "Vulture": return new Vulture(id);
+      case "Nihlathak": return new Nihlathak(id);
+      case "Arach": return new Arach(id);
+      case "AssassinSentry": return new AssassinSentry(id);
+      case "BonePrison": return new BonePrison(id);
+      case "FoulCrowNest": return new FoulCrowNest(id);
+      case "GargoyleTrap": return new GargoyleTrap(id);
+      case "Vines": return new Vines(id);
       default: throw new IllegalArgumentException("unsupported AI checkpoint schema: " + type);
     }
   }

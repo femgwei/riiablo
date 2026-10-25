@@ -10,6 +10,21 @@ import com.riiablo.engine.server.component.Monster;
 public class Imp extends NativeDecisionAI {
   private int previousTarget = Engine.INVALID_ENTITY;
   private int mountedSkill = -1;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(previousTarget);
+    out.writeInt(mountedSkill);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPreviousTarget = in.readInt();
+    int savedMountedSkill = in.readInt();
+    if (apply) {
+      previousTarget = savedPreviousTarget;
+      mountedSkill = savedMountedSkill;
+    }
+  }
+
   public Imp(int entityId) { super(entityId); }
 
   private boolean castMounted(int slot, int targetId, Vector2 target) {

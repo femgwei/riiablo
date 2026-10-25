@@ -2764,6 +2764,73 @@ TCP gate 仍为同进程，不代表真实 socket 跨进程接管验收完成。
 Izual/BaalToStairs 的局部标记不等于任务权威状态恢复，召唤器私有预算恢复也不等于
 RoomEx RNG、实际技能生成和完整战斗续跑全部覆盖。M8-A、M8-D、M8 总体继续进行中。
 
+### M8-A 第 35 批：飞行/骑乘记忆与独立计时型 AI 恢复（2026-10-25）
+
+本批集中补齐 10 类 AI 的私有状态，继续采用精确类型白名单、纯构造解析、全记录预检、
+factory 宿主原位恢复和既有 ECS/RNG/D2S 事务；不改玩法、概率、技能执行或时钟表示。
+
+- 新支持 DarkWanderer、Imp、Vulture、Nihlathak、Arach、AssassinSentry、BonePrison、
+  FoulCrowNest、GargoyleTrap、Vines。累计 88 类实体 AI，另有共享 IDLE；未知具体类型、
+  未声明派生类继续拒绝。AI v1、wrapper v1、unit-state v4、D2GC v7 不变，原有 78 类布局不变。
+- Vulture 保存飞行阶段 aiParam0、历史航点 aiParam1/2、groundIdle/Walk/Run 三个 byte、
+  savedModes、landingStatus 和 lastTraceFrame。航点不是临时向量，不能恢复时重抽；
+  地面模式账本也不能从当前飞行动画推导。恢复只覆盖 AI 字段，不调用 airborne/land/kill。
+- Imp 保存 previousTarget/mountedSkill，避免丢失目标连续性或重复选择骑乘技能。
+  nativeOwner/nativeRequestedMount 的身份仍由既有 Monster 镜像负责；
+  Nihlathak 无新增实例字段，明确继承 Overseer 的 rallyDeadline/lastAttacker 和基类状态。
+- DarkWanderer 保存 phase/attempts。destination 在每次成功 beforeDecision 时由
+  Act3QuestSystem.getDarkWandererCoordinates 完整覆盖，失败时不进入 think，是 scratch；
+  不把该临时坐标当作任务权威状态，不重放任务初始化或离场事件。
+- Arach 保存 nextThink、三个 aiParam 和 state，其逃跑向量使用前由当前位置覆盖。
+  GargoyleTrap/Vines 保存 nextThink/state；这三类 nextThink 可由旧 SLEEP 产生正无穷
+  sleep sentinel，沿用 timer codec，拒绝 NaN/负无穷。
+- FoulCrowNest 保存 elapsedFrames/lastSpawnFrame/nextThink/spawned/state；三个时钟必须有限，
+  不把固定冷却误作 sleep sentinel。AssassinSentry 保存 state，BonePrison 保存 dead。
+  Vines 的 corpseEntities 是目标 World 的实时查询订阅，保留 factory 注入/初始化后的对象，
+  不复制源订阅、mapper、World、Map 或服务。
+
+原版核对：D2MOO AiThink.cpp 的 Fn023_Vulture 明确保留 dwAiParam[1/2] 航点并递减飞行计数；
+Fn043_FoulCrowNest 保留上次生成帧/已生成数；Fn063_GargoyleTrap 保留射击恢复；
+Fn091_DarkWanderer 每轮向 ACT3Q7 获取坐标并保留阶段/重试数。
+本批忠实保存宿主现有表示，不将 checkpoint 工作扩大成原版行为差异修正。
+
+验收扩展到 88 类逐字段往返、继承链字段策略、预检零写入、逐字节截断、非默认有符号 byte、
+严格 boolean 和 timer/有限 float 非法值拒绝。真实表/ECS 用例组合恢复 AI 与 Monster（含共享
+原生种子），验证秃鹰沿用未到达航点、死亡恢复原地面模式，魔童在预建同 ID owner 上保留
+已选技能与后续决策/RNG；另验鸟巢耗尽预算不重置、石像陷阱保留剩余冷却，以及藤蔓保留
+目标 World 的订阅对象；已死亡 BonePrison 不重新执行 kill 动作。
+移动模式、地图/碰撞和 owner 依赖在这些定向夹具中显式预建，
+不宣称完整飞行、骑乘物理或 owner 生命周期恢复。
+
+真实 D2GS factory 的 GargoyleTrap 在射击后剩余 0.75 秒冷却时保存，新 World 与独立 JVM
+各续跑 60 步，逐步比较动作请求、状态、canonical（含原生 RNG）和 D2S，检查不会提前射击
+且到期后重新射击。AI-only witness 变化及现有/空 World 晚期 D2S 失败回滚新增该类型，
+保持目标 live AI 对象身份。续跑仍使用受控动作完成边界，显式清理 Casting/Sequence/Pathfind，
+不是完整动作或网络接管验收。
+
+定向验证命令（真实资源由 D2_HOME 指向本地 1.10f 目录）：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.server.ai.AiRuntimeStateTest --tests com.riiablo.engine.server.ai.FlightAndIndependentCheckpointIntegrationTest :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --continue --no-daemon --max-workers=1 --console=plain
+```
+
+最终扩大回归沿用第 34 批全部 AI、checkpoint/factory/状态/目标/RNG/D2S 测试范围，
+附带 :server:d2gs:headlessSimulationTick、:server:d2gs:headlessReconnectGroundLoot、
+:server:d2gs:headlessStaleTransport、:desktop:compileJava 与自动 verifyModuleBoundaries。
+最终结果：core 1024 项、server/d2gs 74 项，共 1098 项通过，0 失败、0 跳过；
+桌面编译、模块边界和 git diff --check 通过。三个真实 TCP gate 通过：
+固定 Tick 6→36（30 步、40ms 步长）、部分拾取后剩余 15 金币且 ownerWindowPreserved=true、
+旧 socket 延迟帧 delayedFrameDropped=true 且当前 generationAwareCommand=true。
+TCP gate 仍为同进程，不代表真实 socket 跨进程接管完成。
+
+剩余：Regurgitator 的 foodIdentity 必须另接 null/current/stale 引用编码、覆盖范围和目标
+World 身份绑定，不能把旧 token 对象复制过去或一律重绑当前实体；该类型继续明确拒绝。
+其他旧 FSM/宠物/佣兵 AI、完整 Casting/Sequence/冻结战斗记录和 Item 引用、ECS 路径/
+NativePathRuntime 游标、MovementModes/飞行碰撞/骑乘物理、DiabPrison 关系与 AssassinTrapSystem
+控制器等仍需各自适配。任务、Map/RoomEx、本地实体、交易、未绑定 RNG、资源 digest、
+结构订阅副作用及真实 socket 跨进程接管仍按前批保留。局部 AI 字段支持不等于这些系统
+整体可恢复；M8-A、M8-D、M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

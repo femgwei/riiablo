@@ -34,6 +34,7 @@ public class Vines extends AI {
   protected com.artemis.ComponentMapper<Position> mPosition;
   protected com.artemis.ComponentMapper<Sequence> mSequence;
   protected com.artemis.ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  // World-owned live query, retained on the factory-created AI rather than serialized.
   private EntitySubscription corpseEntities;
 
   @Override
@@ -42,6 +43,21 @@ public class Vines extends AI {
     if (Riiablo.engine != null) {
       corpseEntities = Riiablo.engine.getAspectSubscriptionManager().get(
           Aspect.all(Corpse.class, Monster.class, Position.class, AttributesWrapper.class));
+    }
+  }
+
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    AiRuntimeState.writeTimer(out, nextThink);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, state);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    float savedNextThink = AiRuntimeState.readTimer(in);
+    String savedState = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    if (apply) {
+      nextThink = savedNextThink;
+      state = savedState;
     }
   }
 

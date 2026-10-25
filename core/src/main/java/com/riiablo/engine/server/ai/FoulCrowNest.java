@@ -25,6 +25,30 @@ public class FoulCrowNest extends AI {
   private int spawned;
   private String state = "IDLE";
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, elapsedFrames);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, lastSpawnFrame);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, nextThink);
+    out.writeInt(spawned);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, state);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    float savedElapsedFrames = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float savedLastSpawnFrame = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float savedNextThink = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    int savedSpawned = in.readInt();
+    String savedState = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    if (apply) {
+      elapsedFrames = savedElapsedFrames;
+      lastSpawnFrame = savedLastSpawnFrame;
+      nextThink = savedNextThink;
+      spawned = savedSpawned;
+      state = savedState;
+    }
+  }
+
   public FoulCrowNest(int entityId) {
     super(entityId);
   }
