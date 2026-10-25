@@ -210,7 +210,7 @@ public class D2gsWorldCheckpointBindingsTest {
   }
 
   @Test public void privateAiOnlyChangeAltersCanonicalAndLateFailureRestoresDecisionPhase() throws Exception {
-    for (String row : new String[] {"doomknight1", "trap-firebolt", spiritRow(), rowForAi("BatDemon"), "gargoyletrap", "regurgitator1", "baboon1", "sandmaggot1"}) {
+    for (String row : new String[] {"doomknight1", "trap-firebolt", spiritRow(), rowForAi("BatDemon"), "gargoyletrap", "regurgitator1", "baboon1", "sandmaggot1", rowForAi("SandLeaper")}) {
       try (Fixture source = new Fixture(); Fixture target = new Fixture(); Fixture empty = new Fixture(); Fixture control = new Fixture()) {
         source.populate();
         if (row.equals(rowForAi("BatDemon"))) source.populateRegeneratingBatAi();
@@ -218,6 +218,7 @@ public class D2gsWorldCheckpointBindingsTest {
         else if (row.equals("regurgitator1")) source.populateFoodAi(1);
         else if (row.equals("baboon1")) source.populateLegacyBaboonAi();
         else if (row.equals("sandmaggot1")) source.populateBurrowedSandMaggotAi();
+        else if (row.equals(rowForAi("SandLeaper"))) source.populateRecoveringSandLeaperAi();
         else source.populateDecisionAi(row);
         D2gsCheckpointSnapshot before = source.server.captureReplayCheckpoint();
         source.updateDecisionAi(0.013f); // Still before the pending absolute think event; only private elapsed time changes.
@@ -231,9 +232,18 @@ public class D2gsWorldCheckpointBindingsTest {
         for (int i = 0; i <= encoded.length - nested.length; i++) {
           if (java.util.Arrays.equals(nested, java.util.Arrays.copyOfRange(encoded, i, i + nested.length))) { offset = i; break; }
         }
-        assertTrue(offset >= 0); nested[nested.length - 1] ^= 1;
+        assertTrue(offset >= 0);
+        int privateByte = nested.length - 1;
+        if (row.equals(rowForAi("SandLeaper"))) {
+          // The FSM tail is a nullable enum, not an arbitrary scalar. Alter its finite timer instead.
+          privateByte = -1;
+          for (int i = 0; i <= nested.length - 4; i++)
+            if (ByteBuffer.wrap(nested).getInt(i) == Float.floatToRawIntBits(.35f - .013f)) { privateByte = i + 3; break; }
+          assertTrue(privateByte >= 0);
+        }
+        nested[privateByte] ^= 1;
         com.riiablo.engine.replay.AiDecisionRuntimeCheckpoint.fromBytes(nested); // Valid nested payload; the outer witness must reject the change.
-        encoded[offset + nested.length - 1] ^= 1;
+        encoded[offset + privateByte] ^= 1;
         try { D2gsCheckpointSnapshot.fromBytes(encoded); fail("private AI corruption accepted"); }
         catch (IllegalArgumentException correct) {}
         assertTrue(target.server.restoreReplayCheckpoint(changed).success());
@@ -255,6 +265,7 @@ public class D2gsWorldCheckpointBindingsTest {
         }
         assertSame(liveAi, target.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai);
         if (row.equals("sandmaggot1")) assertEquals(continueSandMaggot(control), continueSandMaggot(target));
+        else if (row.equals(rowForAi("SandLeaper"))) assertEquals(continueSandLeaper(control), continueSandLeaper(target));
         else assertEquals(continueDecisions(control), continueDecisions(target));
       }
     }
@@ -524,6 +535,68 @@ public class D2gsWorldCheckpointBindingsTest {
           .append(':').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
     }
     assertTrue(unburrowed); assertTrue(reburrowed); assertEquals(2, actions);
+    return result.toString();
+  }
+
+  @Test public void legacyRangedFactoryRestoresValidateAndRetainMissileBindings() throws Exception {
+    for (String type : new String[] {"CorruptArcher", "SkeletonBow", "SkeletonMage"}) {
+      try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+        source.populate(); source.createDecisionAi(rowForAi(type));
+        D2gsCheckpointSnapshot archive = source.server.captureReplayCheckpoint();
+        assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+        Object ai = target.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai;
+        java.lang.reflect.Field field = ai.getClass().getDeclaredField("missile"); field.setAccessible(true);
+        Object bound = field.get(ai);
+        assertNotNull(type + " real table missile binding", bound);
+        assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+        assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+        assertSame(ai, target.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai);
+        assertSame(bound, field.get(ai));
+      }
+    }
+  }
+
+  @Test public void sandLeaperMeleeResumesAcrossFactoryWorldAndIndependentJvm() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("sand-leaper.chk"); String expected;
+    try (Fixture source = new Fixture()) {
+      source.populate(); source.populateRecoveringSandLeaperAi();
+      source.server.writeReplayCheckpoint(path); expected = continueSandLeaper(source);
+    }
+    assertEquals(expected, resumeSandLeaper(path));
+    Path output = temporary.getRoot().toPath().resolve("sand-leaper-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "sand-leaper").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("Sand Leaper child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  private static String resumeSandLeaper(Path path) throws Exception {
+    try (Fixture target = new Fixture()) {
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      return continueSandLeaper(target);
+    }
+  }
+
+  private static String continueSandLeaper(Fixture f) {
+    com.riiablo.engine.server.ai.AI ai = f.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai;
+    assertEquals("ATTACK", ai.getState());
+    StringBuilder result = new StringBuilder("SAND_LEAPER_CONTINUED"); int actions = 0;
+    for (int frame = 0; frame < 60; frame++) {
+      f.server.simulation.tick(null, null); boolean action = f.updateDecisionAi(.04f);
+      if (frame < 8) assertFalse(action);
+      if (action) actions++;
+      assertEquals("ATTACK", ai.getState());
+      D2gsCheckpointSnapshot after = f.server.captureReplayCheckpoint();
+      result.append('|').append(ai.getState()).append(':').append(action)
+          .append(':').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
+    }
+    assertTrue("Sand Leaper did not resume its native RNG melee branch", actions > 1);
     return result.toString();
   }
 
@@ -1735,7 +1808,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "sand-maggot".equals(args[3])
+      try { System.out.println(args.length > 3 && "sand-leaper".equals(args[3])
+          ? resumeSandLeaper(Path.of(args[0])) : args.length > 3 && "sand-maggot".equals(args[3])
           ? resumeSandMaggot(Path.of(args[0])) : args.length > 3 && "legacy-baboon".equals(args[3])
           ? resumeLegacyBaboon(Path.of(args[0])) : args.length > 3 && args[3].startsWith("food-decisions-")
           ? resumeFoodDecisions(Path.of(args[0]), Integer.parseInt(args[3].substring("food-decisions-".length())))
@@ -1890,6 +1964,20 @@ public class D2gsWorldCheckpointBindingsTest {
       com.badlogic.gdx.ai.fsm.StateMachine machine = (com.badlogic.gdx.ai.fsm.StateMachine) field.get(ai);
       for (Object state : machine.getCurrentState().getClass().getEnumConstants())
         if (state.toString().equals("BURROW")) machine.changeState((com.badlogic.gdx.ai.fsm.State) state);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void populateRecoveringSandLeaperAi() throws Exception {
+      com.riiablo.engine.server.ai.AI ai = createDecisionAi(rowForAi("SandLeaper"));
+      java.lang.reflect.Field params = com.riiablo.engine.server.ai.AI.class.getDeclaredField("params");
+      params.setAccessible(true); params.set(ai, new int[] {0, 100, 0, 0, 0, 0, 0, 0});
+      java.lang.reflect.Field sleep = com.riiablo.engine.server.ai.AI.class.getDeclaredField("SLEEP");
+      sleep.setAccessible(true); sleep.setFloat(ai, .2f);
+      java.lang.reflect.Field time = ai.getClass().getDeclaredField("time"); time.setAccessible(true); time.setFloat(ai, .35f);
+      java.lang.reflect.Field field = ai.getClass().getDeclaredField("stateMachine"); field.setAccessible(true);
+      com.badlogic.gdx.ai.fsm.StateMachine machine = (com.badlogic.gdx.ai.fsm.StateMachine) field.get(ai);
+      for (Object state : machine.getCurrentState().getClass().getEnumConstants())
+        if (state.toString().equals("ATTACK")) machine.changeState((com.badlogic.gdx.ai.fsm.State) state);
     }
 
     void populateFoodAi(int lifetime) throws Exception {

@@ -23,11 +23,17 @@ import org.junit.jupiter.params.provider.ValueSource;
 class LegacyFsmCheckpointIntegrationTest extends RiiabloTest {
   @ParameterizedTest
   @ValueSource(strings = {"Baboon", "Bighead", "BloodHawk", "ClawViper", "CorruptLancer", "CorruptRogue", "Goatman",
-      "Mummy", "MaggotLarva", "PinHead", "PantherWoman", "Wraith", "Fetish", "SandMaggot"})
+      "Mummy", "MaggotLarva", "PinHead", "PantherWoman", "Wraith", "Fetish", "SandMaggot",
+      "CorruptArcher", "FallenShaman", "FetishShaman", "SandLeaper", "SandRaider", "SkeletonBow", "SkeletonMage", "Vampire"})
   void realWorldRestoresMachineHistoryAndKeepsTargetServicesAndRemainingDelay(String type) throws Exception {
     Map<Integer, UnitStateRuntimeCheckpoint> image; Object sourceSubscription = null;
     try (Fixture f = fixture(type, 30)) {
       AiRuntimeStateTest.setStates(f.ai);
+      // Keep a valid target, but do not trigger the ranged hosts' immediate-response shortcut.
+      if (f.ai instanceof CorruptArcher) ((CheckpointStateMachine<CorruptArcher.State>)
+          ((CorruptArcher) f.ai).stateMachine).restore(CorruptArcher.State.ATTACK, CorruptArcher.State.DEAD, CorruptArcher.State.WANDER);
+      if (f.ai instanceof SkeletonBow) ((CheckpointStateMachine<SkeletonBow.State>)
+          ((SkeletonBow) f.ai).stateMachine).restore(SkeletonBow.State.ATTACK, SkeletonBow.State.DEAD, SkeletonBow.State.WANDER);
       AiRuntimeStateTest.put(f.ai, f.ai.getClass(), "nextAction", 1.25f);
       AiRuntimeStateTest.put(f.ai, f.ai.getClass(), "time", .5f);
       if (hasSubscription(type)) sourceSubscription = AiRuntimeStateTest.get(f.ai, f.ai.getClass(), "enemyEntities");
@@ -65,7 +71,8 @@ class LegacyFsmCheckpointIntegrationTest extends RiiabloTest {
     try {
       MathUtils.random = uncovered;
       for (String type : new String[] {"Baboon", "Bighead", "BloodHawk", "ClawViper", "CorruptLancer", "CorruptRogue", "Goatman",
-          "Mummy", "MaggotLarva", "PinHead", "PantherWoman", "Wraith", "Fetish", "SandMaggot"}) {
+          "Mummy", "MaggotLarva", "PinHead", "PantherWoman", "Wraith", "Fetish", "SandMaggot",
+          "CorruptArcher", "FallenShaman", "FetishShaman", "SandLeaper", "SandRaider", "SkeletonBow", "SkeletonMage", "Vampire"}) {
         AI source = AI.findAI(0, type), target = AI.findAI(0, type);
         AiRuntimeStateTest.setStates(source);
         AiRuntimeState image = AiRuntimeState.fromBytes(AiRuntimeState.capture(source, 0).bytes());
@@ -120,13 +127,17 @@ class LegacyFsmCheckpointIntegrationTest extends RiiabloTest {
   }
 
   private static boolean hasSubscription(String type) {
-    return !type.equals("Baboon") && !type.equals("Bighead") && !type.equals("SandMaggot");
+    return java.util.Arrays.asList("BloodHawk", "ClawViper", "CorruptLancer", "CorruptRogue", "Goatman",
+        "Mummy", "MaggotLarva", "PinHead", "PantherWoman", "Wraith", "Fetish",
+        "FetishShaman", "SandRaider", "Vampire").contains(type);
   }
   @Test void legacyMachinesRejectForeignOwnersBadEnumsNonfiniteClocksAndNonBooleanRunMemory() throws Exception {
     for (AI source : new AI[] {new Baboon(0), new Bighead(0), new BloodHawk(0), new ClawViper(0),
         new CorruptLancer(0), new CorruptRogue(0), new Goatman(0),
         new Mummy(0), new MaggotLarva(0), new PinHead(0), new PantherWoman(0),
-        new Wraith(0), new Fetish(0), new SandMaggot(0)}) {
+        new Wraith(0), new Fetish(0), new SandMaggot(0),
+        new CorruptArcher(0), new FallenShaman(0), new FetishShaman(0), new SandLeaper(0),
+        new SandRaider(0), new SkeletonBow(0), new SkeletonMage(0), new Vampire(0)}) {
       java.lang.Class<?> type = source.getClass();
       AI target = AI.findAI(0, type.getSimpleName());
       AiRuntimeStateTest.put(source, type, "time", Float.POSITIVE_INFINITY);

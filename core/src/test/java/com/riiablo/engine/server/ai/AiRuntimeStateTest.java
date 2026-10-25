@@ -39,7 +39,9 @@ class AiRuntimeStateTest {
       Baboon::new, Bighead::new, BloodHawk::new, ClawViper::new,
       CorruptLancer::new, CorruptRogue::new, Goatman::new,
       Mummy::new, MaggotLarva::new, PinHead::new, PantherWoman::new,
-      Wraith::new, Fetish::new, SandMaggot::new);
+      Wraith::new, Fetish::new, SandMaggot::new,
+      CorruptArcher::new, FallenShaman::new, FetishShaman::new, SandLeaper::new,
+      SandRaider::new, SkeletonBow::new, SkeletonMage::new, Vampire::new);
 
   @Test void allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects() throws Exception {
     for (IntFunction<AI> factory : SCHEMAS) {
@@ -197,6 +199,14 @@ class AiRuntimeStateTest {
     expected.put(Wraith.class, "enemyEntities tmpVec2 stateMachine nextAction time");
     expected.put(Fetish.class, "enemyEntities tmpVec2 stateMachine nextAction time aiParam0 aiParam1");
     expected.put(SandMaggot.class, "tmpVec2 stateMachine nextAction time aiParam0 aiParam1 aiParam2");
+    expected.put(CorruptArcher.class, "tmpVec2 stateMachine nextAction time missile");
+    expected.put(FallenShaman.class, "tmpVec2 targetDistance corpseEntities stateMachine nextAction time");
+    expected.put(FetishShaman.class, "enemyEntities corpseEntities tmpVec2 stateMachine nextAction time");
+    expected.put(SandLeaper.class, "tmpVec2 stateMachine nextAction time");
+    expected.put(SandRaider.class, "world enemyEntities tmpVec2 stateMachine nextAction time aiParam0 aiParam1 aiParam2");
+    expected.put(SkeletonBow.class, "tmpVec2 stateMachine nextAction time missile");
+    expected.put(SkeletonMage.class, "tmpVec2 stateMachine nextAction time targetId missile");
+    expected.put(Vampire.class, "enemyEntities tmpVec2 stateMachine nextAction time aiParam0 aiParam1 aiParam2");
     for (Class<?> type : Arrays.asList(QuillMother.class, BloodLord.class, Catapult.class,
         DeathMauler.class, FrozenHorror.class, Griswold.class, HellMeteor.class, Minion.class, Smith.class)) expected.put(type, "");
     for (Class<?> type : Arrays.asList(Andariel.class, DoomKnight.class, FlyingScimitar.class, BaalMinion.class, Idle.class)) expected.put(type, "");
@@ -219,7 +229,7 @@ class AiRuntimeStateTest {
   }
 
   @Test void unsupportedTypesAndForeignOwnerOrConfigurationCannotBeRestored() {
-    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new CorruptArcher(2), 2));
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new Navi(2), 2));
     assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new TrapNova(2) {}, 2));
     assertThrows(IllegalStateException.class, () -> AiRuntimeState.capture(new QuillRat(2), 1));
     AiRuntimeState image = AiRuntimeState.capture(new GenericMonster(2, "first"), 2);

@@ -3021,6 +3021,78 @@ SandRaider、SkeletonBow、SkeletonMage、Vampire；还包括 Npc/Navi/NecroPet/
 本地实体、交易、资源 digest、结构订阅副作用和真实 socket 跨进程接管。
 M8-A、M8-D 和 M8 总体继续进行中。
 
+### M8-A 第 39 批：剩余旧 FSM、远程表绑定及 World 订阅收口（2026-10-26）
+
+本批合并 CorruptArcher、FallenShaman、FetishShaman、SandLeaper、SandRaider、
+SkeletonBow、SkeletonMage、Vampire 八类，累计 115 类实体 AI，另有共享 IDLE。
+AI 包不再直接构造 DefaultStateMachine，统一使用 CheckpointStateMachine；
+这是旧 FSM 私有字段检查点适配收口，不是全部 AI/原版行为/完整 ECS 恢复完成。
+AI v1、wrapper v1、unit-state v4、D2GC v7 不变，原有 107 类布局不变。
+
+- 八类保存 nextAction/time 及 current/previous/global 历史；恢复不调用 initialize、
+  状态回调或动作事件。owner、未知枚举、非有限 nextAction 和 NaN/负无穷 time
+  继续拒绝；正无穷 sleep sentinel、负计时余量保留，不重排决策。
+- SandRaider 保存 aiParam0/1/2 蓄力计数、充能标记及受伤逃跑尝试数；
+  Vampire 保存 aiParam0/1/2 阶段、距离记忆和升级技能冷却决策数。SkeletonMage
+  保存 targetId（-1 或非负），沿用下一决策的既有有效性重查，不新增硬引用或
+  lifetime 保证。其余五类没有额外私有持久标量。
+- CorruptArcher/SkeletonBow/SkeletonMage 的 missile 是初始化派生的表绑定，
+  镜像记录 presence、Id、Missile key、Range。纯解码只校验结构，不访问资源表；
+  恢复预检要求目标已初始化绑定与记录一致，保留目标 row 对象，不构造/覆盖源表行。
+  缺失/多出绑定或 ID/key/Range 不符均在写入 AI 字段前拒绝。此局部校验不是完整
+  内容 digest，不能保证未记录列或其他资源一致，资源版本锁仍待后续。
+- SandRaider 的 enemyEntities 原为静态缓存，改为实例持有，通过注入的 World
+  初始化，避免第二个 World 使用第一个 World 的订阅。两 World 并存和目标
+  Class 移除用例验证隔离；恢复不覆盖订阅或 World。其他实时订阅和 scratch
+  向量不进入镜像；FallenShaman.targetDistance 每次使用前重置，亦属 scratch。
+
+原版依据：D2MOO source/D2Game/src/AI/AiThink.cpp 的 Fn008_SandRaider、
+Fn013_FallenShaman、Fn017_SandLeaper、Fn028_Vampire、Fn035_CorruptArcher、
+Fn037_SkeletonBow、Fn064_SkeletonMage、Fn065_FetishShaman。
+Fn008 按决策累加蓄力并保存充能/逃跑次数，Fn028 按决策递减升级技能冷却，
+Fn013/Fn065 通过技能请求复活，实际复活仍由关键帧执行；Fn017 近战使用 A2。
+本批不修既有玩法差异：SandRaider 的充能技能/友军逃跑搜索和颜色状态仍有 TODO，
+Vampire special-state/逃跑分支、弓手即时反应和其余宿主与原版的差异仍需行为审计。
+
+验收扩展到 115 类字段往返、字段策略、纯解码/预检零写入、逐字节截断、
+FSM 历史及 owner/枚举/计时拒绝。八类真实表/ECS 验证等待、目标 AI/机器/向量/
+实时订阅身份和 DEAD 回退不重复死亡。新增导弹表 distinct-object 绑定保留及
+presence/ID/key/Range 不符零写入、严格 presence/负 ID/截断拒绝；蓄力到期、
+冷却到期、萨满到期才请求目标 World 尸体复活且未提前消费尸体、保留 live Leap
+时不重发跳跃。首次扩大参数化夹具将目标移出 aidist，触发现有 stopMovement；
+改为保留有效目标并给弓手设置待恢复 ATTACK 阶段，继续严格检查等待期间无路径调用，
+未修改生产决策或放宽断言。
+
+真实 D2GS factory 验证三类远程 AI 的非空导弹表绑定在空/已有 World 恢复后保持；
+SandLeaper 在 ATTACK、time=0.35 秒时写盘，新 World 和独立 JVM 各续跑 60 步，
+逐步比较动作、FSM、canonical（含原生 RNG）和 D2S，并加入 AI-only witness、
+私有计时篡改校验、现有/空 World 晚期 D2S 失败回滚。受控参数使其只走原生 unit-seed
+近战分支，其他概率用例使用显式外部 MathUtils RNG；codec 不消费/替换该全局源。
+
+边界：未恢复完整 Casting/Sequence/Leap/Pathfind、技能关键帧和冻结战斗记录；
+live Leap 用例仅验证不覆盖既有空中组件，不证明跨 World 空中轨迹恢复。
+萨满仅验证复活请求/延迟，不证明中途复活事务恢复。D2GS 仍在受控动作完成边界
+清除动作/路径，不声称所有分支或全局 RNG 跨进程确定性闭合。
+
+定向命令（D2_HOME 指向本地 1.10f 资源）：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.server.ai.AiRuntimeStateTest --tests com.riiablo.engine.server.ai.LegacyFsmCheckpointIntegrationTest --tests com.riiablo.engine.server.ai.LegacyRangedCheckpointIntegrationTest :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --continue --no-daemon --max-workers=1 --console=plain
+```
+
+扩大回归沿用第 38 批范围，附带桌面编译、模块边界和三个真实 TCP gate。
+最终结果：core 1100 项、server/d2gs 80 项，共 1180 项通过，0 失败、0 跳过；
+桌面编译、模块边界扫描及其 9 项工具自测、git diff --check 通过。
+TCP 门禁验证固定 Tick 6→37（31 步、40ms）、重连后部分拾取剩余 15 金币且
+ownerWindowPreserved=true、旧 socket 延迟帧 delayedFrameDropped=true 且
+slotReuse=true、generationAwareCommand=true；仍是同进程 TCP 门禁，
+不代表真实 socket 跨进程接管完成。
+
+后续：Npc/Navi/NecroPet/Hireable 等非旧 FSM AI、全局/未绑定 RNG、
+完整动作/跳跃/路径游标/冻结战斗记录与 Item 引用、MovementModes/飞行碰撞/骑乘物理、
+控制器、任务、Map/RoomEx、本地实体、交易、内容 digest、结构订阅副作用及真实
+socket 跨进程接管仍待适配。M8-A、M8-D 和 M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

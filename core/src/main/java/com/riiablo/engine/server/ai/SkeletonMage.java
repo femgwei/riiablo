@@ -1,7 +1,6 @@
 package com.riiablo.engine.server.ai;
 
 import com.artemis.ComponentMapper;
-import com.badlogic.gdx.ai.fsm.DefaultStateMachine;
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
 import com.badlogic.gdx.math.MathUtils;
@@ -64,7 +63,7 @@ public class SkeletonMage extends AI {
 
   public SkeletonMage(int entityId) {
     super(entityId);
-    stateMachine = new DefaultStateMachine<>(entityId, State.IDLE);
+    stateMachine = new CheckpointStateMachine<>(entityId, State.IDLE);
   }
 
   @Override

@@ -5,13 +5,11 @@ import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
 import com.artemis.utils.IntBag;
 
-import com.badlogic.gdx.ai.fsm.DefaultStateMachine;
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
-import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
@@ -62,7 +60,8 @@ public class SandRaider extends AI {
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
-  private static EntitySubscription enemyEntities;
+  protected com.artemis.World world;
+  private EntitySubscription enemyEntities;
 
   final Vector2 tmpVec2 = new Vector2();
 
@@ -77,14 +76,14 @@ public class SandRaider extends AI {
 
   public SandRaider(int entityId) {
     super(entityId);
-    stateMachine = new DefaultStateMachine<>(entityId, State.IDLE);
+    stateMachine = new CheckpointStateMachine<>(entityId, State.IDLE);
   }
 
   @Override
   public void initialize() {
     super.initialize();
     if (enemyEntities == null) {
-      enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
+      enemyEntities = world.getAspectSubscriptionManager().get(Aspect
               .all(Class.class)
               .one(Player.class));
     }

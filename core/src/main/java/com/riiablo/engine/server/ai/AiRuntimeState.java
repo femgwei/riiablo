@@ -53,7 +53,7 @@ public final class AiRuntimeState {
       String type = CheckpointIO.readString(in), configuration = CheckpointIO.readString(in);
       AI prototype = schema(type, configuration, id); // Constructors only, never inject/initialize/update or draw RNG.
       NativeEntityReferenceCheckpoint reference = null;
-      if (prototype != AI.IDLE) { prototype.readRuntime(in, false); reference = readSpecific(prototype, in, false, null); }
+      if (prototype != AI.IDLE) { prototype.readRuntime(in, false); reference = readSpecific(prototype, in, false, false, null); }
       if (in.read() != -1) throw new IllegalArgumentException("trailing AI runtime");
       return new AiRuntimeState(copy, type, configuration, id, reference);
     } catch (IOException e) { throw new IllegalArgumentException("truncated AI runtime", e); }
@@ -80,7 +80,7 @@ public final class AiRuntimeState {
     try {
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
       in.readInt(); in.readInt(); CheckpointIO.readString(in); CheckpointIO.readString(in);
-      ai.readRuntime(in, apply); readSpecific(ai, in, apply, world);
+      ai.readRuntime(in, apply); readSpecific(ai, in, apply, true, world);
     } catch (IOException impossible) { throw new IllegalStateException(impossible); }
   }
 
@@ -195,6 +195,14 @@ public final class AiRuntimeState {
       case "Wraith": return new Wraith(id);
       case "Fetish": return new Fetish(id);
       case "SandMaggot": return new SandMaggot(id);
+      case "CorruptArcher": return new CorruptArcher(id);
+      case "FallenShaman": return new FallenShaman(id);
+      case "FetishShaman": return new FetishShaman(id);
+      case "SandLeaper": return new SandLeaper(id);
+      case "SandRaider": return new SandRaider(id);
+      case "SkeletonBow": return new SkeletonBow(id);
+      case "SkeletonMage": return new SkeletonMage(id);
+      case "Vampire": return new Vampire(id);
       default: throw new IllegalArgumentException("unsupported AI checkpoint schema: " + type);
     }
   }
@@ -218,6 +226,14 @@ public final class AiRuntimeState {
         : ai instanceof Wraith ? ((Wraith) ai).stateMachine
         : ai instanceof Fetish ? ((Fetish) ai).stateMachine
         : ai instanceof SandMaggot ? ((SandMaggot) ai).stateMachine
+        : ai instanceof CorruptArcher ? ((CorruptArcher) ai).stateMachine
+        : ai instanceof FallenShaman ? ((FallenShaman) ai).stateMachine
+        : ai instanceof FetishShaman ? ((FetishShaman) ai).stateMachine
+        : ai instanceof SandLeaper ? ((SandLeaper) ai).stateMachine
+        : ai instanceof SandRaider ? ((SandRaider) ai).stateMachine
+        : ai instanceof SkeletonBow ? ((SkeletonBow) ai).stateMachine
+        : ai instanceof SkeletonMage ? ((SkeletonMage) ai).stateMachine
+        : ai instanceof Vampire ? ((Vampire) ai).stateMachine
         : null;
     if (machine != null && (machine.getClass() != CheckpointStateMachine.class
         || !Objects.equals(((CheckpointStateMachine<?>) machine).getOwner(), ai.entityId))) {
@@ -247,9 +263,25 @@ public final class AiRuntimeState {
     else if (ai instanceof Fetish) { Fetish a = (Fetish) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); out.writeInt(a.aiParam1); }
     else if (ai instanceof SandMaggot) { SandMaggot a = (SandMaggot) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); out.writeInt(a.aiParam1); out.writeInt(a.aiParam2); }
     else if (ai instanceof Regurgitator) ((Regurgitator) ai).checkpointFood(world).write(out);
+    else if (ai instanceof CorruptArcher) { CorruptArcher a = (CorruptArcher) ai; fsm(out, a.stateMachine, a.nextAction, a.time); missile(out, a.missile); }
+    else if (ai instanceof FallenShaman) { FallenShaman a = (FallenShaman) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
+    else if (ai instanceof FetishShaman) { FetishShaman a = (FetishShaman) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
+    else if (ai instanceof SandLeaper) { SandLeaper a = (SandLeaper) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
+    else if (ai instanceof SandRaider) { SandRaider a = (SandRaider) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); out.writeInt(a.aiParam1); out.writeInt(a.aiParam2); }
+    else if (ai instanceof SkeletonBow) { SkeletonBow a = (SkeletonBow) ai; fsm(out, a.stateMachine, a.nextAction, a.time); missile(out, a.missile); }
+    else if (ai instanceof SkeletonMage) { SkeletonMage a = (SkeletonMage) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.targetId); missile(out, a.missile); }
+    else if (ai instanceof Vampire) { Vampire a = (Vampire) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); out.writeInt(a.aiParam1); out.writeInt(a.aiParam2); }
   }
-  private static NativeEntityReferenceCheckpoint readSpecific(AI ai, DataInputStream in, boolean apply, World world) throws IOException {
+  private static NativeEntityReferenceCheckpoint readSpecific(AI ai, DataInputStream in, boolean apply, boolean validateHost, World world) throws IOException {
     if (ai instanceof QuillRat) { QuillRat a = (QuillRat) ai; float[] t = fsm(in, a.stateMachine, QuillRat.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof CorruptArcher) { CorruptArcher a = (CorruptArcher) ai; float[] t = fsm(in, a.stateMachine, CorruptArcher.State.values(), apply); missile(in, a.missile, validateHost); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof FallenShaman) { FallenShaman a = (FallenShaman) ai; float[] t = fsm(in, a.stateMachine, FallenShaman.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof FetishShaman) { FetishShaman a = (FetishShaman) ai; float[] t = fsm(in, a.stateMachine, FetishShaman.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof SandLeaper) { SandLeaper a = (SandLeaper) ai; float[] t = fsm(in, a.stateMachine, SandLeaper.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof SandRaider) { SandRaider a = (SandRaider) ai; float[] t = fsm(in, a.stateMachine, SandRaider.State.values(), apply); int p0 = in.readInt(); int p1 = in.readInt(); int p2 = in.readInt(); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p0; a.aiParam1 = p1; a.aiParam2 = p2; } }
+    else if (ai instanceof SkeletonBow) { SkeletonBow a = (SkeletonBow) ai; float[] t = fsm(in, a.stateMachine, SkeletonBow.State.values(), apply); missile(in, a.missile, validateHost); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof SkeletonMage) { SkeletonMage a = (SkeletonMage) ai; float[] t = fsm(in, a.stateMachine, SkeletonMage.State.values(), apply); int p0 = in.readInt(); if (p0 < -1) throw new IllegalArgumentException("AI target"); missile(in, a.missile, validateHost); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.targetId = p0; } }
+    else if (ai instanceof Vampire) { Vampire a = (Vampire) ai; float[] t = fsm(in, a.stateMachine, Vampire.State.values(), apply); int p0 = in.readInt(); int p1 = in.readInt(); int p2 = in.readInt(); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p0; a.aiParam1 = p1; a.aiParam2 = p2; } }
     else if (ai instanceof Scarab) { Scarab a = (Scarab) ai; float[] t = fsm(in, a.stateMachine, Scarab.State.values(), apply); int p = in.readInt(); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p; } }
     else if (ai instanceof Fallen) { Fallen a = (Fallen) ai; float[] t = fsm(in, a.stateMachine, Fallen.State.values(), apply); boolean p = CheckpointIO.readBoolean(in); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p; } }
     else if (ai instanceof Brute) { Brute a = (Brute) ai; float[] t = fsm(in, a.stateMachine, Brute.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
@@ -276,6 +308,27 @@ public final class AiRuntimeState {
     }
     return null;
   }
+  /** Derived table binding: witness it, but never deserialize or replace the target's row object. */
+  private static void missile(DataOutputStream out, com.riiablo.codec.excel.Missiles.Entry row) throws IOException {
+    out.writeBoolean(row != null);
+    if (row == null) return;
+    if (row.Id < 0 || row.Missile == null || row.Missile.isEmpty()) throw new IllegalArgumentException("AI missile binding");
+    out.writeInt(row.Id); CheckpointIO.writeString(out, row.Missile); out.writeInt(row.Range);
+  }
+  private static void missile(DataInputStream in, com.riiablo.codec.excel.Missiles.Entry row,
+      boolean validateHost) throws IOException {
+    boolean present = CheckpointIO.readBoolean(in);
+    int id = -1, range = 0; String key = null;
+    if (present) {
+      id = in.readInt(); key = CheckpointIO.readString(in); range = in.readInt();
+      if (id < 0 || key == null || key.isEmpty()) throw new IllegalArgumentException("AI missile binding");
+    }
+    if (validateHost && (present != (row != null)
+        || present && (row.Id != id || !key.equals(row.Missile) || row.Range != range))) {
+      throw new IllegalStateException("AI missile table binding mismatch");
+    }
+  }
+
   private static void fsm(DataOutputStream out, StateMachine<Integer, ?> fsm, float next, float time) throws IOException {
     if (fsm.getClass() != CheckpointStateMachine.class) throw new IllegalStateException("unsupported AI state machine");
     CheckpointIO.writeFloat(out, next); writeTimer(out, time);
