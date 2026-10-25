@@ -9,9 +9,39 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest.Fixture;
 import com.riiablo.engine.server.component.NativeAiCommand;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.replay.AiControlRuntimeCheckpoint;
 import org.junit.jupiter.api.Test;
 
 class ScarabCommandTest extends RiiabloTest {
+  @Test void restoredCommandIsConsumedByRealAiWithoutExtraChanceRolls() {
+    for (int difficulty = 0; difficulty < 3; difficulty++) {
+      try (Fixture source = new Fixture("scarab1", difficulty, 1);
+           Fixture target = new Fixture("scarab1", difficulty, 1)) {
+        NativeAiCommand command = source.world.getMapper(NativeAiCommand.class).create(source.actor);
+        command.set(source.actor, NativeAiCommand.MOVE, source.target);
+        command.expiresAtFrame = 123;
+        command.copy(source.world, source.actor, NativeAiCommand.ATTACK, source.target);
+        AiControlRuntimeCheckpoint.capture(source.world, new int[] {source.actor, source.target}).restore(target.world);
+        for (Fixture f : new Fixture[] {source, target}) {
+          Riiablo.engine = f.world;
+          Scarab ai = (Scarab) f.ai;
+          ai.params[0] = ai.params[3] = 0;
+          Riiablo.gameSeed = 12;
+          ai.update(0.04f);
+          assertEquals("JAB", ai.getState());
+          assertEquals(Riiablo.files.skills.get(ai.monster.monstats.Skill1).Id, f.casting().skillId);
+          assertEquals(f.target, f.casting().targetId);
+          NativeAiCommand remaining = f.world.getMapper(NativeAiCommand.class).get(f.actor);
+          assertEquals(NativeAiCommand.MOVE, remaining.command);
+          assertEquals(123, remaining.expiresAtFrame);
+          assertUnconsumed(f, ai);
+        }
+        assertArrayEquals(AiControlRuntimeCheckpoint.capture(source.world, new int[] {source.actor, source.target}).bytes(),
+            AiControlRuntimeCheckpoint.capture(target.world, new int[] {target.actor, target.target}).bytes());
+      }
+    }
+  }
+
   @Test void meleeCommandUsesJabWithoutChanceRollsAndPopsOnlyCurrent() {
     for (int difficulty = 0; difficulty < 3; difficulty++) {
       try (Fixture f = new Fixture("scarab1", difficulty, 1)) {

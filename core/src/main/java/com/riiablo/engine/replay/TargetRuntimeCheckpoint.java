@@ -9,17 +9,19 @@ import java.util.*;
 
 /**
  * One world's TARGETS event domain, raw memberships and small AI control overlays.
- * Not a checkpoint of arbitrary AI objects, command queues or movement paths.
+ * Includes host command stacks and native path observations, not arbitrary AI objects or movement paths.
  * Structural listeners must settle before applying this image.
  * Detached component-owned memberships are not imported into this registry.
  */
 public final class TargetRuntimeCheckpoint {
-  private static final int VERSION = 1;
+  private static final int VERSION = 2;
   public static final int MAX_BYTES = 64 * 1024 * 1024;
   private final byte[] bytes;
   private TargetRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
   public byte[] bytes() { return bytes.clone(); }
   public Set<Integer> entityIds() { return Collections.unmodifiableSet(decode().entities.keySet()); }
+  /** False for v1: absence means uncovered, not an empty command/path image. */
+  public boolean hasAiControlRuntime() { return decode().aiControl != null; }
 
   public static TargetRuntimeCheckpoint fromBytes(byte[] bytes) {
     if (bytes == null || bytes.length == 0 || bytes.length > MAX_BYTES) {
@@ -87,6 +89,8 @@ public final class TargetRuntimeCheckpoint {
           out.writeInt(override.remainingFrames); out.writeInt(override.rngState);
         }
       }
+      byte[] ai = AiControlRuntimeCheckpoint.capture(world, ids).bytes();
+      out.writeInt(ai.length); out.write(ai);
       out.flush(); return fromBytes(bytes.toByteArray());
     } catch (IOException impossible) { throw new IllegalStateException(impossible); }
   }
@@ -101,6 +105,7 @@ public final class TargetRuntimeCheckpoint {
         throw new IllegalStateException("target runtime host missing: " + id);
       }
     }
+    if (d.aiControl != null) d.aiControl.validateRestore(world);
     slots.restoreCheckpoint(d.slots);
     for (Map.Entry<Integer, Entry> entry : d.entities.entrySet()) {
       int id = entry.getKey(); Entry e = entry.getValue();
@@ -127,12 +132,14 @@ public final class TargetRuntimeCheckpoint {
         override.remainingFrames = e.override[4]; override.rngState = e.override[5];
       }
     }
+    if (d.aiControl != null) d.aiControl.restore(world);
   }
 
   private Decoded decode() {
     try {
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
-      if (in.readInt() != VERSION) throw new IllegalArgumentException("target runtime version");
+      int version = in.readInt();
+      if (version != 1 && version != VERSION) throw new IllegalArgumentException("target runtime version");
       long sequence = in.readLong();
       int[] heads = new int[NativePlayerTargetSlots.SLOT_COUNT];
       long[] orders = new long[heads.length];
@@ -173,6 +180,15 @@ public final class TargetRuntimeCheckpoint {
       for (int id : attempts) if (!d.entities.containsKey(id)) {
         throw new IllegalArgumentException("uncovered target allocation attempt");
       }
+      if (version >= 2) {
+        int length = CheckpointIO.count(in, AiControlRuntimeCheckpoint.MAX_BYTES);
+        if (length == 0 || length > in.available()) throw new IllegalArgumentException("AI control runtime length");
+        byte[] ai = new byte[length]; in.readFully(ai);
+        d.aiControl = AiControlRuntimeCheckpoint.fromBytes(ai);
+        if (!d.aiControl.entityIds().equals(d.entities.keySet())) {
+          throw new IllegalArgumentException("AI control host coverage mismatch");
+        }
+      }
       if (in.read() != -1) throw new IllegalArgumentException("trailing target runtime");
       return d;
     } catch (IOException e) { throw new IllegalArgumentException("truncated target runtime", e); }
@@ -183,6 +199,7 @@ public final class TargetRuntimeCheckpoint {
     int[] override;
   }
   private static final class Decoded {
+    AiControlRuntimeCheckpoint aiControl;
     NativePlayerTargetSlots.Checkpoint slots;
     final Map<Integer, Entry> entities = new TreeMap<>();
   }

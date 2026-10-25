@@ -2437,6 +2437,59 @@ AI 决策对象/命令队列/路径缓存、pet/merc 其他可变运行时、周
 建议下一批集中处理怪物/AI 的明确标量与队列相位，继续对无法完整重建的对象 fail closed。
 M8-A、M8-D、M8 总体继续保持进行中。
 
+### M8-A 第 29 批：AI 命令栈与原生路径观察相位恢复（2026-10-25）
+
+本批集中补齐 `NativeAiCommand` 和 `NativeAiPathCache`；不把宿主命令栈、部分原生路径缓存
+等同于完整 Monster、AI 决策对象或 ECS 移动路径快照。
+
+实现与边界：
+
+- 新增显式 `AiControlRuntimeCheckpoint` v1。覆盖每个网络 payload ID 的组件 presence，
+  区分无命令组件和 present/NONE，区分无缓存、known empty、known nonempty 和 unknown。
+  原样保存 targetX/targetY、三个观察位；失效时保留的 raw 坐标/hasPoints 不被清零或推断成新路径。
+- `NativeAiCommand` 提供不可变值镜像：current 在前，displaced commands 按实际 pop 顺序排列，
+  保存 owner/target、任意现有 command 值、绝对 expiresAtFrame，不重新调用 copy/set 构造历史。
+  上限 65536 项；完整栈先校验，再一次性替换，不修改现有命令执行规则、不消耗 RNG。
+  owner/target 分别保存 null/current/stale lifetime；current 重绑目标 World 的真实 token，
+  stale 永远失效，null 保留原有不加代际保护的语义。当前身份必须属于本 checkpoint 且已由实际
+  factory 建立，缺失时拒绝恢复，不凭引用补造实体身份；失效引用允许指向已不存在的实体。
+- `TargetRuntimeCheckpoint` 升为 v2，在原有 v1 数据之后追加完整 AI-control 段，严格校验 host 集合一致。
+  保留 v1 读取并暴露 `hasAiControlRuntime=false`；旧格式的未覆盖不等于新格式的显式 absence，
+  不删除旧格式未声明的命令/缓存。D2GC 外层布局仍为 v7，原有 TARGETS digest 自动覆盖新版内嵌字节；
+  旧版 reader 会拒绝未知的 TARGETS 子版本，不会无声丢弃新增运行时。
+- 沿用完整事务：结构订阅和 native lifecycle 结束后恢复 TARGETS/AI-control，最后恢复 allocator；
+  在变更任何目标节点/时钟前预检所有命令 current lifetime。晚期 D2S 失败也恢复原命令栈、
+  缓存及后续 pop 行为；未覆盖本地命令/缓存宿主、越界 current 引用、非法长度/布尔/身份、
+  非升序/重复 host、截断和尾部字节继续 fail closed。
+
+原版参考：D2MOO `AI/AiGeneral.cpp` 的 AIGENERAL_CopyAiCommand/AllocAiCommand 和命令控制结构。
+本批保存的是已实现的宿主 current/displaced 栈，并不宣称完整复刻原版五参数循环链表。
+缓存延续既有 `BaalCrab.noTowardPoints` 的明确 known/unknown 投影，不新增原版路径算法猜测。
+
+验收包括：逐字段 schema guard、逐字节截断与恶意输入、全部 known/unknown 组合、
+current/stale/null 栈逐层弹出、恢复后实体身份重用、缺失 later-host 身份时零部分写入、
+v1/v2 兼容与 presence 清除；真实 Scarab 恢复命令后执行 Jab、保留 displaced MOVE 且无额外概率抽样，
+Baal/Clone 恢复三类缓存后真实 node9 选择；真实 factory 的新 World/独立 JVM 严格 canonical/native RNG/D2S
+续跑和 live/empty World 晚期失败回滚。命令/缓存独立变化必须改变 canonical，且不改变 EntitySync 或 D2S。
+
+扩大 AI 回归时，修正一项既有 Baal owner-recreation 测试夹具：原测试把 detached StateList/pet 的
+全局顺序与 World-local player head 比较，第二个 World 的结果依赖前面的全局插入次数。
+改为在插入前绑定实际共享节点，释放 wall 时显式 detach；保留玩家组释放、刷新不重入、
+重新插入才恢复、独立 node9 存活等原有断言，不改生产规则，也不放宽期望值。
+
+真实资源：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。
+沿用第 28 批验收组合，增加 `AiControlRuntimeCheckpointTest`、`NativeAiPathCacheTest`、
+`NativeAiCommandTest`、`ScarabCommandTest`、`ScarabLeaderCommandTest`、`BaalCrabNode9IntegrationTest`。
+最终结果：服务端 63 项、core 205 项，共 268 项通过，0 失败、0 跳过；模块边界、桌面编译、
+`git diff --check` 通过。三个真实 TCP gate 通过：固定 Tick `7→37`（30 步）、
+部分拾取后剩余 15 金币且 owner window 保持、旧 socket 延迟帧丢弃且当前 generation 命令成功。
+这三个 TCP gate 仍是同进程；独立 JVM 的命令/缓存/状态续跑不等于真实 socket 跨进程接管。
+
+剩余与下一批：完整 Monster image（component ordinals、模式元素冻结选择、召唤所属/出生锚点、
+死亡与复活相位）、AI 对象私有 timer/状态机、Casting/Sequence 与 ECS 移动路径、pet/merc 其他运行时，
+以及前批列出的 Map/RoomEx、本地实体、任务/交易、资源 digest 和真实 socket 跨进程接管组合验收。
+M8-A、M8-D、M8 总体仍进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

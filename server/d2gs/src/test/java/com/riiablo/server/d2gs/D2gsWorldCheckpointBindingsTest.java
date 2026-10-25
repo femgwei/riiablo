@@ -31,6 +31,8 @@ import com.riiablo.engine.server.component.NativeTargetNode;
 import com.riiablo.engine.server.component.NativePathIdentity;
 import com.riiablo.engine.server.component.NativeAiState;
 import com.riiablo.engine.server.component.NativeAiTargetOverride;
+import com.riiablo.engine.server.component.NativeAiCommand;
+import com.riiablo.engine.server.component.NativeAiPathCache;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.NativeConversionLifecycle;
 import com.riiablo.engine.server.NativePregnancyLifecycle;
@@ -105,6 +107,7 @@ public class D2gsWorldCheckpointBindingsTest {
       source.populate(); source.populateTargets();
       source.server.writeReplayCheckpoint(path);
       D2gsCheckpointSnapshot archive = source.server.captureReplayCheckpoint();
+      assertTrue(archive.targetRuntime().hasAiControlRuntime());
       try { archive.withTargetRuntime(null); fail("active state membership lost its TARGETS owner"); }
       catch (IllegalArgumentException correct) {}
       byte[] bytes = archive.toBytes(), targetBytes = archive.targetRuntime().bytes();
@@ -151,12 +154,36 @@ public class D2gsWorldCheckpointBindingsTest {
         .matches(monster, world.getMapper(AttributesWrapper.class).get(1)));
     assertEquals(7, world.getMapper(NativeAiState.class).get(1).previousMode);
     assertEquals(-793, world.getMapper(NativeAiTargetOverride.class).get(1).rngState);
+    NativeAiCommand command = world.getMapper(NativeAiCommand.class).get(1);
+    assertEquals(NativeAiCommand.ATTACK, command.command); assertEquals(80, command.expiresAtFrame);
+    assertTrue(command.ownerIsCurrent(world)); assertTrue(command.targetIsCurrent(world));
+    assertSame(world.getMapper(NativePathIdentity.class).get(0).token(), command.ownerIdentity);
+    assertSame(world.getMapper(NativePathIdentity.class).get(2).token(), command.targetIdentity);
+    NativeAiPathCache path = world.getMapper(NativeAiPathCache.class).get(1);
+    assertEquals(357, path.targetX); assertEquals(-91, path.targetY);
+    assertFalse(path.coordinatesKnown); assertFalse(path.pointsKnown); assertTrue(path.hasPoints);
+    assertTrue(world.getMapper(NativeAiPathCache.class).get(2).pointsKnown);
+    assertFalse(world.getMapper(NativeAiPathCache.class).get(2).hasPoints);
     for (int id = 1; id <= 5; id++) {
       assertSame(world.getMapper(NativeTargetNode.class).get(id),
           world.getMapper(UnitStates.class).get(id).stateList.checkpointTargetNode());
     }
     StringBuilder result = new StringBuilder("TARGETS_CONTINUED");
     for (int frame = 1; frame <= 4; frame++) {
+      if (frame == 1) {
+        assertTrue(command.pop()); assertEquals(NativeAiCommand.MOVE, command.command);
+        assertEquals(79, command.expiresAtFrame);
+        assertFalse(command.ownerIsCurrent(world)); assertFalse(command.targetIsCurrent(world));
+        path.targetCoordinates(412, -3); path.pathPoints(false);
+      } else if (frame == 2) {
+        assertTrue(command.pop()); assertEquals(NativeAiCommand.ATTACK, command.command);
+        assertEquals(78, command.expiresAtFrame);
+        assertNull(command.ownerIdentity); assertNull(command.targetIdentity);
+        path.pathPoints(true);
+      } else {
+        assertFalse(command.pop()); assertEquals(NativeAiCommand.NONE, command.command);
+        path.invalidate();
+      }
       for (int id = 1; id <= 5; id++) world.getMapper(UnitStates.class).get(id).stateList.update();
       fixture.server.simulation.tick(null, null);
       if (frame == 1) assertEquals(5, world.getAspectSubscriptionManager().get(Aspect.all(Monster.class)).getEntities().size());
@@ -214,6 +241,40 @@ public class D2gsWorldCheckpointBindingsTest {
       assertTrue(target.server.restoreReplayCheckpoint(archive).success());
       assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
       assertEquals(continueTargets(source), continueTargets(target));
+    }
+  }
+
+  @Test public void missingCurrentCommandLifetimeRollsBackTheEntireExistingWorld() {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      source.populate(); source.populateTargets(); target.populate(); target.populateTargets();
+      D2gsCheckpointSnapshot incoming = source.server.captureReplayCheckpoint();
+      // Player owner: no earlier Pregnant hook requires this token, so AI control preflight fails.
+      target.server.world.getMapper(NativePathIdentity.class).remove(0);
+      D2gsCheckpointSnapshot before = target.server.captureReplayCheckpoint();
+      try { target.server.restoreReplayCheckpoint(incoming); fail("current command lifetime was silently fabricated"); }
+      catch (IllegalStateException expected) {
+        assertEquals("allocator checkpoint transaction rolled back", expected.getMessage());
+        assertTrue(expected.getCause().getMessage().contains("AI command current lifetime missing"));
+      }
+      assertEquals(before.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      assertArrayEquals(before.targetRuntime().bytes(), target.server.captureReplayCheckpoint().targetRuntime().bytes());
+      assertEquals(before.d2sCheckpoint().canonical(), target.server.captureReplayCheckpoint().d2sCheckpoint().canonical());
+    }
+  }
+
+  @Test public void commandAndPathOnlyChangesAlterCanonicalWithoutChangingEntitySync() {
+    try (Fixture f = new Fixture()) {
+      f.populate(); f.populateTargets();
+      D2gsCheckpointSnapshot before = f.server.captureReplayCheckpoint();
+      f.server.world.getMapper(NativeAiCommand.class).get(1).expiresAtFrame++;
+      D2gsCheckpointSnapshot commandChanged = f.server.captureReplayCheckpoint();
+      assertNotEquals(before.summary().canonical(), commandChanged.summary().canonical());
+      f.server.world.getMapper(NativeAiPathCache.class).get(1).targetX++;
+      D2gsCheckpointSnapshot pathChanged = f.server.captureReplayCheckpoint();
+      assertNotEquals(commandChanged.summary().canonical(), pathChanged.summary().canonical());
+      for (int id : before.payloads().keySet()) assertArrayEquals(before.payloads().get(id), pathChanged.payloads().get(id));
+      assertEquals(before.d2sCheckpoint().canonical(), pathChanged.d2sCheckpoint().canonical());
+      assertEquals(before.summary().nativeUnitRngStates(), pathChanged.summary().nativeUnitRngStates());
     }
   }
 
@@ -1178,6 +1239,16 @@ public class D2gsWorldCheckpointBindingsTest {
           if (id == 3) world.getMapper(NativePathIdentity.class).get(id).allocated(world, id);
         }
       }
+      NativeAiCommand command = world.getMapper(NativeAiCommand.class).create(1).set(0, NativeAiCommand.ATTACK, 2);
+      command.expiresAtFrame = 78; // Null lifetime legacy command displaced last.
+      command.copy(world, 3, NativeAiCommand.MOVE, 3).expiresAtFrame = 79;
+      world.getMapper(NativePathIdentity.class).get(3).allocated(world, 3); // Retain stale owner AND target.
+      command.copy(world, 0, NativeAiCommand.ATTACK, 2).expiresAtFrame = 80;
+      world.getMapper(NativeAiCommand.class).create(4); // Present NONE differs from absent.
+      NativeAiPathCache path = world.getMapper(NativeAiPathCache.class).create(1);
+      path.targetCoordinates(357, -91); path.pathPoints(true); path.invalidate();
+      world.getMapper(NativeAiPathCache.class).create(2).allocated();
+      world.getMapper(NativeAiPathCache.class).create(3).pathPoints(true);
       world.process();
     }
 

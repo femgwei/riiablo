@@ -28,6 +28,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.replay.AiControlRuntimeCheckpoint;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 import com.riiablo.map.pfa.GraphPath;
@@ -204,6 +205,32 @@ class BaalCrabNode9IntegrationTest extends RiiabloTest {
       cache.pathPoints(true);
       assertEquals(f.target, select(f), "early return can also retain known nonzero points");
       assertEquals(0, cache.targetY);
+    }
+  }
+
+  @Test void restoredKnownUnknownPathObservationsDriveRealBaalNode9Selection() {
+    for (String ai : new String[] {"BaalCrab", "BaalCrabClone"}) {
+      for (int mode = 0; mode < 3; mode++) {
+        try (Act1NativeAiIntegrationTest.Fixture source = fixture(ai);
+             Act1NativeAiIntegrationTest.Fixture target = fixture(ai)) {
+          int sourceWall = wall(source, 14, 10), targetWall = wall(target, 14, 10);
+          assertEquals(sourceWall, targetWall);
+          source.targetPosition().set(0, 10); target.targetPosition().set(0, 10);
+          source.world.process(); target.world.process();
+          NativeAiPathCache path = cache(source).allocated();
+          path.pathPoints(mode == 1);
+          if (mode == 2) path.invalidate();
+          int[] ids = {source.actor, source.target, sourceWall};
+          AiControlRuntimeCheckpoint.capture(source.world, ids).restore(target.world);
+          int expected = mode == 0 ? sourceWall : source.target;
+          Riiablo.engine = source.world;
+          assertEquals(expected, select(source));
+          Riiablo.engine = target.world;
+          assertEquals(expected, select(target));
+          assertArrayEquals(AiControlRuntimeCheckpoint.capture(source.world, ids).bytes(),
+              AiControlRuntimeCheckpoint.capture(target.world, ids).bytes());
+        }
+      }
     }
   }
 
@@ -555,11 +582,16 @@ class BaalCrabNode9IntegrationTest extends RiiabloTest {
         Monster monster = f.world.getMapper(Monster.class).get(converted);
         monster.converted = true;
         monster.conversionOwnerId = f.target;
-        UnitStates states = f.world.getMapper(UnitStates.class).create(converted).init(converted);
+        // Lifecycle assertions require a shared World-local node, not detached compatibility orders.
+        UnitStates states = f.world.getMapper(UnitStates.class).create(converted).init(f.world, converted);
         states.stateList.addState(StateId.CONVERSION, 100, 1, f.target);
         attributes(f, converted).base().put(Stat.maxdamage, 1000);
         attributes(f, converted).reset();
-        int wall = wall(f, 14, 10);
+        int wall = enemy(f, 14, 10);
+        SummonedPet wallPet = f.world.getMapper(SummonedPet.class).create(wall)
+            .bindNativeTargetNode(com.riiablo.engine.server.NativeTargetNodes.get(f.world, wall))
+            .set(f.target, "bonewall", 78, 1, true, 100);
+        wallPet.boneWall = true;
         f.world.process();
         f.world.getMapper(Player.class).remove(f.target);
         f.world.process();
@@ -572,7 +604,8 @@ class BaalCrabNode9IntegrationTest extends RiiabloTest {
         assertEquals(1, baal(f).lastTargetCount());
         states.stateList.removeState(StateId.CONVERSION);
         states.stateList.addState(StateId.CONVERSION, 200, 1, f.target);
-        f.world.getMapper(SummonedPet.class).get(wall).boneWall = false;
+        wallPet.boneWall = false;
+        wallPet.detachNativeTargetNode(); // Marker changes alone must not free a native membership.
         assertEquals(converted, select(f));
         assertEquals(2, baal(f).lastTargetCount(), "wall's old player insertion remains released");
       }

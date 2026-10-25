@@ -153,7 +153,7 @@ class TargetRuntimeCheckpointTest {
         assertThrows(IllegalArgumentException.class, () -> TargetRuntimeCheckpoint.fromBytes(truncated));
       }
       assertThrows(IllegalArgumentException.class, () -> TargetRuntimeCheckpoint.fromBytes(Arrays.copyOf(bytes, bytes.length + 1)));
-      byte[] bad = bytes.clone(); bad[3] = 2; final byte[] versionImage = bad;
+      byte[] bad = bytes.clone(); bad[3] = 3; final byte[] versionImage = bad;
       assertThrows(IllegalArgumentException.class, () -> TargetRuntimeCheckpoint.fromBytes(versionImage));
       // version + sequence + eight slots + attempts count/one ID + entity count/ID.
       int firstBoolean = 4 + 8 + 8 * 12 + 4 + 4 + 4 + 4;
@@ -193,6 +193,40 @@ class TargetRuntimeCheckpointTest {
       assertThrows(IllegalStateException.class, () -> f.slots.registerPlayer(0));
       assertEquals(-1, f.slots.playerAtSlot(0));
       assertEquals(Long.MAX_VALUE, f.slots.captureCheckpoint().sequence);
+    }
+  }
+
+  @Test void legacyV1ExplicitlyLeavesAiControlUncoveredWhileV2RestoresAbsence() {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      for (Fixture f : new Fixture[] {source, target}) { f.player(); f.world.process(); }
+      TargetRuntimeCheckpoint saved = TargetRuntimeCheckpoint.capture(source.world, new int[] {0});
+      assertTrue(saved.hasAiControlRuntime());
+      int suffix = 4 + AiControlRuntimeCheckpoint.capture(source.world, new int[] {0}).bytes().length;
+      byte[] v1 = Arrays.copyOf(saved.bytes(), saved.bytes().length - suffix);
+      ByteBuffer.wrap(v1).putInt(1);
+      TargetRuntimeCheckpoint legacy = TargetRuntimeCheckpoint.fromBytes(v1);
+      assertFalse(legacy.hasAiControlRuntime());
+      target.world.getMapper(NativeAiCommand.class).create(0).set(-1, 75, -1);
+      target.world.getMapper(NativeAiPathCache.class).create(0).targetCoordinates(3, 4);
+      legacy.restore(target.world);
+      assertEquals(75, target.world.getMapper(NativeAiCommand.class).get(0).command);
+      saved.restore(target.world);
+      assertFalse(target.world.getMapper(NativeAiCommand.class).has(0));
+      assertFalse(target.world.getMapper(NativeAiPathCache.class).has(0));
+    }
+  }
+
+  @Test void missingCommandLifetimeDoesNotRewindTargetClockOrApplyEarlierNodes() {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      for (Fixture f : new Fixture[] {source, target}) { f.player(); f.world.create(); f.world.process(); }
+      source.world.getMapper(NativePathIdentity.class).create(1).allocated(source.world, 1);
+      source.world.getMapper(NativeAiCommand.class).create(1).copy(source.world, 1, 14, 1);
+      TargetRuntimeCheckpoint saved = TargetRuntimeCheckpoint.capture(source.world, new int[] {0, 1});
+      target.slots.nextOrder();
+      long before = target.slots.captureCheckpoint().sequence;
+      assertThrows(IllegalStateException.class, () -> saved.restore(target.world));
+      assertEquals(before, target.slots.captureCheckpoint().sequence);
+      assertFalse(target.world.getMapper(NativeAiCommand.class).has(1));
     }
   }
 
