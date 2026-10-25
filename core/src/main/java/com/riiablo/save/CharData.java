@@ -88,6 +88,49 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   private final PotionRecovery manaPotion = new PotionRecovery();
   private int potionSeed;
 
+  /** Runtime-only potion state. This is checkpoint metadata, never a D2S extension. */
+  public static final class PotionCheckpoint {
+    public final int seed;
+    public final int healthRateEncoded;
+    public final int healthFrames;
+    public final int manaRateEncoded;
+    public final int manaFrames;
+
+    public PotionCheckpoint(int seed, int healthRateEncoded, int healthFrames,
+        int manaRateEncoded, int manaFrames) {
+      if (healthRateEncoded < 0 || healthFrames < 0 || manaRateEncoded < 0 || manaFrames < 0
+          || (healthFrames == 0 && healthRateEncoded != 0)
+          || (manaFrames == 0 && manaRateEncoded != 0)) {
+        throw new IllegalArgumentException("invalid potion checkpoint");
+      }
+      this.seed = seed;
+      this.healthRateEncoded = healthRateEncoded;
+      this.healthFrames = healthFrames;
+      this.manaRateEncoded = manaRateEncoded;
+      this.manaFrames = manaFrames;
+    }
+
+    public String canonical() {
+      return "potion-v1:" + seed + ":" + healthRateEncoded + ":" + healthFrames
+          + ":" + manaRateEncoded + ":" + manaFrames;
+    }
+  }
+
+  public PotionCheckpoint capturePotionCheckpoint() {
+    return new PotionCheckpoint(potionSeed, healthPotion.rateEncoded, healthPotion.framesRemaining,
+        manaPotion.rateEncoded, manaPotion.framesRemaining);
+  }
+
+  /** Applies validated immutable runtime state without consuming RNG or advancing a frame. */
+  public void restorePotionCheckpoint(PotionCheckpoint checkpoint) {
+    if (checkpoint == null) throw new NullPointerException("checkpoint");
+    potionSeed = checkpoint.seed;
+    healthPotion.rateEncoded = checkpoint.healthRateEncoded;
+    healthPotion.framesRemaining = checkpoint.healthFrames;
+    manaPotion.rateEncoded = checkpoint.manaRateEncoded;
+    manaPotion.framesRemaining = checkpoint.manaFrames;
+  }
+
   public int diff;
   public boolean managed;
   public CharacterClass classId;

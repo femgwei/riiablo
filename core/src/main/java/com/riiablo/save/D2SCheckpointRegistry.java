@@ -65,7 +65,7 @@ public final class D2SCheckpointRegistry {
       CharData data = Objects.requireNonNull(binding.get(), "character data");
       byte[] bytes = new D2SWriter96().writeD2S(D2SWriter96.createD2S(data));
       entries.put(entry.getKey(), D2SCheckpoint.entry(
-          entry.getKey(), binding.difficulty(), bytes));
+          entry.getKey(), binding.difficulty(), bytes, data.capturePotionCheckpoint()));
     }
     return D2SCheckpoint.of(entries);
   }
@@ -89,6 +89,7 @@ public final class D2SCheckpointRegistry {
     TreeMap<Integer, CharData> decoded = new TreeMap<>();
     for (D2SCheckpoint.Entry entry : checkpoint.entries().values()) {
       CharData data = CharData.loadFromBuffer(entry.difficulty(), ByteBuffer.wrap(entry.bytes()));
+      if (entry.potionCheckpoint() != null) data.restorePotionCheckpoint(entry.potionCheckpoint());
       Binding binding = bindings.get(entry.entityId());
       if (binding == null) binding = Objects.requireNonNull(
           factory.create(entry.entityId(), entry, data), "D2S factory result");

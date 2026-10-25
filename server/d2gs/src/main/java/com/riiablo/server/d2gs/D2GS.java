@@ -6284,7 +6284,7 @@ public class D2GS extends ApplicationAdapter {
         ? null : replayD2sRegistry.capture();
     if (rngStates == null && replayRngRegistry != null) rngStates = replayRngRegistry.snapshot();
     return D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber(), rngStates,
-        nativeUnitRngStates, d2sCheckpoint, authoritativeSessions.snapshot());
+        nativeUnitRngStates, d2sCheckpoint, authoritativeSessions.snapshot()).withWorldIdentity(seed, diff);
   }
 
   public D2gsCheckpointSnapshot replayCheckpoint() { return replayCheckpoint; }
@@ -6315,6 +6315,10 @@ public class D2GS extends ApplicationAdapter {
     Thread owner = simulation.ownerThread();
     if (owner != null && owner != Thread.currentThread()) {
       throw new IllegalStateException("checkpoint restore must run on the owner thread");
+    }
+    D2gsCheckpointSnapshot.WorldIdentity identity = checkpoint.worldIdentity();
+    if (identity != null && (identity.seed != seed || identity.difficulty != diff)) {
+      throw new IllegalArgumentException("checkpoint world seed/difficulty mismatch");
     }
     SerializationManager serializer = world.getSystem(SerializationManager.class);
     if (serializer == null) throw new IllegalStateException("serialization manager unavailable");

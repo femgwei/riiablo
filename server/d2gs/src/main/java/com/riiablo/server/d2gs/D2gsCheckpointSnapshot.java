@@ -26,6 +26,7 @@ import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.AuthoritativeSessionRegistry;
 import com.riiablo.engine.replay.SimulationCheckpoint;
 import com.riiablo.save.D2SCheckpoint;
+import com.riiablo.save.CharData;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 
@@ -39,7 +40,7 @@ public final class D2gsCheckpointSnapshot {
   private static final int ECS_WIRE_MAGIC = 0x44324745; // "D2GE"
   private static final int ECS_WIRE_VERSION = 1;
   private static final int CHECKPOINT_WIRE_MAGIC = 0x44324743; // "D2GC"
-  private static final int CHECKPOINT_WIRE_VERSION = 2;
+  private static final int CHECKPOINT_WIRE_VERSION = 3;
   private static final int MAX_ECS_ENTITIES = 1_000_000;
   private static final int MAX_ECS_PAYLOAD = 16 * 1024 * 1024;
   private static final int MAX_CHECKPOINT_STRING = 64 * 1024 * 1024;
@@ -54,6 +55,20 @@ public final class D2gsCheckpointSnapshot {
   public interface EntityLifecycle {
     int createEntity(World world, int expectedEntityId, ByteBuffer payload);
     boolean deleteEntity(World world, int entityId);
+  }
+
+  /** Minimal world compatibility lock; not a content digest or a map runtime snapshot. */
+  public static final class WorldIdentity {
+    public final int seed;
+    public final int difficulty;
+
+    public WorldIdentity(int seed, int difficulty) {
+      if (difficulty < 0 || difficulty > 2) throw new IllegalArgumentException("difficulty");
+      this.seed = seed;
+      this.difficulty = difficulty;
+    }
+
+    public String canonical() { return "world-v1:" + seed + ":" + difficulty; }
   }
 
   public static final class RestoreResult {
@@ -87,10 +102,11 @@ public final class D2gsCheckpointSnapshot {
   private final Map<Integer, byte[]> payloads;
   private final D2SCheckpoint d2sCheckpoint;
   private final AuthoritativeSessionRegistry.Snapshot sessionSnapshot;
+  private final WorldIdentity worldIdentity;
 
   private D2gsCheckpointSnapshot(long tick, SimulationCheckpoint summary,
       Map<Integer, byte[]> payloads, D2SCheckpoint d2sCheckpoint,
-      AuthoritativeSessionRegistry.Snapshot sessionSnapshot) {
+      AuthoritativeSessionRegistry.Snapshot sessionSnapshot, WorldIdentity worldIdentity) {
     this.tick = tick;
     this.summary = summary;
     TreeMap<Integer, byte[]> copy = new TreeMap<>();
@@ -100,6 +116,7 @@ public final class D2gsCheckpointSnapshot {
     this.payloads = Collections.unmodifiableMap(copy);
     this.d2sCheckpoint = d2sCheckpoint;
     this.sessionSnapshot = sessionSnapshot;
+    this.worldIdentity = worldIdentity;
   }
 
   /** Captures the same EntitySync state used for an authoritative baseline. */
@@ -185,6 +202,15 @@ public final class D2gsCheckpointSnapshot {
       List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates,
       D2SCheckpoint d2sCheckpoint,
       AuthoritativeSessionRegistry.Snapshot sessionSnapshot) {
+    return fromPayloads(tick, payloads, rngStates, nativeUnitRngStates, d2sCheckpoint,
+        sessionSnapshot, null);
+  }
+
+  public static D2gsCheckpointSnapshot fromPayloads(long tick, Map<Integer, byte[]> payloads,
+      List<SimulationCheckpoint.RngState> rngStates,
+      List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates,
+      D2SCheckpoint d2sCheckpoint, AuthoritativeSessionRegistry.Snapshot sessionSnapshot,
+      WorldIdentity worldIdentity) {
     if (tick < 0L) throw new IllegalArgumentException("tick");
     if (payloads == null) throw new NullPointerException("payloads");
     TreeMap<Integer, String> entityDigests = new TreeMap<>();
@@ -205,15 +231,28 @@ public final class D2gsCheckpointSnapshot {
     }
     if (sessionSnapshot != null) canonical.append("|sessions:")
         .append(digest(sessionSnapshot.canonical()));
+    if (worldIdentity != null) canonical.append("|world:").append(worldIdentity.canonical());
+    if (d2sCheckpoint != null) {
+      for (D2SCheckpoint.Entry entry : d2sCheckpoint.entries().values()) {
+        if (entry.potionCheckpoint() != null) canonical.append("|player-runtime:")
+            .append(entry.entityId()).append(':').append(digest(entry.potionCheckpoint().canonical()));
+      }
+    }
     SimulationCheckpoint summary = SimulationCheckpoint.of(tick, digest(canonical.toString()),
         entityDigests, rngStates, nativeUnitRngStates);
-    return new D2gsCheckpointSnapshot(tick, summary, copy, d2sCheckpoint, sessionSnapshot);
+    return new D2gsCheckpointSnapshot(tick, summary, copy, d2sCheckpoint, sessionSnapshot, worldIdentity);
   }
 
   public long tick() { return tick; }
   public SimulationCheckpoint summary() { return summary; }
   public D2SCheckpoint d2sCheckpoint() { return d2sCheckpoint; }
   public AuthoritativeSessionRegistry.Snapshot sessionSnapshot() { return sessionSnapshot; }
+  public WorldIdentity worldIdentity() { return worldIdentity; }
+
+  public D2gsCheckpointSnapshot withWorldIdentity(int seed, int difficulty) {
+    return fromPayloads(tick, payloads, summary.rngStates(), summary.nativeUnitRngStates(),
+        d2sCheckpoint, sessionSnapshot, new WorldIdentity(seed, difficulty));
+  }
   public Map<Integer, byte[]> payloads() {
     Map<Integer, byte[]> copy = new TreeMap<>();
     for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
@@ -240,7 +279,7 @@ public final class D2gsCheckpointSnapshot {
    */
   public byte[] toEcsBytes() {
     if (!summary.rngStates().isEmpty() || !summary.nativeUnitRngStates().isEmpty()
-        || d2sCheckpoint != null || sessionSnapshot != null) {
+        || d2sCheckpoint != null || sessionSnapshot != null || worldIdentity != null) {
       throw new IllegalStateException("ECS envelope cannot discard checkpoint metadata");
     }
     try {
@@ -352,6 +391,15 @@ public final class D2gsCheckpointSnapshot {
           byte[] save = entry.bytes();
           output.writeInt(save.length);
           output.write(save);
+          CharData.PotionCheckpoint potion = entry.potionCheckpoint();
+          output.writeBoolean(potion != null);
+          if (potion != null) {
+            output.writeInt(potion.seed);
+            output.writeInt(potion.healthRateEncoded);
+            output.writeInt(potion.healthFrames);
+            output.writeInt(potion.manaRateEncoded);
+            output.writeInt(potion.manaFrames);
+          }
         }
       }
 
@@ -368,6 +416,11 @@ public final class D2gsCheckpointSnapshot {
           output.writeLong(session.disconnectedTick);
           output.writeLong(session.generation);
         }
+      }
+      output.writeBoolean(worldIdentity != null);
+      if (worldIdentity != null) {
+        output.writeInt(worldIdentity.seed);
+        output.writeInt(worldIdentity.difficulty);
       }
       writeString(output, summary.canonical());
       writeString(output, d2sCheckpoint == null ? "" : d2sCheckpoint.canonical());
@@ -421,7 +474,12 @@ public final class D2gsCheckpointSnapshot {
           }
           byte[] save = new byte[length];
           input.readFully(save);
-          if (entries.put(entityId, D2SCheckpoint.entry(entityId, difficulty, save)) != null) {
+          CharData.PotionCheckpoint potion = null;
+          if (version >= 3 && readPresence(input, "potion metadata")) {
+            potion = new CharData.PotionCheckpoint(input.readInt(), input.readInt(),
+                input.readInt(), input.readInt(), input.readInt());
+          }
+          if (entries.put(entityId, D2SCheckpoint.entry(entityId, difficulty, save, potion)) != null) {
             throw new IllegalArgumentException("duplicate D2S entity");
           }
         }
@@ -447,11 +505,15 @@ public final class D2gsCheckpointSnapshot {
         sessions = AuthoritativeSessionRegistry.Snapshot.of(records);
       }
 
+      WorldIdentity identity = null;
+      if (version >= 3 && readPresence(input, "world identity")) {
+        identity = new WorldIdentity(input.readInt(), input.readInt());
+      }
       String expectedSummary = readString(input, "summary canonical");
       String expectedD2s = readString(input, "D2S canonical");
       if (input.read() != -1) throw new IllegalArgumentException("trailing checkpoint bytes");
       D2gsCheckpointSnapshot result = fromPayloads(tick, payloads, rngStates, nativeStates,
-          d2s, sessions);
+          d2s, sessions, identity);
       if (!result.summary.canonical().equals(expectedSummary)) {
         throw new IllegalArgumentException("checkpoint summary mismatch");
       }
@@ -463,6 +525,12 @@ public final class D2gsCheckpointSnapshot {
     } catch (IOException e) {
       throw new IllegalArgumentException("invalid checkpoint", e);
     }
+  }
+
+  private static boolean readPresence(DataInputStream input, String field) throws IOException {
+    int present = input.readUnsignedByte();
+    if (present > 1) throw new IllegalArgumentException(field);
+    return present == 1;
   }
 
   private static int readOptionalCount(DataInputStream input, String field, int version)

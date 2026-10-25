@@ -150,13 +150,52 @@ public class D2gsCheckpointSnapshotTest {
   @Test public void completeEnvelopeStillReadsVersionOneWithoutOptionalMetadata() {
     D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.fromPayloads(5L,
         java.util.Collections.emptyMap());
-    byte[] legacy = checkpoint.toBytes();
+    byte[] current = checkpoint.toBytes();
+    // v3 adds a world-presence byte after the empty session list. v1/v2 did not.
+    byte[] legacy = new byte[current.length - 1];
+    System.arraycopy(current, 0, legacy, 0, 36);
+    System.arraycopy(current, 37, legacy, 36, current.length - 37);
     java.nio.ByteBuffer bytes = java.nio.ByteBuffer.wrap(legacy);
     bytes.putInt(4, 1); // original complete envelope version
     bytes.putInt(28, 0); // v1 encoded absent D2S as zero entries
     bytes.putInt(32, 0); // v1 encoded absent sessions as zero entries
     assertEquals(checkpoint.summary().canonical(),
         D2gsCheckpointSnapshot.fromBytes(legacy).summary().canonical());
+  }
+
+  @Test public void worldIdentityRoundTripRejectsTamperingAndEcsOnlyExport() {
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.fromPayloads(5L,
+        java.util.Collections.emptyMap()).withWorldIdentity(12345, 2);
+    D2gsCheckpointSnapshot restored = D2gsCheckpointSnapshot.fromBytes(checkpoint.toBytes());
+    assertEquals(12345, restored.worldIdentity().seed);
+    assertEquals(2, restored.worldIdentity().difficulty);
+    assertEquals(checkpoint.summary().canonical(), restored.summary().canonical());
+    byte[] tampered = checkpoint.toBytes();
+    tampered[40] ^= 1; // last seed byte in the empty fixture
+    assertIllegalArgument(() -> D2gsCheckpointSnapshot.fromBytes(tampered));
+    byte[] badPresence = checkpoint.toBytes();
+    badPresence[36] = 2;
+    assertIllegalArgument(() -> D2gsCheckpointSnapshot.fromBytes(badPresence));
+    try {
+      checkpoint.toEcsBytes();
+      throw new AssertionError("ECS-only transport must not discard world identity");
+    } catch (IllegalStateException expected) {}
+  }
+
+  @Test public void completeEnvelopeStillReadsVersionTwoWithoutWorldIdentity() {
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.fromPayloads(5L,
+        java.util.Collections.emptyMap(), null, null,
+        com.riiablo.save.D2SCheckpoint.of(java.util.Collections.emptyMap()),
+        new AuthoritativeSessionRegistry().snapshot());
+    byte[] current = checkpoint.toBytes();
+    byte[] legacy = new byte[current.length - 1];
+    System.arraycopy(current, 0, legacy, 0, 36);
+    System.arraycopy(current, 37, legacy, 36, current.length - 37);
+    java.nio.ByteBuffer.wrap(legacy).putInt(4, 2);
+    D2gsCheckpointSnapshot restored = D2gsCheckpointSnapshot.fromBytes(legacy);
+    assertEquals(checkpoint.summary().canonical(), restored.summary().canonical());
+    assertEquals(checkpoint.d2sCheckpoint().canonical(), restored.d2sCheckpoint().canonical());
+    org.junit.Assert.assertNull(restored.worldIdentity());
   }
 
   @Test public void checkpointCarriesRngStateAndReportsContinuationDrift() {

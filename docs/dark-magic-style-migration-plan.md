@@ -1986,6 +1986,74 @@ TCP gate 分别验收，不合并声称已通过真实 socket 的跨进程重启
 Connection name/class 身份模型，不是新增密码认证系统。后续将完整地图/native factory、
 系统状态和真实 socket 重启接管纳入同一组合验收，再决定 M8-A 收口。
 
+### M8-A 第 23 批：世界兼容锁、药剂运行时与跨 JVM 连续恢复（2026-10-25）
+
+完成日期：2026-10-25。本批合并处理真实重启前的两个状态缺口：World 的 seed/难度身份，
+以及 D2S 不保存的角色药剂 RNG、生命/法力持续恢复速率和剩余帧；不改原有药剂规则公式。
+
+- `CharData.PotionCheckpoint` 是不可变、校验后的运行时快照，捕获/恢复不抽取随机数、
+  不推进任何帧。`D2SCheckpoint.Entry` 单独携带该元数据，不向原版 D2S 添加字段或字节。
+  D2S registry 在 factory/Binding.set 之前将运行时状态装入解码后的 CharData，晚期失败
+  回滚同时恢复旧角色的剩余恢复进度和随机状态。
+- 完整 checkpoint envelope 升到 v3，增加每个 D2S 条目的可选 PotionCheckpoint 以及可选
+  WorldIdentity；保留 v1/v2（包括非空真实 D2S）的读取。旧归档的缺省元数据保持缺省，
+  不能把不存在的药剂恢复进度当作已保存。新增字段的 presence、数值范围与 canonical
+  witness 均受校验，篡改或截断拒绝。
+- 生产 D2GS 自动记录 seed/难度，并在刷新 binding、创建实体或变更时钟之前拒绝不匹配的
+  归档。WorldIdentity 和药剂运行时进入 replay summary 的 world digest，即使 ECS/D2S
+  字节未改变，也能发现药剂随机状态或剩余恢复帧差异；ECS-only 导出不允许丢弃世界身份。
+- 真实 1.10f 门禁让原 World 饮用生命/法力药剂后运行 31 个固定 Tick，再落盘交接；以原
+  World 不间断运行作为基准，比较新 World 与独立 JVM 恢复后 400 Tick 内多个时点的定点
+  生命/法力、恢复进度和 RNG 状态，中途再次饮药并验证最终 ECS/D2S 摘要一致。
+  新 World 不额外调用 `World.process()` 激活 subscription，避免在恢复时钟之外消耗一帧。
+- 同批覆盖错误 seed/难度的前置拒绝、仅运行时改变时的摘要变化、非法恢复速率/帧数、
+  元数据篡改，以及带活跃药剂进度的非空/空 World D2S identity 失败回滚。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointStoreTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointRecoveryTest `
+  --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest `
+  --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest `
+  :core:test `
+  --tests com.riiablo.engine.D2gsCommandAdapterTest `
+  --tests com.riiablo.engine.replay.CheckpointRngRegistryTest `
+  --tests com.riiablo.engine.replay.NativeUnitRandomRegistryTest `
+  --tests com.riiablo.save.D2SCheckpointRegistryTest `
+  --tests com.riiablo.engine.server.PotionRecoverySystemTest `
+  --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:headlessSimulationTick `
+  :server:d2gs:headlessReconnectGroundLoot :server:d2gs:headlessStaleTransport `
+  :core:test --tests com.riiablo.save.D2SWriter96HeaderTest `
+  --tests com.riiablo.save.D2SWriter96StatTest `
+  --tests com.riiablo.save.ItemDataResourceRefreshTest `
+  --tests com.riiablo.save.CharDataResetTest `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+第一组结果：服务端 38 项、core 25 项，共 63 项通过，0 失败、0 跳过。
+第二组额外 D2S header/stat、资源刷新与 CharData reset 回归 18 项通过；合计 81 项，
+0 失败、0 跳过。生产编译、模块边界与 `git diff --check` 通过。真实 TCP 三个 gate 均通过：
+固定步进 tick 5→36、部分拾取后的 15 金币/owner window 在重连后保持一致、同槽旧 socket
+延迟帧被丢弃且当前 generation 命令成功。它们仍是同进程网络回归，不等于跨进程 socket 接管。
+
+真实资源：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。D2MOO/原版依据：沿用既有
+HEALTHPOT/MANAPOT、PotionRecoverySystem 和 CharData 药剂计算实现；本批只保存并恢复
+其现有字段，不修改持续恢复、叠加或随机加倍公式，也不将兼容药剂 RNG 冒称为原版双字 pSeed。
+
+剩余问题/下一迁移：WorldIdentity 只是 seed/难度兼容锁，不是 MPQ/TXT 内容 digest，不能
+证明完整地图或系统运行时已恢复。旧 v1/v2 归档本来就没有这些新字段，仍只保留历史子集恢复
+能力。完整地图/native factory（包括稀疏实体 ID）、Map/AI/任务/交易等系统级隐藏状态和
+其他随机调用方仍待审计；真实 socket 跨进程重启接管尚未通过组合 gate。
+下一批集中处理完整地图/native factory 的实体集和系统恢复前置条件，再接真实 TCP 重启。
+M8-A、M8-D 与 M8 总体继续保持进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

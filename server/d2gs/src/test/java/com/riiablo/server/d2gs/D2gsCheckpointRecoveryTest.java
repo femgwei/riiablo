@@ -34,6 +34,26 @@ import org.junit.rules.TemporaryFolder;
 public class D2gsCheckpointRecoveryTest {
   @Rule public TemporaryFolder temporary = new TemporaryFolder();
 
+  @Test public void wrongWorldSeedOrDifficultyRejectsBeforeMutatingState() {
+    try (Fixture live = new Fixture()) {
+      live.installRegistries();
+      live.seedStreams();
+      live.server.simulation.restoreFromCheckpoint(10L);
+      D2gsCheckpointSnapshot before = live.server.captureReplayCheckpoint();
+      for (D2gsCheckpointSnapshot incoming : new D2gsCheckpointSnapshot[] {
+          before.withWorldIdentity(2, 0), before.withWorldIdentity(1, 1)}) {
+        try {
+          live.server.restoreReplayCheckpoint(incoming);
+          fail("another world's checkpoint must be rejected");
+        } catch (IllegalArgumentException expected) {
+          assertEquals("checkpoint world seed/difficulty mismatch", expected.getMessage());
+        }
+        assertEquals(before.summary().canonical(), live.server.captureReplayCheckpoint().summary().canonical());
+        assertNull(live.server.replayCheckpoint());
+      }
+    }
+  }
+
   @Test public void missingMetadataAdaptersRejectBeforeChangingEcsOrClock() throws Exception {
     try (Fixture live = new Fixture()) {
       D2gsCheckpointSnapshot before = live.server.captureReplayCheckpoint();

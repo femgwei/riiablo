@@ -16,8 +16,9 @@ public final class D2SCheckpoint {
     private final byte[] bytes;
     private final int checksum;
     private final String digest;
+    private final CharData.PotionCheckpoint potionCheckpoint;
 
-    private Entry(int entityId, int difficulty, byte[] bytes) {
+    private Entry(int entityId, int difficulty, byte[] bytes, CharData.PotionCheckpoint potionCheckpoint) {
       if (entityId < 0) throw new IllegalArgumentException("entityId");
       if (difficulty < 0) throw new IllegalArgumentException("difficulty");
       if (bytes == null || bytes.length == 0) throw new IllegalArgumentException("bytes");
@@ -27,6 +28,7 @@ public final class D2SCheckpoint {
       this.bytes = Arrays.copyOf(bytes, bytes.length);
       this.checksum = D2SReader.INSTANCE.calculateChecksum(ByteInput.wrap(bytes));
       this.digest = sha256(bytes);
+      this.potionCheckpoint = potionCheckpoint;
     }
 
     public int entityId() { return entityId; }
@@ -34,9 +36,11 @@ public final class D2SCheckpoint {
     public byte[] bytes() { return Arrays.copyOf(bytes, bytes.length); }
     public int checksum() { return checksum; }
     public String digest() { return digest; }
+    public CharData.PotionCheckpoint potionCheckpoint() { return potionCheckpoint; }
 
     private String canonical() {
-      return entityId + ":" + difficulty + ":" + checksum + ":" + digest;
+      return entityId + ":" + difficulty + ":" + checksum + ":" + digest
+          + (potionCheckpoint == null ? "" : ":" + potionCheckpoint.canonical());
     }
   }
 
@@ -81,6 +85,12 @@ public final class D2SCheckpoint {
 
   /** Builds a validated immutable entry for checkpoint transport codecs. */
   public static Entry entry(int entityId, int difficulty, byte[] bytes) {
-    return new Entry(entityId, difficulty, bytes);
+    return entry(entityId, difficulty, bytes, null);
+  }
+
+  /** Runtime metadata is separate from the unchanged original D2S bytes. */
+  public static Entry entry(int entityId, int difficulty, byte[] bytes,
+      CharData.PotionCheckpoint potionCheckpoint) {
+    return new Entry(entityId, difficulty, bytes, potionCheckpoint);
   }
 }
