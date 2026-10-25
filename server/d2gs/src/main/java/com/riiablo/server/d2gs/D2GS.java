@@ -6088,6 +6088,7 @@ public class D2GS extends ApplicationAdapter {
   private CheckpointRngRegistry replayRngRegistry;
   private NativeUnitRandomRegistry replayNativeUnitRngRegistry;
   private D2SCheckpointRegistry replayD2sRegistry;
+  private D2gsWorldCheckpointBindings worldReplayBindings;
   /** Stable identities captured from a restarted process and awaiting takeover. */
   private final Set<String> pendingSessionRebindKeys = new HashSet<>();
   /** Single fixed-tick ingress for authenticated movement/combat packets. */
@@ -6237,6 +6238,22 @@ public class D2GS extends ApplicationAdapter {
     return replayD2sRegistry;
   }
 
+  /** Installs production bindings; explicit host registry overrides remain supported. */
+  void installWorldReplayBindings() {
+    if (world == null) throw new IllegalStateException("D2GS world is not initialized");
+    worldReplayBindings = new D2gsWorldCheckpointBindings(world, seed);
+    replayD2sRegistry = worldReplayBindings.d2sRegistry();
+    replayNativeUnitRngRegistry = worldReplayBindings.nativeRegistry();
+  }
+
+  private void refreshWorldReplayBindings() {
+    if (worldReplayBindings == null) return;
+    if (replayD2sRegistry == worldReplayBindings.d2sRegistry()) worldReplayBindings.refreshPlayers();
+    if (replayNativeUnitRngRegistry == worldReplayBindings.nativeRegistry()) {
+      replayNativeUnitRngRegistry = worldReplayBindings.captureNativeRegistry();
+    }
+  }
+
   /** Captures the authoritative ECS/network baseline on the simulation thread. */
   public D2gsCheckpointSnapshot captureReplayCheckpoint() {
     return captureReplayCheckpoint(null);
@@ -6259,6 +6276,7 @@ public class D2GS extends ApplicationAdapter {
     }
     SerializationManager serializer = world.getSystem(SerializationManager.class);
     if (serializer == null) return null;
+    refreshWorldReplayBindings();
     java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.NativeUnitRngState>
         nativeUnitRngStates = replayNativeUnitRngRegistry == null
         ? null : replayNativeUnitRngRegistry.snapshot();
@@ -6300,6 +6318,12 @@ public class D2GS extends ApplicationAdapter {
     }
     SerializationManager serializer = world.getSystem(SerializationManager.class);
     if (serializer == null) throw new IllegalStateException("serialization manager unavailable");
+    refreshWorldReplayBindings();
+    boolean worldNative = worldReplayBindings != null
+        && replayNativeUnitRngRegistry == worldReplayBindings.nativeRegistry();
+    boolean worldD2s = worldReplayBindings != null
+        && replayD2sRegistry == worldReplayBindings.d2sRegistry();
+    if (worldNative) worldReplayBindings.validateNativeStates(checkpoint);
     java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.RngState> rngStates =
         checkpoint.summary().rngStates();
     java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.NativeUnitRngState>
@@ -6355,6 +6379,8 @@ public class D2GS extends ApplicationAdapter {
           replayRngRegistry.restore(rngStates);
         }
         if (replayNativeUnitRngRegistry != null) {
+          if (worldNative) replayNativeUnitRngRegistry =
+              worldReplayBindings.prepareNativeRestore(nativeUnitRngStates);
           replayNativeUnitRngRegistry.restore(nativeUnitRngStates);
         }
         if (replayD2sRegistry != null && d2sCheckpoint != null) {
@@ -6364,6 +6390,7 @@ public class D2GS extends ApplicationAdapter {
             throw new IllegalStateException("D2S checkpoint restore failed: "
                 + d2sResult.failedEntities);
           }
+          if (worldD2s) worldReplayBindings.restorePlayerMetadata(checkpoint);
         }
         if (sessionSnapshot != null) {
           authoritativeSessions.restore(sessionSnapshot);
@@ -6381,6 +6408,19 @@ public class D2GS extends ApplicationAdapter {
         replayCheckpoint = checkpoint;
       } catch (Throwable failure) {
         try {
+          // Factory insertions may not yet be visible to Artemis subscriptions.
+          // Remove them explicitly before restoring the previous entity set;
+          // otherwise a late D2S/RNG failure leaves a ghost actor on the next tick.
+          if (lifecycle != null) {
+            java.util.Set<Integer> previousEntities = before.payloads().keySet();
+            for (int createdId : result.createdEntities) {
+              if (!previousEntities.contains(createdId)
+                  && D2gsCheckpointSnapshot.isActive(world, createdId)
+                  && !lifecycle.deleteEntity(world, createdId)) {
+                throw new IllegalStateException("created entity rollback failed: " + createdId);
+              }
+            }
+          }
           D2gsCheckpointSnapshot.RestoreResult ecsRollback = lifecycle == null
               ? before.restoreExisting(world, serializer)
               : before.restoreExisting(world, serializer, lifecycle);
@@ -6389,9 +6429,12 @@ public class D2GS extends ApplicationAdapter {
           }
           if (replayRngRegistry != null) replayRngRegistry.restore(
               liveRngStates == null ? java.util.Collections.emptyList() : liveRngStates);
-          if (replayNativeUnitRngRegistry != null) replayNativeUnitRngRegistry.restore(
-              liveNativeUnitRngStates == null ? java.util.Collections.emptyList()
-                  : liveNativeUnitRngStates);
+          if (replayNativeUnitRngRegistry != null) {
+            if (worldNative) replayNativeUnitRngRegistry = worldReplayBindings.prepareNativeRestore(
+                liveNativeUnitRngStates);
+            replayNativeUnitRngRegistry.restore(liveNativeUnitRngStates == null
+                ? java.util.Collections.emptyList() : liveNativeUnitRngStates);
+          }
           if (replayD2sRegistry != null && liveD2sCheckpoint != null) {
             com.riiablo.save.D2SCheckpointRegistry.RestoreResult d2sRollback =
                 replayD2sRegistry.restore(liveD2sCheckpoint);
@@ -6399,6 +6442,7 @@ public class D2GS extends ApplicationAdapter {
               throw new IllegalStateException("D2S rollback failed: "
                   + d2sRollback.failedEntities);
             }
+            if (worldD2s) worldReplayBindings.restorePlayerMetadata(before);
           }
           authoritativeSessions.restore(liveSessionSnapshot);
           pendingSessionRebindKeys.clear();
@@ -6536,6 +6580,7 @@ public class D2GS extends ApplicationAdapter {
     // that owns ordinary D2GS creation.  Installing it after World wiring
     // guarantees all factory mappers and server context bindings are live.
     setReplayEntityLifecycle(new ServerEntityLifecycle(world, factory, serverContext.files()));
+    installWorldReplayBindings();
 
     clientThreads = new ThreadGroup("D2GSClients");
 
@@ -6814,6 +6859,11 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private void Connection(Packet packet) {
+    if (player.get(packet.id, Engine.INVALID_ENTITY) != Engine.INVALID_ENTITY) {
+      Gdx.app.log(TAG, "[NET_INGRESS] phase=session_reject connection=" + packet.id
+          + " reason=already_authenticated");
+      return;
+    }
     Connection connection = (Connection) packet.data.data(new Connection());
     String charName = connection.charName();
     int charClass = connection.charClass();
@@ -6834,44 +6884,50 @@ public class D2GS extends ApplicationAdapter {
 
     ByteBuffer d2sData = connection.d2sAsByteBuffer();
     CharData charData = CharData.loadFromBuffer(diff, d2sData);
-    short[] sessionQuestRecords = disconnectedQuestRecords.remove(charData.name);
-    if (sessionQuestRecords != null) {
-      boolean restored = QuestSnapshot.apply(charData, sessionQuestRecords.length,
-          i -> Short.toUnsignedInt(sessionQuestRecords[i]));
-      Gdx.app.log(TAG, "[RECONNECT_BASELINE] phase=quest_restore character="
-          + charData.name + " records=" + sessionQuestRecords.length + " restored=" + restored + " revision="
-          + QuestSnapshot.revision(QuestSnapshot.records(charData)));
-    }
-    // Rebuild equipment-derived attributes and native skills after loading a
-    // remote save.  Without this, a valid starting Amazon has a javelin in her
-    // hand but the authoritative skill map never gains Throw, causing every
-    // network throw request to be rejected as skill_not_owned.
-    charData.update();
-    Gdx.app.log(TAG, "  " + charData);
-
-    Vector2 origin = map.find(Map.ID.TOWN_ENTRY_1);
-    if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_2);
-    if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
-    int entityId = factory.createPlayer(charData, origin);
-    player.put(packet.id, entityId);
-    long sessionTick = simulation == null ? 0L : simulation.tickNumber();
-    AuthoritativeSessionRegistry.Result session = commandAdapter.connect(
-        packet.id, charData.name, entityId, sessionTick);
-    if (!session.accepted
-        && (session.rejection == AuthoritativeSessionRegistry.Rejection.STABLE_KEY_ACTIVE
-            || session.rejection == AuthoritativeSessionRegistry.Rejection.CONNECTION_IN_USE)
-        && pendingSessionRebindKeys.contains(charData.name)) {
-      AuthoritativeSessionRegistry.Session archived = authoritativeSessions.stableKey(charData.name);
-      session = archived == null ? session : commandAdapter.rebind(packet.id, charData.name,
-          entityId, sessionTick, archived.generation);
-      if (session.accepted) pendingSessionRebindKeys.remove(charData.name);
-    }
-    if (!session.accepted) {
-      Gdx.app.error(TAG, "[NET_INGRESS] phase=session_reject connection=" + packet.id
-          + " player=" + entityId + " reason=" + session.rejection);
-      player.remove(packet.id, Engine.INVALID_ENTITY);
-      world.delete(entityId);
+    if (!charData.name.equals(charName) || charData.charClass != charClass) {
+      Gdx.app.error(TAG, "[NET_INGRESS] phase=session_reject reason=identity_mismatch");
       return;
+    }
+    boolean replayTakeover = pendingSessionRebindKeys.contains(charData.name);
+    int entityId;
+    if (replayTakeover) {
+      try {
+        entityId = claimReplayPlayer(packet.id, charData.name, charClass);
+        // The client's save establishes identity only. The restored actor owns
+        // inventory, progression, position and all existing owner references.
+        charData = world.getMapper(Player.class).get(entityId).data;
+      } catch (IllegalStateException failure) {
+        Gdx.app.error(TAG, "[NET_INGRESS] phase=session_reject reason=" + failure.getMessage());
+        return;
+      }
+    } else {
+      short[] sessionQuestRecords = disconnectedQuestRecords.remove(charData.name);
+      if (sessionQuestRecords != null) {
+        boolean restored = QuestSnapshot.apply(charData, sessionQuestRecords.length,
+            i -> Short.toUnsignedInt(sessionQuestRecords[i]));
+        Gdx.app.log(TAG, "[RECONNECT_BASELINE] phase=quest_restore character="
+            + charData.name + " records=" + sessionQuestRecords.length + " restored=" + restored
+            + " revision=" + QuestSnapshot.revision(QuestSnapshot.records(charData)));
+      }
+      // Rebuild equipment-derived attributes and native skills after loading a
+      // remote save. Without this, a starting Amazon cannot use Throw.
+      charData.update();
+      Gdx.app.log(TAG, "  " + charData);
+
+      Vector2 origin = map.find(Map.ID.TOWN_ENTRY_1);
+      if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_2);
+      if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
+      entityId = factory.createPlayer(charData, origin);
+      long sessionTick = simulation == null ? 0L : simulation.tickNumber();
+      AuthoritativeSessionRegistry.Result session = commandAdapter.connect(
+          packet.id, charData.name, entityId, sessionTick);
+      if (!session.accepted) {
+        Gdx.app.error(TAG, "[NET_INGRESS] phase=session_reject connection=" + packet.id
+            + " player=" + entityId + " reason=" + session.rejection);
+        world.delete(entityId);
+        return;
+      }
+      player.put(packet.id, entityId);
     }
     Integer previousEntityId = disconnectedOwnerEntities.remove(charData.name);
     if (previousEntityId != null) {
@@ -6915,7 +6971,7 @@ public class D2GS extends ApplicationAdapter {
 
     NativeMercenaryRewardSystem mercenaryRewards =
         world.getSystem(NativeMercenaryRewardSystem.class);
-    if (charData.hasMerc() && (mercenaryRewards == null
+    if (!replayTakeover && charData.hasMerc() && (mercenaryRewards == null
         || !mercenaryRewards.restorePersistedMercenary(entityId))) {
       Gdx.app.error(TAG, "[MERC_RESTORE] phase=failed player=" + entityId
           + " type=" + (charData.getMerc().type & 0xFFFF)
@@ -6933,8 +6989,35 @@ public class D2GS extends ApplicationAdapter {
 
     Synchronize(packet.id, entityId);
 
-    BroadcastConnect(packet.id, connection, charData, entityId);
+    BroadcastConnect(packet.id, connection, charData, entityId, replayTakeover);
     broadcastPartySnapshots(PartyOperation.SNAPSHOT, entityId, -1, -1);
+  }
+
+  /** Claims a restored actor without creating a second player or trusting a stale client D2S. */
+  int claimReplayPlayer(int connectionId, String stableKey, int charClass) {
+    if (simulation == null || (simulation.ownerThread() != null
+        && simulation.ownerThread() != Thread.currentThread())) {
+      throw new IllegalStateException("replay takeover must run on the owner thread");
+    }
+    if (!pendingSessionRebindKeys.contains(stableKey)) {
+      throw new IllegalStateException("no pending replay player");
+    }
+    if (player.get(connectionId, Engine.INVALID_ENTITY) != Engine.INVALID_ENTITY) {
+      throw new IllegalStateException("connection already authenticated");
+    }
+    AuthoritativeSessionRegistry.Session archived = authoritativeSessions.stableKey(stableKey);
+    Player restored = archived != null && D2gsCheckpointSnapshot.isActive(world, archived.actorId)
+        ? world.getMapper(Player.class).get(archived.actorId) : null;
+    if (restored == null || restored.data == null || !stableKey.equals(restored.data.name)
+        || restored.data.charClass != charClass) {
+      throw new IllegalStateException("restored player identity mismatch");
+    }
+    AuthoritativeSessionRegistry.Result result = commandAdapter.rebind(connectionId, stableKey,
+        archived.actorId, simulation.tickNumber(), archived.generation);
+    if (!result.accepted) throw new IllegalStateException("replay rebind rejected: " + result.rejection);
+    player.put(connectionId, archived.actorId);
+    pendingSessionRebindKeys.remove(stableKey);
+    return archived.actorId;
   }
 
   private void Synchronize(int id, int entityId) {
@@ -7066,20 +7149,32 @@ public class D2GS extends ApplicationAdapter {
     return masks;
   }
 
-  private void BroadcastConnect(int id, Connection connection, CharData charData, int entityId) {
+  private void BroadcastConnect(int id, Connection connection, CharData charData, int entityId,
+      boolean replayTakeover) {
     FlatBufferBuilder builder = new FlatBufferBuilder();
     int charNameOffset = builder.createString(charData.name);
 
     byte[] components = new byte[16];
-    connection.cofComponentsAsByteBuffer().get(components);
+    if (replayTakeover) {
+      int[] authoritative = world.getMapper(com.riiablo.engine.server.component.CofComponents.class)
+          .get(entityId).component;
+      for (int i = 0; i < components.length; i++) components[i] = (byte) authoritative[i];
+    } else connection.cofComponentsAsByteBuffer().get(components);
     int componentsOffset = Connection.createCofComponentsVector(builder, components);
 
     byte[] alphas = new byte[16];
-    connection.cofAlphasAsByteBuffer().get(alphas);
+    if (replayTakeover) {
+      float[] authoritative = world.getMapper(com.riiablo.engine.server.component.CofAlphas.class)
+          .get(entityId).alpha;
+      for (int i = 0; i < alphas.length; i++) alphas[i] = (byte) Math.round(authoritative[i] * 255f);
+    } else connection.cofAlphasAsByteBuffer().get(alphas);
     int alphasOffset = Connection.createCofAlphasVector(builder, alphas);
 
     byte[] transforms = new byte[16];
-    connection.cofTransformsAsByteBuffer().get(transforms);
+    if (replayTakeover) System.arraycopy(
+        world.getMapper(com.riiablo.engine.server.component.CofTransforms.class).get(entityId).transform,
+        0, transforms, 0, transforms.length);
+    else connection.cofTransformsAsByteBuffer().get(transforms);
     int transformsOffset = Connection.createCofTransformsVector(builder, transforms);
 
     Connection.startConnection(builder);

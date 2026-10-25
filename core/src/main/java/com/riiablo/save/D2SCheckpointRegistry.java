@@ -55,6 +55,9 @@ public final class D2SCheckpointRegistry {
 
   public synchronized Binding get(int entityId) { return bindings.get(entityId); }
 
+  /** Removes a binding after its authoritative ECS player has left the world. */
+  public synchronized void unregister(int entityId) { bindings.remove(entityId); }
+
   public synchronized D2SCheckpoint capture() {
     TreeMap<Integer, D2SCheckpoint.Entry> entries = new TreeMap<>();
     for (Map.Entry<Integer, Binding> entry : bindings.entrySet()) {

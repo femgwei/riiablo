@@ -1921,6 +1921,71 @@ git diff --check
 在 1.10f headless 环境启动旧实例写出 checkpoint、关闭并启动新实例，经真实 socket 完成
 generation rebind 和后续固定 Tick 命令；再核对完整地图/实体、非空 D2S、RNG 继续执行证据。
 
+### M8-A 第 22 批：生产绑定、归档 actor 接管与真实角色跨 JVM 恢复（2026-10-25）
+
+本批集中补齐上一批的生产接管适配：真实玩家 D2S/native unit RNG 自动绑定、归档 actor
+复用和含非空角色存档的独立 JVM 继续运行门禁。M8-A、M8-D 和 M8 总体仍保持进行中。
+
+- 新增 `D2gsWorldCheckpointBindings` 并在生产 D2GS World 装配后安装。捕获时自动扫描
+  networked 玩家，注销已删除角色的 D2S binding；恢复时同时更新 `Player.data` 与
+  `AttributesWrapper.attrs`，保留 ECS 中的 progression/equipment revision 和实时 Vitals。
+  显式安装的 host registry 仍可覆盖自动 binding。
+- 自动捕获 Monster/Missile 与已初始化的其他 UnitRandomSeed 的 D2Common 双字 seed；
+  每次捕获重建 live wrapper，避免组件/id 回收后读到旧 seed。恢复在实体创建后绑定新组件，
+  清理归档之外的 seed，并拒绝非 unit stream 或不属于归档实体的 RNG 引用。
+- checkpoint 待接管角色的 Connection 复用归档 actor 和已恢复 CharData，不由客户端旧 D2S
+  创建另一角色，不重复生成佣兵；向观察者发布归档角色的 COF 外观。重复登录、错误角色
+  class/identity 和重复接管拒绝。同槽接管仍使用服务端归档 generation，不信任客户端版本。
+- 修复 pinned Artemis 2.3 `EntityManager.isActive(id)` 对从未分配 ID 返回真的问题；
+  checkpoint/lifecycle guard 同时检查实际 Entity 是否存在，使真空 World 能创建归档实体。
+  晚期 RNG/D2S 失败回滚还显式删除尚未进入 subscription 的新实体，避免下一 Tick 出现幽灵角色。
+- 独立 JVM 门禁加载真实 1.10f MPQ，使用真实 ServerEntityFactory、SerializationManager 和
+  D2GS 恢复事务，在空 World 恢复完整 Amazon D2S（含初始装备、金币和传送点），核对存档
+  字节/ECS 摘要、属性指针和 runtime revision；复用 actor 接管后核对 native RNG 下一次抽样、
+  N+1 Tick 位移以及与本 JVM 同路径的继续运行摘要。
+- 同批覆盖同 World 再次恢复、角色删除/id 回收、Monster/Missile 双字 RNG 继续抽样、
+  真实 D2S identity 晚期失败在非空/空 World 的完整回滚，以及从未分配 ID 的无资源回归。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointStoreTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointRecoveryTest `
+  --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest `
+  --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest `
+  :core:test `
+  --tests com.riiablo.engine.D2gsCommandAdapterTest `
+  --tests com.riiablo.engine.replay.CheckpointRngRegistryTest `
+  --tests com.riiablo.engine.replay.NativeUnitRandomRegistryTest `
+  --tests com.riiablo.save.D2SCheckpointRegistryTest `
+  --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:headlessSimulationTick `
+  :server:d2gs:headlessReconnectGroundLoot :server:d2gs:headlessStaleTransport `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：服务端 32 项、core 18 项，共 50 项测试通过，0 失败、0 跳过；生产编译、模块边界和
+`git diff --check` 通过。真实 TCP gate 观察到固定 40ms 步进（tick 6→37）、20 金币堆
+部分拾取 5 后剩余 15 在重连 baseline 保持一致且 owner window 不丢失，以及同槽重用后的旧 socket 帧被拒绝、
+当前 generation 命令正常执行。独立 JVM 角色恢复是上述定向测试的一部分，与这三个同进程
+TCP gate 分别验收，不合并声称已通过真实 socket 的跨进程重启。
+
+真实资源：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。本批不修改暗黑公式，native RNG
+沿用现有 D2MOO D2Common Seed 实现，只绑定/恢复原有双字状态；角色夹具通过正式 D2S
+读写入口，保留既有初始装备和传送点校验，不放宽字节或摘要断言。
+
+剩余问题/下一迁移：新 JVM 门禁使用最小 Map，不含真实 socket 或完整生产 World 系统，
+不能替代“旧实例落盘退出→新实例恢复→真实 TCP 接管/后续命令”的最终 gate。兼容 NativeRng/
+全局随机调用方、角色药剂等未进 D2S 的隐藏运行时状态、完整地图/系统级状态仍需审计和迁移。
+多玩家归档连接槽交换当前按 authority 冲突拒绝，不承诺任意登录顺序；本批沿用原有
+Connection name/class 身份模型，不是新增密码认证系统。后续将完整地图/native factory、
+系统状态和真实 socket 重启接管纳入同一组合验收，再决定 M8-A 收口。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

@@ -9,6 +9,17 @@ import org.junit.jupiter.api.Test;
 
 class D2SCheckpointRegistryTest extends RiiabloTest {
   @Test
+  void unregisterRemovesDeletedPlayerAndAllowsRecycledEntityId() {
+    D2SCheckpointRegistry registry = new D2SCheckpointRegistry();
+    registry.register(3, new Binding(newCharacter("OldHero")));
+    registry.unregister(3);
+    assertTrue(registry.capture().entries().isEmpty());
+    registry.register(3, new Binding(newCharacter("NewHero")));
+    assertEquals("NewHero", registry.get(3).get().name);
+    assertEquals(1, registry.capture().entries().size());
+  }
+
+  @Test
   void capturesValidatedBytesAndRestoresCharacterBinding() {
     Binding binding = new Binding(newCharacter("CheckpointHero"));
     binding.data.level = 42;

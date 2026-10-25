@@ -20,6 +20,29 @@ import org.junit.Test;
 
 /** Verifies the D2GS checkpoint adapter without loading native maps or MPQs. */
 public class D2gsCheckpointSnapshotTest {
+  @Test public void lifecycleAllocatesNeverBeforeAssignedIdsInAnEmptyWorld() {
+    World source = worldWithEntities(2);
+    World target = worldWithEntities(0);
+    try {
+      FakeSerializer serializer = new FakeSerializer();
+      serializer.states.put(0, 10);
+      serializer.states.put(1, 20);
+      D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(source, serializer, 42L);
+      assertFalse(D2gsCheckpointSnapshot.isActive(target, 0));
+      assertFalse(D2gsCheckpointSnapshot.isActive(target, Integer.MAX_VALUE));
+      D2gsCheckpointSnapshot.RestoreResult result = checkpoint.restoreExisting(
+          target, serializer, new FakeLifecycle());
+      target.process();
+      assertTrue(result.success());
+      assertEquals(java.util.Arrays.asList(0, 1), result.createdEntities);
+      assertEquals(checkpoint.summary().canonical(),
+          D2gsCheckpointSnapshot.capture(target, serializer, 42L).summary().canonical());
+    } finally {
+      source.dispose();
+      target.dispose();
+    }
+  }
+
   @Test public void captureRestoreCaptureKeepsSummaryStable() {
     World world = worldWithEntities(2);
     FakeSerializer serializer = new FakeSerializer();

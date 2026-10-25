@@ -63,7 +63,7 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
   public int createEntity(World target, int expectedEntityId, ByteBuffer payload) {
     if (target != world) throw new IllegalArgumentException("world");
     if (expectedEntityId < 0 || payload == null
-        || world.getEntityManager().isActive(expectedEntityId)) return Engine.INVALID_ENTITY;
+        || D2gsCheckpointSnapshot.isActive(world, expectedEntityId)) return Engine.INVALID_ENTITY;
     try {
       D2GS envelope = D2GS.getRootAsD2GS(
           ByteBufferUtil.removeSizePrefix(payload.duplicate()));
@@ -98,7 +98,7 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
           return Engine.INVALID_ENTITY;
       }
       if (entityId != expectedEntityId) {
-        if (entityId >= 0 && world.getEntityManager().isActive(entityId)) world.delete(entityId);
+        if (D2gsCheckpointSnapshot.isActive(world, entityId)) world.delete(entityId);
         return entityId;
       }
       markCheckpointInsertion(entityId);
@@ -118,7 +118,7 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
 
   @Override
   public boolean deleteEntity(World target, int entityId) {
-    if (target != world || entityId < 0 || !world.getEntityManager().isActive(entityId)) {
+    if (target != world || !D2gsCheckpointSnapshot.isActive(world, entityId)) {
       return false;
     }
     CofManager cofs = world.getSystem(CofManager.class);

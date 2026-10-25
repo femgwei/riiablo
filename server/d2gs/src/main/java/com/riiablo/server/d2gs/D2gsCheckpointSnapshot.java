@@ -222,6 +222,16 @@ public final class D2gsCheckpointSnapshot {
     return Collections.unmodifiableMap(copy);
   }
 
+  /** Artemis 2.3 isActive only checks recycling, not whether an id was ever allocated. */
+  static boolean isActive(World world, int entityId) {
+    if (entityId < 0) return false;
+    try {
+      return world.getEntity(entityId) != null && world.getEntityManager().isActive(entityId);
+    } catch (IndexOutOfBoundsException unallocated) {
+      return false;
+    }
+  }
+
   /**
    * Encodes the ECS-only portion as a deterministic, process-independent
    * envelope. Optional RNG/D2S/session metadata is deliberately rejected here
@@ -500,7 +510,7 @@ public final class D2gsCheckpointSnapshot {
     }
     for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
       int entityId = entry.getKey();
-      if (!world.getEntityManager().isActive(entityId)) {
+      if (!isActive(world, entityId)) {
         missing.add(entityId);
       }
     }
@@ -518,8 +528,8 @@ public final class D2gsCheckpointSnapshot {
         try {
           int createdId = lifecycle.createEntity(world, entityId,
               ByteBuffer.wrap(payloads.get(entityId)).duplicate());
-          if (createdId != entityId || !world.getEntityManager().isActive(entityId)) {
-            if (createdId >= 0 && world.getEntityManager().isActive(createdId)) {
+          if (createdId != entityId || !isActive(world, entityId)) {
+            if (isActive(world, createdId)) {
               lifecycle.deleteEntity(world, createdId);
             }
             failed.add(entityId);
@@ -541,7 +551,7 @@ public final class D2gsCheckpointSnapshot {
     for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
       int entityId = entry.getKey();
       try {
-        if (!world.getEntityManager().isActive(entityId)) {
+        if (!isActive(world, entityId)) {
           missing.add(entityId);
           throw new IllegalStateException("entity was not active after lifecycle restore");
         }
@@ -593,32 +603,32 @@ public final class D2gsCheckpointSnapshot {
     try {
       if (lifecycle == null) {
         for (Map.Entry<Integer, byte[]> entry : before.payloads.entrySet()) {
-          if (!world.getEntityManager().isActive(entry.getKey())) return false;
+          if (!isActive(world, entry.getKey())) return false;
           Packet packet = Packet.obtain(1, ByteBuffer.wrap(entry.getValue()).duplicate());
           serializer.deserialize(entry.getKey(), packet.data);
         }
         return true;
       }
       for (Integer entityId : created) {
-        if (world.getEntityManager().isActive(entityId)
+        if (isActive(world, entityId)
             && !lifecycle.deleteEntity(world, entityId)) return false;
       }
       IntBag active = world.getAspectSubscriptionManager()
           .get(Aspect.all(Networked.class)).getEntities();
       for (int i = 0; i < active.size(); i++) {
         int entityId = active.get(i);
-        if (world.getEntityManager().isActive(entityId) && !before.payloads.containsKey(entityId)
+        if (isActive(world, entityId) && !before.payloads.containsKey(entityId)
             && !lifecycle.deleteEntity(world, entityId)) return false;
       }
       for (Integer entityId : before.payloads.keySet()) {
-        if (!world.getEntityManager().isActive(entityId)) {
+        if (!isActive(world, entityId)) {
           int createdId = lifecycle.createEntity(world, entityId,
               ByteBuffer.wrap(before.payloads.get(entityId)).duplicate());
-          if (createdId != entityId || !world.getEntityManager().isActive(entityId)) return false;
+          if (createdId != entityId || !isActive(world, entityId)) return false;
         }
       }
       for (Map.Entry<Integer, byte[]> entry : before.payloads.entrySet()) {
-        if (!world.getEntityManager().isActive(entry.getKey())) return false;
+        if (!isActive(world, entry.getKey())) return false;
         Packet packet = Packet.obtain(1, ByteBuffer.wrap(entry.getValue()).duplicate());
         serializer.deserialize(entry.getKey(), packet.data);
       }
