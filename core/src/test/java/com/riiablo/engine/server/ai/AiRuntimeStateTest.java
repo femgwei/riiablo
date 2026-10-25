@@ -37,7 +37,9 @@ class AiRuntimeStateTest {
       GargoyleTrap::new, Vines::new, Regurgitator::new, BloodRaven::new,
       FrogDemon::new, CycleOfLife::new, DeathSentry::new,
       Baboon::new, Bighead::new, BloodHawk::new, ClawViper::new,
-      CorruptLancer::new, CorruptRogue::new, Goatman::new);
+      CorruptLancer::new, CorruptRogue::new, Goatman::new,
+      Mummy::new, MaggotLarva::new, PinHead::new, PantherWoman::new,
+      Wraith::new, Fetish::new, SandMaggot::new);
 
   @Test void allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects() throws Exception {
     for (IntFunction<AI> factory : SCHEMAS) {
@@ -188,6 +190,13 @@ class AiRuntimeStateTest {
     expected.put(CorruptLancer.class, "enemyEntities tmpVec2 stateMachine nextAction time ranToTarget");
     expected.put(CorruptRogue.class, "enemyEntities tmpVec2 stateMachine nextAction time");
     expected.put(Goatman.class, "enemyEntities tmpVec2 stateMachine nextAction time");
+    expected.put(Mummy.class, "enemyEntities tmpVec2 stateMachine nextAction time");
+    expected.put(MaggotLarva.class, "enemyEntities tmpVec2 stateMachine nextAction time aiParam0");
+    expected.put(PinHead.class, "enemyEntities tmpVec2 stateMachine nextAction time");
+    expected.put(PantherWoman.class, "enemyEntities monsterEntities tmpVec2 stateMachine nextAction time");
+    expected.put(Wraith.class, "enemyEntities tmpVec2 stateMachine nextAction time");
+    expected.put(Fetish.class, "enemyEntities tmpVec2 stateMachine nextAction time aiParam0 aiParam1");
+    expected.put(SandMaggot.class, "tmpVec2 stateMachine nextAction time aiParam0 aiParam1 aiParam2");
     for (Class<?> type : Arrays.asList(QuillMother.class, BloodLord.class, Catapult.class,
         DeathMauler.class, FrozenHorror.class, Griswold.class, HellMeteor.class, Minion.class, Smith.class)) expected.put(type, "");
     for (Class<?> type : Arrays.asList(Andariel.class, DoomKnight.class, FlyingScimitar.class, BaalMinion.class, Idle.class)) expected.put(type, "");

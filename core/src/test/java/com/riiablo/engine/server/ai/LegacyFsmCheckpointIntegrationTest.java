@@ -22,7 +22,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 /** Private legacy FSM restoration, not a claim that global RNG or actions are checkpointed. */
 class LegacyFsmCheckpointIntegrationTest extends RiiabloTest {
   @ParameterizedTest
-  @ValueSource(strings = {"Baboon", "Bighead", "BloodHawk", "ClawViper", "CorruptLancer", "CorruptRogue", "Goatman"})
+  @ValueSource(strings = {"Baboon", "Bighead", "BloodHawk", "ClawViper", "CorruptLancer", "CorruptRogue", "Goatman",
+      "Mummy", "MaggotLarva", "PinHead", "PantherWoman", "Wraith", "Fetish", "SandMaggot"})
   void realWorldRestoresMachineHistoryAndKeepsTargetServicesAndRemainingDelay(String type) throws Exception {
     Map<Integer, UnitStateRuntimeCheckpoint> image; Object sourceSubscription = null;
     try (Fixture f = fixture(type, 30)) {
@@ -63,7 +64,8 @@ class LegacyFsmCheckpointIntegrationTest extends RiiabloTest {
     RandomXS128 uncovered = mock(RandomXS128.class);
     try {
       MathUtils.random = uncovered;
-      for (String type : new String[] {"Baboon", "Bighead", "BloodHawk", "ClawViper", "CorruptLancer", "CorruptRogue", "Goatman"}) {
+      for (String type : new String[] {"Baboon", "Bighead", "BloodHawk", "ClawViper", "CorruptLancer", "CorruptRogue", "Goatman",
+          "Mummy", "MaggotLarva", "PinHead", "PantherWoman", "Wraith", "Fetish", "SandMaggot"}) {
         AI source = AI.findAI(0, type), target = AI.findAI(0, type);
         AiRuntimeStateTest.setStates(source);
         AiRuntimeState image = AiRuntimeState.fromBytes(AiRuntimeState.capture(source, 0).bytes());
@@ -117,10 +119,14 @@ class LegacyFsmCheckpointIntegrationTest extends RiiabloTest {
     }
   }
 
-  private static boolean hasSubscription(String type) { return !type.equals("Baboon") && !type.equals("Bighead"); }
+  private static boolean hasSubscription(String type) {
+    return !type.equals("Baboon") && !type.equals("Bighead") && !type.equals("SandMaggot");
+  }
   @Test void legacyMachinesRejectForeignOwnersBadEnumsNonfiniteClocksAndNonBooleanRunMemory() throws Exception {
     for (AI source : new AI[] {new Baboon(0), new Bighead(0), new BloodHawk(0), new ClawViper(0),
-        new CorruptLancer(0), new CorruptRogue(0), new Goatman(0)}) {
+        new CorruptLancer(0), new CorruptRogue(0), new Goatman(0),
+        new Mummy(0), new MaggotLarva(0), new PinHead(0), new PantherWoman(0),
+        new Wraith(0), new Fetish(0), new SandMaggot(0)}) {
       java.lang.Class<?> type = source.getClass();
       AI target = AI.findAI(0, type.getSimpleName());
       AiRuntimeStateTest.put(source, type, "time", Float.POSITIVE_INFINITY);
@@ -157,7 +163,7 @@ class LegacyFsmCheckpointIntegrationTest extends RiiabloTest {
   private static StateMachine<Integer, ?> machine(AI ai) throws Exception {
     return (StateMachine<Integer, ?>) AiRuntimeStateTest.get(ai, ai.getClass(), "stateMachine");
   }
-  private static Fixture fixture(String type, float distance) {
+  static Fixture fixture(String type, float distance) {
     String rowId = null;
     for (com.riiablo.codec.excel.MonStats.Entry row : Riiablo.files.monstats) if (type.equals(row.AI)) { rowId = row.Id; break; }
     assertNotNull(rowId, type);

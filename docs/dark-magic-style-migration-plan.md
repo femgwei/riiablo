@@ -2953,6 +2953,74 @@ MovementModes/飞行碰撞/骑乘物理、DiabPrison/AssassinTrapSystem 控制�
 Map/RoomEx、本地实体、交易、资源 digest、结构订阅副作用及真实 socket 跨进程接管
 仍需后续适配；M8-A、M8-D 和 M8 总体继续进行中。
 
+### M8-A 第 38 批：旧 FSM 恢复、循环及沙虫阶段记忆（2026-10-26）
+
+本批集中补齐 Mummy、MaggotLarva、PinHead、PantherWoman、Wraith、Fetish、
+SandMaggot 七类，累计 107 类实体 AI，另有共享 IDLE。继续使用精确类白名单和
+CheckpointStateMachine，恢复直接赋值 current/previous/global，不触发状态回调、
+initialize、出生或死亡动作。AI v1、wrapper v1、unit-state v4、D2GC v7 不变，
+原有 100 类编码布局不变；不改变当前宿主玩法、参数或 RNG 调用顺序。
+
+- 七类显式保存 nextAction/time 和三段 FSM 历史，验证 machine 类型/owner、枚举和
+  有限 nextAction；time 保留正无穷 sentinel，拒绝 NaN/负无穷，不夹取负计时余量。
+- MaggotLarva 保存 aiParam0 恢复标记，恢复后近战先消耗该标记进入等待，不凭空
+  发起攻击或额外抽全局随机数。Fetish 保存 aiParam0/1 阶段与循环次数，保留循环
+  边界后的逃跑决策，不从正常阶段或循环零点重新开始。
+- SandMaggot 保存 aiParam0/1/2 阶段、时限记忆和已产卵数量；ready-to-lay 到期
+  才请求既有 Skill3，成功后只消费一次额度；潜地状态保持等待及配置的出土技能。
+  不在恢复时执行技能、孵蛋、回血或重新计算时限。
+- Mummy、PinHead、PantherWoman、Wraith 没有额外私有持久标量。scratch tmpVec2、
+  mapper、World 和实时订阅不进入镜像；保留目标 AI/机器/向量/订阅对象身份，
+  PantherWoman 的敌方及怪物群订阅均保留目标 World 的初始化结果。
+
+原版依据：D2MOO source/D2Game/src/AI/AiThink.cpp 的 Fn009_Wraith、
+Fn015_SandMaggot、Fn018_PantherWoman、Fn021_Mummy、Fn030_Fetish、
+Fn038_MaggotLarva 和 Fn039_PinHead。Fn038 的非零 dwAiParam[0] 会短路概率判定
+并清标记进入恢复；Fn030 保存阶段/循环次数；Fn015 保存阶段、绝对帧时限及产卵数。
+本批只保存当前宿主表示：沙虫现有 aiParam1/出入土时限 TODO 不因此等于原版绝对帧；
+PinHead 当前未实现原版 dwAiParam[0] 攻击记忆，Mummy 的唤醒距离分支、
+PantherWoman 的原版 base-id 群体过滤、Fetish 原版目标生命比例/逃跑分支仍有
+既有差异，另属行为对齐工作，不能由 checkpoint 字段往返推导为已完成。
+
+验收覆盖 107 类逐标量、字段策略、预检零写入、逐字节截断及 FSM 历史。
+七类真实表/ECS 验证延迟续跑、目标宿主对象身份和回退 DEAD 不重复死亡。
+新增幼虫恢复先于 RNG、Fetish 循环到期逃跑、沙虫待产卵额度只消费一次/封顶、
+潜地等待与配置出土技能、PantherWoman 双订阅及三个简单近战 AI 到期恢复用例。
+codec 构造/解析/预检/恢复不读取或替换 MathUtils 全局 RNG。
+
+真实 D2GS factory 的 sandmaggot1 在 BURROW、aiParam0/1/2=3/47/2、
+time=0.35 秒时写盘，新 World 和独立 JVM 各续跑 60 步；近处目标使其在第 9 步
+请求出土，随后显式把玩家移远，使下一阶段请求潜地，逐步比较动作、FSM、
+canonical（含原生 RNG）和 D2S，并验证时限记忆/产卵数未被重置。
+将其加入 AI-only witness 变化、私有状态篡改校验、现有/空 World 晚期 D2S
+失败回滚验收；失败后 canonical 不变且现有 live AI 对象保留。
+
+边界：MathUtils 全局随机源仍未纳入 checkpoint；沙虫跨进程轨迹主动选择不经过
+该源的潜地/出土分支，其他概率用例显式提供测试外部 RNG，不声称随机源被恢复。
+Casting/Sequence/Pathfind 仍在受控动作完成边界清理，本批不包含真实技能关键帧、
+产卵实体创建、潜地治疗或完整路径/碰撞续跑，也不覆盖所有旧 AI 概率分支。
+
+定向命令（D2_HOME 指向本地 1.10f 资源）：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.server.ai.AiRuntimeStateTest --tests com.riiablo.engine.server.ai.LegacyFsmCheckpointIntegrationTest --tests com.riiablo.engine.server.ai.LegacyPhaseCheckpointIntegrationTest :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --continue --no-daemon --max-workers=1 --console=plain
+```
+
+扩大回归沿用第 37 批范围，并加入 Act1MonsterEcsScenarioTest 沙虫等既有技能关键帧
+回归，附带桌面编译、模块边界和三个真实 TCP gate。最终结果：core 1084 项、
+server/d2gs 78 项，共 1162 项通过，0 失败、0 跳过；桌面编译、模块边界和
+git diff --check 通过。TCP 门禁验证固定 Tick 5→36（31 步、40ms）、
+重连后部分拾取剩余 15 金币且 ownerWindowPreserved=true、旧 socket 延迟帧
+delayedFrameDropped=true 且 generationAwareCommand=true；仍是同进程门禁，
+不代表真实 socket 跨进程接管完成。
+
+剩余旧 FSM 为 CorruptArcher、FallenShaman、FetishShaman、SandLeaper、
+SandRaider、SkeletonBow、SkeletonMage、Vampire；还包括 Npc/Navi/NecroPet/Hireable
+等 AI、全局/未绑定 RNG、完整 Casting/Sequence/冻结战斗记录与 Item 引用、
+路径游标、MovementModes/飞行碰撞/骑乘物理、控制器、任务、Map/RoomEx、
+本地实体、交易、资源 digest、结构订阅副作用和真实 socket 跨进程接管。
+M8-A、M8-D 和 M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

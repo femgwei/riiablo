@@ -188,6 +188,13 @@ public final class AiRuntimeState {
       case "CorruptLancer": return new CorruptLancer(id);
       case "CorruptRogue": return new CorruptRogue(id);
       case "Goatman": return new Goatman(id);
+      case "Mummy": return new Mummy(id);
+      case "MaggotLarva": return new MaggotLarva(id);
+      case "PinHead": return new PinHead(id);
+      case "PantherWoman": return new PantherWoman(id);
+      case "Wraith": return new Wraith(id);
+      case "Fetish": return new Fetish(id);
+      case "SandMaggot": return new SandMaggot(id);
       default: throw new IllegalArgumentException("unsupported AI checkpoint schema: " + type);
     }
   }
@@ -204,6 +211,13 @@ public final class AiRuntimeState {
         : ai instanceof CorruptLancer ? ((CorruptLancer) ai).stateMachine
         : ai instanceof CorruptRogue ? ((CorruptRogue) ai).stateMachine
         : ai instanceof Goatman ? ((Goatman) ai).stateMachine
+        : ai instanceof Mummy ? ((Mummy) ai).stateMachine
+        : ai instanceof MaggotLarva ? ((MaggotLarva) ai).stateMachine
+        : ai instanceof PinHead ? ((PinHead) ai).stateMachine
+        : ai instanceof PantherWoman ? ((PantherWoman) ai).stateMachine
+        : ai instanceof Wraith ? ((Wraith) ai).stateMachine
+        : ai instanceof Fetish ? ((Fetish) ai).stateMachine
+        : ai instanceof SandMaggot ? ((SandMaggot) ai).stateMachine
         : null;
     if (machine != null && (machine.getClass() != CheckpointStateMachine.class
         || !Objects.equals(((CheckpointStateMachine<?>) machine).getOwner(), ai.entityId))) {
@@ -225,6 +239,13 @@ public final class AiRuntimeState {
     else if (ai instanceof CorruptLancer) { CorruptLancer a = (CorruptLancer) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeBoolean(a.ranToTarget); }
     else if (ai instanceof CorruptRogue) { CorruptRogue a = (CorruptRogue) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
     else if (ai instanceof Goatman) { Goatman a = (Goatman) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
+    else if (ai instanceof Mummy) { Mummy a = (Mummy) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
+    else if (ai instanceof MaggotLarva) { MaggotLarva a = (MaggotLarva) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); }
+    else if (ai instanceof PinHead) { PinHead a = (PinHead) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
+    else if (ai instanceof PantherWoman) { PantherWoman a = (PantherWoman) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
+    else if (ai instanceof Wraith) { Wraith a = (Wraith) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
+    else if (ai instanceof Fetish) { Fetish a = (Fetish) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); out.writeInt(a.aiParam1); }
+    else if (ai instanceof SandMaggot) { SandMaggot a = (SandMaggot) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); out.writeInt(a.aiParam1); out.writeInt(a.aiParam2); }
     else if (ai instanceof Regurgitator) ((Regurgitator) ai).checkpointFood(world).write(out);
   }
   private static NativeEntityReferenceCheckpoint readSpecific(AI ai, DataInputStream in, boolean apply, World world) throws IOException {
@@ -241,6 +262,13 @@ public final class AiRuntimeState {
     else if (ai instanceof CorruptLancer) { CorruptLancer a = (CorruptLancer) ai; float[] t = fsm(in, a.stateMachine, CorruptLancer.State.values(), apply); boolean ran = CheckpointIO.readBoolean(in); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.ranToTarget = ran; } }
     else if (ai instanceof CorruptRogue) { CorruptRogue a = (CorruptRogue) ai; float[] t = fsm(in, a.stateMachine, CorruptRogue.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
     else if (ai instanceof Goatman) { Goatman a = (Goatman) ai; float[] t = fsm(in, a.stateMachine, Goatman.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof Mummy) { Mummy a = (Mummy) ai; float[] t = fsm(in, a.stateMachine, Mummy.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof MaggotLarva) { MaggotLarva a = (MaggotLarva) ai; float[] t = fsm(in, a.stateMachine, MaggotLarva.State.values(), apply); int p0 = in.readInt(); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p0; } }
+    else if (ai instanceof PinHead) { PinHead a = (PinHead) ai; float[] t = fsm(in, a.stateMachine, PinHead.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof PantherWoman) { PantherWoman a = (PantherWoman) ai; float[] t = fsm(in, a.stateMachine, PantherWoman.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof Wraith) { Wraith a = (Wraith) ai; float[] t = fsm(in, a.stateMachine, Wraith.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof Fetish) { Fetish a = (Fetish) ai; float[] t = fsm(in, a.stateMachine, Fetish.State.values(), apply); int p0 = in.readInt(); int p1 = in.readInt(); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p0; a.aiParam1 = p1; } }
+    else if (ai instanceof SandMaggot) { SandMaggot a = (SandMaggot) ai; float[] t = fsm(in, a.stateMachine, SandMaggot.State.values(), apply); int p0 = in.readInt(); int p1 = in.readInt(); int p2 = in.readInt(); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p0; a.aiParam1 = p1; a.aiParam2 = p2; } }
     else if (ai instanceof Regurgitator) {
       NativeEntityReferenceCheckpoint reference = NativeEntityReferenceCheckpoint.read(in);
       if (apply) ((Regurgitator) ai).restoreFood(world, reference);
