@@ -2893,6 +2893,66 @@ DiabPrison 关系、AssassinTrapSystem 控制器等仍需独立适配。隐藏�
 任务、Map/RoomEx、本地实体、交易、未绑定 RNG、资源 digest、结构订阅副作用及
 真实 socket 跨进程接管继续保留；M8-A、M8-D、M8 总体仍进行中。
 
+### M8-A 第 37 批：旧 FSM 近战、冲锋及再生记忆恢复（2026-10-26）
+
+本批集中补齐 Baboon、Bighead、BloodHawk、ClawViper、CorruptLancer、CorruptRogue、
+Goatman 七类，累计 100 类实体 AI，另有共享 IDLE。它们统一沿用既有
+CheckpointStateMachine，运行时继承 DefaultStateMachine 的原有行为；恢复直接赋值
+current/previous/global，不调用 changeState、enter/exit 或 initialize，不重放出生/死亡。
+AI v1、wrapper v1、unit-state v4、D2GC v7 不变，原有 93 类字节布局不变。
+
+- 七类均显式保存 nextAction/time 以及三段 FSM 历史；校验机器精确类型和 owner，
+  未声明派生类、未知状态名和非法数值继续拒绝。nextAction 必须有限，time 保留
+  正无穷 sleep sentinel，拒绝 NaN/负无穷；负计时余量保持原值，不做夹取或重排时钟。
+- Baboon 保存 aiParam0/1/2，即再生剩余决策数、攻击记忆、待移除的再生增量。
+  增量字段和既有 unit-state 属性镜像组合恢复，不在恢复时重新增加 hpregen；
+  后续原有决策到期才扣减保存的增量，不能把其他来源的再生一起清零。
+- BloodHawk/ClawViper 保存 aiParam0 冲锋记忆；CorruptLancer 保存 ranToTarget，
+  不丢失跑近后下一次近战决策的连续性。Bighead/CorruptRogue/Goatman 没有额外私有
+  持久标量。tmpVec2 均在使用前完整覆盖，是 scratch，不复制源向量。
+- enemyEntities 是目标 World 初始化后的实时订阅，恢复保留原对象，不复制源 World、
+  mapper 或订阅；这些宿主仍须按目标服务器上下文正常初始化。
+
+原版核对：D2MOO AiThink.cpp Fn011_Baboon 明确保留 dwAiParam[0] 再生计数、[1] 攻击
+记忆及 [2] 增量，到期或健康恢复时扣减保存的增量；Fn005_BloodHawk 保留冲锋后近战
+优先状态；Fn036_CorruptLancer 跑近后保存 dwAiParam[0]，下一近战决策消耗该记忆。
+FSM 名称、time/nextAction 是宿主现有表示，本批不将 checkpoint 扩大成原版行为修正。
+
+验收扩展到 100 类逐字段往返、继承字段策略、预检零写入、逐字节截断和 FSM 历史。
+七类真实表/ECS 验证剩余等待、目标 AI/机器/临时向量/实时订阅对象身份、历史回退到
+DEAD 后 update/kill 不重复触发死亡动作；另验证狒狒的待移除再生增量与属性镜像组合，
+以及 Lancer 跑近记忆保留至下一次近战。codec 解析/预检/恢复不读取或替换全局随机源。
+
+真实 D2GS factory 的 Baboon 在待移除再生加成且 time 尚余 0.35 秒时保存，新 World
+与独立 JVM 各续跑 60 步，逐步比较动作请求、FSM、canonical（含原生 RNG）和 D2S，
+验证等待到期后 hpregen 从 51 降至 40 且不重复扣除，随后仍能继续近战决策。
+AI-only witness 变化、现有/空 World 晚期 D2S 失败回滚加入该类型，保留 live AI 身份。
+
+边界：若干旧 AI 分支仍调用 MathUtils 全局随机源，该源未由本批接入 checkpoint。
+Baboon 的 D2GS 续跑选用有目标的原生 unit-seed 分支；Lancer 定向用例显式预建外部
+随机源，并不声称恢复了它。其他六类的字段恢复不等于所有随机分支已跨进程确定性闭合。
+Casting/Sequence/Pathfind 仍在受控动作完成边界清理，不代表完整技能、路径或碰撞恢复。
+
+定向命令（D2_HOME 指向本地 1.10f 资源）：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.server.ai.AiRuntimeStateTest --tests com.riiablo.engine.server.ai.LegacyFsmCheckpointIntegrationTest :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --continue --no-daemon --max-workers=1 --console=plain
+```
+
+最终扩大回归沿用第 36 批全部 AI、checkpoint/factory/状态/目标/RNG/D2S 和身份生命周期
+测试范围，附带三个真实 TCP gate、桌面编译及模块边界检查。
+最终结果：core 1053 项、server/d2gs 77 项，共 1130 项通过，0 失败、0 跳过；
+桌面编译、verifyModuleBoundaries 和 git diff --check 通过。三个真实 TCP gate 通过：
+固定 Tick 5→36（31 步、40ms 步长）、重连后部分拾取剩余 15 金币且 ownerWindowPreserved=true、
+旧 socket 延迟帧 delayedFrameDropped=true 且 generationAwareCommand=true。
+TCP gate 仍为同进程，不代表真实 socket 跨进程接管完成。
+
+剩余旧 FSM（含 CorruptArcher 的 missile 表引用）、Npc/Navi/NecroPet/Hireable 等 AI、
+全局/未绑定 RNG、完整 Casting/Sequence/冻结战斗记录与 Item 引用、路径游标、
+MovementModes/飞行碰撞/骑乘物理、DiabPrison/AssassinTrapSystem 控制器、任务、
+Map/RoomEx、本地实体、交易、资源 digest、结构订阅副作用及真实 socket 跨进程接管
+仍需后续适配；M8-A、M8-D 和 M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

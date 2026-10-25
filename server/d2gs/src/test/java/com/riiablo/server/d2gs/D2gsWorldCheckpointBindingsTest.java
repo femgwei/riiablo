@@ -210,12 +210,13 @@ public class D2gsWorldCheckpointBindingsTest {
   }
 
   @Test public void privateAiOnlyChangeAltersCanonicalAndLateFailureRestoresDecisionPhase() throws Exception {
-    for (String row : new String[] {"doomknight1", "trap-firebolt", spiritRow(), rowForAi("BatDemon"), "gargoyletrap", "regurgitator1"}) {
+    for (String row : new String[] {"doomknight1", "trap-firebolt", spiritRow(), rowForAi("BatDemon"), "gargoyletrap", "regurgitator1", "baboon1"}) {
       try (Fixture source = new Fixture(); Fixture target = new Fixture(); Fixture empty = new Fixture(); Fixture control = new Fixture()) {
         source.populate();
         if (row.equals(rowForAi("BatDemon"))) source.populateRegeneratingBatAi();
         else if (row.equals("gargoyletrap")) source.populateRecoveringGargoyleAi();
         else if (row.equals("regurgitator1")) source.populateFoodAi(1);
+        else if (row.equals("baboon1")) source.populateLegacyBaboonAi();
         else source.populateDecisionAi(row);
         D2gsCheckpointSnapshot before = source.server.captureReplayCheckpoint();
         source.updateDecisionAi(0.013f); // Still before the pending absolute think event; only private elapsed time changes.
@@ -416,6 +417,51 @@ public class D2gsWorldCheckpointBindingsTest {
       assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
       return continueFoodDecisions(target, lifetime);
     }
+  }
+
+  @Test public void legacyBaboonRegenerationResumesAcrossFactoryWorldAndIndependentJvm() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("legacy-baboon.chk"); String expected;
+    try (Fixture source = new Fixture()) {
+      source.populate(); source.populateLegacyBaboonAi();
+      source.server.writeReplayCheckpoint(path); expected = continueLegacyBaboon(source);
+    }
+    assertEquals(expected, resumeLegacyBaboon(path));
+    Path output = temporary.getRoot().toPath().resolve("legacy-baboon-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "legacy-baboon").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("legacy Baboon child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  private static String resumeLegacyBaboon(Path path) throws Exception {
+    try (Fixture target = new Fixture()) {
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      return continueLegacyBaboon(target);
+    }
+  }
+
+  private static String continueLegacyBaboon(Fixture f) throws Exception {
+    com.riiablo.engine.server.ai.AI ai = f.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai;
+    assertEquals("REGEN", ai.getState());
+    StringBuilder result = new StringBuilder("LEGACY_BABOON_CONTINUED"); int actions = 0;
+    for (int frame = 0; frame < 60; frame++) {
+      f.server.simulation.tick(null, null); boolean action = f.updateDecisionAi(.04f);
+      if (action) actions++;
+      com.riiablo.attributes.Attributes attrs = f.server.world.getMapper(AttributesWrapper.class).get(1).attrs;
+      assertEquals(frame < 8 ? 51 : 40, attrs.base().getValue(Stat.hpregen, 0));
+      assertEquals(frame < 8 ? 51 : 40, attrs.getValue(Stat.hpregen, 0));
+      D2gsCheckpointSnapshot after = f.server.captureReplayCheckpoint();
+      result.append('|').append(ai.getState()).append(':').append(action)
+          .append(':').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
+    }
+    assertTrue("legacy Baboon never resumed its melee decisions", actions > 0);
+    return result.toString();
   }
 
   private static Object foodField(Fixture f, String name) throws Exception {
@@ -1626,7 +1672,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && args[3].startsWith("food-decisions-")
+      try { System.out.println(args.length > 3 && "legacy-baboon".equals(args[3])
+          ? resumeLegacyBaboon(Path.of(args[0])) : args.length > 3 && args[3].startsWith("food-decisions-")
           ? resumeFoodDecisions(Path.of(args[0]), Integer.parseInt(args[3].substring("food-decisions-".length())))
           : args.length > 3 && "gargoyle-decisions".equals(args[3])
           ? resumeGargoyleDecisions(Path.of(args[0])) : args.length > 3 && "bat-decisions".equals(args[3])
@@ -1740,6 +1787,27 @@ public class D2gsWorldCheckpointBindingsTest {
       updateDecisionAi(0.04f);
       assertEquals(120, attrs.base().getValue(Stat.hpregen, 0));
       assertEquals(120, attrs.getValue(Stat.hpregen, 0));
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void populateLegacyBaboonAi() throws Exception {
+      com.riiablo.engine.server.ai.AI ai = createDecisionAi("baboon1");
+      java.lang.Class<?> type = ai.getClass();
+      for (String name : new String[] {"aiParam0", "aiParam1", "aiParam2", "time", "nextAction"}) {
+        java.lang.reflect.Field field = type.getDeclaredField(name); field.setAccessible(true);
+        if (name.equals("time")) field.setFloat(ai, .35f);
+        else if (name.equals("nextAction")) field.setFloat(ai, 1.25f);
+        else field.setInt(ai, name.equals("aiParam2") ? 11 : 1);
+      }
+      java.lang.reflect.Field field = type.getDeclaredField("stateMachine"); field.setAccessible(true);
+      com.badlogic.gdx.ai.fsm.StateMachine machine = (com.badlogic.gdx.ai.fsm.StateMachine) field.get(ai);
+      for (Object state : machine.getCurrentState().getClass().getEnumConstants())
+        if (state.toString().equals("REGEN")) machine.changeState((com.badlogic.gdx.ai.fsm.State) state);
+      com.riiablo.attributes.Attributes attrs = server.world.getMapper(AttributesWrapper.class).get(1).attrs;
+      attrs.base().put(Stat.hitpoints, 50f); attrs.base().put(Stat.maxhp, 100f); attrs.reset();
+      attrs.base().put(Stat.hpregen, 51); attrs.aggregate().put(Stat.hpregen, 51);
+      server.world.getMapper(com.riiablo.engine.server.component.UnitStates.class).create(1);
+      com.artemis.EntityAllocatorCheckpoint.flushStructure(server.world);
     }
 
     void populateFoodAi(int lifetime) throws Exception {

@@ -35,7 +35,9 @@ class AiRuntimeStateTest {
       DarkWanderer::new, Imp::new, Vulture::new, Nihlathak::new,
       Arach::new, AssassinSentry::new, BonePrison::new, FoulCrowNest::new,
       GargoyleTrap::new, Vines::new, Regurgitator::new, BloodRaven::new,
-      FrogDemon::new, CycleOfLife::new, DeathSentry::new);
+      FrogDemon::new, CycleOfLife::new, DeathSentry::new,
+      Baboon::new, Bighead::new, BloodHawk::new, ClawViper::new,
+      CorruptLancer::new, CorruptRogue::new, Goatman::new);
 
   @Test void allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects() throws Exception {
     for (IntFunction<AI> factory : SCHEMAS) {
@@ -179,6 +181,13 @@ class AiRuntimeStateTest {
     expected.put(FrogDemon.class, "phase hiddenDecisions");
     expected.put(CycleOfLife.class, "");
     expected.put(DeathSentry.class, "");
+    expected.put(Baboon.class, "tmpVec2 stateMachine nextAction time aiParam0 aiParam1 aiParam2");
+    expected.put(Bighead.class, "tmpVec2 stateMachine nextAction time");
+    expected.put(BloodHawk.class, "enemyEntities tmpVec2 stateMachine nextAction time aiParam0");
+    expected.put(ClawViper.class, "enemyEntities tmpVec2 stateMachine nextAction time aiParam0");
+    expected.put(CorruptLancer.class, "enemyEntities tmpVec2 stateMachine nextAction time ranToTarget");
+    expected.put(CorruptRogue.class, "enemyEntities tmpVec2 stateMachine nextAction time");
+    expected.put(Goatman.class, "enemyEntities tmpVec2 stateMachine nextAction time");
     for (Class<?> type : Arrays.asList(QuillMother.class, BloodLord.class, Catapult.class,
         DeathMauler.class, FrozenHorror.class, Griswold.class, HellMeteor.class, Minion.class, Smith.class)) expected.put(type, "");
     for (Class<?> type : Arrays.asList(Andariel.class, DoomKnight.class, FlyingScimitar.class, BaalMinion.class, Idle.class)) expected.put(type, "");
@@ -201,7 +210,7 @@ class AiRuntimeStateTest {
   }
 
   @Test void unsupportedTypesAndForeignOwnerOrConfigurationCannotBeRestored() {
-    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new Baboon(2), 2));
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new CorruptArcher(2), 2));
     assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new TrapNova(2) {}, 2));
     assertThrows(IllegalStateException.class, () -> AiRuntimeState.capture(new QuillRat(2), 1));
     AiRuntimeState image = AiRuntimeState.capture(new GenericMonster(2, "first"), 2);

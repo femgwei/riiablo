@@ -181,6 +181,13 @@ public final class AiRuntimeState {
       case "FrogDemon": return new FrogDemon(id);
       case "CycleOfLife": return new CycleOfLife(id);
       case "DeathSentry": return new DeathSentry(id);
+      case "Baboon": return new Baboon(id);
+      case "Bighead": return new Bighead(id);
+      case "BloodHawk": return new BloodHawk(id);
+      case "ClawViper": return new ClawViper(id);
+      case "CorruptLancer": return new CorruptLancer(id);
+      case "CorruptRogue": return new CorruptRogue(id);
+      case "Goatman": return new Goatman(id);
       default: throw new IllegalArgumentException("unsupported AI checkpoint schema: " + type);
     }
   }
@@ -189,7 +196,15 @@ public final class AiRuntimeState {
     StateMachine<Integer, ?> machine = ai instanceof QuillRat ? ((QuillRat) ai).stateMachine
         : ai instanceof Scarab ? ((Scarab) ai).stateMachine : ai instanceof Fallen ? ((Fallen) ai).stateMachine
         : ai instanceof Brute ? ((Brute) ai).stateMachine : ai instanceof Zombie ? ((Zombie) ai).stateMachine
-        : ai instanceof Skeleton ? ((Skeleton) ai).stateMachine : null;
+        : ai instanceof Skeleton ? ((Skeleton) ai).stateMachine
+        : ai instanceof Baboon ? ((Baboon) ai).stateMachine
+        : ai instanceof Bighead ? ((Bighead) ai).stateMachine
+        : ai instanceof BloodHawk ? ((BloodHawk) ai).stateMachine
+        : ai instanceof ClawViper ? ((ClawViper) ai).stateMachine
+        : ai instanceof CorruptLancer ? ((CorruptLancer) ai).stateMachine
+        : ai instanceof CorruptRogue ? ((CorruptRogue) ai).stateMachine
+        : ai instanceof Goatman ? ((Goatman) ai).stateMachine
+        : null;
     if (machine != null && (machine.getClass() != CheckpointStateMachine.class
         || !Objects.equals(((CheckpointStateMachine<?>) machine).getOwner(), ai.entityId))) {
       throw new IllegalStateException("AI state machine owner mismatch");
@@ -203,6 +218,13 @@ public final class AiRuntimeState {
     else if (ai instanceof Brute) { Brute a = (Brute) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
     else if (ai instanceof Zombie) { Zombie a = (Zombie) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
     else if (ai instanceof Skeleton) { Skeleton a = (Skeleton) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.targetId); }
+    else if (ai instanceof Baboon) { Baboon a = (Baboon) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); out.writeInt(a.aiParam1); out.writeInt(a.aiParam2); }
+    else if (ai instanceof Bighead) { Bighead a = (Bighead) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
+    else if (ai instanceof BloodHawk) { BloodHawk a = (BloodHawk) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); }
+    else if (ai instanceof ClawViper) { ClawViper a = (ClawViper) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); }
+    else if (ai instanceof CorruptLancer) { CorruptLancer a = (CorruptLancer) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeBoolean(a.ranToTarget); }
+    else if (ai instanceof CorruptRogue) { CorruptRogue a = (CorruptRogue) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
+    else if (ai instanceof Goatman) { Goatman a = (Goatman) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
     else if (ai instanceof Regurgitator) ((Regurgitator) ai).checkpointFood(world).write(out);
   }
   private static NativeEntityReferenceCheckpoint readSpecific(AI ai, DataInputStream in, boolean apply, World world) throws IOException {
@@ -212,6 +234,13 @@ public final class AiRuntimeState {
     else if (ai instanceof Brute) { Brute a = (Brute) ai; float[] t = fsm(in, a.stateMachine, Brute.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
     else if (ai instanceof Zombie) { Zombie a = (Zombie) ai; float[] t = fsm(in, a.stateMachine, Zombie.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
     else if (ai instanceof Skeleton) { Skeleton a = (Skeleton) ai; float[] t = fsm(in, a.stateMachine, Skeleton.State.values(), apply); int target = in.readInt(); if (target < -1) throw new IllegalArgumentException("AI target"); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.targetId = target; } }
+    else if (ai instanceof Baboon) { Baboon a = (Baboon) ai; float[] t = fsm(in, a.stateMachine, Baboon.State.values(), apply); int p0 = in.readInt(), p1 = in.readInt(), p2 = in.readInt(); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p0; a.aiParam1 = p1; a.aiParam2 = p2; } }
+    else if (ai instanceof Bighead) { Bighead a = (Bighead) ai; float[] t = fsm(in, a.stateMachine, Bighead.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof BloodHawk) { BloodHawk a = (BloodHawk) ai; float[] t = fsm(in, a.stateMachine, BloodHawk.State.values(), apply); int p0 = in.readInt(); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p0; } }
+    else if (ai instanceof ClawViper) { ClawViper a = (ClawViper) ai; float[] t = fsm(in, a.stateMachine, ClawViper.State.values(), apply); int p0 = in.readInt(); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p0; } }
+    else if (ai instanceof CorruptLancer) { CorruptLancer a = (CorruptLancer) ai; float[] t = fsm(in, a.stateMachine, CorruptLancer.State.values(), apply); boolean ran = CheckpointIO.readBoolean(in); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.ranToTarget = ran; } }
+    else if (ai instanceof CorruptRogue) { CorruptRogue a = (CorruptRogue) ai; float[] t = fsm(in, a.stateMachine, CorruptRogue.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
+    else if (ai instanceof Goatman) { Goatman a = (Goatman) ai; float[] t = fsm(in, a.stateMachine, Goatman.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
     else if (ai instanceof Regurgitator) {
       NativeEntityReferenceCheckpoint reference = NativeEntityReferenceCheckpoint.read(in);
       if (apply) ((Regurgitator) ai).restoreFood(world, reference);
