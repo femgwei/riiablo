@@ -328,6 +328,9 @@ public class SerializationManager extends PassiveSystem {
         case ComponentP.StateP:
         case ComponentP.ObjectP:
         case ComponentP.SummonedPetP:
+        case ComponentP.MercenaryP:
+          // Network projections are not authoritative controller images.
+          // TARGETS v3 restores Mercenary runtime after structural settlement.
           break;
         default: {
           Class<? extends Component> clazz = deserializers[dataType];

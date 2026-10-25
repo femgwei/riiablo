@@ -69,6 +69,12 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   protected CombatPositionHistory positionHistory;
 
   private final IntMap<Float> repathCooldown = new IntMap<>();
+  public java.util.Map<Integer, Float> checkpointRepathCooldowns() {
+    return RuntimeCooldowns.capture(repathCooldown);
+  }
+  public void restoreRepathCooldowns(java.util.Map<Integer, Float> timers) {
+    RuntimeCooldowns.restore(repathCooldown, timers);
+  }
   private final Vector2 landing = new Vector2();
   private volatile int teleportCount;
   private volatile int followCount;
@@ -81,6 +87,11 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     // AI path; only the Valkyrie pet type enters this system.
     super(Aspect.all(Position.class, MapWrapper.class)
         .one(Mercenary.class, SummonedPet.class));
+  }
+
+  @Override
+  protected void initialize() {
+    RuntimeCooldowns.clearOnDeletion(world, repathCooldown);
   }
 
   @Override

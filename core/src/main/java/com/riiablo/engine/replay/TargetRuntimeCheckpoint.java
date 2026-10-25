@@ -14,7 +14,7 @@ import java.util.*;
  * Detached component-owned memberships are not imported into this registry.
  */
 public final class TargetRuntimeCheckpoint {
-  private static final int VERSION = 2;
+  private static final int VERSION = 3;
   public static final int MAX_BYTES = 64 * 1024 * 1024;
   private final byte[] bytes;
   private TargetRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
@@ -22,6 +22,8 @@ public final class TargetRuntimeCheckpoint {
   public Set<Integer> entityIds() { return Collections.unmodifiableSet(decode().entities.keySet()); }
   /** False for v1: absence means uncovered, not an empty command/path image. */
   public boolean hasAiControlRuntime() { return decode().aiControl != null; }
+  /** Null for v1/v2, which did not cover hireling components or system retry clocks. */
+  public CompanionRuntimeCheckpoint companionRuntime() { return decode().companions; }
 
   public static TargetRuntimeCheckpoint fromBytes(byte[] bytes) {
     if (bytes == null || bytes.length == 0 || bytes.length > MAX_BYTES) {
@@ -91,6 +93,8 @@ public final class TargetRuntimeCheckpoint {
       }
       byte[] ai = AiControlRuntimeCheckpoint.capture(world, ids).bytes();
       out.writeInt(ai.length); out.write(ai);
+      byte[] companions = CompanionRuntimeCheckpoint.capture(world, ids).bytes();
+      out.writeInt(companions.length); out.write(companions);
       out.flush(); return fromBytes(bytes.toByteArray());
     } catch (IOException impossible) { throw new IllegalStateException(impossible); }
   }
@@ -106,6 +110,8 @@ public final class TargetRuntimeCheckpoint {
       }
     }
     if (d.aiControl != null) d.aiControl.validateRestore(world);
+    if (d.companions != null) d.companions.validateRestore(world);
+    if (d.companions != null) d.companions.restore(world);
     slots.restoreCheckpoint(d.slots);
     for (Map.Entry<Integer, Entry> entry : d.entities.entrySet()) {
       int id = entry.getKey(); Entry e = entry.getValue();
@@ -139,7 +145,7 @@ public final class TargetRuntimeCheckpoint {
     try {
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
       int version = in.readInt();
-      if (version != 1 && version != VERSION) throw new IllegalArgumentException("target runtime version");
+      if (version < 1 || version > VERSION) throw new IllegalArgumentException("target runtime version");
       long sequence = in.readLong();
       int[] heads = new int[NativePlayerTargetSlots.SLOT_COUNT];
       long[] orders = new long[heads.length];
@@ -189,6 +195,15 @@ public final class TargetRuntimeCheckpoint {
           throw new IllegalArgumentException("AI control host coverage mismatch");
         }
       }
+      if (version >= 3) {
+        int length = CheckpointIO.count(in, CompanionRuntimeCheckpoint.MAX_BYTES);
+        if (length == 0 || length > in.available()) throw new IllegalArgumentException("companion runtime length");
+        byte[] image = new byte[length]; in.readFully(image);
+        d.companions = CompanionRuntimeCheckpoint.fromBytes(image);
+        if (!d.companions.entityIds().equals(d.entities.keySet())) {
+          throw new IllegalArgumentException("companion host coverage mismatch");
+        }
+      }
       if (in.read() != -1) throw new IllegalArgumentException("trailing target runtime");
       return d;
     } catch (IOException e) { throw new IllegalArgumentException("truncated target runtime", e); }
@@ -199,6 +214,7 @@ public final class TargetRuntimeCheckpoint {
     int[] override;
   }
   private static final class Decoded {
+    CompanionRuntimeCheckpoint companions;
     AiControlRuntimeCheckpoint aiControl;
     NativePlayerTargetSlots.Checkpoint slots;
     final Map<Integer, Entry> entities = new TreeMap<>();

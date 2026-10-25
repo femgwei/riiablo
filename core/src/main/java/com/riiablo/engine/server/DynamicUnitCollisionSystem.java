@@ -697,6 +697,20 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     return grid.move(moverId, Engine.INVALID_ENTITY, x, y, size, sameSpaceBlocker(moverId));
   }
 
+  /** Legacy map compatibility: a cross-zone pet arrives in the owner's space,
+   * not its old zone. Native RoomEx/shared-bit relocation keeps its existing path.
+   * The caller commits MapWrapper/Position immediately after a successful reservation.
+   */
+  public boolean tryLand(int moverId, Map.Zone destination, int x, int y, int size) {
+    Map.Zone source = zoneOf(moverId);
+    if (destination != null && destination != source && !nativeZone(source) && !nativeZone(destination)) {
+      return !enabled || !hasPresence(moverId)
+          || grid.move(moverId, Engine.INVALID_ENTITY, x, y, size,
+              other -> sharesCollisionSpace(destination, other));
+    }
+    return tryLand(moverId, x, y, size);
+  }
+
   /** Transfers a unit to a destination without pushing another unit. */
   public boolean tryMove(int entityId, Vector2 destination) {
     if (!enabled || destination == null) return true;

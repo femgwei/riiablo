@@ -38,6 +38,20 @@ public final class MercenarySkillSystem extends IteratingSystem {
   private final IntMap<Float> blockLogCooldown = new IntMap<>();
   private final IntMap<Integer> lastBlockedStage = new IntMap<>();
 
+  public java.util.Map<Integer, Float> checkpointSkillCooldowns() {
+    return RuntimeCooldowns.capture(cooldown);
+  }
+  public void restoreSkillCooldowns(java.util.Map<Integer, Float> timers) {
+    RuntimeCooldowns.restore(cooldown, timers);
+  }
+
+  @Override
+  protected void removed(int entityId) {
+    cooldown.remove(entityId);
+    blockLogCooldown.remove(entityId);
+    lastBlockedStage.remove(entityId);
+  }
+
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Position> mPosition;
@@ -68,6 +82,7 @@ public final class MercenarySkillSystem extends IteratingSystem {
 
   @Override
   protected void initialize() {
+    RuntimeCooldowns.clearOnDeletion(world, cooldown, blockLogCooldown, lastBlockedStage);
     targets = world.getAspectSubscriptionManager().get(
         Aspect.all(Monster.class, Position.class, AttributesWrapper.class));
     table = NativeHirelingExperienceTable.load();

@@ -153,7 +153,7 @@ class TargetRuntimeCheckpointTest {
         assertThrows(IllegalArgumentException.class, () -> TargetRuntimeCheckpoint.fromBytes(truncated));
       }
       assertThrows(IllegalArgumentException.class, () -> TargetRuntimeCheckpoint.fromBytes(Arrays.copyOf(bytes, bytes.length + 1)));
-      byte[] bad = bytes.clone(); bad[3] = 3; final byte[] versionImage = bad;
+      byte[] bad = bytes.clone(); bad[3] = 4; final byte[] versionImage = bad;
       assertThrows(IllegalArgumentException.class, () -> TargetRuntimeCheckpoint.fromBytes(versionImage));
       // version + sequence + eight slots + attempts count/one ID + entity count/ID.
       int firstBoolean = 4 + 8 + 8 * 12 + 4 + 4 + 4 + 4;
@@ -201,7 +201,8 @@ class TargetRuntimeCheckpointTest {
       for (Fixture f : new Fixture[] {source, target}) { f.player(); f.world.process(); }
       TargetRuntimeCheckpoint saved = TargetRuntimeCheckpoint.capture(source.world, new int[] {0});
       assertTrue(saved.hasAiControlRuntime());
-      int suffix = 4 + AiControlRuntimeCheckpoint.capture(source.world, new int[] {0}).bytes().length;
+      int suffix = 4 + AiControlRuntimeCheckpoint.capture(source.world, new int[] {0}).bytes().length
+          + 4 + saved.companionRuntime().bytes().length;
       byte[] v1 = Arrays.copyOf(saved.bytes(), saved.bytes().length - suffix);
       ByteBuffer.wrap(v1).putInt(1);
       TargetRuntimeCheckpoint legacy = TargetRuntimeCheckpoint.fromBytes(v1);

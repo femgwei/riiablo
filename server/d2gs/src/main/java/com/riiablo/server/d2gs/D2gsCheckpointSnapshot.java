@@ -29,6 +29,12 @@ import com.riiablo.engine.replay.SimulationCheckpoint;
 import com.riiablo.engine.replay.MissileRuntimeCheckpoint;
 import com.riiablo.engine.replay.UnitStateRuntimeCheckpoint;
 import com.riiablo.engine.replay.TargetRuntimeCheckpoint;
+import com.riiablo.engine.replay.CompanionRuntimeCheckpoint;
+import com.riiablo.engine.server.component.Mercenary;
+import com.google.flatbuffers.ByteBufferUtil;
+import com.riiablo.net.packet.d2gs.ComponentP;
+import com.riiablo.net.packet.d2gs.EntitySync;
+import com.riiablo.net.packet.d2gs.MercenaryP;
 import com.riiablo.save.D2SCheckpoint;
 import com.riiablo.save.CharData;
 import com.riiablo.net.packet.d2gs.D2GS;
@@ -355,6 +361,8 @@ public final class D2gsCheckpointSnapshot {
       if (!targetRuntime.entityIds().equals(copy.keySet())) {
         throw new IllegalArgumentException("target runtime coverage mismatch");
       }
+      CompanionRuntimeCheckpoint companions = targetRuntime.companionRuntime();
+      if (companions != null) validateCompanionProjections(companions, copy);
       canonical.append("|target-runtime:").append(digest(targetRuntime.bytes()));
     }
     SimulationCheckpoint summary = SimulationCheckpoint.of(tick, digest(canonical.toString()),
@@ -364,6 +372,27 @@ public final class D2gsCheckpointSnapshot {
   }
 
   public long tick() { return tick; }
+
+  private static void validateCompanionProjections(CompanionRuntimeCheckpoint companions, Map<Integer, byte[]> payloads) {
+    Map<Integer, Mercenary> projections = new TreeMap<>();
+    for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
+      D2GS packet = D2GS.getRootAsD2GS(ByteBufferUtil.removeSizePrefix(ByteBuffer.wrap(entry.getValue())));
+      EntitySync sync = (EntitySync) packet.data(new EntitySync());
+      Mercenary projection = null;
+      for (int i = 0; i < sync.componentTypeLength(); i++) {
+        if (sync.componentType(i) != ComponentP.MercenaryP) continue;
+        if (projection != null) throw new IllegalArgumentException("duplicate hireling projection");
+        MercenaryP p = (MercenaryP) sync.component(new MercenaryP(), i);
+        projection = new Mercenary();
+        projection.ownerId = p.ownerId(); projection.mercType = p.mercType(); projection.hirelingId = p.hirelingId();
+        projection.level = p.level(); projection.seed = p.seed(); projection.nameId = p.nameId();
+        projection.experience = p.experience(); projection.flags = (int) p.flags();
+        projection.progressionRevision = p.progressionRevision(); projection.equipmentRevision = p.equipmentRevision();
+      }
+      projections.put(entry.getKey(), projection);
+    }
+    companions.validateMercenaryProjections(projections);
+  }
   public SimulationCheckpoint summary() { return summary; }
   public D2SCheckpoint d2sCheckpoint() { return d2sCheckpoint; }
   public AuthoritativeSessionRegistry.Snapshot sessionSnapshot() { return sessionSnapshot; }

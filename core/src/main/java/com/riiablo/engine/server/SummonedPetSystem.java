@@ -66,8 +66,16 @@ public class SummonedPetSystem extends IteratingSystem {
   private final Vector2 landingProbe = new Vector2();
   private final IntMap<Float> regroupRetry = new IntMap<>();
 
+  public java.util.Map<Integer, Float> checkpointRegroupCooldowns() {
+    return RuntimeCooldowns.capture(regroupRetry);
+  }
+  public void restoreRegroupCooldowns(java.util.Map<Integer, Float> timers) {
+    RuntimeCooldowns.restore(regroupRetry, timers);
+  }
+
   @Override
   protected void initialize() {
+    RuntimeCooldowns.clearOnDeletion(world, regroupRetry);
     dynamicCollision = world.getSystem(DynamicUnitCollisionSystem.class);
   }
 
@@ -172,7 +180,7 @@ public class SummonedPetSystem extends IteratingSystem {
           if (regroup && readyToRegroup(entityId, !sameZone)) {
             if (findOwnerLanding(ownerMap.zone, ownerPosition, footprint,
                 warpPosition, landingProbe, (x, y) -> collisionSystem() == null
-                    || collisionSystem().tryLand(entityId, x, y, footprint))) {
+                    || collisionSystem().tryLand(entityId, ownerMap.zone, x, y, footprint))) {
               relocate(entityId, pet, petMap, ownerMap, warpPosition, distance,
                   sameZone ? "regroup" : "warp");
             } else if (!sameZone) {

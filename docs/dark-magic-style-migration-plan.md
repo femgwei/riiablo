@@ -3163,6 +3163,87 @@ slotReuse=true、generationAwareCommand=true；仍是同进程 TCP 门禁，
 任务、Map/RoomEx、NPC 服务/交易、本地实体、完整内容 digest、结构订阅副作用及
 真实 socket 跨进程接管。M8-A、M8-D 和 M8 总体继续进行中。
 
+### M8-A 第 41 批：雇佣兵组件与伴随单位系统重试时钟（2026-10-26）
+
+本批合并雇佣兵组件、跟随/技能重试、召唤物重聚重试的恢复适配。
+TARGETS 升至 v3，内嵌 companion-runtime v1；AI v1、wrapper v1、unit-state v4、
+D2GC v7 不变。旧 TARGETS v1/v2 仍可读取，companionRuntime=null 明确表示未覆盖，
+不会用缺失镜像清空目标雇佣兵或系统时钟。
+
+- 保存 Mercenary 的 presence、ownerId、mercType、原始 hirelingId（保留 -1 回退）、
+  level/seed/nameId、experience/flags、progression/equipment revision、六槽 skills/
+  skillLevels，以及 aiRngState、aiChanceParam、targetId。零 RNG 状态与原始机会参数
+  不被重新播种或重算；现有组件及 final 数组原地写回。缺失组件按镜像创建/移除，
+  不调用 set、技能初始化、雇佣/复活服务、目标插入或战斗动作。
+- nativeTargetNode/private fallback 不作为独立对象图复制，仍由 TARGETS 恢复共享
+  节点和所属 World 的事件域；采集拒绝 detached membership。owner 必须在镜像内，
+  当前活跃 target 不能漏出镜像；targetId 仍是会在下一次技能决策重查的软 ID，
+  不新增跨 lifetime 引用保证，已失效的软目标可以保留。
+- MercenaryFollowSystem.repathCooldown、MercenarySkillSystem.cooldown、
+  SummonedPetSystem.regroupRetry 全量保存，包括空 map、未存条目与显式零值的区别。
+  浮点保留原始有限位型（包括负零），拒绝负余量、NaN/Infinity、重复/负 ID、
+  未覆盖时钟宿主。完整替换目标时钟，不 tick、不消费 RNG、不改现有重试算法。
+- 镜像见证三个系统的 presence，恢复要求装配一致；所有实体和计时宿主先预检，
+  再允许 TARGETS 回退 sequence 或修改节点/组件。跟随时钟要求具备 Position/
+  MapWrapper 的雇佣兵或有效 Valkyrie；技能时钟要求 Mercenary/Monster/Position；
+  召唤物重聚时钟要求目标已有 SummonedPet 控制器。本批不凭时钟构造召唤物。
+- 修复 MercenarySkillSystem 缺少 removed 清理：移除/删除宿主后清空技能冷却及
+  日志节流条目，避免回收 ID 继承旧冷却。日志节流、计数器与 scratch 向量不是
+  游戏权威时钟，不进入镜像，也不以它们宣称诊断输出可逐字回放。
+  三个系统额外监听全部实体的删除：工厂实体已发布、checkpoint 新增控制器尚未
+  进入各组件 aspect 时发生回滚删除，也必须清除刚恢复的时钟，不能只依赖
+  IteratingSystem.removed。新增此边角的定向测试及空 World 晚期失败回滚回归。
+- D2GS 将 MercenaryP 作为网络投影，避免反序列化落入尚未实现的 getData；
+  TARGETS v3 的完整 Mercenary overlay 负责恢复。在构造/读盘 checkpoint 时，
+  对网络投影与运行态的 presence、身份、经验、flags 和 revision 做交叉校验，
+  拒绝冲突/重复投影。运行态与时钟进入现有 TARGETS canonical 摘要和文件见证。
+  legacy 无 companion overlay 的包仍仅是子集，不获得完整雇佣兵恢复保证。
+- 扩大回归发现并修复既有 legacy 地图跨 Zone 重聚落点缺口：预留落点必须按主人
+  的目标 Zone 过滤阻挡者，不能按宠物旧 Zone 忽略已抵达的前一只宠物。沿用现有
+  多狼回归验证同/跨 Zone 的分离、阻挡和刷新后占位；原生 RoomEx/shared-bit 分支
+  保持不变，此项不宣称完整原生跨区碰撞恢复。
+
+原版依据：D2MOO source/D2Game/src/AI/AiThink.cpp 的 Fn061_Hireable、
+D2GAME_PETAI_PetMove_6FCE3EE0、sub_6FCE4610、sub_6FCE4830。
+原版依赖主人、AI-control param0、unit pSeed、Hireling.txt 和调度事件；本批保留
+宿主已有独立兼容 RNG 与浮点重试计时，不改用原生 pSeed，也不宣称调度/战斗行为
+与原版完全等价。
+
+验收：Mercenary 全字段策略守卫、逐标量/数组/共享节点往返、组件 presence/absence、
+零 RNG 与 -1 hirelingId、计时负零/空 map、World 隔离、完整截断与非法镜像拒绝、
+系统装配/晚宿主缺失的预检零写入、旧 v1/v2 未覆盖语义、删除清理和 ID 回收；
+真实 ECS 验证跟随冷却同 Tick 到期、技能重试/RNG 100 步续跑，召唤重聚重试在
+目标已有控制器时保持到期语义，缺控制器时拒绝。
+
+真实 D2GS 工厂验收包括雇佣兵在新/已有 World 恢复、组件及 final 数组身份保持、
+新 World/独立 JVM 各 100 步继续真实 MercenarySkillSystem/Actioneer 决策，逐步
+比较 canonical、原生 unit RNG 和 D2S；私有机会参数改变摘要但不改变网络 payload，
+有效 nested 目标 ID 篡改被文件见证拒绝，晚期 D2S 失败回滚现有/空 World 的
+实体、组件、时钟、TARGETS、RNG、D2S 与分配器。夹具主动结束 Casting/Sequence/
+Pathfind，不代表完整动作关键帧、命中/伤害或寻路游标验收。
+
+边界：完整 SummonedPet（spawnOrder 分配器、时长/死亡、陷阱/Inferno/Blade 控制、
+Iron Golem sourceItem、骨墙 controller）、MercenaryManager 的 active playerMercs/
+装备 Item 引用、NPC 候选名单及刷新时钟、NativeMercenaryRewardSystem 服务绑定、
+主人 CombatPositionHistory 路径环尚未覆盖；不能把完整 Mercenary 组件等同于
+完整雇佣服务/装备/控制器恢复。NPC 交互/交易与真实 socket 跨进程接管仍不在本批。
+
+定向命令（D2_HOME 指向本地 1.10f 资源）：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.replay.CompanionRuntimeCheckpointTest --tests com.riiablo.engine.replay.TargetRuntimeCheckpointTest --tests com.riiablo.engine.server.SummonedPetSystemTest :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --continue --no-daemon --max-workers=1 --console=plain
+```
+
+扩大回归沿用第 40 批范围，增加 companion runtime、雇佣/名单/原生经验表、
+Mercenary/SummonedPet serializer、跟随/重聚及 DynamicUnitCollisionSystem/
+UnitCollisionGrid 回归，并附带桌面编译、模块边界和三个真实 TCP gate。
+最终结果：core 1207 项、server/d2gs 85 项，共 1292 项通过，0 失败、0 错误、
+0 跳过；桌面编译、模块边界扫描及其 9 项工具自测、git diff --check 通过。
+TCP 门禁验证固定 Tick 5→35（30 步、40ms）、重连部分拾取剩余 15 金币且
+ownerWindowPreserved=true、旧 socket 延迟帧 delayedFrameDropped=true 且
+slotReuse=true、generationAwareCommand=true；仍是同进程 TCP 门禁，
+不代表真实 socket 跨进程接管完成。M8-A、M8-D 和 M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

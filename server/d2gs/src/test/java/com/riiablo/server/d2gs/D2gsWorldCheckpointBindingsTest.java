@@ -628,6 +628,136 @@ public class D2gsWorldCheckpointBindingsTest {
     }
   }
 
+  @Test public void hirelingRuntimeAndSystemClocksResumeInFactoryWorldAndIndependentJvm() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("companions.chk"); String expected;
+    try (Fixture source = new Fixture(false, false, false, true)) {
+      source.populate(); source.populateHirelingRuntime();
+      source.server.writeReplayCheckpoint(path); expected = continueCompanions(source);
+    }
+    assertEquals(expected, resumeCompanions(path));
+    Path output = temporary.getRoot().toPath().resolve("companions-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "companions").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("Companion child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  private static String resumeCompanions(Path path) throws Exception {
+    try (Fixture target = new Fixture(false, false, false, true)) {
+      D2gsCheckpointSnapshot image = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      assertEquals(image.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      return continueCompanions(target);
+    }
+  }
+
+  private static String continueCompanions(Fixture f) {
+    World world = f.server.world;
+    com.riiablo.engine.server.component.Mercenary merc = world.getMapper(
+        com.riiablo.engine.server.component.Mercenary.class).get(1);
+    assertNotNull(merc); assertEquals(0, merc.aiRngState); assertEquals(2, merc.targetId);
+    assertEquals(19L, merc.progressionRevision); assertEquals(23L, merc.equipmentRevision);
+    assertSame(world.getMapper(NativeTargetNode.class).get(1), merc.checkpointTargetNode());
+    com.riiablo.engine.server.MercenarySkillSystem skills = world.getSystem(com.riiablo.engine.server.MercenarySkillSystem.class);
+    StringBuilder result = new StringBuilder("COMPANIONS_CONTINUED");
+    int before = skills.castCount();
+    for (int frame = 0; frame < 100; frame++) {
+      f.server.simulation.tick(null, null);
+      if (frame < 3) assertEquals(before, skills.castCount());
+      // Controlled action-completion boundary; this does not claim Casting/Sequence keyframe recovery.
+      world.getMapper(com.riiablo.engine.server.component.Casting.class).remove(1);
+      world.getMapper(com.riiablo.engine.server.component.Sequence.class).remove(1);
+      world.getMapper(com.riiablo.engine.server.component.Pathfind.class).remove(1);
+      com.artemis.EntityAllocatorCheckpoint.flushStructure(world);
+      D2gsCheckpointSnapshot after = f.server.captureReplayCheckpoint();
+      result.append('|').append(merc.aiRngState).append(':').append(skills.castCount() - before)
+          .append(':').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
+    }
+    assertTrue("Hireling did not resume skill decisions", skills.castCount() - before > 1);
+    return result.toString();
+  }
+
+  private static int indexOf(byte[] bytes, byte[] needle) {
+    outer: for (int offset = 0; offset <= bytes.length - needle.length; offset++) {
+      for (int i = 0; i < needle.length; i++) if (bytes[offset + i] != needle[i]) continue outer;
+      return offset;
+    }
+    return -1;
+  }
+
+  @Test public void hirelingRuntimeChangesAreCanonicalAndConflictingNetworkProjectionIsRejected() throws Exception {
+    try (Fixture source = new Fixture(false, false, false, true)) {
+      source.populate(); source.populateHirelingRuntime();
+      D2gsCheckpointSnapshot before = source.server.captureReplayCheckpoint();
+      com.riiablo.engine.server.component.Mercenary merc = source.server.world.getMapper(
+          com.riiablo.engine.server.component.Mercenary.class).get(1);
+      merc.aiChanceParam += 10;
+      D2gsCheckpointSnapshot privateChange = source.server.captureReplayCheckpoint();
+      for (int id : before.payloads().keySet()) assertArrayEquals(before.payloads().get(id), privateChange.payloads().get(id));
+      assertNotEquals(before.summary().canonical(), privateChange.summary().canonical());
+      source.server.world.getSystem(com.riiablo.engine.server.MercenarySkillSystem.class)
+          .restoreSkillCooldowns(java.util.Collections.singletonMap(1, .17f));
+      D2gsCheckpointSnapshot timerChange = source.server.captureReplayCheckpoint();
+      for (int id : before.payloads().keySet()) assertArrayEquals(before.payloads().get(id), timerChange.payloads().get(id));
+      assertNotEquals(privateChange.summary().canonical(), timerChange.summary().canonical());
+      merc.level++;
+      D2gsCheckpointSnapshot changedProjection = source.server.captureReplayCheckpoint();
+      try { changedProjection.withTargetRuntime(before.targetRuntime()); fail("conflicting network/runtime mercenary accepted"); }
+      catch (IllegalArgumentException expected) { assertTrue(expected.getMessage().contains("hireling network/runtime")); }
+      merc.level--;
+      byte[] archive = before.toBytes(), targets = before.targetRuntime().bytes();
+      int offset = indexOf(archive, targets);
+      assertTrue(offset >= 0);
+      // Last record is absent hostile 2; mutate the prior mercenary's soft target ID, preserving nested schema.
+      byte[] nested = before.targetRuntime().companionRuntime().bytes();
+      int nestedOffset = indexOf(archive, nested); assertTrue(nestedOffset >= 0);
+      ByteBuffer.wrap(archive).putInt(nestedOffset + nested.length - 9, 0);
+      try { D2gsCheckpointSnapshot.fromBytes(archive); fail("valid nested runtime tamper accepted"); }
+      catch (IllegalArgumentException expected) {}
+    }
+  }
+
+  @Test public void hirelingLiveObjectsAndClocksSurviveLateD2sFailureInLiveAndEmptyWorlds() throws Exception {
+    try (Fixture source = new Fixture(false, false, false, true);
+        Fixture target = new Fixture(false, false, false, true); Fixture empty = new Fixture(false, false, false, true)) {
+      source.populate(); source.populateHirelingRuntime();
+      D2gsCheckpointSnapshot image = source.server.captureReplayCheckpoint();
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      com.riiablo.engine.server.component.Mercenary live = target.server.world.getMapper(
+          com.riiablo.engine.server.component.Mercenary.class).get(1);
+      int[] skills = live.skills; live.aiRngState = 987; live.aiChanceParam = 70;
+      target.server.world.getSystem(com.riiablo.engine.server.MercenarySkillSystem.class)
+          .restoreSkillCooldowns(java.util.Collections.singletonMap(1, .27f));
+      D2gsCheckpointSnapshot before = target.server.captureReplayCheckpoint();
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      assertSame(live, target.server.world.getMapper(com.riiablo.engine.server.component.Mercenary.class).get(1));
+      assertSame(skills, live.skills);
+      assertTrue(target.server.restoreReplayCheckpoint(before).success());
+      CharData impostor = CharData.loadFromBuffer(0, ByteBuffer.wrap(image.d2sCheckpoint().entry(0).bytes()));
+      impostor.name = "ImpostorHero";
+      D2SCheckpoint wrong = D2SCheckpoint.of(java.util.Collections.singletonMap(0,
+          D2SCheckpoint.entry(0, 0, new D2SWriter96().writeD2S(D2SWriter96.createD2S(impostor)))));
+      D2gsCheckpointSnapshot incoming = D2gsCheckpointSnapshot.fromPayloads(image.tick(), image.payloads(),
+          image.summary().rngStates(), image.summary().nativeUnitRngStates(), wrong, image.sessionSnapshot())
+          .withTargetRuntime(image.targetRuntime()).withUnitStateRuntime(image.unitStateRuntime())
+          .withAllocatorState(image.allocatorState());
+      for (Fixture f : new Fixture[] {target, empty}) {
+        D2gsCheckpointSnapshot previous = f.server.captureReplayCheckpoint();
+        try { f.server.restoreReplayCheckpoint(incoming); fail("late D2S failure must roll back companions"); }
+        catch (IllegalStateException expected) {}
+        assertEquals(previous.summary().canonical(), f.server.captureReplayCheckpoint().summary().canonical());
+      }
+      assertSame(live, target.server.world.getMapper(com.riiablo.engine.server.component.Mercenary.class).get(1));
+      assertSame(skills, live.skills); assertEquals(987, live.aiRngState);
+      assertEquals(.27f, target.server.world.getSystem(com.riiablo.engine.server.MercenarySkillSystem.class)
+          .checkpointSkillCooldowns().get(1), 0f);
+    }
+  }
+
   private static String continueNavi(Fixture f) {
     StringBuilder result = new StringBuilder("NAVI_CONTINUED"); int actions = 0;
     int before = f.server.world.getAspectSubscriptionManager().get(Aspect.all(Missile.class)).getEntities().size();
@@ -1870,7 +2000,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "navi".equals(args[3])
+      try { System.out.println(args.length > 3 && "companions".equals(args[3])
+          ? resumeCompanions(Path.of(args[0])) : args.length > 3 && "navi".equals(args[3])
           ? resumeNavi(Path.of(args[0])) : args.length > 3 && "sand-leaper".equals(args[3])
           ? resumeSandLeaper(Path.of(args[0])) : args.length > 3 && "sand-maggot".equals(args[3])
           ? resumeSandMaggot(Path.of(args[0])) : args.length > 3 && "legacy-baboon".equals(args[3])
@@ -1905,6 +2036,10 @@ public class D2gsWorldCheckpointBindingsTest {
     Fixture(boolean potions, boolean projectiles) { this(potions, projectiles, false); }
 
     Fixture(boolean potions, boolean projectiles, boolean states) {
+      this(potions, projectiles, states, false);
+    }
+
+    Fixture(boolean potions, boolean projectiles, boolean states, boolean companions) {
       WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
           .with(new net.mostlyoriginal.api.event.common.EventSystem(), new ItemManager(),
               new ObjectInteractor(), new WarpInteractor(), new ItemInteractor(), factory,
@@ -1913,6 +2048,9 @@ public class D2gsWorldCheckpointBindingsTest {
       if (potions) builder.with(new PotionRecoverySystem());
       if (states) builder.with(new com.riiablo.engine.server.StateUpdater());
       if (projectiles) builder.with(new com.riiablo.engine.server.MissileCollisionSystem());
+      if (companions) builder.with(new com.riiablo.engine.server.Actioneer(),
+          new com.riiablo.engine.server.MercenaryFollowSystem(), new com.riiablo.engine.server.MercenarySkillSystem(),
+          new com.riiablo.engine.server.SummonedPetSystem());
       server.world = new World(builder.build().register("factory", factory).register("map", map)
           .register("serverContext", new com.riiablo.engine.server.ServerGameplayContext(Riiablo.files, 1))
           .register("townPortalRegistry", new TownPortalRegistry()));
@@ -1963,6 +2101,26 @@ public class D2gsWorldCheckpointBindingsTest {
     }
 
     CharData data() { return server.world.getMapper(Player.class).get(0).data; }
+
+    void populateHirelingRuntime() {
+      World world = server.world;
+      assertEquals(1, factory.createMonster(Riiablo.files.monstats.get(rowForAi("Hireable")), 20f, 10f));
+      assertEquals(2, factory.createMonster(Riiablo.files.monstats.get("quillrat1"), 28f, 10f));
+      NativeTargetNode node = world.getMapper(NativeTargetNode.class).create(1);
+      node.usePlayerSlots(world.getSystem(NativePlayerTargetSlots.class));
+      com.riiablo.engine.server.component.Mercenary merc = world.getMapper(
+          com.riiablo.engine.server.component.Mercenary.class).create(1);
+      merc.bindNativeTargetNode(node).set(0, 0, 25, 12345, 7);
+      merc.hirelingId = 0; merc.experience = 123456; merc.flags = 0x80000001;
+      merc.progressionRevision = 19; merc.equipmentRevision = 23;
+      for (int i = 0; i < 6; i++) merc.setSkill(i, i == 0 ? 10 : -1, i == 0 ? 3 : 0);
+      com.artemis.EntityAllocatorCheckpoint.flushStructure(world);
+      merc.aiRngState = 0; merc.aiChanceParam = 20; merc.targetId = 2;
+      world.getSystem(com.riiablo.engine.server.MercenarySkillSystem.class)
+          .restoreSkillCooldowns(java.util.Collections.singletonMap(1, .13f));
+      world.getSystem(com.riiablo.engine.server.MercenaryFollowSystem.class)
+          .restoreRepathCooldowns(java.util.Collections.singletonMap(1, .29f));
+    }
 
     void populateDecisionAi() {
       populateDecisionAi("doomknight1");
