@@ -19,6 +19,8 @@ public class NativeTargetNode extends Component {
 
   public void usePlayerSlots(NativePlayerTargetSlots slots) { this.slots = slots; }
   public boolean boundTo(NativePlayerTargetSlots slots) { return this.slots == slots; }
+  /** Separate quota allocator; -1 denotes detached compatibility, never a World image. */
+  public long nextPetSpawnOrder() { return slots == null ? -1 : slots.nextPetSpawnOrder(); }
   /** Raw observation must not lazily detach a stale owner during capture. */
   public long[] checkpoint() { return new long[] {kind, ownerId, order}; }
   public void restoreCheckpoint(int kind, int ownerId, long order, NativePlayerTargetSlots slots) {

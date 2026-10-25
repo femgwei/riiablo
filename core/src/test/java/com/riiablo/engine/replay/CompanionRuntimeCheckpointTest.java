@@ -160,7 +160,7 @@ class CompanionRuntimeCheckpointTest {
         assertThrows(IllegalArgumentException.class, () -> CompanionRuntimeCheckpoint.fromBytes(truncated));
       }
       assertThrows(IllegalArgumentException.class, () -> CompanionRuntimeCheckpoint.fromBytes(Arrays.copyOf(bytes, bytes.length + 1)));
-      for (int offset : new int[] {3, 4, 5, 6, 15}) {
+      for (int offset : new int[] {4, 5, 6, 15}) {
         byte[] bad = bytes.clone(); bad[offset] = 2;
         assertThrows(IllegalArgumentException.class, () -> CompanionRuntimeCheckpoint.fromBytes(bad), "offset=" + offset);
       }
@@ -286,7 +286,7 @@ class CompanionRuntimeCheckpointTest {
     }
   }
 
-  @Test void summonRegroupRetryRestoresOnlyAgainstAnExistingController() throws Exception {
+  @Test void summonRegroupRetryRestoresTheControllerBeforeItsClocks() throws Exception {
     try (Fixture source = new Fixture(true); Fixture target = new Fixture(true)) {
       for (Fixture f : new Fixture[] {source, target}) {
         SummonedPet pet = f.world.getMapper(SummonedPet.class).create(1);
@@ -304,7 +304,9 @@ class CompanionRuntimeCheckpointTest {
         assertEquals(source.pets.checkpointRegroupCooldowns(), target.pets.checkpointRegroupCooldowns());
       }
       target.world.getMapper(SummonedPet.class).remove(1); EntityAllocatorCheckpoint.flushStructure(target.world);
-      assertThrows(IllegalStateException.class, () -> image.restore(target.world));
+      image.restore(target.world);
+      assertNotNull(target.world.getMapper(SummonedPet.class).get(1));
+      assertEquals(.13f, target.pets.checkpointRegroupCooldowns().get(1));
     }
   }
 

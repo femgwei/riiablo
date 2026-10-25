@@ -203,6 +203,12 @@ public final class TargetRuntimeCheckpoint {
         if (!d.companions.entityIds().equals(d.entities.keySet())) {
           throw new IllegalArgumentException("companion host coverage mismatch");
         }
+        SummonRuntimeCheckpoint summons = d.companions.summonRuntime();
+        if (summons != null) for (Map.Entry<Integer, SummonedPet> entry : summons.entries().entrySet()) {
+          if (entry.getValue() != null && d.entities.get(entry.getKey()).node == null) {
+            throw new IllegalArgumentException("summon requires shared target node");
+          }
+        }
       }
       if (in.read() != -1) throw new IllegalArgumentException("trailing target runtime");
       return d;

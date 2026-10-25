@@ -9,16 +9,18 @@ import com.riiablo.engine.server.component.*;
 import java.io.*;
 import java.util.*;
 
-/** Hireling component and world-owned companion retry clocks; nested in TARGETS v3.
- * Not summon controllers, equipment Item references, actions, or owner path history.
+/** Hireling/summon components and world-owned companion retry clocks; nested in TARGETS v3.
+ * Not equipment Item references, actions, or owner path history.
  */
 public final class CompanionRuntimeCheckpoint {
-  private static final int VERSION = 1;
-  public static final int MAX_BYTES = 16 * 1024 * 1024;
+  private static final int VERSION = 2;
+  public static final int MAX_BYTES = 48 * 1024 * 1024;
   private final byte[] bytes;
   private CompanionRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
   public byte[] bytes() { return bytes.clone(); }
   public Set<Integer> entityIds() { return Collections.unmodifiableSet(decode().mercenaries.keySet()); }
+  /** Null for companion v1: old archives did not cover summon controllers or quota. */
+  public SummonRuntimeCheckpoint summonRuntime() { return decode().summons; }
 
   public static CompanionRuntimeCheckpoint fromBytes(byte[] bytes) {
     if (bytes == null || bytes.length == 0 || bytes.length > MAX_BYTES) {
@@ -62,6 +64,8 @@ public final class CompanionRuntimeCheckpoint {
           writeMercenary(out, merc);
         }
       }
+      byte[] summons = SummonRuntimeCheckpoint.capture(world, ids).bytes();
+      out.writeInt(summons.length); out.write(summons);
       out.flush(); CompanionRuntimeCheckpoint result = fromBytes(bytes.toByteArray());
       result.validateRestore(world); return result;
     } catch (IOException impossible) { throw new IllegalStateException(impossible); }
@@ -97,10 +101,12 @@ public final class CompanionRuntimeCheckpoint {
     for (int id : d.mercenaries.keySet()) if (!world.getEntityManager().isActive(id)) {
       throw new IllegalStateException("companion host missing: " + id);
     }
+    if (d.summons != null) d.summons.validateRestore(world);
+    Map<Integer, SummonedPet> restoredPets = d.summons == null ? null : d.summons.entries();
     if (d.follow != null) for (int id : d.follow.keySet()) {
-      SummonedPet pet = world.getMapper(SummonedPet.class).get(id);
-      if ((d.mercenaries.get(id) == null && (pet == null || pet.passive || pet.boneWall
-          || !"valkyrie".equalsIgnoreCase(pet.petType)))
+      SummonedPet pet = restoredPets != null ? restoredPets.get(id) : world.getMapper(SummonedPet.class).get(id);
+      boolean valkyrie = pet != null && !pet.passive && !pet.boneWall && "valkyrie".equalsIgnoreCase(pet.petType);
+      if ((d.mercenaries.get(id) == null && !valkyrie)
           || !world.getMapper(Position.class).has(id) || !world.getMapper(MapWrapper.class).has(id)) {
         throw new IllegalStateException("follow timer host missing: " + id);
       }
@@ -112,8 +118,8 @@ public final class CompanionRuntimeCheckpoint {
       }
     }
     if (d.pets != null) for (int id : d.pets.keySet()) {
-      if (!world.getMapper(SummonedPet.class).has(id)) {
-        throw new IllegalStateException("summon regroup timer requires existing controller: " + id);
+      if (!(restoredPets != null ? restoredPets.get(id) != null : world.getMapper(SummonedPet.class).has(id))) {
+        throw new IllegalStateException("summon regroup timer requires covered controller: " + id);
       }
     }
   }
@@ -121,6 +127,7 @@ public final class CompanionRuntimeCheckpoint {
   /** Raw assignments only: never set(), insert a target node, seed RNG or tick a system. */
   public void restore(World world) {
     validateRestore(world); Decoded d = decode();
+    if (d.summons != null) d.summons.restore(world);
     for (Map.Entry<Integer, Mercenary> entry : d.mercenaries.entrySet()) {
       int id = entry.getKey(); Mercenary m = entry.getValue();
       if (m == null) world.getMapper(Mercenary.class).remove(id);
@@ -184,7 +191,8 @@ public final class CompanionRuntimeCheckpoint {
   private Decoded decode() {
     try {
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
-      if (in.readInt() != VERSION) throw new IllegalArgumentException("companion runtime version");
+      int version = in.readInt();
+      if (version < 1 || version > VERSION) throw new IllegalArgumentException("companion runtime version");
       Decoded d = new Decoded(); d.follow = readTimers(in); d.skills = readTimers(in); d.pets = readTimers(in);
       int count = CheckpointIO.count(in, 1000000), previous = -1;
       for (int i = 0; i < count; i++) {
@@ -200,11 +208,20 @@ public final class CompanionRuntimeCheckpoint {
           throw new IllegalArgumentException("companion timer outside checkpoint");
         }
       }
+      if (version >= 2) {
+        int length = CheckpointIO.count(in, SummonRuntimeCheckpoint.MAX_BYTES);
+        if (length == 0 || length > in.available()) throw new IllegalArgumentException("summon runtime length");
+        byte[] image = new byte[length]; in.readFully(image); d.summons = SummonRuntimeCheckpoint.fromBytes(image);
+        if (!d.summons.entityIds().equals(d.mercenaries.keySet())) {
+          throw new IllegalArgumentException("summon host coverage mismatch");
+        }
+      }
       if (in.read() != -1) throw new IllegalArgumentException("trailing companion runtime");
       return d;
     } catch (IOException e) { throw new IllegalArgumentException("truncated companion runtime", e); }
   }
   private static final class Decoded {
+    SummonRuntimeCheckpoint summons;
     Map<Integer, Float> follow, skills, pets;
     final Map<Integer, Mercenary> mercenaries = new TreeMap<>();
   }

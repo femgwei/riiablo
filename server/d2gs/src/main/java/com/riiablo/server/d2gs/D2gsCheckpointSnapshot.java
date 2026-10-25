@@ -375,11 +375,22 @@ public final class D2gsCheckpointSnapshot {
 
   private static void validateCompanionProjections(CompanionRuntimeCheckpoint companions, Map<Integer, byte[]> payloads) {
     Map<Integer, Mercenary> projections = new TreeMap<>();
+    Map<Integer, com.riiablo.engine.server.component.SummonedPet> pets = new TreeMap<>();
+    java.util.Set<Integer> unsummonable = new java.util.HashSet<>();
     for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
       D2GS packet = D2GS.getRootAsD2GS(ByteBufferUtil.removeSizePrefix(ByteBuffer.wrap(entry.getValue())));
       EntitySync sync = (EntitySync) packet.data(new EntitySync());
       Mercenary projection = null;
+      com.riiablo.engine.server.component.SummonedPet pet = null;
       for (int i = 0; i < sync.componentTypeLength(); i++) {
+        if (sync.componentType(i) == ComponentP.SummonedPetP) {
+          if (pet != null) throw new IllegalArgumentException("duplicate summon projection");
+          com.riiablo.net.packet.d2gs.SummonedPetP p = (com.riiablo.net.packet.d2gs.SummonedPetP)
+              sync.component(new com.riiablo.net.packet.d2gs.SummonedPetP(), i);
+          pet = new com.riiablo.engine.server.component.SummonedPet();
+          pet.ownerId = p.ownerId(); pet.petType = p.petType(); pet.skillId = p.skillId();
+          if (p.unsummonable()) unsummonable.add(entry.getKey());
+        }
         if (sync.componentType(i) != ComponentP.MercenaryP) continue;
         if (projection != null) throw new IllegalArgumentException("duplicate hireling projection");
         MercenaryP p = (MercenaryP) sync.component(new MercenaryP(), i);
@@ -390,8 +401,10 @@ public final class D2gsCheckpointSnapshot {
         projection.progressionRevision = p.progressionRevision(); projection.equipmentRevision = p.equipmentRevision();
       }
       projections.put(entry.getKey(), projection);
+      pets.put(entry.getKey(), pet);
     }
     companions.validateMercenaryProjections(projections);
+    if (companions.summonRuntime() != null) companions.summonRuntime().validateProjections(pets, unsummonable);
   }
   public SimulationCheckpoint summary() { return summary; }
   public D2SCheckpoint d2sCheckpoint() { return d2sCheckpoint; }

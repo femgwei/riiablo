@@ -3244,6 +3244,84 @@ ownerWindowPreserved=true、旧 socket 延迟帧 delayedFrameDropped=true 且
 slotReuse=true、generationAwareCommand=true；仍是同进程 TCP 门禁，
 不代表真实 socket 跨进程接管完成。M8-A、M8-D 和 M8 总体继续进行中。
 
+### M8-A 第 42 批：召唤物运行态、World 配额与 Inferno 续跑（2026-10-26）
+
+本批集中补齐 SummonedPet 的标量控制器镜像、组件 presence/absence、配额高水位和
+已有重聚时钟的联合恢复。companion-runtime 升至 v2，内嵌 summon-runtime v1；
+TARGETS v3、AI v1、wrapper v1、unit-state v4、D2GC v7 不变。
+companion v1 仍可读取，summonRuntime=null 表示未覆盖，不清空现有召唤物或配额。
+
+- 显式保存 owner/type/skill、被动标记、duration/elapsed、spawnOrder、unsummon
+  标记/原因、networkReplica、死亡标记/deadFrames、陷阱预算/已发射数/攻击余量、
+  Blade 方向/原点/目标坐标/关联 missile ID、Inferno 的 frame/sequence point/
+  end/remaining/pulse/target、Death Sentry 尸体记忆及骨墙 controller ID。
+  所有浮点保留有限原始位型（包括负零）；攻击、Inferno remaining 和 pulse cooldown
+  是可合法为负的 due counter，不截断归零。共享 NativeTargetNode 仍由 TARGETS
+  恢复和重绑，不保存 detached membership，不调用 set、插入目标节点或重新触发技能。
+- 生产 set 在绑定节点后使用所属 NativePlayerTargetSlots 的独立 petSpawnSequence，
+  不再消费进程级静态配额计数。quota 与 TARGETS 插入序列分开，保存已退休插入的
+  高水位，不能从现存宠物最大 spawnOrder 重建；其他 World 和客户端不能干扰配额。
+  目标 World 若还存在镜像外活召唤物，直接恢复也必须在零写入预检拒绝，不能围绕
+  未覆盖宠物回退配额；D2GS 正常事务先收敛网络实体集合，再应用此完整 World 镜像。
+  detached/custom-world 兼容调用保留旧序列，但不能冒充可恢复的生产 World 镜像。
+  零值/组件缺失保持原义；正 spawnOrder 必须唯一且不超过保存的高水位，溢出拒绝。
+- 先预检所有宿主、覆盖范围、共享节点、配额、有限数值和 Item 图边界，再写组件、
+  配额及系统时钟；已有 SummonedPet 对象原地恢复，缺失时创建，镜像缺失时移除。
+  重聚/女武神跟随时钟依据待恢复控制器预检，允许空 World 的正常工厂怪物在
+  TARGETS 阶段获得控制器，不再要求目标 World 预先拥有召唤物组件。
+- SummonedPetP 仅为网络投影，保持协议不变；D2GS 对 presence、owner/type、实际
+  ushort skill 投影及派生 unsummonable 标记交叉验证，拒绝重复/冲突。运行态和
+  quota 进入既有 canonical 摘要与文件见证，合法篡改高水位也会被外层见证拒绝。
+- Iron Golem 的非空 sourceItem 暂不复制：采集明确拒绝，恢复到携带该未覆盖图的
+  活对象也在预检拒绝，避免悄悄丢弃 Item 身份/属性/装备关系。其余字段有反射策略
+  守卫，新增字段不能无声漏出 codec。关联目标、尸体、Blade missile、骨墙控制器
+  保留原有软 ID 语义，活引用须被镜像覆盖；不新增跨 lifetime 引用安全保证。
+
+原版核对：D2MOO PlayerPets.cpp:260 的移除、:468 的配额满时移除链表头再尾插，
+AiThink.cpp:13880 的 Fn104 尸体记忆，SkillMonst.cpp:972 的 SrvDo095，以及
+SkillNec.cpp:1693/1811 的 MONUMOD_KILLMINIONSDEATH。本批恢复宿主现有表示，
+不改原有配额、死亡宽限、技能伤害公式，不将兼容浮点计时宣称为原版调度器复刻。
+
+验收：全字段往返、对象/共享节点身份、组件增删、空配额/退休高水位/World 隔离/
+溢出、负 due counter/负零、全截断/非法长度/布尔/数值/重复顺序拒绝、旧 companion
+v1 未覆盖语义、晚宿主缺失和 sourceItem 预检零写入；真实 SummonedPetSystem 验证
+到期、死亡宽限的同 Tick 退出和骨墙控制器联动。
+
+真实 1.10f D2GS factory 验收在 Inferno 序列第 4 帧写盘，新 World 与独立 JVM 各续跑
+60 Tick，逐 Tick 比较 canonical（含 unit RNG、状态、导弹、控制器、配额）与 D2S，
+实际生成脉冲并在预算耗尽后移除陷阱；同时验证召唤物死亡、骨墙控制器/从属段移除，
+恢复后下一 quota 分配保持一致。已有 World 保留组件对象身份；晚期 D2S 身份失败
+回滚现有/空 World 的实体、控制器、TARGETS、重聚时钟、quota、RNG、D2S 和分配器。
+
+定向命令（D2_HOME 指向本地 1.10f 资源）：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.replay.SummonRuntimeCheckpointTest --tests com.riiablo.engine.replay.CompanionRuntimeCheckpointTest --tests com.riiablo.engine.replay.TargetRuntimeCheckpointTest :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --no-daemon --max-workers=1 --console=plain
+```
+
+扩大回归覆盖 AI、checkpoint、状态、目标、召唤/陷阱/骨墙/佣兵、碰撞、真实 factory、
+RNG/D2S 及生命周期：core 1214 项、server/d2gs 88 项，共 1302 项通过，0 失败、
+0 错误、0 跳过；最终 quota/companion 39 项及真实 factory 53 项定向复测也全部
+通过（不重复计入总数），包括镜像外召唤物的零写入预检。
+桌面编译、模块边界扫描及 9 项工具自测、git diff --check 通过。
+
+```text
+./gradlew.bat :server:d2gs:headlessSimulationTick :server:d2gs:headlessReconnectGroundLoot :server:d2gs:headlessStaleTransport :server:d2gs:headlessSummonReconnect --continue --no-daemon --max-workers=1 --console=plain
+```
+
+四个真实 TCP gate 全部通过：固定 Tick 5→36（31 步、40ms）；部分拾取重连剩余
+15 金币且 ownerWindowPreserved=true；旧 socket delayedFrameDropped=true、
+slotReuse=true、generationAwareCommand=true；骷髅双客户端/观察端重连验证
+ownerSummonPreserved=true、observerSnapshotReplay=true。它们仍为同进程 TCP
+门禁，不代表真实 socket 跨进程接管完成。
+
+边界：sourceItem/装备 Item 图、MercenaryManager 服务/名单/刷新时钟/奖励绑定、
+主人 CombatPositionHistory、完整 Casting/Sequence/Leap/动态路径游标/冻结战斗记录、
+MovementModes/飞行碰撞/骑乘物理、任务、Map/RoomEx/NPC 服务/交易、本地实体、
+全局/未绑定 RNG、完整内容 digest、结构订阅副作用及真实 socket 跨进程接管仍未闭环。
+Blade 控制字段恢复不等于完整路径/命中验收；Inferno 门禁不是全技能动作关键帧验收。
+M8-A、M8-D 和 M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

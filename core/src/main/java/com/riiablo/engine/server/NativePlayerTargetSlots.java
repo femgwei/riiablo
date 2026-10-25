@@ -34,6 +34,19 @@ public class NativePlayerTargetSlots extends BaseEntitySystem {
   /** Only this world's target insertion domain. Detached compatibility lists
    * keep their legacy counter, but cannot enter this registry implicitly. */
   private long nextOrder;
+  // PLAYERPETS quota insertion is a different order domain from TARGETS.
+  // Kept on the World owner so another game/client cannot perturb eviction.
+  private long petSpawnSequence;
+
+  public long nextPetSpawnOrder() {
+    if (petSpawnSequence == Long.MAX_VALUE) throw new IllegalStateException("pet spawn order exhausted");
+    return ++petSpawnSequence;
+  }
+  public long checkpointPetSpawnSequence() { return petSpawnSequence; }
+  public void restorePetSpawnSequence(long sequence) {
+    if (sequence < 0) throw new IllegalArgumentException("pet spawn sequence");
+    petSpawnSequence = sequence;
+  }
 
   public long nextOrder() {
     if (nextOrder == Long.MAX_VALUE) throw new IllegalStateException("target order exhausted");

@@ -9,6 +9,7 @@ import com.riiablo.engine.server.NativeTargetOrder;
 @Transient
 @PooledWeaver
 public class SummonedPet extends Component {
+  /** Detached/custom-world compatibility only; production uses its bound World allocator. */
   private static long nextSpawnOrder;
 
   public int ownerId = -1;
@@ -90,6 +91,11 @@ public class SummonedPet extends Component {
 
   public SummonedPet set(int ownerId, String petType, int skillId, int skillLevel,
       boolean passive, int durationFrames) {
+    long worldOrder = nativeTargetNode == null ? -1 : nativeTargetNode.nextPetSpawnOrder();
+    if (worldOrder < 0 && nextSpawnOrder == Long.MAX_VALUE) {
+      throw new IllegalStateException("detached pet spawn order exhausted");
+    }
+    long allocatedOrder = worldOrder < 0 ? ++nextSpawnOrder : worldOrder;
     this.ownerId = ownerId;
     this.petType = petType;
     this.skillId = skillId;
@@ -97,7 +103,7 @@ public class SummonedPet extends Component {
     this.passive = passive;
     this.durationFrames = Math.max(0, durationFrames);
     elapsedFrames = 0f;
-    spawnOrder = ++nextSpawnOrder;
+    spawnOrder = allocatedOrder;
     if (nativeTargetNode == null) {
       // Standalone/custom-world compatibility; production binds before set.
       nativeTargetOrder = NativeTargetOrder.inserted();

@@ -681,6 +681,118 @@ public class D2gsWorldCheckpointBindingsTest {
     return result.toString();
   }
 
+  @Test public void summonControllersAndInfernoResumeInFactoryWorldAndIndependentJvm() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("summons.chk"); String expected;
+    try (Fixture source = new Fixture(false, false, false, true)) {
+      source.populate(); source.populateSummonRuntime();
+      source.server.writeReplayCheckpoint(path); expected = continueSummons(source);
+    }
+    assertEquals(expected, resumeSummons(path));
+    Path output = temporary.getRoot().toPath().resolve("summons-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "summons").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("Summon child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  private static String resumeSummons(Path path) throws Exception {
+    try (Fixture target = new Fixture(false, false, false, true)) {
+      D2gsCheckpointSnapshot image = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      assertEquals(image.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      return continueSummons(target);
+    }
+  }
+
+  private static String continueSummons(Fixture f) {
+    World world = f.server.world;
+    com.riiablo.engine.server.component.SummonedPet trap = world.getMapper(
+        com.riiablo.engine.server.component.SummonedPet.class).get(1);
+    assertNotNull(trap); assertTrue(trap.infernoChanneling); assertEquals(4, trap.infernoFrame);
+    assertEquals(1, trap.shotsFired); assertEquals(2, trap.infernoTargetId);
+    assertSame(world.getMapper(NativeTargetNode.class).get(1), trap.checkpointTargetNode());
+    StringBuilder result = new StringBuilder("SUMMONS_CONTINUED");
+    boolean pulse = false;
+    for (int frame = 0; frame < 60; frame++) {
+      f.server.simulation.tick(null, null);
+      int missiles = world.getAspectSubscriptionManager().get(Aspect.all(Missile.class)).getEntities().size();
+      pulse |= missiles > 0;
+      if (frame == 2) assertFalse(world.getEntityManager().isActive(3));
+      if (frame == 4) {
+        assertFalse(world.getEntityManager().isActive(4)); assertFalse(world.getEntityManager().isActive(5));
+      }
+      D2gsCheckpointSnapshot after = f.server.captureReplayCheckpoint();
+      result.append('|').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
+    }
+    assertTrue("Restored Inferno emitted no pulse", pulse);
+    assertFalse("Spent trap did not retire", world.getEntityManager().isActive(1));
+    NativePlayerTargetSlots slots = world.getSystem(NativePlayerTargetSlots.class);
+    assertEquals(7L, slots.nextPetSpawnOrder()); // 4 live/retired summons plus two retired insertions
+    result.append('|').append(slots.checkpointPetSpawnSequence());
+    return result.toString();
+  }
+
+  @Test public void summonRuntimeProjectionAndNestedFileWitnessRejectConflicts() throws Exception {
+    try (Fixture f = new Fixture(false, false, false, true)) {
+      f.populate(); f.populateSummonRuntime(); D2gsCheckpointSnapshot before = f.server.captureReplayCheckpoint();
+      com.riiablo.engine.server.component.SummonedPet trap = f.server.world.getMapper(
+          com.riiablo.engine.server.component.SummonedPet.class).get(1);
+      trap.infernoPulseCooldownFrames--;
+      D2gsCheckpointSnapshot privateChange = f.server.captureReplayCheckpoint();
+      for (int id : before.payloads().keySet()) assertArrayEquals(before.payloads().get(id), privateChange.payloads().get(id));
+      assertNotEquals(before.summary().canonical(), privateChange.summary().canonical());
+      trap.skillId++;
+      D2gsCheckpointSnapshot changed = f.server.captureReplayCheckpoint();
+      try { changed.withTargetRuntime(before.targetRuntime()); fail("conflicting summon projection accepted"); }
+      catch (IllegalArgumentException expected) { assertTrue(expected.getMessage().contains("summon network/runtime")); }
+      byte[] archive = before.toBytes(), nested = before.targetRuntime().companionRuntime().summonRuntime().bytes();
+      int offset = indexOf(archive, nested); assertTrue(offset >= 0);
+      ByteBuffer.wrap(archive).putLong(offset + 4, 100L); // valid larger quota high-water mark, invalid witness
+      try { D2gsCheckpointSnapshot.fromBytes(archive); fail("summon quota witness tamper accepted"); }
+      catch (IllegalArgumentException expected) {}
+    }
+  }
+
+  @Test public void summonComponentsQuotaAndRetryClocksRollBackAfterLateD2sFailure() throws Exception {
+    try (Fixture source = new Fixture(false, false, false, true);
+        Fixture target = new Fixture(false, false, false, true); Fixture empty = new Fixture(false, false, false, true)) {
+      source.populate(); source.populateSummonRuntime(); D2gsCheckpointSnapshot image = source.server.captureReplayCheckpoint();
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      com.riiablo.engine.server.component.SummonedPet live = target.server.world.getMapper(
+          com.riiablo.engine.server.component.SummonedPet.class).get(1);
+      live.infernoRemainingFrames = -7;
+      target.server.world.getSystem(NativePlayerTargetSlots.class).nextPetSpawnOrder();
+      target.server.world.getSystem(com.riiablo.engine.server.SummonedPetSystem.class)
+          .restoreRegroupCooldowns(java.util.Collections.singletonMap(3, .37f));
+      D2gsCheckpointSnapshot before = target.server.captureReplayCheckpoint();
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      assertSame(live, target.server.world.getMapper(com.riiablo.engine.server.component.SummonedPet.class).get(1));
+      assertTrue(target.server.restoreReplayCheckpoint(before).success());
+      CharData impostor = CharData.loadFromBuffer(0, ByteBuffer.wrap(image.d2sCheckpoint().entry(0).bytes()));
+      impostor.name = "ImpostorHero";
+      D2SCheckpoint wrong = D2SCheckpoint.of(java.util.Collections.singletonMap(0,
+          D2SCheckpoint.entry(0, 0, new D2SWriter96().writeD2S(D2SWriter96.createD2S(impostor)))));
+      D2gsCheckpointSnapshot incoming = D2gsCheckpointSnapshot.fromPayloads(image.tick(), image.payloads(),
+          image.summary().rngStates(), image.summary().nativeUnitRngStates(), wrong, image.sessionSnapshot())
+          .withTargetRuntime(image.targetRuntime()).withUnitStateRuntime(image.unitStateRuntime())
+          .withAllocatorState(image.allocatorState());
+      for (Fixture f : new Fixture[] {target, empty}) {
+        D2gsCheckpointSnapshot previous = f.server.captureReplayCheckpoint();
+        try { f.server.restoreReplayCheckpoint(incoming); fail("late D2S failure must roll back summons"); }
+        catch (IllegalStateException expected) {}
+        assertEquals(previous.summary().canonical(), f.server.captureReplayCheckpoint().summary().canonical());
+      }
+      assertSame(live, target.server.world.getMapper(com.riiablo.engine.server.component.SummonedPet.class).get(1));
+      assertEquals(-7, live.infernoRemainingFrames);
+      assertEquals(.37f, target.server.world.getSystem(com.riiablo.engine.server.SummonedPetSystem.class)
+          .checkpointRegroupCooldowns().get(3), 0f);
+    }
+  }
+
   private static int indexOf(byte[] bytes, byte[] needle) {
     outer: for (int offset = 0; offset <= bytes.length - needle.length; offset++) {
       for (int i = 0; i < needle.length; i++) if (bytes[offset + i] != needle[i]) continue outer;
@@ -715,7 +827,8 @@ public class D2gsWorldCheckpointBindingsTest {
       // Last record is absent hostile 2; mutate the prior mercenary's soft target ID, preserving nested schema.
       byte[] nested = before.targetRuntime().companionRuntime().bytes();
       int nestedOffset = indexOf(archive, nested); assertTrue(nestedOffset >= 0);
-      ByteBuffer.wrap(archive).putInt(nestedOffset + nested.length - 9, 0);
+      int hirelingPrefixLength = nested.length - 4 - before.targetRuntime().companionRuntime().summonRuntime().bytes().length;
+      ByteBuffer.wrap(archive).putInt(nestedOffset + hirelingPrefixLength - 9, 0);
       try { D2gsCheckpointSnapshot.fromBytes(archive); fail("valid nested runtime tamper accepted"); }
       catch (IllegalArgumentException expected) {}
     }
@@ -2000,7 +2113,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "companions".equals(args[3])
+      try { System.out.println(args.length > 3 && "summons".equals(args[3])
+          ? resumeSummons(Path.of(args[0])) : args.length > 3 && "companions".equals(args[3])
           ? resumeCompanions(Path.of(args[0])) : args.length > 3 && "navi".equals(args[3])
           ? resumeNavi(Path.of(args[0])) : args.length > 3 && "sand-leaper".equals(args[3])
           ? resumeSandLeaper(Path.of(args[0])) : args.length > 3 && "sand-maggot".equals(args[3])
@@ -2050,7 +2164,7 @@ public class D2gsWorldCheckpointBindingsTest {
       if (projectiles) builder.with(new com.riiablo.engine.server.MissileCollisionSystem());
       if (companions) builder.with(new com.riiablo.engine.server.Actioneer(),
           new com.riiablo.engine.server.MercenaryFollowSystem(), new com.riiablo.engine.server.MercenarySkillSystem(),
-          new com.riiablo.engine.server.SummonedPetSystem());
+          new com.riiablo.engine.server.SummonedPetSystem(), new com.riiablo.engine.server.AssassinTrapSystem());
       server.world = new World(builder.build().register("factory", factory).register("map", map)
           .register("serverContext", new com.riiablo.engine.server.ServerGameplayContext(Riiablo.files, 1))
           .register("townPortalRegistry", new TownPortalRegistry()));
@@ -2120,6 +2234,37 @@ public class D2gsWorldCheckpointBindingsTest {
           .restoreSkillCooldowns(java.util.Collections.singletonMap(1, .13f));
       world.getSystem(com.riiablo.engine.server.MercenaryFollowSystem.class)
           .restoreRepathCooldowns(java.util.Collections.singletonMap(1, .29f));
+    }
+
+    void populateSummonRuntime() {
+      World world = server.world;
+      assertEquals(1, factory.createMonster(Riiablo.files.monstats.get("infernosentry"), 20f, 10f));
+      assertEquals(2, factory.createMonster(Riiablo.files.monstats.get("quillrat1"), 24f, 10f));
+      com.riiablo.engine.server.component.SummonedPet trap = attachSummon(1, "assassintrap", 272);
+      trap.maxShots = 1;
+      com.artemis.EntityAllocatorCheckpoint.flushStructure(world);
+      for (int tick = 0; tick < 5; tick++) server.simulation.tick(null, null);
+      assertTrue(trap.infernoChanneling); assertEquals(4, trap.infernoFrame);
+      for (int id = 3; id <= 5; id++) {
+        assertEquals(id, factory.createMonster(Riiablo.files.monstats.get("quillrat1"), 30f + id, 10f));
+        com.riiablo.engine.server.component.SummonedPet p = attachSummon(id, id == 3 ? "revive" : "bonewall", id == 3 ? 95 : 78);
+        if (id == 3) { p.unsummonPending = true; p.unsummonReason = "quota"; p.deadFrames = 22.5f; }
+        else {
+          p.boneWall = true; p.controllerId = 4;
+          if (id == 4) { p.unsummonPending = true; p.unsummonReason = "expired"; p.deadFrames = 21f; }
+        }
+      }
+      com.artemis.EntityAllocatorCheckpoint.flushStructure(world);
+      NativePlayerTargetSlots slots = world.getSystem(NativePlayerTargetSlots.class);
+      slots.nextPetSpawnOrder(); slots.nextPetSpawnOrder(); // retired entries must not be inferred from live max
+      world.getSystem(com.riiablo.engine.server.SummonedPetSystem.class)
+          .restoreRegroupCooldowns(java.util.Collections.singletonMap(3, .13f));
+    }
+
+    com.riiablo.engine.server.component.SummonedPet attachSummon(int id, String type, int skill) {
+      return server.world.getMapper(com.riiablo.engine.server.component.SummonedPet.class).create(id)
+          .bindNativeTargetNode(com.riiablo.engine.server.NativeTargetNodes.get(server.world, id))
+          .set(0, type, skill, 4, false, 0);
     }
 
     void populateDecisionAi() {
