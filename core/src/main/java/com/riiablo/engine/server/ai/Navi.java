@@ -21,6 +21,36 @@ public final class Navi extends Npc {
   private int burstRemaining;
   private NativeRng attackRng;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    AiRuntimeState.writeTimer(out, nextThink);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, burstPause); out.writeInt(burstRemaining);
+    out.writeBoolean(attackRng != null);
+    if (attackRng != null) {
+      NativeRng.Snapshot s = attackRng.snapshot();
+      com.riiablo.engine.replay.CheckpointIO.writeString(out, s.stream);
+      out.writeLong(s.contextId); out.writeInt(s.state); out.writeLong(s.drawCount);
+    }
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    float think = AiRuntimeState.readTimer(in);
+    float pause = com.riiablo.engine.replay.CheckpointIO.readFloat(in); int remaining = in.readInt();
+    if (pause < 0f || remaining < 0 || remaining > 2) throw new IllegalArgumentException("Navi burst state");
+    NativeRng.Snapshot rng = null;
+    if (com.riiablo.engine.replay.CheckpointIO.readBoolean(in)) {
+      rng = new NativeRng.Snapshot(com.riiablo.engine.replay.CheckpointIO.readString(in), in.readLong(), in.readInt(), in.readLong());
+      if (!"legacy".equals(rng.stream) || rng.contextId != -1L) throw new IllegalArgumentException("Navi RNG identity");
+    }
+    if (apply) {
+      nextThink = think; burstPause = pause; burstRemaining = remaining;
+      if (rng == null) attackRng = null;
+      else if (attackRng == null || !rng.stream.equals(attackRng.streamName())
+          || rng.contextId != attackRng.contextId()) attackRng = NativeRng.fromSnapshot(rng);
+      else attackRng.restore(rng);
+    }
+  }
+
   public Navi(int entityId) {
     super(entityId);
   }

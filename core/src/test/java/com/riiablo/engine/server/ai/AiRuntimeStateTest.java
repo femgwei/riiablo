@@ -41,7 +41,8 @@ class AiRuntimeStateTest {
       Mummy::new, MaggotLarva::new, PinHead::new, PantherWoman::new,
       Wraith::new, Fetish::new, SandMaggot::new,
       CorruptArcher::new, FallenShaman::new, FetishShaman::new, SandLeaper::new,
-      SandRaider::new, SkeletonBow::new, SkeletonMage::new, Vampire::new);
+      SandRaider::new, SkeletonBow::new, SkeletonMage::new, Vampire::new,
+      Npc::new, Navi::new, NecroPet::new, Hireable::new);
 
   @Test void allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects() throws Exception {
     for (IntFunction<AI> factory : SCHEMAS) {
@@ -50,6 +51,7 @@ class AiRuntimeStateTest {
         int value = 57;
         for (Field f : type.getDeclaredFields()) {
           if (Modifier.isStatic(f.getModifiers()) || Modifier.isFinal(f.getModifiers()) || f.getName().equals("entityId")) continue;
+          if (type == Npc.class && f.getName().equals("name")) continue; // Derived target table binding.
           f.setAccessible(true);
           if (f.getType() == int.class) f.setInt(source, value++);
           else if (f.getType() == byte.class) f.setByte(source, (byte) (value++ - 80));
@@ -61,6 +63,7 @@ class AiRuntimeStateTest {
         }
       }
       source.params = new int[] {1, -2, 3, 4, 5, 6, 7, 8};
+      if (source instanceof Navi) put(source, Navi.class, "burstRemaining", 2);
       put(source, AI.class, "specialAiRng", NativeRng.fromSnapshot(new NativeRng.Snapshot("private-control", 12, 0, 41)));
       put(source, AI.class, "aiSeed", new D2Seed(17, -123));
       setStates(source);
@@ -207,6 +210,10 @@ class AiRuntimeStateTest {
     expected.put(SkeletonBow.class, "tmpVec2 stateMachine nextAction time missile");
     expected.put(SkeletonMage.class, "tmpVec2 stateMachine nextAction time targetId missile");
     expected.put(Vampire.class, "enemyEntities tmpVec2 stateMachine nextAction time aiParam0 aiParam1 aiParam2");
+    expected.put(Npc.class, "mercenaries world tmpVec2 targetId actionTimer actionPerformed state name monstats");
+    expected.put(Navi.class, "nextThink burstPause burstRemaining attackRng");
+    expected.put(NecroPet.class, "skillBranch skillBranchConfigured nextThink targetId state");
+    expected.put(Hireable.class, "");
     for (Class<?> type : Arrays.asList(QuillMother.class, BloodLord.class, Catapult.class,
         DeathMauler.class, FrozenHorror.class, Griswold.class, HellMeteor.class, Minion.class, Smith.class)) expected.put(type, "");
     for (Class<?> type : Arrays.asList(Andariel.class, DoomKnight.class, FlyingScimitar.class, BaalMinion.class, Idle.class)) expected.put(type, "");
@@ -229,7 +236,7 @@ class AiRuntimeStateTest {
   }
 
   @Test void unsupportedTypesAndForeignOwnerOrConfigurationCannotBeRestored() {
-    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new Navi(2), 2));
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new Npc(2) {}, 2));
     assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new TrapNova(2) {}, 2));
     assertThrows(IllegalStateException.class, () -> AiRuntimeState.capture(new QuillRat(2), 1));
     AiRuntimeState image = AiRuntimeState.capture(new GenericMonster(2, "first"), 2);

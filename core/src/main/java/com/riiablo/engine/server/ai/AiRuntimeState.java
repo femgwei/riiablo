@@ -203,6 +203,10 @@ public final class AiRuntimeState {
       case "SkeletonBow": return new SkeletonBow(id);
       case "SkeletonMage": return new SkeletonMage(id);
       case "Vampire": return new Vampire(id);
+      case "Npc": return new Npc(id);
+      case "Navi": return new Navi(id);
+      case "NecroPet": return new NecroPet(id);
+      case "Hireable": return new Hireable(id);
       default: throw new IllegalArgumentException("unsupported AI checkpoint schema: " + type);
     }
   }
@@ -271,6 +275,7 @@ public final class AiRuntimeState {
     else if (ai instanceof SkeletonBow) { SkeletonBow a = (SkeletonBow) ai; fsm(out, a.stateMachine, a.nextAction, a.time); missile(out, a.missile); }
     else if (ai instanceof SkeletonMage) { SkeletonMage a = (SkeletonMage) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.targetId); missile(out, a.missile); }
     else if (ai instanceof Vampire) { Vampire a = (Vampire) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); out.writeInt(a.aiParam1); out.writeInt(a.aiParam2); }
+    else if (ai instanceof Npc) npc(out, (Npc) ai);
   }
   private static NativeEntityReferenceCheckpoint readSpecific(AI ai, DataInputStream in, boolean apply, boolean validateHost, World world) throws IOException {
     if (ai instanceof QuillRat) { QuillRat a = (QuillRat) ai; float[] t = fsm(in, a.stateMachine, QuillRat.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
@@ -306,7 +311,75 @@ public final class AiRuntimeState {
       if (apply) ((Regurgitator) ai).restoreFood(world, reference);
       return reference;
     }
+    else if (ai instanceof Npc) npc(in, (Npc) ai, apply, validateHost);
     return null;
+  }
+
+  /** Map AI paths are target-owned configuration, not a serialized movement path or NPC session. */
+  private static void npc(DataOutputStream out, Npc ai) throws IOException {
+    requireNpcSessionBoundary(ai);
+    out.writeInt(ai.targetId); writeTimer(out, ai.actionTimer); out.writeBoolean(ai.actionPerformed);
+    CheckpointIO.writeString(out, ai.state); CheckpointIO.writeString(out, ai.name);
+    out.writeBoolean(ai.monstats != null);
+    if (ai.monstats != null) { out.writeInt(ai.monstats.hcIdx); CheckpointIO.writeString(out, ai.monstats.Id); }
+    com.riiablo.map.DS1.Path path = npcPath(ai);
+    out.writeBoolean(path != null);
+    if (path == null) return;
+    if (path.numPoints < 0 || path.numPoints > 1024
+        || path.numPoints > 0 && (path.points == null || path.points.length < path.numPoints)) {
+      throw new IllegalStateException("NPC map AI path layout");
+    }
+    out.writeInt(path.numPoints); out.writeInt(path.x); out.writeInt(path.y);
+    for (int i = 0; i < path.numPoints; i++) {
+      com.riiablo.map.DS1.Path.Point point = path.points[i];
+      if (point == null) throw new IllegalStateException("NPC map AI path point");
+      out.writeInt(point.x); out.writeInt(point.y); out.writeInt(point.action);
+    }
+  }
+  private static void npc(DataInputStream in, Npc ai, boolean apply, boolean validateHost) throws IOException {
+    int cursor = in.readInt(); float timer = readTimer(in); boolean performed = CheckpointIO.readBoolean(in);
+    String state = CheckpointIO.readString(in), name = CheckpointIO.readString(in);
+    if (cursor < -1 || state == null) throw new IllegalArgumentException("NPC map AI state");
+    boolean row = CheckpointIO.readBoolean(in); int rowId = -1; String rowKey = null;
+    if (row) {
+      rowId = in.readInt(); rowKey = CheckpointIO.readString(in);
+      if (rowId < 0 || rowKey == null || rowKey.isEmpty()) throw new IllegalArgumentException("NPC table binding");
+    }
+    boolean present = CheckpointIO.readBoolean(in); int count = 0, x = 0, y = 0; int[] points = null;
+    if (present) {
+      count = CheckpointIO.count(in, 1024); x = in.readInt(); y = in.readInt(); points = new int[count * 3];
+      for (int i = 0; i < points.length; i++) points[i] = in.readInt();
+      if (count > 0 && cursor >= count) throw new IllegalArgumentException("NPC map AI cursor");
+    }
+    if (validateHost) {
+      requireNpcSessionBoundary(ai);
+      if (!Objects.equals(name, ai.name) || row != (ai.monstats != null)
+          || row && (ai.monstats.hcIdx != rowId || !rowKey.equals(ai.monstats.Id))) {
+        throw new IllegalStateException("NPC table binding mismatch");
+      }
+      com.riiablo.map.DS1.Path path = npcPath(ai);
+      if (present != (path != null) || present && (path.numPoints != count || path.x != x || path.y != y
+          || count > 0 && (path.points == null || path.points.length < count))) {
+        throw new IllegalStateException("NPC map AI path binding mismatch");
+      }
+      for (int i = 0; i < count; i++) {
+        com.riiablo.map.DS1.Path.Point p = path.points[i];
+        if (p == null || p.x != points[i * 3] || p.y != points[i * 3 + 1] || p.action != points[i * 3 + 2]) {
+          throw new IllegalStateException("NPC map AI path point mismatch");
+        }
+      }
+    }
+    if (apply) { ai.targetId = cursor; ai.actionTimer = timer; ai.actionPerformed = performed; ai.state = state; }
+  }
+  private static com.riiablo.map.DS1.Path npcPath(Npc ai) {
+    com.riiablo.engine.server.component.PathWrapper wrapper = ai.mPathWrapper == null ? null : ai.mPathWrapper.get(ai.entityId);
+    return wrapper == null ? null : wrapper.path;
+  }
+  private static void requireNpcSessionBoundary(Npc ai) {
+    if (ai.mInteractable != null && ai.mInteractable.has(ai.entityId)
+        && ai.mInteractable.get(ai.entityId).count != 0) {
+      throw new IllegalStateException("active NPC interaction requires session checkpoint");
+    }
   }
   /** Derived table binding: witness it, but never deserialize or replace the target's row object. */
   private static void missile(DataOutputStream out, com.riiablo.codec.excel.Missiles.Entry row) throws IOException {

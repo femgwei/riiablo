@@ -3093,6 +3093,76 @@ slotReuse=true、generationAwareCommand=true；仍是同进程 TCP 门禁，
 控制器、任务、Map/RoomEx、本地实体、交易、内容 digest、结构订阅副作用及真实
 socket 跨进程接管仍待适配。M8-A、M8-D 和 M8 总体继续进行中。
 
+### M8-A 第 40 批：NPC / Navi / NecroPet / Hireable 私有状态与绑定边界（2026-10-26）
+
+本批合并四类非旧 FSM AI，累计 119 类实体 AI，另有共享 IDLE。
+继续使用精确类白名单，不接受任意子类；AI v1、wrapper v1、unit-state v4、
+D2GC v7 不变，原有 115 类布局不变，不改变服务端工厂的 NPC 选择或战斗决策。
+
+- Npc 保存 targetId（DS1 巡逻点索引，不是实体 ID）、actionTimer、actionPerformed
+  和诊断 state。actionTimer 允许交互结束后遗留的正无穷等待及负余量，拒绝 NaN/
+  负无穷；游标要求至少 -1，绑定非空路径时必须小于 numPoints。
+- Npc.name/monstats 是目标初始化派生绑定；镜像见证 name、表行 presence/hcIdx/Id，
+  预检一致后保留目标对象。DS1.Path 仅见证 presence、点数、x/y 及每点 x/y/action，
+  不构造或覆盖目标路径。点数限 1024，拒绝负数、缺点或空点；目标路径缺失、多出、
+  坐标、顺序或动作不符均在 AI 写入前拒绝。此绑定不是完整资源内容 digest，亦不
+  包含 Pathfind 动态轨迹、寻路游标、碰撞或 NPC 任务 MapAI 命令的完整恢复。
+- Npc/Navi 的 Interactable.count 非零时，采集和恢复预检拒绝，避免把活动对话、
+  交易或服务会话当作私有计时恢复。World、mercenaries 订阅、派生表行和 scratch
+  向量均保留目标身份；恢复不调用 initialize、interact、路径搜索或动作回调。
+  此防护仅适用于这两类 AI，不是共享 IDLE 城镇 NPC 或全部服务会话的覆盖声明。
+- Navi 保存 nextThink、burstPause、burstRemaining 及独立 attackRng 的 presence、
+  stream/context/state/drawCount。保留零 RNG 状态、消费次数和 null/lazy 语义，
+  不重新播种或消费随机数；已存在同身份 RNG 对象原地恢复。严格拒绝非法布尔、
+  非 legacy/-1 身份、负消费次数、负/非有限 pause 和不在 0..2 的剩余射击数。
+  这仍是宿主已有的兼容 LCG，并未改为原版 pSeed 算法。
+- NecroPet 保存 skillBranch/skillBranchConfigured、有限 nextThink、软目标 targetId
+  及非空诊断 state。恢复不重新推导技能分支；延迟到期后沿用目标/主人有效性重查，
+  不增加跨 lifetime 引用保证。Hireable 没有新增私有字段，仍是被动标记；雇佣兵
+  的跟随/战斗由专用系统驱动，不因本批 codec 接入而宣称它们的计时器已全部恢复。
+
+原版依据：D2MOO source/D2Game/src/AI/AiThink.cpp 的 Fn032_Npc、
+AITHINK_ExecuteMapAiAction、Fn058_Navi、Fn061_Hireable、Fn067_NecroPet。
+原版 MapAI 依赖地图节点/命令和任务特例；Fn058 在交互时等待，检测友方玩家并维护
+喊话计数，再选择 25 范围内目标攻击；Fn067 用 AI-control param0 选择普通/技能分支，
+并依赖主人与目标。宿主的巡逻计时、Navi 连射/暂停/伤害补偿和独立 LCG、宠物分支
+仍有既有行为差异，本批保存实际宿主状态，不宣称与原版行为完全等价。
+
+验收覆盖 119 类字段策略、逐标量往返、预检零写入和截断拒绝；新增两类 NPC 的
+真实 World 表/路径绑定保持与不匹配拒绝、活动交互拒绝、等待到期后巡逻点选择续跑，
+Navi 的零状态/已有随机流对象/空随机流及 100 步跨连射暂停续跑、不访问 MathUtils；
+NecroPet 的两类分支/显式配置标记、延迟、主人失效、warp 重置与死亡不重复触发，
+并用真实技能表行验证恢复后的普通近战/技能分支决策。Hireable 恢复后保持无动作。
+
+真实 D2GS 工厂验证 Navi/NecroPet/Hireable 在空/已有 World 恢复且 live AI 对象
+不替换；普通城镇 Npc 仍按现有工厂策略使用共享 IDLE，本批明确验证保留此策略。
+Npc 巡逻镜像只在目标已初始化且绑定一致的 World 验证，不宣称工厂已创建巡逻 NPC
+或已支持从空 World 重建 DS1 地图路径。
+Navi 在待续 burstPause=0.3、nextThink=0.15、burstRemaining=1 时写盘，新 World
+和独立 JVM 各续跑 100 步；逐步比较动作、canonical（含 AI 私有 LCG、原生 unit RNG）
+和 D2S，核对真实箭实体增量等于射击次数。其私有暂停变化进入 AI-only witness、
+有效 nested 计时篡改拒绝及现有/空 World 晚期 D2S 失败回滚。受控夹具显式清理
+Casting/Sequence/Pathfind，不代表箭命中、全动作关键帧或真实 socket 跨进程接管。
+
+定向命令（D2_HOME 指向本地 1.10f 资源）：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.server.ai.AiRuntimeStateTest --tests com.riiablo.engine.server.ai.NpcAndPetCheckpointIntegrationTest :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --continue --no-daemon --max-workers=1 --console=plain
+```
+
+扩大回归沿用第 39 批范围，附带桌面编译、模块边界和三个真实 TCP gate。
+最终结果：core 1111 项、server/d2gs 82 项，共 1193 项通过，0 失败、0 跳过；
+桌面编译、模块边界扫描及其 9 项工具自测、git diff --check 通过。
+TCP 门禁验证固定 Tick 6→37（31 步、40ms）、重连部分拾取剩余 15 金币且
+ownerWindowPreserved=true、旧 socket 延迟帧 delayedFrameDropped=true 且
+slotReuse=true、generationAwareCommand=true；仍是同进程 TCP 门禁，
+不代表真实 socket 跨进程接管完成。
+
+后续重点转向全局/未绑定 RNG、完整 Casting/Sequence/Leap/动态路径游标、冻结战斗
+记录与 Item 引用、召唤/雇佣兵控制器与系统计时、MovementModes/飞行碰撞/骑乘物理、
+任务、Map/RoomEx、NPC 服务/交易、本地实体、完整内容 digest、结构订阅副作用及
+真实 socket 跨进程接管。M8-A、M8-D 和 M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

@@ -36,6 +36,25 @@ public final class NecroPet extends AI {
   int targetId = Engine.INVALID_ENTITY;
   String state = "IDLE";
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeBoolean(skillBranch); out.writeBoolean(skillBranchConfigured);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, nextThink); out.writeInt(targetId);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, state);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    boolean branch = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    boolean configured = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    float think = com.riiablo.engine.replay.CheckpointIO.readFloat(in); int target = in.readInt();
+    String savedState = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    if (target < Engine.INVALID_ENTITY || savedState == null) throw new IllegalArgumentException("NecroPet state");
+    if (apply) {
+      skillBranch = branch; skillBranchConfigured = configured;
+      nextThink = think; targetId = target; state = savedState;
+    }
+  }
+
   public NecroPet(int entityId) {
     super(entityId);
   }
