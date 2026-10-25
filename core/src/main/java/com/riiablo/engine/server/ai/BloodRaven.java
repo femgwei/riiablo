@@ -39,6 +39,29 @@ public final class BloodRaven extends AI {
   protected com.artemis.ComponentMapper<Sequence> mSequence;
   protected com.artemis.ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, anchor.x);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, anchor.y);
+    AiRuntimeState.writeTimer(out, nextThink);
+    out.writeInt(quickStrikeRollChance); out.writeBoolean(returningToAnchor); out.writeInt(specialUses);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, state);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    float x = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float y = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float think = AiRuntimeState.readTimer(in);
+    int chance = in.readInt();
+    boolean returning = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    int uses = in.readInt();
+    String savedState = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    if (apply) {
+      anchor.set(x, y); nextThink = think; quickStrikeRollChance = chance;
+      returningToAnchor = returning; specialUses = uses; state = savedState;
+    }
+  }
+
   public BloodRaven(int entityId) {
     super(entityId);
   }

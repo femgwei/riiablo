@@ -16,6 +16,7 @@ public final class AiDecisionRuntimeCheckpoint {
   }
   public byte[] bytes() { return bytes.clone(); }
   public String implementation() { return ai == null ? null : ai.type(); }
+  public void validateCoverage(java.util.Set<Integer> ids) { if (ai != null) ai.validateCoverage(ids); }
   public void validateHost(int id) {
     if (ai != null && ai.owner() != id) throw new IllegalArgumentException("AI image host mismatch");
   }
@@ -24,7 +25,7 @@ public final class AiDecisionRuntimeCheckpoint {
     try {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream(); DataOutputStream out = new DataOutputStream(buffer);
       out.writeInt(1); int kind = wrapper == null ? 0 : wrapper.ai == null ? 1 : 2; out.writeByte(kind);
-      if (kind == 2) { byte[] ai = AiRuntimeState.capture(wrapper.ai, id).bytes(); out.writeInt(ai.length); out.write(ai); }
+      if (kind == 2) { byte[] ai = AiRuntimeState.capture(world, wrapper.ai, id).bytes(); out.writeInt(ai.length); out.write(ai); }
       out.flush(); return fromBytes(buffer.toByteArray());
     } catch (IOException impossible) { throw new IllegalStateException(impossible); }
   }
@@ -51,10 +52,10 @@ public final class AiDecisionRuntimeCheckpoint {
     if ((wrapper != null) != (kind != 0) || kind == 1 && wrapper.ai != null) {
       throw new IllegalStateException("AI wrapper factory host mismatch: " + id);
     }
-    if (kind == 2) ai.validateRestore(wrapper.ai, id);
+    if (kind == 2) ai.validateRestore(world, wrapper.ai, id);
   }
   public void restore(World world, int id) {
     validateRestore(world, id);
-    if (kind == 2) ai.restore(world.getMapper(AIWrapper.class).get(id).ai, id);
+    if (kind == 2) ai.restore(world, world.getMapper(AIWrapper.class).get(id).ai, id);
   }
 }

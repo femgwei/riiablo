@@ -11,6 +11,15 @@ public final class FrogDemon extends NativeDecisionAI {
   private int phase;
   private int hiddenDecisions;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out); out.writeInt(phase); out.writeInt(hiddenDecisions);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPhase = in.readInt(), savedHiddenDecisions = in.readInt();
+    if (apply) { phase = savedPhase; hiddenDecisions = savedHiddenDecisions; }
+  }
+
   public FrogDemon(int entityId) { super(entityId); }
 
   @Override protected boolean actionBlocksDecision() {

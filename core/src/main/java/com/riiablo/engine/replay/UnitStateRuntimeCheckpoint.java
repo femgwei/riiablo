@@ -30,6 +30,9 @@ public final class UnitStateRuntimeCheckpoint {
   public void validateAiHost(int id) {
     AiDecisionRuntimeCheckpoint ai = decode().aiDecision; if (ai != null) ai.validateHost(id);
   }
+  public void validateAiCoverage(Set<Integer> ids) {
+    AiDecisionRuntimeCheckpoint ai = decode().aiDecision; if (ai != null) ai.validateCoverage(ids);
+  }
   public void validateMonsterCoverage(Set<Integer> ids) {
     MonsterRuntimeCheckpoint monster = decode().monsterRuntime;
     if (monster != null) monster.validateCoverage(ids);
@@ -92,7 +95,9 @@ public final class UnitStateRuntimeCheckpoint {
         if (monster != null) {
           byte[] image = monster.bytes(); out.writeInt(image.length); out.write(image);
         }
-        byte[] ai = AiDecisionRuntimeCheckpoint.capture(world, id).bytes(); out.writeInt(ai.length); out.write(ai);
+        AiDecisionRuntimeCheckpoint decision = AiDecisionRuntimeCheckpoint.capture(world, id);
+        decision.validateCoverage(covered);
+        byte[] ai = decision.bytes(); out.writeInt(ai.length); out.write(ai);
         out.flush(); result.put(id, fromBytes(bytes.toByteArray()));
       } catch (IOException impossible) { throw new IllegalStateException(impossible); }
     }
@@ -110,7 +115,10 @@ public final class UnitStateRuntimeCheckpoint {
       }
       Decoded d = entry.getValue().decode();
       Monster monster = world.getMapper(Monster.class).get(id);
-      if (d.aiDecision != null) d.aiDecision.validateRestore(world, id);
+      if (d.aiDecision != null) {
+        d.aiDecision.validateCoverage(records.keySet());
+        d.aiDecision.validateRestore(world, id);
+      }
       if (d.hasMonsterRuntime) {
         if (d.monsterRuntime == null) {
           if (monster != null) throw new IllegalStateException("unexpected monster runtime host: " + id);

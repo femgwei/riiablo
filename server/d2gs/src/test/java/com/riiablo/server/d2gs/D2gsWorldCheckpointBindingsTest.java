@@ -210,11 +210,12 @@ public class D2gsWorldCheckpointBindingsTest {
   }
 
   @Test public void privateAiOnlyChangeAltersCanonicalAndLateFailureRestoresDecisionPhase() throws Exception {
-    for (String row : new String[] {"doomknight1", "trap-firebolt", spiritRow(), rowForAi("BatDemon"), "gargoyletrap"}) {
+    for (String row : new String[] {"doomknight1", "trap-firebolt", spiritRow(), rowForAi("BatDemon"), "gargoyletrap", "regurgitator1"}) {
       try (Fixture source = new Fixture(); Fixture target = new Fixture(); Fixture empty = new Fixture(); Fixture control = new Fixture()) {
         source.populate();
         if (row.equals(rowForAi("BatDemon"))) source.populateRegeneratingBatAi();
         else if (row.equals("gargoyletrap")) source.populateRecoveringGargoyleAi();
+        else if (row.equals("regurgitator1")) source.populateFoodAi(1);
         else source.populateDecisionAi(row);
         D2gsCheckpointSnapshot before = source.server.captureReplayCheckpoint();
         source.updateDecisionAi(0.013f); // Still before the pending absolute think event; only private elapsed time changes.
@@ -366,6 +367,85 @@ public class D2gsWorldCheckpointBindingsTest {
       String log = Files.readString(output, StandardCharsets.UTF_8);
       assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
     } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  @Test public void corpseReferencesResumeAcrossFactoryWorldAndIndependentJvmWithoutRebindingRetiredFood() throws Exception {
+    for (int lifetime = 0; lifetime < 3; lifetime++) {
+      Path path = temporary.getRoot().toPath().resolve("food-" + lifetime + ".chk"); String expected;
+      try (Fixture source = new Fixture()) {
+        source.populate(); source.populateFoodAi(lifetime);
+        source.server.writeReplayCheckpoint(path); expected = continueFoodDecisions(source, lifetime);
+      }
+      assertEquals(expected, resumeFoodDecisions(path, lifetime));
+      Path output = temporary.getRoot().toPath().resolve("food-" + lifetime + "-child.log");
+      Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+          System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+          Riiablo.home.path(), "food-decisions-" + lifetime).redirectErrorStream(true).redirectOutput(output.toFile()).start();
+      try {
+        assertTrue("food recovery child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+        String log = Files.readString(output, StandardCharsets.UTF_8);
+        assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+      } finally { if (child.isAlive()) child.destroyForcibly(); }
+    }
+  }
+
+  @Test public void aiReferenceCoverageIsValidatedByTheOuterCheckpointNotOnlyTheRestoreAdapter() throws Exception {
+    for (int lifetime = 0; lifetime < 3; lifetime++) {
+      try (Fixture source = new Fixture()) {
+        source.populate(); source.populateFoodAi(lifetime);
+        D2gsCheckpointSnapshot image = source.server.captureReplayCheckpoint();
+        java.util.Map<Integer, com.riiablo.engine.replay.UnitStateRuntimeCheckpoint> records =
+            new java.util.TreeMap<>(image.unitStateRuntime());
+        byte[] bytes = records.get(1).bytes();
+        // Food reference is the last ID/kind pair in this explicit Regurgitator schema.
+        ByteBuffer.wrap(bytes).putInt(bytes.length - 5, 999);
+        records.put(1, com.riiablo.engine.replay.UnitStateRuntimeCheckpoint.fromBytes(bytes));
+        if (lifetime == 2) assertNotEquals(image.summary().canonical(), image.withUnitStateRuntime(records).summary().canonical());
+        else {
+          try { image.withUnitStateRuntime(records); fail("out-of-scope actionable food reference accepted"); }
+          catch (IllegalArgumentException expected) {}
+        }
+      }
+    }
+  }
+
+  private static String resumeFoodDecisions(Path path, int lifetime) throws Exception {
+    try (Fixture target = new Fixture()) {
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      return continueFoodDecisions(target, lifetime);
+    }
+  }
+
+  private static Object foodField(Fixture f, String name) throws Exception {
+    java.lang.reflect.Field field = com.riiablo.engine.server.ai.Regurgitator.class.getDeclaredField(name);
+    field.setAccessible(true);
+    return field.get(f.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai);
+  }
+
+  private static String continueFoodDecisions(Fixture f, int lifetime) throws Exception {
+    assertEquals(3, foodField(f, "phase")); assertEquals(2, foodField(f, "food"));
+    NativePathIdentity.Token token = (NativePathIdentity.Token) foodField(f, "foodIdentity");
+    if (lifetime == 0) assertNull(token);
+    else assertEquals(lifetime == 1, token.isCurrent(f.server.world, 2));
+    StringBuilder result = new StringBuilder("FOOD_DECISIONS_CONTINUED_" + lifetime);
+    boolean observedFirstTransition = false;
+    for (int frame = 0; frame < 60; frame++) {
+      f.server.simulation.tick(null, null);
+      boolean action = f.updateDecisionAi(0.04f);
+      int phase = (Integer) foodField(f, "phase");
+      if (!observedFirstTransition && phase != 3) {
+        observedFirstTransition = true;
+        assertEquals(lifetime == 2 ? 0 : 4, phase); assertEquals(lifetime != 2, action);
+        if (lifetime == 2) assertEquals(-1, foodField(f, "food"));
+      }
+      D2gsCheckpointSnapshot after = f.server.captureReplayCheckpoint();
+      result.append('|').append(phase).append(':').append(action)
+          .append(':').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
+    }
+    assertTrue("food phase never resumed", observedFirstTransition);
+    return result.toString();
   }
 
   private static String resumeGargoyleDecisions(Path path) throws Exception {
@@ -1546,7 +1626,9 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "gargoyle-decisions".equals(args[3])
+      try { System.out.println(args.length > 3 && args[3].startsWith("food-decisions-")
+          ? resumeFoodDecisions(Path.of(args[0]), Integer.parseInt(args[3].substring("food-decisions-".length())))
+          : args.length > 3 && "gargoyle-decisions".equals(args[3])
           ? resumeGargoyleDecisions(Path.of(args[0])) : args.length > 3 && "bat-decisions".equals(args[3])
           ? resumeBatDecisions(Path.of(args[0])) : args.length > 3 && "spirit-decisions".equals(args[3])
           ? resumeSpiritDecisions(Path.of(args[0])) : args.length > 3 && "trap-decisions".equals(args[3])
@@ -1658,6 +1740,26 @@ public class D2gsWorldCheckpointBindingsTest {
       updateDecisionAi(0.04f);
       assertEquals(120, attrs.base().getValue(Stat.hpregen, 0));
       assertEquals(120, attrs.getValue(Stat.hpregen, 0));
+    }
+
+    void populateFoodAi(int lifetime) throws Exception {
+      com.riiablo.engine.server.ai.AI ai = createDecisionAi("regurgitator1");
+      World world = server.world;
+      // Another native-decision actor supplies the soft corpse, without adding a legacy FSM dependency.
+      assertEquals(2, factory.createMonster(Riiablo.files.monstats.get("regurgitator1"), 12f, 10f));
+      world.getMapper(AttributesWrapper.class).get(2).attrs.base().put(Stat.hitpoints, 0f);
+      world.getMapper(AttributesWrapper.class).get(2).attrs.reset();
+      world.getMapper(com.riiablo.engine.server.component.CofReference.class).get(2).mode =
+          com.riiablo.engine.Engine.Monster.MODE_DD;
+      if (lifetime == 0) world.getMapper(NativePathIdentity.class).remove(2);
+      world.process();
+      java.lang.reflect.Field params = com.riiablo.engine.server.ai.AI.class.getDeclaredField("params");
+      params.setAccessible(true); params.set(ai, new int[] {0, 100, 0, 0, 100, 30, 0, 0});
+      java.lang.reflect.Field sleep = com.riiablo.engine.server.ai.AI.class.getDeclaredField("SLEEP");
+      sleep.setAccessible(true); sleep.setFloat(ai, 0.04f);
+      updateDecisionAi(0.04f); updateDecisionAi(0.04f);
+      assertEquals(3, foodField(this, "phase")); assertEquals(2, foodField(this, "food"));
+      if (lifetime == 2) world.getMapper(NativePathIdentity.class).get(2).allocated(world, 2);
     }
 
     void populateRecoveringGargoyleAi() throws Exception {

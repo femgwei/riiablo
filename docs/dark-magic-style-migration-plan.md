@@ -2831,6 +2831,68 @@ NativePathRuntime 游标、MovementModes/飞行碰撞/骑乘物理、DiabPrison 
 结构订阅副作用及真实 socket 跨进程接管仍按前批保留。局部 AI 字段支持不等于这些系统
 整体可恢复；M8-A、M8-D、M8 总体继续进行中。
 
+### M8-A 第 36 批：尸体寿命引用、血乌锚点及隐藏阶段恢复（2026-10-25）
+
+本批集中补齐 Regurgitator、BloodRaven、FrogDemon、CycleOfLife、DeathSentry，
+累计 93 类实体 AI，另有共享 IDLE。沿用精确类型白名单、纯构造解析、全记录预检、
+factory 宿主原位恢复和既有 ECS/RNG/D2S 事务；不改玩法、概率或时钟表示。
+AI v1、wrapper v1、unit-state v4、D2GC v7 不变，原有 88 类字节布局不变。
+
+- Regurgitator 保存 phase/attempts，并用显式 ID + lifetime 编码 food/foodIdentity。
+  null token 保留为 null；current token 绑定目标 World 中该 ID 的当前真实身份；
+  retired token 恢复为目标 World 的独立失效 token，绝不绑定同 ID 的新实体。
+  非 null token 捕获和恢复均要求显式 World，不借用 Riiablo.engine，不复制源 World/token。
+- null/current 引用仍可能解引用实体，必须属于 checkpoint 覆盖集；retired 引用可指向
+  集合外 ID。unit-state 捕获、全记录恢复预检及 D2GC 外层重建都检查覆盖关系。
+  current 引用还必须指向目标 World 已分配、ECS active 且具有当前 NativePathIdentity 的实体；
+  预检不创建身份组件、不分配退休 token、不写 AI，非法/未分配/删除 ID 在写入前拒绝。
+  退休 token 显式标记为永久失效，且 Regurgitator 先判身份再查询尸体组件，保证集合外及
+  极大未分配 ID 不触发 Artemis 越界查询；普通分配 token 的有效期判断不变。
+- BloodRaven 保存历史 anchor、nextThink、quickStrikeRollChance、returningToAnchor、
+  specialUses/state；原位更新目标 anchor 向量，不重新取出生点或补充特殊技能次数。
+  anchor 坐标必须有限，nextThink 保留正无穷 sleep sentinel，拒绝 NaN/负无穷。
+- FrogDemon 保存 phase/hiddenDecisions。CycleOfLife 明确继承 Vines codec；
+  DeathSentry 明确继承 AssassinSentry codec，二者无新增实例字段，不把宿主控制器
+  或实时查询订阅当作可序列化私有状态。
+
+原版核对：D2MOO AiThink.cpp 的 Fn071_Regurgitator 保留阶段、尸体 ID、接近尝试数及
+8 帧吃尸等待；Fn059_BloodRaven 的 AI command 10 保存历史坐标，dwAiParam[2] 保留
+返回锚点状态，并限制特殊技能累计次数。本批只保存现有宿主表示；NativePathIdentity
+是防 ECS ID 复用的宿主保护，不宣称原版具有相同 token 序列化格式。
+
+验收扩展到 93 类逐字段往返、继承链字段策略、预检零写入及逐字节截断。真实表/ECS
+验证三种 food 引用、新 World 重绑、实际删除/ID 复用、恢复后身份再次变更、缺少覆盖/
+身份/显式 World、极大未分配 ID 和非法 wire kind；血乌恢复后返回历史锚点、耗尽预算
+不重置；蛙魔在预建碰撞和动作完成边界上保留隐藏决策预算并继续 Emerge。
+
+真实 D2GS factory 的 Regurgitator 在 phase 3 吃尸等待时保存，三种引用语义分别在
+新 World 和独立 JVM 续跑 60 步，逐步比较阶段、动作请求、canonical（含原生 RNG）
+和 D2S。current/null 首次到期继续吃尸请求，retired 首次到期清除旧引用，不误吃
+同 ID 新身份；后续允许正常重新搜索尸体。AI-only witness 变化和现有/空 World 的
+晚期 D2S 失败回滚新增该类型，保留 live AI 对象身份。
+这些续跑仍显式清理 Casting/Sequence/Pathfind，并不执行完整吃尸技能效果或尸体消耗。
+
+定向命令（D2_HOME 指向本地 1.10f 资源）：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.server.ai.AiRuntimeStateTest --tests com.riiablo.engine.server.ai.EntityReferenceCheckpointIntegrationTest :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --continue --no-daemon --max-workers=1 --console=plain
+```
+
+最终扩大回归沿用第 35 批全部 AI、checkpoint/factory/状态/目标/RNG/D2S 测试范围，
+增加 NativePathIdentityTest，附带三个真实 TCP gate、桌面编译及模块边界检查；
+最终结果：core 1042 项、server/d2gs 76 项，共 1118 项通过，0 失败、0 跳过；
+桌面编译、verifyModuleBoundaries 与 git diff --check 通过。三个真实 TCP gate 通过：
+固定 Tick 7→38（31 步、40ms 步长）、部分拾取后剩余 15 金币且 ownerWindowPreserved=true、
+旧 socket 延迟帧 delayedFrameDropped=true 且 generationAwareCommand=true。
+TCP gate 仍为同进程，不代表真实 socket 跨进程接管完成。
+
+剩余：旧 FSM、Npc/Navi/NecroPet/Hireable 等 AI，完整 Casting/Sequence/冻结战斗记录和
+Item 引用、ECS 路径/NativePathRuntime 游标、MovementModes/飞行碰撞/骑乘物理、
+DiabPrison 关系、AssassinTrapSystem 控制器等仍需独立适配。隐藏阶段字段支持不代表
+蛙魔碰撞/held S1 动作已整体恢复，DeathSentry 的字段支持也不代表控制器已恢复。
+任务、Map/RoomEx、本地实体、交易、未绑定 RNG、资源 digest、结构订阅副作用及
+真实 socket 跨进程接管继续保留；M8-A、M8-D、M8 总体仍进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

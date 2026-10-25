@@ -34,7 +34,8 @@ class AiRuntimeStateTest {
       Griswold::new, HellMeteor::new, Minion::new, Smith::new,
       DarkWanderer::new, Imp::new, Vulture::new, Nihlathak::new,
       Arach::new, AssassinSentry::new, BonePrison::new, FoulCrowNest::new,
-      GargoyleTrap::new, Vines::new);
+      GargoyleTrap::new, Vines::new, Regurgitator::new, BloodRaven::new,
+      FrogDemon::new, CycleOfLife::new, DeathSentry::new);
 
   @Test void allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects() throws Exception {
     for (IntFunction<AI> factory : SCHEMAS) {
@@ -173,6 +174,11 @@ class AiRuntimeStateTest {
     expected.put(FoulCrowNest.class, "elapsedFrames lastSpawnFrame nextThink spawned state");
     expected.put(GargoyleTrap.class, "nextThink state");
     expected.put(Vines.class, "nextThink state corpseEntities");
+    expected.put(Regurgitator.class, "phase attempts food foodIdentity");
+    expected.put(BloodRaven.class, "anchor nextThink quickStrikeRollChance returningToAnchor specialUses state");
+    expected.put(FrogDemon.class, "phase hiddenDecisions");
+    expected.put(CycleOfLife.class, "");
+    expected.put(DeathSentry.class, "");
     for (Class<?> type : Arrays.asList(QuillMother.class, BloodLord.class, Catapult.class,
         DeathMauler.class, FrozenHorror.class, Griswold.class, HellMeteor.class, Minion.class, Smith.class)) expected.put(type, "");
     for (Class<?> type : Arrays.asList(Andariel.class, DoomKnight.class, FlyingScimitar.class, BaalMinion.class, Idle.class)) expected.put(type, "");
@@ -195,7 +201,7 @@ class AiRuntimeStateTest {
   }
 
   @Test void unsupportedTypesAndForeignOwnerOrConfigurationCannotBeRestored() {
-    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new Regurgitator(2), 2));
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new Baboon(2), 2));
     assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(new TrapNova(2) {}, 2));
     assertThrows(IllegalStateException.class, () -> AiRuntimeState.capture(new QuillRat(2), 1));
     AiRuntimeState image = AiRuntimeState.capture(new GenericMonster(2, "first"), 2);
@@ -386,7 +392,7 @@ class AiRuntimeStateTest {
   }
 
   @Test void independentAiTimersDistinguishSleepSentinelsFromFiniteNestClocks() throws Exception {
-    for (AI source : new AI[] {new Arach(3), new GargoyleTrap(3), new Vines(3)}) {
+    for (AI source : new AI[] {new Arach(3), new GargoyleTrap(3), new Vines(3), new BloodRaven(3)}) {
       AI target = source.getClass().getConstructor(int.class).newInstance(3);
       put(source, source.getClass(), "nextThink", Float.POSITIVE_INFINITY);
       AiRuntimeState.capture(source, 3).restore(target, 3);

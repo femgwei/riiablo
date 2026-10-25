@@ -23,7 +23,7 @@ public class NativePathIdentity extends PooledComponent {
 
   /** A checkpoint's stale lifetime reference must never bind to a recycled owner. */
   public static Token retiredToken(World world, int entityId) {
-    return new Token(Objects.requireNonNull(world), entityId);
+    return new Token(Objects.requireNonNull(world), entityId, true);
   }
 
   @Override protected void reset() { token = null; }
@@ -32,15 +32,21 @@ public class NativePathIdentity extends PooledComponent {
   public static final class Token {
     private final World world;
     private final int entityId;
+    private final boolean retired;
 
     private Token(World world, int entityId) {
+      this(world, entityId, false);
+    }
+
+    private Token(World world, int entityId, boolean retired) {
       this.world = world;
       this.entityId = entityId;
+      this.retired = retired;
     }
 
     /** ECS deletion takes effect at its normal flush boundary. Death keeps identity. */
     public boolean isCurrent(World currentWorld, int currentId) {
-      if (world != currentWorld || entityId != currentId
+      if (retired || world != currentWorld || entityId != currentId
           || !world.getEntityManager().isActive(entityId)) return false;
       NativePathIdentity current = world.getMapper(NativePathIdentity.class).get(entityId);
       return current != null && current.token == this;

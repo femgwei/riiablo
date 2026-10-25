@@ -15,6 +15,24 @@ public class Regurgitator extends NativeDecisionAI {
   private int phase, attempts;
   private int food = Engine.INVALID_ENTITY;
   private NativePathIdentity.Token foodIdentity;
+
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out); out.writeInt(phase); out.writeInt(attempts);
+    // Food ID and lifetime are encoded together by the explicit World-aware reference adapter.
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPhase = in.readInt(), savedAttempts = in.readInt();
+    if (apply) { phase = savedPhase; attempts = savedAttempts; }
+  }
+  com.riiablo.engine.replay.NativeEntityReferenceCheckpoint checkpointFood(com.artemis.World world) {
+    return com.riiablo.engine.replay.NativeEntityReferenceCheckpoint.capture(world, food, foodIdentity);
+  }
+  void restoreFood(com.artemis.World world, com.riiablo.engine.replay.NativeEntityReferenceCheckpoint reference) {
+    NativePathIdentity.Token identity = reference.resolve(world);
+    food = reference.entityId(); foodIdentity = identity;
+  }
+
   public Regurgitator(int entityId) { super(entityId); }
 
   private boolean deadCorpse(int id) {
@@ -66,8 +84,9 @@ public class Regurgitator extends NativeDecisionAI {
   }
   @Override protected void think(int targetId, float distance, boolean combat) {
     if (phase == 2 || phase == 3) {
-      if (!deadCorpse(food) || foodIdentity != null
-          && !foodIdentity.isCurrent(Riiablo.engine, food)) {
+      // A retired checkpoint reference may name an ID never allocated in this World.
+      if (foodIdentity != null && !foodIdentity.isCurrent(Riiablo.engine, food)
+          || !deadCorpse(food)) {
         resetFood(); walkClose(8, 0); return;
       }
       if (phase == 2) {

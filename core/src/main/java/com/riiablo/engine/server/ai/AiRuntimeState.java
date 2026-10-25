@@ -1,8 +1,10 @@
 package com.riiablo.engine.server.ai;
 
 import com.badlogic.gdx.ai.fsm.State;
+import com.artemis.World;
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.riiablo.engine.replay.CheckpointIO;
+import com.riiablo.engine.replay.NativeEntityReferenceCheckpoint;
 import java.io.*;
 import java.util.*;
 
@@ -12,14 +14,19 @@ public final class AiRuntimeState {
   private final byte[] bytes;
   private final String type, configuration;
   private final int owner;
-  private AiRuntimeState(byte[] bytes, String type, String configuration, int owner) {
+  private final NativeEntityReferenceCheckpoint reference;
+  private AiRuntimeState(byte[] bytes, String type, String configuration, int owner, NativeEntityReferenceCheckpoint reference) {
     this.bytes = bytes; this.type = type; this.configuration = configuration; this.owner = owner;
+    this.reference = reference;
   }
   public byte[] bytes() { return bytes.clone(); }
   public int owner() { return owner; }
   public String type() { return type; }
 
   public static AiRuntimeState capture(AI ai, int id) {
+    return capture(null, ai, id);
+  }
+  public static AiRuntimeState capture(World world, AI ai, int id) {
     if (ai == null || id < 0 || ai != AI.IDLE && ai.entityId != id) throw new IllegalStateException("AI owner mismatch");
     String type = ai.getClass().getSimpleName();
     AI schema = schema(type, ai.checkpointConfiguration(), id);
@@ -31,7 +38,7 @@ public final class AiRuntimeState {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream(); DataOutputStream out = new DataOutputStream(buffer);
       out.writeInt(1); out.writeInt(id); CheckpointIO.writeString(out, type);
       CheckpointIO.writeString(out, ai.checkpointConfiguration());
-      if (ai != AI.IDLE) { ai.writeRuntime(out); writeSpecific(ai, out); }
+      if (ai != AI.IDLE) { ai.writeRuntime(out); writeSpecific(ai, out, world); }
       out.flush(); return fromBytes(buffer.toByteArray());
     } catch (IOException impossible) { throw new IllegalStateException(impossible); }
   }
@@ -45,26 +52,35 @@ public final class AiRuntimeState {
       int id = in.readInt(); if (id < 0) throw new IllegalArgumentException("AI runtime owner");
       String type = CheckpointIO.readString(in), configuration = CheckpointIO.readString(in);
       AI prototype = schema(type, configuration, id); // Constructors only, never inject/initialize/update or draw RNG.
-      if (prototype != AI.IDLE) { prototype.readRuntime(in, false); readSpecific(prototype, in, false); }
+      NativeEntityReferenceCheckpoint reference = null;
+      if (prototype != AI.IDLE) { prototype.readRuntime(in, false); reference = readSpecific(prototype, in, false, null); }
       if (in.read() != -1) throw new IllegalArgumentException("trailing AI runtime");
-      return new AiRuntimeState(copy, type, configuration, id);
+      return new AiRuntimeState(copy, type, configuration, id, reference);
     } catch (IOException e) { throw new IllegalArgumentException("truncated AI runtime", e); }
   }
 
   public void validateRestore(AI ai, int id) {
+    validateRestore(null, ai, id);
+  }
+  public void validateCoverage(Set<Integer> ids) {
+    if (reference != null) reference.validateCoverage(ids);
+  }
+  public void validateRestore(World world, AI ai, int id) {
     if (ai == null || id != owner || ai != AI.IDLE && ai.entityId != id
         || ai.getClass() != schema(type, configuration, id).getClass()
         || !Objects.equals(configuration, ai.checkpointConfiguration())
         || ai instanceof Idle && ai != AI.IDLE) throw new IllegalStateException("AI runtime implementation/owner mismatch: " + id);
-    validateMachineOwner(ai); read(ai, false);
+    validateMachineOwner(ai); read(ai, false, world);
+    if (reference != null) reference.validateRestore(world);
   }
-  public void restore(AI ai, int id) { validateRestore(ai, id); read(ai, true); }
-  private void read(AI ai, boolean apply) {
+  public void restore(AI ai, int id) { restore(null, ai, id); }
+  public void restore(World world, AI ai, int id) { validateRestore(world, ai, id); read(ai, true, world); }
+  private void read(AI ai, boolean apply, World world) {
     if (ai == AI.IDLE) return; // Shared sentinel has no entity-owned state; never mutate it.
     try {
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
       in.readInt(); in.readInt(); CheckpointIO.readString(in); CheckpointIO.readString(in);
-      ai.readRuntime(in, apply); readSpecific(ai, in, apply);
+      ai.readRuntime(in, apply); readSpecific(ai, in, apply, world);
     } catch (IOException impossible) { throw new IllegalStateException(impossible); }
   }
 
@@ -160,6 +176,11 @@ public final class AiRuntimeState {
       case "FoulCrowNest": return new FoulCrowNest(id);
       case "GargoyleTrap": return new GargoyleTrap(id);
       case "Vines": return new Vines(id);
+      case "Regurgitator": return new Regurgitator(id);
+      case "BloodRaven": return new BloodRaven(id);
+      case "FrogDemon": return new FrogDemon(id);
+      case "CycleOfLife": return new CycleOfLife(id);
+      case "DeathSentry": return new DeathSentry(id);
       default: throw new IllegalArgumentException("unsupported AI checkpoint schema: " + type);
     }
   }
@@ -175,21 +196,28 @@ public final class AiRuntimeState {
     }
   }
 
-  private static void writeSpecific(AI ai, DataOutputStream out) throws IOException {
+  private static void writeSpecific(AI ai, DataOutputStream out, World world) throws IOException {
     if (ai instanceof QuillRat) { QuillRat a = (QuillRat) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
     else if (ai instanceof Scarab) { Scarab a = (Scarab) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.aiParam0); }
     else if (ai instanceof Fallen) { Fallen a = (Fallen) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeBoolean(a.aiParam0); }
     else if (ai instanceof Brute) { Brute a = (Brute) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
     else if (ai instanceof Zombie) { Zombie a = (Zombie) ai; fsm(out, a.stateMachine, a.nextAction, a.time); }
     else if (ai instanceof Skeleton) { Skeleton a = (Skeleton) ai; fsm(out, a.stateMachine, a.nextAction, a.time); out.writeInt(a.targetId); }
+    else if (ai instanceof Regurgitator) ((Regurgitator) ai).checkpointFood(world).write(out);
   }
-  private static void readSpecific(AI ai, DataInputStream in, boolean apply) throws IOException {
+  private static NativeEntityReferenceCheckpoint readSpecific(AI ai, DataInputStream in, boolean apply, World world) throws IOException {
     if (ai instanceof QuillRat) { QuillRat a = (QuillRat) ai; float[] t = fsm(in, a.stateMachine, QuillRat.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
     else if (ai instanceof Scarab) { Scarab a = (Scarab) ai; float[] t = fsm(in, a.stateMachine, Scarab.State.values(), apply); int p = in.readInt(); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p; } }
     else if (ai instanceof Fallen) { Fallen a = (Fallen) ai; float[] t = fsm(in, a.stateMachine, Fallen.State.values(), apply); boolean p = CheckpointIO.readBoolean(in); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.aiParam0 = p; } }
     else if (ai instanceof Brute) { Brute a = (Brute) ai; float[] t = fsm(in, a.stateMachine, Brute.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
     else if (ai instanceof Zombie) { Zombie a = (Zombie) ai; float[] t = fsm(in, a.stateMachine, Zombie.State.values(), apply); if (apply) { a.nextAction = t[0]; a.time = t[1]; } }
     else if (ai instanceof Skeleton) { Skeleton a = (Skeleton) ai; float[] t = fsm(in, a.stateMachine, Skeleton.State.values(), apply); int target = in.readInt(); if (target < -1) throw new IllegalArgumentException("AI target"); if (apply) { a.nextAction = t[0]; a.time = t[1]; a.targetId = target; } }
+    else if (ai instanceof Regurgitator) {
+      NativeEntityReferenceCheckpoint reference = NativeEntityReferenceCheckpoint.read(in);
+      if (apply) ((Regurgitator) ai).restoreFood(world, reference);
+      return reference;
+    }
+    return null;
   }
   private static void fsm(DataOutputStream out, StateMachine<Integer, ?> fsm, float next, float time) throws IOException {
     if (fsm.getClass() != CheckpointStateMachine.class) throw new IllegalStateException("unsupported AI state machine");
