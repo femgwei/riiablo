@@ -99,13 +99,23 @@ final class D2gsWorldCheckpointBindings {
 
   void validateNativeStates(D2gsCheckpointSnapshot checkpoint) {
     Set<Integer> entities = checkpoint.payloads().keySet();
+    Map<Integer, SimulationCheckpoint.NativeUnitRngState> units = new java.util.HashMap<>();
     for (SimulationCheckpoint.NativeUnitRngState state : checkpoint.summary().nativeUnitRngStates()) {
       if (!UNIT_STREAM.equals(state.stream) || state.contextId < 0
           || state.contextId > Integer.MAX_VALUE
           || !entities.contains((int) state.contextId)) {
         throw new IllegalArgumentException("native RNG is not bound to a checkpoint unit");
       }
+      units.put((int) state.contextId, state);
     }
+    if (checkpoint.unitStateRuntime() != null) checkpoint.unitStateRuntime().forEach((id, record) -> {
+      com.riiablo.engine.replay.MonsterRuntimeCheckpoint monster = record.monsterRuntime();
+      if (monster == null) return;
+      SimulationCheckpoint.NativeUnitRngState seed = units.get(id);
+      if (monster.hasSeed() != (seed != null) || seed != null && !monster.matchesSeed(seed.lowSeed, seed.highSeed)) {
+        throw new IllegalArgumentException("monster/native RNG checkpoint mismatch: " + id);
+      }
+    });
   }
 
   NativeUnitRandomRegistry prepareNativeRestore(List<SimulationCheckpoint.NativeUnitRngState> states) {

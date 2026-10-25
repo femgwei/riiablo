@@ -2490,6 +2490,55 @@ Baal/Clone 恢复三类缓存后真实 node9 选择；真实 factory 的新 Worl
 以及前批列出的 Map/RoomEx、本地实体、任务/交易、资源 digest 和真实 socket 跨进程接管组合验收。
 M8-A、M8-D、M8 总体仍进行中。
 
+### M8-A 第 30 批：完整 Monster 组件镜像与真实生命周期恢复（2026-10-25）
+
+本批集中补齐 `Monster` 组件自身的全部实例字段；不把完整组件值等同于完整怪物实体、
+AI 决策对象、ECS 移动路径或碰撞系统缓存。继续使用真实 `ServerEntityFactory` 生命周期，
+不通过反射复制生产组件、不调用 `Monster.set/setRank` 重建历史，不重新进入模式或抽取 RNG。
+
+实现与边界：
+
+- 新增显式 `MonsterRuntimeCheckpoint` v1，保存 16 个原生 component variant 序号、
+  rank/affixes、Baal wave/pack/所属、召唤和复活来源、死亡调度与碰撞标志、frog/vulture 相位、
+  出生锚点、conversion overlay、冷却及双精度帧值。MonStats/MonStats2 仅存 row identity，
+  恢复时校验 factory 已创建的真实表句柄，不复制内容表，也不把渲染 CompCode 当原生序号。
+- 冻结保存 `modeElements` 的 presence、全部 damage/drain 数组、cold/poison length 与解析标志；
+  保留已选中的临时伤害结果，不凭永久属性重算。原生种子保存 null/present、low/high 两字及
+  `rngState` 镜像；恢复已有 seed 时原位更新，避免已绑定的 RNG wrapper 脱离。
+  真实 world-native archive 的 Monster image 与 unit RNG registry 必须一致，冲突在变更 ECS 前拒绝。
+- owner/mount 分别保存 null/current/stale lifetime：current 必须在 checkpoint 内且目标 factory
+  已建立实际身份，stale 恢复为永远失效 token，null 保留原语义，实体 ID 重用不能激活旧引用。
+  其他无 token 的既有 owner ID 字段保留 raw 值，不擅自增加宿主尚未实现的代际规则。
+- spawnZone 必须属于本 World 注册的 Map，按 levelId/levelSeed/矩形/synthetic 标志在目标预建
+  Map 中唯一精确重绑；缺失、重复、foreign map/zone 拒绝。不按 spawnX/Y 猜测 zone，
+  不生成或导入 Map/RoomEx 运行时；相同 zone key 也不是资源内容 digest 的替代品。
+- `UnitStateRuntimeCheckpoint` 升为 v3，在每条既有记录尾部追加 Monster image，包含显式 absence，
+  即使没有 UnitStates holder 也覆盖 Monster。v1/v2 继续可读且明确返回未覆盖完整 Monster；
+  v2 conversion overlay 与新完整 image 必须一致。D2GC 外层仍为 v7，已有 unit-state digest
+  自动覆盖内嵌字节。全记录先检查 row/token/zone 等依赖再赋值，未覆盖本地 Monster、非法宿主、
+  重复 ID、非法布尔/浮点/长度/版本、截断与尾部字节继续 fail closed。
+- 沿用既有 ECS→RNG→D2S 事务和最终 runtime 重应用；真实 factory 的新 World、独立 JVM
+  严格 canonical/native RNG/D2S 续跑，以及缺失 zone、live/empty World 晚期 D2S 失败回滚均纳入验收。
+  续跑检查覆盖原生 RNG 与明确冷却/帧字段，不宣称已经验证完整 AI、死亡动作或碰撞缓存续跑。
+
+原版参考：D2MOO `MONSTER/MonsterMode.cpp::sub_6FC627B0` 的模式临时元素选择，
+以及死亡路径的 `PATH_SetUnitDeadCollision` 边界；本批只保留宿主已实现值，不新增模式/死亡/复活规则。
+测试包含组件和 mode-elements 字段/数组尺寸 schema guard、全字段 round-trip、9 类 owner/mount
+lifetime 组合、v1/v2/v3 兼容、冻结结果恢复后的真实 projectile/GH/NU 行为，以及 Monster-only
+变化影响 canonical 但不改变 EntitySync/D2S/RNG、嵌套镜像损坏必须被校验和拒绝。
+
+真实资源：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。沿用第 29 批验收组合，增加
+`MonsterRuntimeCheckpointTest`、`MonsterModeElementLifecycleTest`、`MonsterModeElementProfileTest`、
+`MonsterModeMeleeIntegrationTest`、`CorpseSpawnCollisionIntegrationTest`。
+最终扩大回归：服务端 67 项、core 250 项，共 317 项通过，0 失败、0 跳过。
+模块边界、桌面编译和 `git diff --check` 通过。三个真实 TCP gate 通过：固定 Tick `8→39`
+（31 步）、部分拾取后剩余 15 金币且 owner window 保持、旧 socket 延迟帧丢弃且当前 generation
+命令成功。TCP gate 仍为同进程；独立 JVM 的组件/RNG/D2S 续跑不等于真实 socket 跨进程接管。
+
+剩余与下一批：AI 对象私有 timer/状态机、Casting/Sequence 与 ECS 移动路径、pet/merc 其他运行时，
+以及前批列出的 Map/RoomEx、本地实体、任务/交易、资源 digest、其他结构订阅者副作用和真实 socket
+跨进程接管组合验收。M8-A、M8-D、M8 总体仍进行中，不能将本批标记为 M8 整体收尾。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

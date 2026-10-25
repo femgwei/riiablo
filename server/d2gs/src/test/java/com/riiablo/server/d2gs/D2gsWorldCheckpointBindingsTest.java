@@ -145,6 +145,145 @@ public class D2gsWorldCheckpointBindingsTest {
     }
   }
 
+  @Test public void fullMonsterRuntimeResumesInPrebuiltMapAcrossWorldAndJvmRestart() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("monsters.chk"); String expected;
+    try (Fixture source = new Fixture()) {
+      source.populate(); source.populateMonsters(); source.server.writeReplayCheckpoint(path);
+      expected = continueMonsters(source);
+    }
+    assertEquals(expected, resumeMonsters(path));
+    Path output = temporary.getRoot().toPath().resolve("monsters-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "monsters").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("monster recovery child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  @Test public void monsterOnlyChangesAlterCanonicalAndNestedCorruptionIsRejected() {
+    try (Fixture source = new Fixture()) {
+      source.populate(); source.populateMonsters();
+      D2gsCheckpointSnapshot before = source.server.captureReplayCheckpoint();
+      Monster live = source.server.world.getMapper(Monster.class).get(1);
+      for (int field = 0; field < 3; field++) {
+        if (field == 0) live.componentVariants[0] += 1;
+        else if (field == 1) live.chargedBoltsCooldown += 0.25f;
+        else live.modeElements.drainMinimum[0] += 1;
+        D2gsCheckpointSnapshot changed = source.server.captureReplayCheckpoint();
+        assertNotEquals(before.summary().canonical(), changed.summary().canonical());
+        for (int id : before.payloads().keySet()) assertArrayEquals(before.payloads().get(id), changed.payloads().get(id));
+        assertEquals(before.d2sCheckpoint().canonical(), changed.d2sCheckpoint().canonical());
+        assertEquals(before.summary().nativeUnitRngStates(), changed.summary().nativeUnitRngStates());
+        before = changed;
+      }
+      byte[] encoded = before.toBytes(), nested = before.unitStateRuntime().get(1).monsterRuntime().bytes();
+      int offset = -1;
+      for (int i = 0; i <= encoded.length - nested.length; i++) {
+        if (java.util.Arrays.equals(nested, java.util.Arrays.copyOfRange(encoded, i, i + nested.length))) { offset = i; break; }
+      }
+      assertTrue(offset >= 0);
+      encoded[offset + nested.length - 22] ^= 1; // A valid raw scalar, but not the canonical witness.
+      try { D2gsCheckpointSnapshot.fromBytes(encoded); fail("nested Monster corruption accepted"); }
+      catch (IllegalArgumentException correct) {}
+    }
+  }
+
+  private static String resumeMonsters(Path path) throws Exception {
+    try (Fixture target = new Fixture()) {
+      target.map.createSyntheticArena(2, 1, 1); // Map itself is a prebuilt dependency, not imported runtime.
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      assertEquals(archive.d2sCheckpoint().canonical(), target.server.captureReplayCheckpoint().d2sCheckpoint().canonical());
+      return continueMonsters(target);
+    }
+  }
+
+  private static String continueMonsters(Fixture f) {
+    World world = f.server.world; Monster monster = world.getMapper(Monster.class).get(1);
+    assertSame(f.map.getZones().first(), monster.spawnZone);
+    assertEquals(2, monster.nativeSelfResurrections); assertTrue(monster.nativeSelfResurrect);
+    assertEquals(37, monster.nativePackId); assertTrue(monster.nativePackLeader);
+    assertEquals(1, monster.baalWaveIndex); assertEquals(99, monster.baalWaveRoomId); assertTrue(monster.baalWaveLeader);
+    assertEquals(0, monster.nativeOwnerId); assertTrue(monster.nativeOwnerIdentity.isCurrent(world, 0));
+    assertEquals(2, monster.nativeRequestedMountId); assertFalse(monster.nativeRequestedMountIdentity.isCurrent(world, 2));
+    assertTrue(monster.resurrected); assertEquals(0, monster.resurrectedBy);
+    Monster corpse = world.getMapper(Monster.class).get(2);
+    assertTrue(corpse.fireDeathExplosionScheduled); assertTrue(corpse.coldDeathNovaScheduled);
+    assertTrue(corpse.shatteredAtDeath); assertTrue(corpse.nativeCorpseCollision);
+    assertTrue(corpse.frogSpawnMarkerInitialized); assertTrue(corpse.frogSpawnMarkerMoved);
+    assertEquals(-13, corpse.frogSpawnMarkerX); assertEquals(49, corpse.frogSpawnMarkerY);
+    assertNotNull(monster.modeElements); assertEquals(37, monster.modeElements.poisonLength);
+    StringBuilder result = new StringBuilder("MONSTERS_CONTINUED");
+    for (int frame = 0; frame < 4; frame++) {
+      result.append('|').append(NativeUnitRandom.monster(monster, 1, 1).nextUnsigned());
+      result.append(':').append(NativeUnitRandom.monster(corpse, 1, 2).nextUnsigned());
+      monster.chargedBoltsCooldown -= 0.04f;
+      monster.lightningEnchantedLastFrame += 1;
+      f.server.simulation.tick(null, null);
+      D2gsCheckpointSnapshot after = f.server.captureReplayCheckpoint();
+      result.append(':').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
+    }
+    return result.toString();
+  }
+
+  @Test public void monsterRuntimeAndSeedDisagreementIsRejectedBeforeMutation() {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      source.populate(); source.populateMonsters(); target.populate();
+      D2gsCheckpointSnapshot archive = source.server.captureReplayCheckpoint();
+      java.util.List<SimulationCheckpoint.NativeUnitRngState> seeds = new java.util.ArrayList<>();
+      for (SimulationCheckpoint.NativeUnitRngState seed : archive.summary().nativeUnitRngStates()) {
+        seeds.add(seed.contextId == 1 ? new SimulationCheckpoint.NativeUnitRngState(seed.stream,
+            seed.contextId, seed.lowSeed + 1, seed.highSeed) : seed);
+      }
+      D2gsCheckpointSnapshot inconsistent = D2gsCheckpointSnapshot.fromPayloads(archive.tick(), archive.payloads(),
+          archive.summary().rngStates(), seeds, archive.d2sCheckpoint(), archive.sessionSnapshot())
+          .withTargetRuntime(archive.targetRuntime()).withUnitStateRuntime(archive.unitStateRuntime());
+      D2gsCheckpointSnapshot before = target.server.captureReplayCheckpoint();
+      try { target.server.restoreReplayCheckpoint(inconsistent); fail("conflicting Monster/RNG owners accepted"); }
+      catch (IllegalArgumentException expected) { assertTrue(expected.getMessage().contains("monster/native RNG")); }
+      assertEquals(before.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+    }
+  }
+
+  @Test public void monsterZoneDependencyAndLateD2sFailureRollbackFullRuntimeInLiveAndEmptyWorlds() {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture(); Fixture empty = new Fixture(); Fixture control = new Fixture()) {
+      source.populate(); source.populateMonsters(); target.populate();
+      D2gsCheckpointSnapshot archive = source.server.captureReplayCheckpoint();
+      D2gsCheckpointSnapshot beforeMissingMap = target.server.captureReplayCheckpoint();
+      D2gsCheckpointSnapshot.RestoreResult rejected = target.server.restoreReplayCheckpoint(archive);
+      assertFalse(rejected.success()); assertTrue(rejected.rolledBack);
+      assertEquals(beforeMissingMap.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      target.prepareMonsterMap(); empty.prepareMonsterMap(); control.prepareMonsterMap();
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      Monster live = target.server.world.getMapper(Monster.class).get(1);
+      live.nativeSelfResurrections = 7; live.componentVariants[0] += 17;
+      live.chargedBoltsCooldown += 0.2f; live.modeElements.drainMinimum[0] += 9;
+      D2gsCheckpointSnapshot before = target.server.captureReplayCheckpoint();
+      assertTrue(control.server.restoreReplayCheckpoint(before).success());
+      CharData impostor = CharData.loadFromBuffer(0, ByteBuffer.wrap(archive.d2sCheckpoint().entry(0).bytes()));
+      impostor.name = "ImpostorHero";
+      D2SCheckpoint wrong = D2SCheckpoint.of(java.util.Collections.singletonMap(0,
+          D2SCheckpoint.entry(0, 0, new D2SWriter96().writeD2S(D2SWriter96.createD2S(impostor)))));
+      D2gsCheckpointSnapshot incoming = D2gsCheckpointSnapshot.fromPayloads(archive.tick(), archive.payloads(),
+          archive.summary().rngStates(), archive.summary().nativeUnitRngStates(), wrong, archive.sessionSnapshot())
+          .withTargetRuntime(archive.targetRuntime()).withUnitStateRuntime(archive.unitStateRuntime())
+          .withAllocatorState(archive.allocatorState());
+      for (Fixture f : new Fixture[] {target, empty}) {
+        D2gsCheckpointSnapshot previous = f.server.captureReplayCheckpoint();
+        try { f.server.restoreReplayCheckpoint(incoming); fail("late D2S failure must roll back full Monster runtime"); }
+        catch (IllegalStateException expected) {}
+        assertEquals(previous.summary().canonical(), f.server.captureReplayCheckpoint().summary().canonical());
+      }
+      live.nativeSelfResurrections = 2;
+      control.server.world.getMapper(Monster.class).get(1).nativeSelfResurrections = 2;
+      assertEquals(continueMonsters(control), continueMonsters(target));
+    }
+  }
+
   private static String continueTargets(Fixture fixture) {
     World world = fixture.server.world;
     StateList conversion = world.getMapper(UnitStates.class).get(1).stateList;
@@ -1128,7 +1267,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "targets".equals(args[3])
+      try { System.out.println(args.length > 3 && "monsters".equals(args[3])
+          ? resumeMonsters(Path.of(args[0])) : args.length > 3 && "targets".equals(args[3])
           ? resumeTargets(Path.of(args[0])) : args.length > 3 && "states".equals(args[3])
           ? resumeStates(Path.of(args[0])) : args.length > 3 && "allocator".equals(args[3])
           ? resumeAllocator(Path.of(args[0])) : args.length > 3 && "projectiles".equals(args[3])
@@ -1142,6 +1282,7 @@ public class D2gsWorldCheckpointBindingsTest {
   private static final class Fixture implements AutoCloseable {
     final D2GS server = new D2GS(new FileHandle("."), 1, 0);
     final ServerEntityFactory factory = new ServerEntityFactory();
+    final Map map = new Map(1, 0);
 
     Fixture() { this(false); }
 
@@ -1158,7 +1299,7 @@ public class D2gsWorldCheckpointBindingsTest {
       if (potions) builder.with(new PotionRecoverySystem());
       if (states) builder.with(new com.riiablo.engine.server.StateUpdater());
       if (projectiles) builder.with(new com.riiablo.engine.server.MissileCollisionSystem());
-      server.world = new World(builder.build().register("factory", factory).register("map", new Map(1, 0))
+      server.world = new World(builder.build().register("factory", factory).register("map", map)
           .register("serverContext", new com.riiablo.engine.server.ServerGameplayContext(Riiablo.files, 1))
           .register("townPortalRegistry", new TownPortalRegistry()));
       server.factory = factory;
@@ -1208,6 +1349,44 @@ public class D2gsWorldCheckpointBindingsTest {
     }
 
     CharData data() { return server.world.getMapper(Player.class).get(0).data; }
+
+    void prepareMonsterMap() {
+      map.createSyntheticArena(2, 1, 1);
+      // The minimal fixture has no zone-transition updater. Settle an already-created
+      // player into the newly prebuilt arena, just as creating it in that map would.
+      if (server.world.getMapper(Player.class).has(0)) {
+        server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(0).zone =
+            map.getZone(server.world.getMapper(Position.class).get(0).position);
+      }
+    }
+
+    void populateMonsters() {
+      prepareMonsterMap();
+      for (int id = 1; id <= 2; id++) assertEquals(id,
+          factory.createMonster(Riiablo.files.monstats.get("quillrat1"), 20f + id, 10f));
+      // Finish normal mode entry before freezing the runtime image to be checkpointed.
+      server.world.process();
+      World world = server.world; Monster m = world.getMapper(Monster.class).get(1);
+      m.nativeOwnerId = 0; m.nativeOwnerIdentity = world.getMapper(NativePathIdentity.class).get(0).token();
+      m.nativeRequestedMountId = 2; m.nativeRequestedMountIdentity = world.getMapper(NativePathIdentity.class).get(2).token();
+      world.getMapper(NativePathIdentity.class).get(2).allocated(world, 2);
+      m.nativeSelfResurrections = 2; m.nativeSelfResurrect = true; m.nativeChargedBolts = true;
+      m.setNativePack(37, true); m.setBaalWaveMember(1, 12, 99, true);
+      m.baalLinkedOwnerId = 2; m.baalClonesCreated = 1; m.setResurrected(0, false);
+      m.chargedBoltsCooldown = 0.37f; m.lightningEnchantedLastFrame = 9007199254740001d;
+      m.modeElements = new com.riiablo.engine.server.combat.NativeMonsterModeElements();
+      m.modeElements.minimum[1] = 11; m.modeElements.maximum[1] = 23; m.modeElements.poisonLength = 37;
+      m.modeElements.drainMinimum[0] = 7; m.modeElements.drainMaximum[0] = 19; m.modeElements.matchedRows = 2;
+      Monster corpse = world.getMapper(Monster.class).get(2);
+      corpse.fireDeathExplosionScheduled = corpse.coldDeathNovaScheduled = true;
+      corpse.shatteredAtDeath = corpse.nativeCorpseCollision = true;
+      corpse.nativeRestoredCollisionPattern = true; corpse.frogSmallPresence = true;
+      corpse.frogSpawnMarkerInitialized = corpse.frogSpawnMarkerMoved = true;
+      corpse.frogSpawnMarkerX = -13; corpse.frogSpawnMarkerY = 49;
+      world.getMapper(AttributesWrapper.class).get(2).attrs.base().put(Stat.hitpoints, 0f);
+      world.getMapper(AttributesWrapper.class).get(2).attrs.reset();
+      world.process();
+    }
 
     void populateTargets() {
       World world = server.world;

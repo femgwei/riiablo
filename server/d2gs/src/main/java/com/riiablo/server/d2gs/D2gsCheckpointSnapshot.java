@@ -342,6 +342,7 @@ public final class D2gsCheckpointSnapshot {
       canonical.append("|unit-state-runtime-v1");
       for (Map.Entry<Integer, UnitStateRuntimeCheckpoint> entry : new TreeMap<>(unitStateRuntime).entrySet()) {
         if (entry.getValue() == null) throw new IllegalArgumentException("null unit-state runtime");
+        entry.getValue().validateMonsterCoverage(copy.keySet());
         if (entry.getValue().requiresTargetRuntime() && targetRuntime == null) {
           throw new IllegalArgumentException("state target runtime missing");
         }

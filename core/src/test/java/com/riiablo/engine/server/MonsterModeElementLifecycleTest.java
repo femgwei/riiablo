@@ -22,6 +22,29 @@ import org.junit.jupiter.api.Test;
 
 /** Real COF entry and projectile adapter; expectations never re-roll during creation. */
 class MonsterModeElementLifecycleTest extends RiiabloTest {
+  @Test void checkpointRestoresFrozenModeElementsForRealProjectileAndGetHitWithoutReroll() {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      source.row.El1Type = target.row.El1Type = "life";
+      source.cofs.setMode(source.id, Engine.Monster.MODE_A1, true);
+      com.riiablo.engine.replay.MonsterRuntimeCheckpoint image =
+          com.riiablo.engine.replay.MonsterRuntimeCheckpoint.capture(source.world, source.id,
+              java.util.Collections.singleton(source.id));
+      image.restore(target.world, target.id);
+      target.world.getMapper(CofReference.class).get(target.id).mode = Engine.Monster.MODE_A1;
+      NativeMonsterModeElements frozen = target.monster.modeElements;
+      int seed = target.monster.rngState, high = target.monster.nativeSeed.getNHighSeed();
+      Missile expected = source.projectile(123), actual = target.projectile(123);
+      assertTrue(actual.damage.getValue(Stat.lifedrainmindam, 0) > 0);
+      assertEquals(expected.damage.getValue(Stat.lifedrainmindam, 0), actual.damage.getValue(Stat.lifedrainmindam, 0));
+      assertEquals(seed, target.monster.rngState); assertEquals(high, target.monster.nativeSeed.getNHighSeed());
+      target.cofs.setMode(target.id, Engine.Monster.MODE_GH);
+      assertSame(frozen, target.monster.modeElements); assertEquals(seed, target.monster.rngState);
+      target.cofs.setMode(target.id, Engine.Monster.MODE_NU);
+      assertNotSame(frozen, target.monster.modeElements);
+      for (int drain : target.monster.modeElements.drainMaximum) assertEquals(0, drain);
+    }
+  }
+
   static final class Fixture implements AutoCloseable {
     final MonStats.Entry row = row();
     final Files files = files(row);

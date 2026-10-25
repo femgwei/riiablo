@@ -1,6 +1,7 @@
 package com.riiablo.engine.replay;
 
 import com.artemis.World;
+import com.artemis.EntityAllocatorCheckpoint;
 import com.riiablo.engine.server.NativeConversionLifecycle;
 import com.riiablo.engine.server.NativePregnancyLifecycle;
 import com.riiablo.attributes.*;
@@ -10,17 +11,24 @@ import java.io.*;
 import java.util.*;
 
 /**
- * Explicit authoritative state-list/runtime codec, not StateP reconstruction.
+ * Explicit authoritative state-list and Monster component codec, not StateP reconstruction.
  * Per-network-entity records include component absence. Native memberships require
  * the owning TARGETS image; only explicitly typed removal lifecycles are supported.
  */
 public final class UnitStateRuntimeCheckpoint {
-  private static final int VERSION = 2;
+  private static final int VERSION = 3;
   public static final int MAX_BYTES = 1024 * 1024;
   private final byte[] bytes;
   private UnitStateRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
   public byte[] bytes() { return bytes.clone(); }
   public boolean requiresTargetRuntime() { return decode().requiresTargets; }
+  /** v1/v2 did not describe the complete Monster component, including absence. */
+  public boolean hasMonsterRuntime() { return decode().hasMonsterRuntime; }
+  public MonsterRuntimeCheckpoint monsterRuntime() { return decode().monsterRuntime; }
+  public void validateMonsterCoverage(Set<Integer> ids) {
+    MonsterRuntimeCheckpoint monster = decode().monsterRuntime;
+    if (monster != null) monster.validateCoverage(ids);
+  }
 
   public static UnitStateRuntimeCheckpoint fromBytes(byte[] bytes) {
     if (bytes == null || bytes.length == 0 || bytes.length > MAX_BYTES) {
@@ -36,6 +44,16 @@ public final class UnitStateRuntimeCheckpoint {
   }
 
   public static Map<Integer, UnitStateRuntimeCheckpoint> capture(World world, int[] ids, boolean targetCovered) {
+    EntityAllocatorCheckpoint allocator = EntityAllocatorCheckpoint.capture(world);
+    Set<Integer> covered = new HashSet<>();
+    for (int id : ids) {
+      if (!allocator.active(id) || !covered.add(id)) throw new IllegalArgumentException("unit-state capture host: " + id);
+    }
+    for (int id : allocator.activeIds()) {
+      if (!covered.contains(id) && world.getMapper(Monster.class).has(id)) {
+        throw new IllegalStateException("local monster requires owner checkpoint: " + id);
+      }
+    }
     Map<Integer, UnitStateRuntimeCheckpoint> result = new TreeMap<>();
     for (int id : ids) {
       UnitStates holder = world.getMapper(UnitStates.class).get(id);
@@ -64,6 +82,11 @@ public final class UnitStateRuntimeCheckpoint {
             out.writeBoolean(monster.converted); out.writeInt(monster.conversionOwnerId);
           }
         }
+        MonsterRuntimeCheckpoint monster = MonsterRuntimeCheckpoint.capture(world, id, covered);
+        out.writeBoolean(monster != null);
+        if (monster != null) {
+          byte[] image = monster.bytes(); out.writeInt(image.length); out.write(image);
+        }
         out.flush(); result.put(id, fromBytes(bytes.toByteArray()));
       } catch (IOException impossible) { throw new IllegalStateException(impossible); }
     }
@@ -81,6 +104,14 @@ public final class UnitStateRuntimeCheckpoint {
       }
       Decoded d = entry.getValue().decode();
       Monster monster = world.getMapper(Monster.class).get(id);
+      if (d.hasMonsterRuntime) {
+        if (d.monsterRuntime == null) {
+          if (monster != null) throw new IllegalStateException("unexpected monster runtime host: " + id);
+        } else {
+          d.monsterRuntime.validateCoverage(records.keySet());
+          d.monsterRuntime.validateRestore(world, id);
+        }
+      }
       if (d.monsterId != null && (monster == null || monster.monstats == null
           || monster.monstats.hcIdx != d.monsterId)) {
         throw new IllegalStateException("state monster host mismatch");
@@ -108,6 +139,7 @@ public final class UnitStateRuntimeCheckpoint {
     }
     for (Map.Entry<Integer, Decoded> entry : decoded.entrySet()) {
       int id = entry.getKey(); Decoded d = entry.getValue();
+      if (d.monsterRuntime != null) d.monsterRuntime.restore(world, id);
       if (d.holder == null) {
         UnitStates old = world.getMapper(UnitStates.class).get(id);
         if (old != null && old.stateList != null) old.stateList.discardAll();
@@ -153,6 +185,19 @@ public final class UnitStateRuntimeCheckpoint {
           d.monsterId = in.readInt(); d.converted = CheckpointIO.readBoolean(in);
           d.conversionOwner = in.readInt();
           if (d.monsterId < 0 || d.conversionOwner < -1) throw new IllegalArgumentException("conversion overlay");
+        }
+      }
+      if (version >= 3) {
+        d.hasMonsterRuntime = true;
+        if (CheckpointIO.readBoolean(in)) {
+          int length = CheckpointIO.count(in, MonsterRuntimeCheckpoint.MAX_BYTES);
+          if (length == 0 || length > in.available()) throw new IllegalArgumentException("monster runtime length");
+          byte[] image = new byte[length]; in.readFully(image);
+          d.monsterRuntime = MonsterRuntimeCheckpoint.fromBytes(image);
+        }
+        if (d.monsterId != null && (d.monsterRuntime == null || d.monsterId != d.monsterRuntime.monsterId()
+            || d.converted != d.monsterRuntime.converted() || d.conversionOwner != d.monsterRuntime.conversionOwner())) {
+          throw new IllegalArgumentException("conflicting monster state overlay");
         }
       }
       if (in.read() != -1) throw new IllegalArgumentException("trailing unit-state runtime");
@@ -297,6 +342,8 @@ public final class UnitStateRuntimeCheckpoint {
   }
 
   private static final class Decoded {
+    boolean hasMonsterRuntime;
+    MonsterRuntimeCheckpoint monsterRuntime;
     UnitStates holder;
     final List<UnitState> states = new ArrayList<>();
     final List<int[]> hooks = new ArrayList<>();
