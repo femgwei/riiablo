@@ -6242,6 +6242,13 @@ public class D2GS extends ApplicationAdapter {
     return captureReplayCheckpoint(null);
   }
 
+  /** Captures and durably publishes a complete checkpoint for another process. */
+  public void writeReplayCheckpoint(java.nio.file.Path path) throws java.io.IOException {
+    D2gsCheckpointSnapshot checkpoint = captureReplayCheckpoint();
+    if (checkpoint == null) throw new IllegalStateException("D2GS simulation is not initialized");
+    D2gsCheckpointStore.write(path, checkpoint);
+  }
+
   /** Captures a baseline together with named RNG stream state supplied by the host. */
   public D2gsCheckpointSnapshot captureReplayCheckpoint(
       java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.RngState> rngStates) {
@@ -6274,6 +6281,12 @@ public class D2GS extends ApplicationAdapter {
     return restoreReplayCheckpoint(checkpoint, replayEntityLifecycle);
   }
 
+  /** Reads and restores a checkpoint published by a previous D2GS process. */
+  public D2gsCheckpointSnapshot.RestoreResult restoreReplayCheckpoint(
+      java.nio.file.Path path) throws java.io.IOException {
+    return restoreReplayCheckpoint(D2gsCheckpointStore.read(path), replayEntityLifecycle);
+  }
+
   /** Restores a checkpoint with an explicit native entity create/delete bridge. */
   public D2gsCheckpointSnapshot.RestoreResult restoreReplayCheckpoint(
       D2gsCheckpointSnapshot checkpoint, D2gsCheckpointSnapshot.EntityLifecycle lifecycle) {
@@ -6292,12 +6305,21 @@ public class D2GS extends ApplicationAdapter {
     java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.NativeUnitRngState>
         nativeUnitRngStates = checkpoint.summary().nativeUnitRngStates();
     com.riiablo.save.D2SCheckpoint d2sCheckpoint = checkpoint.d2sCheckpoint();
-    if (replayRngRegistry != null && !rngStates.isEmpty()) {
+    if (replayRngRegistry == null && !rngStates.isEmpty()) {
+      throw new IllegalStateException("checkpoint RNG registry is not installed");
+    }
+    if (replayNativeUnitRngRegistry == null && !nativeUnitRngStates.isEmpty()) {
+      throw new IllegalStateException("checkpoint native-unit RNG registry is not installed");
+    }
+    if (replayD2sRegistry == null && d2sCheckpoint != null) {
+      throw new IllegalStateException("checkpoint D2S registry is not installed");
+    }
+    if (replayRngRegistry != null) {
       // Validate before touching ECS so a missing/duplicate RNG stream cannot
       // leave the world half-restored.
       replayRngRegistry.validate(rngStates);
     }
-    if (replayNativeUnitRngRegistry != null && !nativeUnitRngStates.isEmpty()) {
+    if (replayNativeUnitRngRegistry != null) {
       replayNativeUnitRngRegistry.validate(nativeUnitRngStates);
     }
     if (replayD2sRegistry != null && d2sCheckpoint != null) {
@@ -6329,10 +6351,10 @@ public class D2GS extends ApplicationAdapter {
         : checkpoint.restoreExisting(world, serializer, lifecycle);
     if (result.success()) {
       try {
-        if (replayRngRegistry != null && !rngStates.isEmpty()) {
+        if (replayRngRegistry != null) {
           replayRngRegistry.restore(rngStates);
         }
-        if (replayNativeUnitRngRegistry != null && !nativeUnitRngStates.isEmpty()) {
+        if (replayNativeUnitRngRegistry != null) {
           replayNativeUnitRngRegistry.restore(nativeUnitRngStates);
         }
         if (replayD2sRegistry != null && d2sCheckpoint != null) {
@@ -6836,7 +6858,8 @@ public class D2GS extends ApplicationAdapter {
     AuthoritativeSessionRegistry.Result session = commandAdapter.connect(
         packet.id, charData.name, entityId, sessionTick);
     if (!session.accepted
-        && session.rejection == AuthoritativeSessionRegistry.Rejection.STABLE_KEY_ACTIVE
+        && (session.rejection == AuthoritativeSessionRegistry.Rejection.STABLE_KEY_ACTIVE
+            || session.rejection == AuthoritativeSessionRegistry.Rejection.CONNECTION_IN_USE)
         && pendingSessionRebindKeys.contains(charData.name)) {
       AuthoritativeSessionRegistry.Session archived = authoritativeSessions.stableKey(charData.name);
       session = archived == null ? session : commandAdapter.rebind(packet.id, charData.name,

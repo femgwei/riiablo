@@ -89,4 +89,46 @@ class D2gsCommandAdapterTest {
     assertEquals(1, sessions.activeCount());
     assertEquals(valid.canonical(), sessions.snapshot().canonical());
   }
+
+  @Test
+  void checkpointTakeoverCanReuseTheSameConnectionSlot() {
+    AuthoritativeSessionRegistry sessions = new AuthoritativeSessionRegistry();
+    D2gsCommandAdapter adapter = new D2gsCommandAdapter(sessions, "d2gs", (command, target) -> true);
+    assertTrue(adapter.connect(0, "hero", 7, 0).accepted);
+    assertEquals(AuthoritativeSessionRegistry.Rejection.CONNECTION_IN_USE,
+        adapter.rebind(0, "anotherHero", 8, 10).rejection);
+    assertTrue(adapter.rebind(0, "hero", 7, 10, 1).accepted);
+    assertEquals(2L, sessions.stableKey("hero").generation);
+    assertEquals(D2gsCommandAdapter.Rejection.STALE_SESSION,
+        adapter.submit(0, 1, "move", "late", 11, 1, -1).rejection);
+  }
+
+  @Test
+  void checkpointAfterTakeoverRetainsHistoryAndSelectsLatestGeneration() {
+    AuthoritativeSessionRegistry sessions = new AuthoritativeSessionRegistry();
+    assertTrue(sessions.connect(1, "hero", 7, 0).accepted);
+    assertTrue(sessions.rebind(8, "hero", 7, 10, 1).accepted);
+    AuthoritativeSessionRegistry restored = new AuthoritativeSessionRegistry();
+    restored.restore(sessions.snapshot());
+    assertEquals(sessions.snapshot().canonical(), restored.snapshot().canonical());
+    assertEquals(2L, restored.stableKey("hero").generation);
+    assertEquals(2L, restored.snapshot().stableKey("hero").generation);
+    assertEquals(AuthoritativeSessionRegistry.State.DISCONNECTED, restored.connection(1).state);
+    assertTrue(restored.rebind(2, "hero", 7, 20, 2).accepted);
+    sessions.restore(restored.snapshot());
+    assertEquals(3L, sessions.stableKey("hero").generation);
+  }
+
+  @Test
+  void checkpointRejectsTwoActiveOwnersOfOneStableKey() {
+    AuthoritativeSessionRegistry sessions = new AuthoritativeSessionRegistry();
+    assertTrue(sessions.connect(1, "hero", 7, 0).accepted);
+    assertTrue(sessions.rebind(8, "hero", 7, 10, 1).accepted);
+    java.util.List<AuthoritativeSessionRegistry.Session> records =
+        new ArrayList<>(sessions.snapshot().sessions());
+    AuthoritativeSessionRegistry.Session old = records.get(0);
+    records.set(0, AuthoritativeSessionRegistry.Session.of(old.connectionId, old.actorId,
+        old.stableKey, AuthoritativeSessionRegistry.State.ACTIVE, old.connectedTick, -1, old.generation));
+    assertThrows(IllegalArgumentException.class, () -> AuthoritativeSessionRegistry.Snapshot.of(records));
+  }
 }

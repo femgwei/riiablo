@@ -39,7 +39,7 @@ public final class D2gsCheckpointSnapshot {
   private static final int ECS_WIRE_MAGIC = 0x44324745; // "D2GE"
   private static final int ECS_WIRE_VERSION = 1;
   private static final int CHECKPOINT_WIRE_MAGIC = 0x44324743; // "D2GC"
-  private static final int CHECKPOINT_WIRE_VERSION = 1;
+  private static final int CHECKPOINT_WIRE_VERSION = 2;
   private static final int MAX_ECS_ENTITIES = 1_000_000;
   private static final int MAX_ECS_PAYLOAD = 16 * 1024 * 1024;
   private static final int MAX_CHECKPOINT_STRING = 64 * 1024 * 1024;
@@ -333,7 +333,7 @@ public final class D2gsCheckpointSnapshot {
       }
 
       if (d2sCheckpoint == null) {
-        output.writeInt(0);
+        output.writeInt(-1);
       } else {
         output.writeInt(d2sCheckpoint.entries().size());
         for (D2SCheckpoint.Entry entry : d2sCheckpoint.entries().values()) {
@@ -346,7 +346,7 @@ public final class D2gsCheckpointSnapshot {
       }
 
       if (sessionSnapshot == null) {
-        output.writeInt(0);
+        output.writeInt(-1);
       } else {
         output.writeInt(sessionSnapshot.sessions().size());
         for (AuthoritativeSessionRegistry.Session session : sessionSnapshot.sessions()) {
@@ -376,7 +376,8 @@ public final class D2gsCheckpointSnapshot {
       if (input.readInt() != CHECKPOINT_WIRE_MAGIC) {
         throw new IllegalArgumentException("checkpoint magic");
       }
-      if (input.readInt() != CHECKPOINT_WIRE_VERSION) {
+      int version = input.readInt();
+      if (version < 1 || version > CHECKPOINT_WIRE_VERSION) {
         throw new IllegalArgumentException("checkpoint version");
       }
       long tick = input.readLong();
@@ -397,9 +398,9 @@ public final class D2gsCheckpointSnapshot {
             input.readInt()));
       }
 
-      int d2sCount = readCount(input, "D2S count");
+      int d2sCount = readOptionalCount(input, "D2S count", version);
       D2SCheckpoint d2s = null;
-      if (d2sCount > 0) {
+      if (d2sCount >= 0) {
         Map<Integer, D2SCheckpoint.Entry> entries = new TreeMap<>();
         for (int i = 0; i < d2sCount; i++) {
           int entityId = input.readInt();
@@ -417,9 +418,9 @@ public final class D2gsCheckpointSnapshot {
         d2s = D2SCheckpoint.of(entries);
       }
 
-      int sessionCount = readCount(input, "session count");
+      int sessionCount = readOptionalCount(input, "session count", version);
       AuthoritativeSessionRegistry.Snapshot sessions = null;
-      if (sessionCount > 0) {
+      if (sessionCount >= 0) {
         List<AuthoritativeSessionRegistry.Session> records = new ArrayList<>();
         for (int i = 0; i < sessionCount; i++) {
           int connectionId = input.readInt();
@@ -452,6 +453,16 @@ public final class D2gsCheckpointSnapshot {
     } catch (IOException e) {
       throw new IllegalArgumentException("invalid checkpoint", e);
     }
+  }
+
+  private static int readOptionalCount(DataInputStream input, String field, int version)
+      throws IOException {
+    int count = input.readInt();
+    if (count < (version == 1 ? 0 : -1) || count > MAX_ECS_ENTITIES) {
+      throw new IllegalArgumentException(field);
+    }
+    // Version 1 used zero for absent metadata and could not represent empty registries.
+    return version == 1 && count == 0 ? -1 : count;
   }
 
   /**

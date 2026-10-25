@@ -1866,6 +1866,61 @@ git diff --check
 结果：D2GS checkpoint 测试通过。下一批运行真实进程重启/接管 gate，验证完整 envelope
 进入新 D2GS 实例后，ECS、RNG、D2S 和 session generation 能共同恢复并继续处理命令。
 
+### M8-A 第 21 批：落盘交接、跨 JVM 继续仿真与接管安全边界（2026-10-25）
+
+本批把完整 checkpoint envelope 接入可落盘的进程交接边界，仍不把“新进程已接管并
+继续处理真实 socket 命令”提前宣称完成。
+
+- 新增 `D2gsCheckpointStore`，将完整 `D2gsCheckpointSnapshot.toBytes()` 写入同目录临时
+  文件，刷新文件内容后再原子替换目标；写入失败会清理临时文件，避免留下半个 checkpoint。
+  不支持原子替换的文件系统直接失败，不降级为可能破坏旧 checkpoint 的非原子覆盖；该承诺
+  是文件内容刷新和进程间原子发布，不等同于断电情况下的目录项持久性保证。
+- `D2GS` 增加 `writeReplayCheckpoint(Path)` 与 `restoreReplayCheckpoint(Path)`，生产恢复
+  入口不再需要调用方自行拼装 envelope；读取仍统一经过版本、长度、摘要、D2S 和 session
+  canonical 校验。
+- 完整 envelope 升到 v2，以 `-1` 表示缺省、`0` 表示存在但为空的 D2S/session registry，
+  修复空 registry 编解码失败；保留 v1 读取兼容性。恢复时缺少非空 RNG/native RNG 或显式
+  D2S payload 的适配器会在 ECS 变更前拒绝，空 RNG 列表则清除归档中不存在的 stream。
+- 接管支持同 stable key 复用原 connection slot，D2GS 登录回退同时处理归档连接槽占用；
+  authority snapshot 允许旧的 disconnected generation 历史，并始终选择最高 generation，
+  但拒绝多 active owner、重复 generation 或旧 generation 仍 active 的无效记录。
+- 新增独立 JVM 组合门禁：真实 `SerializationManager`、最小 ECS 与 `D2GS` 恢复事务在另一
+  Java 进程重建；恢复后摘要一致、旧 generation 命令拒绝，新 generation 命令在 N+1 Tick
+  消耗恢复的两类 RNG 并改变 Position，最终摘要与本 JVM 同路径结果一致。
+- 同批覆盖损坏文件拒绝、目标替换/失败临时文件清理、缺少适配器的前置拒绝、空 stream 清理、
+  接管后再次 snapshot/restore，以及 native factory 晚期失败后的 ECS/RNG/session/clock 回滚。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointStoreTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointRecoveryTest `
+  --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest `
+  --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest `
+  :core:test `
+  --tests com.riiablo.engine.D2gsCommandAdapterTest `
+  --tests com.riiablo.engine.replay.CheckpointRngRegistryTest `
+  --tests com.riiablo.engine.replay.NativeUnitRandomRegistryTest `
+  --tests com.riiablo.save.D2SCheckpointRegistryTest `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：服务端 26 项、core 17 项，共 43 项测试通过，0 失败、0 跳过；生产编译、模块边界与
+`git diff --check` 通过。已验证真实独立 JVM 边界上的恢复/继续仿真摘要一致性及损坏拒绝。
+新增跨 JVM fixture 不依赖 MPQ；同轮真实 factory/D2S 回归使用上述 1.10f 安装资源。本批
+不改暗黑规则算法，RNG 仅验证既有实现的状态恢复和继续抽样。最小 ECS fixture 不等同于
+生产地图/完整 native factory 重建；D2S 在该 JVM 组合门禁中是空 registry，非空角色恢复
+仍由独立 D2S 回归验证。因此 M8-A、M8-D 和 M8 总体继续标记为进行中。
+
+剩余问题/下一迁移：生产 D2GS 仍需自动注册真实 RNG 调用方与玩家 D2S bindings；恢复登录
+必须复用归档 actor/角色状态，而不能由客户端旧 D2S 新建另一个玩家。补齐这些接管适配后，
+在 1.10f headless 环境启动旧实例写出 checkpoint、关闭并启动新实例，经真实 socket 完成
+generation rebind 和后续固定 Tick 命令；再核对完整地图/实体、非空 D2S、RNG 继续执行证据。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

@@ -108,6 +108,34 @@ public class D2gsCheckpointSnapshotTest {
     throw new AssertionError("expected IllegalArgumentException");
   }
 
+  @Test public void completeEnvelopeDistinguishesAbsentAndEmptyRegistries() {
+    D2gsCheckpointSnapshot empty = D2gsCheckpointSnapshot.fromPayloads(0L,
+        java.util.Collections.emptyMap(), null, null,
+        com.riiablo.save.D2SCheckpoint.of(java.util.Collections.emptyMap()),
+        new AuthoritativeSessionRegistry().snapshot());
+    D2gsCheckpointSnapshot decoded = D2gsCheckpointSnapshot.fromBytes(empty.toBytes());
+    assertEquals(empty.summary().canonical(), decoded.summary().canonical());
+    assertEquals(empty.d2sCheckpoint().canonical(), decoded.d2sCheckpoint().canonical());
+    assertEquals(empty.sessionSnapshot().canonical(), decoded.sessionSnapshot().canonical());
+
+    D2gsCheckpointSnapshot absent = D2gsCheckpointSnapshot.fromBytes(
+        D2gsCheckpointSnapshot.fromPayloads(0L, java.util.Collections.emptyMap()).toBytes());
+    org.junit.Assert.assertNull(absent.d2sCheckpoint());
+    org.junit.Assert.assertNull(absent.sessionSnapshot());
+  }
+
+  @Test public void completeEnvelopeStillReadsVersionOneWithoutOptionalMetadata() {
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.fromPayloads(5L,
+        java.util.Collections.emptyMap());
+    byte[] legacy = checkpoint.toBytes();
+    java.nio.ByteBuffer bytes = java.nio.ByteBuffer.wrap(legacy);
+    bytes.putInt(4, 1); // original complete envelope version
+    bytes.putInt(28, 0); // v1 encoded absent D2S as zero entries
+    bytes.putInt(32, 0); // v1 encoded absent sessions as zero entries
+    assertEquals(checkpoint.summary().canonical(),
+        D2gsCheckpointSnapshot.fromBytes(legacy).summary().canonical());
+  }
+
   @Test public void checkpointCarriesRngStateAndReportsContinuationDrift() {
     World world = worldWithEntities(1);
     FakeSerializer serializer = new FakeSerializer();

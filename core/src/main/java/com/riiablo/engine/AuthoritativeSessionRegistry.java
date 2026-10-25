@@ -82,10 +82,12 @@ public final class AuthoritativeSessionRegistry {
 
     public Session stableKey(String stableKey) {
       if (stableKey == null) return null;
+      Session latest = null;
       for (Session session : sessions) {
-        if (stableKey.equals(session.stableKey)) return session;
+        if (stableKey.equals(session.stableKey)
+            && (latest == null || session.generation > latest.generation)) latest = session;
       }
-      return null;
+      return latest;
     }
 
     public String canonical() {
@@ -160,7 +162,8 @@ public final class AuthoritativeSessionRegistry {
     }
     if (tick < 0L) throw new IllegalArgumentException("tick");
     Session currentConnection = byConnection.get(connectionId);
-    if (currentConnection != null && currentConnection.state == State.ACTIVE) {
+    if (currentConnection != null && currentConnection.state == State.ACTIVE
+        && !stableKey.equals(currentConnection.stableKey)) {
       return Result.rejected(Rejection.CONNECTION_IN_USE);
     }
     Session currentKey = byStableKey.get(stableKey);
@@ -232,14 +235,25 @@ public final class AuthoritativeSessionRegistry {
     if (snapshot == null) throw new NullPointerException("snapshot");
     Map<Integer, Session> restoredConnections = new HashMap<>();
     Map<String, Session> restoredKeys = new HashMap<>();
+    Map<String, java.util.Set<Long>> generations = new HashMap<>();
     try {
       for (Session session : snapshot.sessions()) {
         validateSnapshotSession(session);
         if (restoredConnections.put(session.connectionId, session) != null) {
           throw new IllegalArgumentException("duplicate connection");
         }
-        if (restoredKeys.put(session.stableKey, session) != null) {
-          throw new IllegalArgumentException("duplicate stable key");
+        if (!generations.computeIfAbsent(session.stableKey, key -> new java.util.HashSet<>())
+            .add(session.generation)) {
+          throw new IllegalArgumentException("duplicate stable-key generation");
+        }
+        Session latest = restoredKeys.get(session.stableKey);
+        if (latest == null || latest.generation < session.generation) {
+          restoredKeys.put(session.stableKey, session);
+        }
+      }
+      for (Session session : restoredConnections.values()) {
+        if (session.state == State.ACTIVE && restoredKeys.get(session.stableKey) != session) {
+          throw new IllegalArgumentException("active session is not latest generation");
         }
       }
     } catch (RuntimeException e) {
@@ -258,7 +272,7 @@ public final class AuthoritativeSessionRegistry {
   }
 
   private static void validateSnapshotSession(Session session) {
-    if (session == null || session.connectionId < 0 || session.actorId < 0
+    if (session == null || session.state == null || session.connectionId < 0 || session.actorId < 0
         || session.stableKey == null || session.stableKey.trim().isEmpty()
         || session.connectedTick < 0L || session.generation <= 0L) {
       throw new IllegalArgumentException("invalid session");
