@@ -1840,6 +1840,32 @@ git diff --check
 结果：D2GS checkpoint 测试通过。当前 envelope 已能跨进程传输 ECS 世界状态；下一批继续
 把 RNG、D2S 和 session authority 纳入同一版本化 envelope，并做真实进程重启后的组合恢复。
 
+### M8-A 第 20 批：完整 checkpoint metadata envelope（2026-10-25）
+
+本批把 ECS-only envelope 扩展为可携带完整恢复元数据的版本化 checkpoint，仍不把真实
+进程重启网络 gate 宣称为完成。
+
+- `D2gsCheckpointSnapshot.toBytes/fromBytes` 现在同时编码 ECS payload、兼容
+  `NativeRng`、双字 native-unit RNG、D2S 角色条目和 session authority；D2S 条目通过
+  严格 `D2SReader` 重新验证，session records 通过 registry snapshot 校验。
+- envelope 保存完整 summary canonical 与 D2S canonical 作为完整性见证；任何 metadata
+  丢失、篡改、乱序、截断、错误版本或尾随字节都会拒绝恢复。
+- 新增跨 World 的完整 metadata round-trip 测试，确认 RNG 列表和 session generation
+  在解码后保持一致；ECS-only API 对携带可选 metadata 的 checkpoint 显式失败，避免
+  静默降级。
+
+验证命令：
+
+```powershell
+./gradlew.bat :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：D2GS checkpoint 测试通过。下一批运行真实进程重启/接管 gate，验证完整 envelope
+进入新 D2GS 实例后，ECS、RNG、D2S 和 session generation 能共同恢复并继续处理命令。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

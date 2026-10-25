@@ -76,6 +76,29 @@ public class D2gsCheckpointSnapshotTest {
     assertIllegalArgument(() -> D2gsCheckpointSnapshot.fromEcsBytes(trailing));
   }
 
+  @Test public void completeEnvelopePreservesRngAndSessionAuthorityAcrossProcesses() {
+    World world = worldWithEntities(1);
+    FakeSerializer serializer = new FakeSerializer();
+    int id = networkedIds(world)[0];
+    serializer.states.put(id, 12);
+    AuthoritativeSessionRegistry sessions = new AuthoritativeSessionRegistry();
+    assertTrue(sessions.connect(3, "hero", id, 10L).accepted);
+    java.util.List<SimulationCheckpoint.RngState> rng = java.util.Collections.singletonList(
+        new SimulationCheckpoint.RngState("combat.hit", id, 123, 9L));
+    java.util.List<SimulationCheckpoint.NativeUnitRngState> nativeRng =
+        java.util.Collections.singletonList(
+            new SimulationCheckpoint.NativeUnitRngState("unit.hit", id, 7, 11));
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(world, serializer, 10L,
+        rng, nativeRng, null, sessions.snapshot());
+
+    D2gsCheckpointSnapshot transferred = D2gsCheckpointSnapshot.fromBytes(checkpoint.toBytes());
+    assertEquals(checkpoint.summary().canonical(), transferred.summary().canonical());
+    assertEquals(checkpoint.sessionSnapshot().canonical(), transferred.sessionSnapshot().canonical());
+    assertEquals(checkpoint.summary().rngStates(), transferred.summary().rngStates());
+    assertEquals(checkpoint.summary().nativeUnitRngStates(),
+        transferred.summary().nativeUnitRngStates());
+  }
+
   private static void assertIllegalArgument(Runnable action) {
     try {
       action.run();

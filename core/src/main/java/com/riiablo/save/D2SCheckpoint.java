@@ -79,7 +79,8 @@ public final class D2SCheckpoint {
     }
   }
 
-  static Entry entry(int entityId, int difficulty, byte[] bytes) {
+  /** Builds a validated immutable entry for checkpoint transport codecs. */
+  public static Entry entry(int entityId, int difficulty, byte[] bytes) {
     return new Entry(entityId, difficulty, bytes);
   }
 }

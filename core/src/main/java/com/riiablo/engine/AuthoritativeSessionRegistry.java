@@ -48,6 +48,13 @@ public final class AuthoritativeSessionRegistry {
       this.generation = generation;
     }
 
+    /** Rehydrates one validated session record from a process-independent checkpoint. */
+    public static Session of(int connectionId, int actorId, String stableKey, State state,
+        long connectedTick, long disconnectedTick, long generation) {
+      return new Session(connectionId, actorId, stableKey, state, connectedTick,
+          disconnectedTick, generation);
+    }
+
     private Session disconnected(long tick) {
       return new Session(connectionId, actorId, stableKey, State.DISCONNECTED,
           connectedTick, tick, generation);
@@ -60,6 +67,15 @@ public final class AuthoritativeSessionRegistry {
 
     private Snapshot(List<Session> sessions) {
       this.sessions = Collections.unmodifiableList(new ArrayList<>(sessions));
+    }
+
+    /** Rehydrates and validates an immutable authority snapshot from a checkpoint. */
+    public static Snapshot of(List<Session> sessions) {
+      Snapshot snapshot = new Snapshot(sessions == null
+          ? Collections.emptyList() : sessions);
+      AuthoritativeSessionRegistry validator = new AuthoritativeSessionRegistry();
+      validator.restore(snapshot);
+      return snapshot;
     }
 
     public List<Session> sessions() { return sessions; }

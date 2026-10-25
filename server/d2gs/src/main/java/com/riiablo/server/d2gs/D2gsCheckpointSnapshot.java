@@ -38,8 +38,11 @@ import com.riiablo.net.packet.d2gs.D2GSData;
 public final class D2gsCheckpointSnapshot {
   private static final int ECS_WIRE_MAGIC = 0x44324745; // "D2GE"
   private static final int ECS_WIRE_VERSION = 1;
+  private static final int CHECKPOINT_WIRE_MAGIC = 0x44324743; // "D2GC"
+  private static final int CHECKPOINT_WIRE_VERSION = 1;
   private static final int MAX_ECS_ENTITIES = 1_000_000;
   private static final int MAX_ECS_PAYLOAD = 16 * 1024 * 1024;
+  private static final int MAX_CHECKPOINT_STRING = 64 * 1024 * 1024;
 
   /**
    * Native ECS lifecycle bridge used when a checkpoint crosses an entity-set
@@ -301,6 +304,157 @@ public final class D2gsCheckpointSnapshot {
   }
 
   /**
+   * Encodes the complete checkpoint, including ECS, both RNG registries, D2S
+   * role bytes, and session authority. The canonical summaries are included as
+   * integrity witnesses so a receiving process can reject partial metadata.
+   */
+  public byte[] toBytes() {
+    try {
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      DataOutputStream output = new DataOutputStream(bytes);
+      output.writeInt(CHECKPOINT_WIRE_MAGIC);
+      output.writeInt(CHECKPOINT_WIRE_VERSION);
+      output.writeLong(tick);
+      writePayloads(output, payloads);
+
+      output.writeInt(summary.rngStates().size());
+      for (SimulationCheckpoint.RngState state : summary.rngStates()) {
+        writeString(output, state.stream);
+        output.writeLong(state.contextId);
+        output.writeInt(state.state);
+        output.writeLong(state.drawCount);
+      }
+      output.writeInt(summary.nativeUnitRngStates().size());
+      for (SimulationCheckpoint.NativeUnitRngState state : summary.nativeUnitRngStates()) {
+        writeString(output, state.stream);
+        output.writeLong(state.contextId);
+        output.writeInt(state.lowSeed);
+        output.writeInt(state.highSeed);
+      }
+
+      if (d2sCheckpoint == null) {
+        output.writeInt(0);
+      } else {
+        output.writeInt(d2sCheckpoint.entries().size());
+        for (D2SCheckpoint.Entry entry : d2sCheckpoint.entries().values()) {
+          output.writeInt(entry.entityId());
+          output.writeInt(entry.difficulty());
+          byte[] save = entry.bytes();
+          output.writeInt(save.length);
+          output.write(save);
+        }
+      }
+
+      if (sessionSnapshot == null) {
+        output.writeInt(0);
+      } else {
+        output.writeInt(sessionSnapshot.sessions().size());
+        for (AuthoritativeSessionRegistry.Session session : sessionSnapshot.sessions()) {
+          output.writeInt(session.connectionId);
+          output.writeInt(session.actorId);
+          writeString(output, session.stableKey);
+          output.writeByte(session.state.ordinal());
+          output.writeLong(session.connectedTick);
+          output.writeLong(session.disconnectedTick);
+          output.writeLong(session.generation);
+        }
+      }
+      writeString(output, summary.canonical());
+      writeString(output, d2sCheckpoint == null ? "" : d2sCheckpoint.canonical());
+      output.flush();
+      return bytes.toByteArray();
+    } catch (IOException e) {
+      throw new IllegalStateException("unable to encode checkpoint", e);
+    }
+  }
+
+  /** Decodes and validates a complete checkpoint produced by {@link #toBytes()}. */
+  public static D2gsCheckpointSnapshot fromBytes(byte[] encoded) {
+    if (encoded == null) throw new NullPointerException("encoded");
+    try {
+      DataInputStream input = new DataInputStream(new ByteArrayInputStream(encoded));
+      if (input.readInt() != CHECKPOINT_WIRE_MAGIC) {
+        throw new IllegalArgumentException("checkpoint magic");
+      }
+      if (input.readInt() != CHECKPOINT_WIRE_VERSION) {
+        throw new IllegalArgumentException("checkpoint version");
+      }
+      long tick = input.readLong();
+      if (tick < 0L) throw new IllegalArgumentException("tick");
+      Map<Integer, byte[]> payloads = readPayloads(input);
+
+      int rngCount = readCount(input, "rng count");
+      List<SimulationCheckpoint.RngState> rngStates = new ArrayList<>();
+      for (int i = 0; i < rngCount; i++) {
+        rngStates.add(new SimulationCheckpoint.RngState(readString(input, "rng stream"),
+            input.readLong(), input.readInt(), input.readLong()));
+      }
+      int nativeCount = readCount(input, "native rng count");
+      List<SimulationCheckpoint.NativeUnitRngState> nativeStates = new ArrayList<>();
+      for (int i = 0; i < nativeCount; i++) {
+        nativeStates.add(new SimulationCheckpoint.NativeUnitRngState(
+            readString(input, "native rng stream"), input.readLong(), input.readInt(),
+            input.readInt()));
+      }
+
+      int d2sCount = readCount(input, "D2S count");
+      D2SCheckpoint d2s = null;
+      if (d2sCount > 0) {
+        Map<Integer, D2SCheckpoint.Entry> entries = new TreeMap<>();
+        for (int i = 0; i < d2sCount; i++) {
+          int entityId = input.readInt();
+          int difficulty = input.readInt();
+          int length = input.readInt();
+          if (entityId < 0 || length <= 0 || length > MAX_ECS_PAYLOAD) {
+            throw new IllegalArgumentException("D2S entry");
+          }
+          byte[] save = new byte[length];
+          input.readFully(save);
+          if (entries.put(entityId, D2SCheckpoint.entry(entityId, difficulty, save)) != null) {
+            throw new IllegalArgumentException("duplicate D2S entity");
+          }
+        }
+        d2s = D2SCheckpoint.of(entries);
+      }
+
+      int sessionCount = readCount(input, "session count");
+      AuthoritativeSessionRegistry.Snapshot sessions = null;
+      if (sessionCount > 0) {
+        List<AuthoritativeSessionRegistry.Session> records = new ArrayList<>();
+        for (int i = 0; i < sessionCount; i++) {
+          int connectionId = input.readInt();
+          int actorId = input.readInt();
+          String stableKey = readString(input, "stable key");
+          int stateOrdinal = input.readUnsignedByte();
+          if (stateOrdinal >= AuthoritativeSessionRegistry.State.values().length) {
+            throw new IllegalArgumentException("session state");
+          }
+          records.add(AuthoritativeSessionRegistry.Session.of(connectionId, actorId, stableKey,
+              AuthoritativeSessionRegistry.State.values()[stateOrdinal], input.readLong(),
+              input.readLong(), input.readLong()));
+        }
+        sessions = AuthoritativeSessionRegistry.Snapshot.of(records);
+      }
+
+      String expectedSummary = readString(input, "summary canonical");
+      String expectedD2s = readString(input, "D2S canonical");
+      if (input.read() != -1) throw new IllegalArgumentException("trailing checkpoint bytes");
+      D2gsCheckpointSnapshot result = fromPayloads(tick, payloads, rngStates, nativeStates,
+          d2s, sessions);
+      if (!result.summary.canonical().equals(expectedSummary)) {
+        throw new IllegalArgumentException("checkpoint summary mismatch");
+      }
+      String actualD2s = d2s == null ? "" : d2s.canonical();
+      if (!actualD2s.equals(expectedD2s)) throw new IllegalArgumentException("D2S mismatch");
+      return result;
+    } catch (EOFException e) {
+      throw new IllegalArgumentException("truncated checkpoint", e);
+    } catch (IOException e) {
+      throw new IllegalArgumentException("invalid checkpoint", e);
+    }
+  }
+
+  /**
    * Applies serialized component state to existing ECS entities only. Entity
    * creation/deletion remains rejected unless an explicit native lifecycle
    * bridge is supplied.
@@ -484,6 +638,69 @@ public final class D2gsCheckpointSnapshot {
     byte[] bytes = new byte[buffer.remaining()];
     buffer.get(bytes);
     return bytes;
+  }
+
+  private static void writePayloads(DataOutputStream output, Map<Integer, byte[]> payloads)
+      throws IOException {
+    if (payloads.size() > MAX_ECS_ENTITIES) throw new IllegalArgumentException("entity count");
+    output.writeInt(payloads.size());
+    int previousId = -1;
+    for (Map.Entry<Integer, byte[]> entry : payloads.entrySet()) {
+      if (entry.getKey() == null || entry.getKey() <= previousId) {
+        throw new IllegalArgumentException("entity ordering");
+      }
+      byte[] payload = entry.getValue();
+      if (payload == null || payload.length <= 0 || payload.length > MAX_ECS_PAYLOAD) {
+        throw new IllegalArgumentException("entity payload length");
+      }
+      previousId = entry.getKey();
+      output.writeInt(entry.getKey());
+      output.writeInt(payload.length);
+      output.write(payload);
+    }
+  }
+
+  private static Map<Integer, byte[]> readPayloads(DataInputStream input) throws IOException {
+    int count = readCount(input, "entity count");
+    Map<Integer, byte[]> payloads = new LinkedHashMap<>();
+    int previousId = -1;
+    for (int i = 0; i < count; i++) {
+      int entityId = input.readInt();
+      if (entityId < 0 || entityId <= previousId) throw new IllegalArgumentException("entity ordering");
+      previousId = entityId;
+      int length = input.readInt();
+      if (length <= 0 || length > MAX_ECS_PAYLOAD) {
+        throw new IllegalArgumentException("entity payload length");
+      }
+      byte[] payload = new byte[length];
+      input.readFully(payload);
+      payloads.put(entityId, payload);
+    }
+    return payloads;
+  }
+
+  private static int readCount(DataInputStream input, String name) throws IOException {
+    int count = input.readInt();
+    if (count < 0 || count > MAX_ECS_ENTITIES) throw new IllegalArgumentException(name);
+    return count;
+  }
+
+  private static void writeString(DataOutputStream output, String value) throws IOException {
+    if (value == null) throw new NullPointerException("value");
+    byte[] bytes = value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    if (bytes.length > MAX_CHECKPOINT_STRING) throw new IllegalArgumentException("string length");
+    output.writeInt(bytes.length);
+    output.write(bytes);
+  }
+
+  private static String readString(DataInputStream input, String name) throws IOException {
+    int length = input.readInt();
+    if (length < 0 || length > MAX_CHECKPOINT_STRING) {
+      throw new IllegalArgumentException(name);
+    }
+    byte[] bytes = new byte[length];
+    input.readFully(bytes);
+    return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
   }
 
   private static String digest(byte[] bytes) {
