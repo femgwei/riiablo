@@ -1787,6 +1787,34 @@ git diff --check
 下一迁移：把同一延迟帧 gate 扩展到带 generation 的命令 admission，并继续跨进程 ECS/RNG/D2S
 checkpoint restore 验收。
 
+### M8-A 第 18 批：真实 generation-aware command admission（2026-10-25）
+
+本批把旧 socket 的 transport token 门禁继续收口到固定 Tick 命令边界，仍不把 M8-A/M8
+整体标记为完成。
+
+- D2GS 的移动、技能和通用 handler 入站提交统一读取当前
+  `AuthoritativeSessionRegistry.activeConnection(connectionId).generation`，并通过
+  `D2gsCommandAdapter.submit(connectionId, generation, ...)` 做提交时 epoch 校验。
+- `IngressCommand`/`HandlerIngress` 保留提交时 generation；固定 Tick 消费前再次校验
+  connection、actor 和 generation，覆盖提交与消费之间发生断线重连的竞态，旧代命令不会
+  进入 ECS handler 或 movement/combat scheduler。
+- 扩展 `headlessStaleTransport`：旧连接的延迟帧先验证不会移动新 actor，再由新连接发送
+  `SnapshotResyncRequest` 并要求 BEGIN/END 基线成功；日志输出
+  `delayedFrameDropped=true slotReuse=true generationAwareCommand=true`。
+
+验证命令：
+
+```powershell
+./gradlew.bat :core:test --tests com.riiablo.engine.D2gsCommandAdapterTest `
+  :server:d2gs:compileJava --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:headlessStaleTransport --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：core generation/rebind 测试与 D2GS 编译通过；真实 stale transport gate 通过，旧
+transport 帧被丢弃，重连后的当前 generation 命令完成 snapshot baseline。M8-A 仍待跨进程
+ECS checkpoint restore，以及 RNG、D2S 和 session authority 的组合恢复验收。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

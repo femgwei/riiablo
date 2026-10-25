@@ -6153,21 +6153,25 @@ public class D2GS extends ApplicationAdapter {
   private static final class IngressCommand {
     final int connectionId;
     final int entityId;
+    final long generation;
     final Object intent;
 
-    IngressCommand(int connectionId, int entityId, Object intent) {
+    IngressCommand(int connectionId, int entityId, long generation, Object intent) {
       this.connectionId = connectionId;
       this.entityId = entityId;
+      this.generation = generation;
       this.intent = intent;
     }
   }
 
   private static final class HandlerIngress {
     final int connectionId;
+    final long generation;
     final Packet packet;
 
-    HandlerIngress(int connectionId, Packet packet) {
+    HandlerIngress(int connectionId, long generation, Packet packet) {
       this.connectionId = connectionId;
+      this.generation = generation;
       this.packet = packet;
     }
   }
@@ -7206,7 +7210,7 @@ public class D2GS extends ApplicationAdapter {
     input = input.withReceivedTick(simulation.tickNumber());
 
     submitD2gsIngress(packet.id, "movement",
-        new IngressCommand(packet.id, entityId, input),
+        new IngressCommand(packet.id, entityId, 0L, input),
         input.targetKind == MovementIntent.TargetKind.ENTITY ? input.targetEntityId : -1);
   }
 
@@ -7214,6 +7218,7 @@ public class D2GS extends ApplicationAdapter {
     commandAdapter.drain(currentTick, command -> {
       if (command.payload instanceof IngressCommand) {
         IngressCommand ingress = (IngressCommand) command.payload;
+        if (!isCurrentD2gsIngress(command, ingress.connectionId, ingress.generation)) return;
         if (ingress.intent instanceof MovementIntent) {
           enqueueMovementIntent(ingress.connectionId, ingress.entityId,
               (MovementIntent) ingress.intent, currentTick);
@@ -7223,6 +7228,7 @@ public class D2GS extends ApplicationAdapter {
         }
       } else if (command.payload instanceof HandlerIngress) {
         HandlerIngress handler = (HandlerIngress) command.payload;
+        if (!isCurrentD2gsIngress(command, handler.connectionId, handler.generation)) return;
         switch (command.kind) {
           case "select_skill": SelectSkillRequest(handler.packet); break;
           case "spend_skill_point": SpendSkillPointRequest(handler.packet); break;
@@ -7242,6 +7248,19 @@ public class D2GS extends ApplicationAdapter {
     });
   }
 
+  /** Revalidates the socket-owned authority epoch immediately before ECS mutation. */
+  private boolean isCurrentD2gsIngress(SimulationCommandEnvelope command, int connectionId,
+      long generation) {
+    AuthoritativeSessionRegistry.Session session = authoritativeSessions.activeConnection(connectionId);
+    if (session != null && session.generation == generation && session.actorId == command.actorId) {
+      return true;
+    }
+    Gdx.app.log(TAG, "[NET_INGRESS] phase=reject connection=" + connectionId
+        + " actor=" + command.actorId + " kind=" + command.kind
+        + " reason=STALE_SESSION generation=" + generation);
+    return false;
+  }
+
   private void submitD2gsIngress(int connectionId, String kind, IngressCommand ingress,
       int targetEntityId) {
     // Unknown targets stay in the domain scheduler so it can emit the
@@ -7250,7 +7269,10 @@ public class D2GS extends ApplicationAdapter {
     int admissionTarget = targetEntityId >= 0 && world != null
         && world.getMapper(com.riiablo.engine.server.component.Class.class)
             .has(targetEntityId) ? targetEntityId : -1;
-    D2gsCommandAdapter.Result result = commandAdapter.submit(connectionId, kind, ingress,
+    long generation = currentD2gsGeneration(connectionId);
+    IngressCommand stamped = new IngressCommand(ingress.connectionId, ingress.entityId,
+        generation, ingress.intent);
+    D2gsCommandAdapter.Result result = commandAdapter.submit(connectionId, generation, kind, stamped,
         simulation.tickNumber(), nextIngressRequestId++, admissionTarget);
     if (!result.accepted) {
       Gdx.app.log(TAG, "[NET_INGRESS] phase=reject connection=" + connectionId
@@ -7270,8 +7292,9 @@ public class D2GS extends ApplicationAdapter {
     int admissionTarget = targetEntityId >= 0 && world != null
         && world.getMapper(com.riiablo.engine.server.component.Class.class)
             .has(targetEntityId) ? targetEntityId : -1;
-    D2gsCommandAdapter.Result result = commandAdapter.submit(packet.id, kind,
-        new HandlerIngress(packet.id, packet), simulation.tickNumber(),
+    long generation = currentD2gsGeneration(packet.id);
+    D2gsCommandAdapter.Result result = commandAdapter.submit(packet.id, generation, kind,
+        new HandlerIngress(packet.id, generation, packet), simulation.tickNumber(),
         nextIngressRequestId++, admissionTarget);
     if (!result.accepted) {
       Gdx.app.log(TAG, "[NET_INGRESS] phase=reject connection=" + packet.id
@@ -7279,6 +7302,11 @@ public class D2GS extends ApplicationAdapter {
           + (result.rejection != D2gsCommandAdapter.Rejection.NONE
               ? result.rejection : result.admissionRejection));
     }
+  }
+
+  private long currentD2gsGeneration(int connectionId) {
+    AuthoritativeSessionRegistry.Session session = authoritativeSessions.activeConnection(connectionId);
+    return session == null ? 0L : session.generation;
   }
 
   private static int partyTarget(Packet packet) {
@@ -7585,7 +7613,7 @@ public class D2GS extends ApplicationAdapter {
         request.sequence(), request.observedServerTick(), request.targetTick(),
         request.skillId(), request.targetId(), request.targetX(), request.targetY());
     submitD2gsIngress(packet.id, "cast_skill",
-        new IngressCommand(packet.id, entityId, input), input.targetEntityId);
+        new IngressCommand(packet.id, entityId, 0L, input), input.targetEntityId);
   }
 
   private void enqueueCombatIntent(int connectionId, int entityId, CombatIntent input,

@@ -10811,10 +10811,29 @@ public final class D2GSHeadlessClient {
               + "baseline=(" + baselineX + ',' + baselineY + ") current=("
               + replacement.playerX + ',' + replacement.playerY + ')');
         }
+        long resyncRequest = 9101L;
+        send(replacementOutput, ByteBuffer.wrap(snapshotResyncPacket(
+            resyncRequest, replacement.lastSnapshotTick, "generation_admission")));
+        boolean begin = false, end = false;
+        long commandDeadline = deadline();
+        while (!end && System.currentTimeMillis() < commandDeadline) {
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(replacementInput);
+          if (packet == null) continue;
+          if (packet.dataType() == D2GSData.SnapshotBaseline) {
+            SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
+            begin |= marker.phase() == SnapshotBaselinePhase.BEGIN;
+            end |= marker.phase() == SnapshotBaselinePhase.END && marker.success();
+          }
+          replacement.consume(packet);
+        }
+        if (!begin || !end) {
+          throw new IllegalStateException("replacement command was not admitted for current generation: "
+              + "snapshotResyncBegin=" + begin + " snapshotResyncEnd=" + end);
+        }
         log("stale_transport_pass", "oldPlayer=" + oldPlayerId
             + " replacementPlayer=" + replacement.playerId
             + " oldPosition=(" + oldX + ',' + oldY + ")"
-            + " delayedFrameDropped=true slotReuse=true");
+            + " delayedFrameDropped=true slotReuse=true generationAwareCommand=true");
       }
     }
   }
