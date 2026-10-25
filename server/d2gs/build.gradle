@@ -961,6 +961,20 @@ tasks.register('headlessDelayedDeleteFrames', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessStaleTransport', JavaExec) {
+  group = 'verification'
+  description = 'Verifies delayed old-socket frames are dropped after connection-slot reuse.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-stale-transport', '--test-timeout', '90'
+  jvmArgs '-Driiablo.headless.delayInboundEntitySyncTicks=3',
+      '-Driiablo.d2gs.allowLegacyEntitySync=true'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessEntityIdReuse', JavaExec) {
   group = 'verification'
   description = 'Verifies delayed tombstones cannot delete a recycled server entity id.'

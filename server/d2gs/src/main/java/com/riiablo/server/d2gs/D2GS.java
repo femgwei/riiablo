@@ -6039,6 +6039,8 @@ public class D2GS extends ApplicationAdapter {
    * simulation ticks; production servers never populate this queue.
    */
   final Collection<DelayedDeletion> delayedDeletions = new ArrayList<>();
+  /** Headless-only delayed inbound frames used to prove stale transport drops. */
+  final Collection<DelayedIngress> delayedIngress = new ArrayList<>();
   final IntIntMap player = new IntIntMap();
   /** Character-name identity used only to rebind owner windows on reconnect. */
   final java.util.Map<String, Integer> disconnectedOwnerEntities = new HashMap<>();
@@ -6134,6 +6136,16 @@ public class D2GS extends ApplicationAdapter {
     DelayedDeletion(Packet packet, int clientIndex, long dueTick) {
       this.packet = packet;
       this.clientIndex = clientIndex;
+      this.dueTick = dueTick;
+    }
+  }
+
+  private static final class DelayedIngress {
+    final Packet packet;
+    final long dueTick;
+
+    DelayedIngress(Packet packet, long dueTick) {
+      this.packet = packet;
       this.dueTick = dueTick;
     }
   }
@@ -6586,6 +6598,7 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private void applyIncomingPackets() {
+    flushDelayedIngress();
     cache.clear();
     int cached = packets.drainTo(cache);
     if (DEBUG_RECEIVED_CACHE && cached > 0) Gdx.app.log(TAG, "processing " + cached + " packets");
@@ -6609,6 +6622,24 @@ public class D2GS extends ApplicationAdapter {
     // been accepted, and before any due combat command starts its animation.
     combatPositionHistory.capture(world, simulation.tickNumber());
     applyReadyCombatIntents();
+  }
+
+  /** Flushes test-only inbound frames after a fixed simulation delay. */
+  private void flushDelayedIngress() {
+    if (delayedIngress.isEmpty()) return;
+    long now = simulation == null ? 0L : simulation.tickNumber();
+    synchronized (delayedIngress) {
+      java.util.Iterator<DelayedIngress> iterator = delayedIngress.iterator();
+      while (iterator.hasNext()) {
+        DelayedIngress delayed = iterator.next();
+        if (delayed.dueTick > now) continue;
+        iterator.remove();
+        if (!packets.offer(delayed.packet)) {
+          Gdx.app.error(TAG, "[HEADLESS_FAULT] delayed ingress queue full connection="
+              + delayed.packet.id);
+        }
+      }
+    }
   }
 
   private void dispatchOutgoingPackets() {
@@ -9787,6 +9818,16 @@ public class D2GS extends ApplicationAdapter {
       ByteBuffer copy = ByteBuffer.allocate(frame.remaining());
       copy.put(frame.duplicate()).flip();
       Packet packet = Packet.obtainPayload(id, copy, transportToken);
+      int delayTicks = Integer.getInteger("riiablo.headless.delayInboundEntitySyncTicks", 0);
+      if (delayTicks > 0 && packet.data.dataType() == D2GSData.EntitySync) {
+        long now = simulation == null ? 0L : simulation.tickNumber();
+        synchronized (delayedIngress) {
+          delayedIngress.add(new DelayedIngress(packet, now + delayTicks));
+        }
+        Gdx.app.log(TAG, "[HEADLESS_FAULT] delayed inbound EntitySync connection=" + id
+            + " token=" + transportToken + " dueTick=" + (now + delayTicks));
+        return;
+      }
       if (DEBUG_RECEIVED_PACKETS && !ignoredPackets.get(packet.data.dataType())) {
         Gdx.app.log(TAG, "received " + D2GSData.name(packet.data.dataType())
             + " packet from " + socket.getRemoteAddress());

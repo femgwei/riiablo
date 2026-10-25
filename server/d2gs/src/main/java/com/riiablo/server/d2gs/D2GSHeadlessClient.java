@@ -535,6 +535,10 @@ public final class D2GSHeadlessClient {
       runReconnectGroundLoot(d2s, character);
       return;
     }
+    if (config.requireStaleTransport) {
+      runStaleTransport(d2s, character);
+      return;
+    }
     if (config.requireItemFailureCorrections) {
       runItemFailureCorrections(d2s, character);
       return;
@@ -10750,6 +10754,71 @@ public final class D2GSHeadlessClient {
     }
   }
 
+  /**
+   * Real socket-level transport incarnation gate.  The old connection sends
+   * an absolute position frame that is held for several simulation ticks,
+   * disconnects, and is followed by a same-character reconnect.  The delayed
+   * frame must be discarded by its old transport token after the slot is
+   * reused; otherwise it would move the newly-created actor.
+   */
+  private void runStaleTransport(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient oldClient = new D2GSHeadlessClient(config);
+    try (Socket oldSocket = oldClient.openSocket();
+         DataInputStream oldInput = input(oldSocket);
+         OutputStream oldOutput = output(oldSocket)) {
+      send(oldOutput, connectionPacket(character, d2s));
+      oldClient.awaitConnection(oldInput, deadline());
+      long baselineDeadline = deadline();
+      while ((!Float.isFinite(oldClient.playerX) || !Float.isFinite(oldClient.playerY))
+          && System.currentTimeMillis() < baselineDeadline) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(oldInput);
+        if (packet != null) oldClient.consume(packet);
+      }
+      if (!Float.isFinite(oldClient.playerX) || !Float.isFinite(oldClient.playerY)) {
+        throw new IOException("stale transport fixture did not receive old baseline");
+      }
+      int oldPlayerId = oldClient.playerId;
+      float oldX = oldClient.playerX;
+      float oldY = oldClient.playerY;
+      send(oldOutput, positionPacket(oldPlayerId, oldX + 6f, oldY));
+      // Ensure the socket thread has accepted the frame into the delayed
+      // queue before the close/reconnect handoff begins.
+      Thread.sleep(50L);
+      oldSocket.close();
+      oldClient.awaitEntityInactive(oldPlayerId, deadline());
+
+      D2GSHeadlessClient replacement = new D2GSHeadlessClient(config);
+      try (Socket replacementSocket = replacement.openSocket();
+           DataInputStream replacementInput = input(replacementSocket);
+           OutputStream replacementOutput = output(replacementSocket)) {
+        send(replacementOutput, connectionPacket(character, d2s));
+        replacement.awaitConnection(replacementInput, deadline());
+        long replacementBaselineDeadline = deadline();
+        while ((!Float.isFinite(replacement.playerX) || !Float.isFinite(replacement.playerY))
+            && System.currentTimeMillis() < replacementBaselineDeadline) {
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(replacementInput);
+          if (packet != null) replacement.consume(packet);
+        }
+        if (!Float.isFinite(replacement.playerX) || !Float.isFinite(replacement.playerY)) {
+          throw new IOException("stale transport fixture did not receive replacement baseline");
+        }
+        float baselineX = replacement.playerX;
+        float baselineY = replacement.playerY;
+        consumeFor(replacementInput, 1_000L);
+        if (Math.abs(replacement.playerX - baselineX) > 0.01f
+            || Math.abs(replacement.playerY - baselineY) > 0.01f) {
+          throw new IllegalStateException("stale transport frame moved replacement actor: "
+              + "baseline=(" + baselineX + ',' + baselineY + ") current=("
+              + replacement.playerX + ',' + replacement.playerY + ')');
+        }
+        log("stale_transport_pass", "oldPlayer=" + oldPlayerId
+            + " replacementPlayer=" + replacement.playerId
+            + " oldPosition=(" + oldX + ',' + oldY + ")"
+            + " delayedFrameDropped=true slotReuse=true");
+      }
+    }
+  }
+
   /** Real 1.10f regression for complete ground-item corrections on failures. */
   private void runItemFailureCorrections(byte[] d2s, CharacterHeader character) throws Exception {
     D2GSHeadlessClient client = new D2GSHeadlessClient(config);
@@ -13367,6 +13436,7 @@ public final class D2GSHeadlessClient {
     boolean requireReconnectVisibility;
     boolean requireSummonReconnect;
     boolean requireReconnectGroundLoot;
+    boolean requireStaleTransport;
     boolean requireItemFailureCorrections;
     int attempts = 20;
     int connectTimeoutMillis = 2000;
@@ -13477,6 +13547,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-reconnect-visibility".equals(arg)) config.requireReconnectVisibility = true;
         else if ("--require-summon-reconnect".equals(arg)) config.requireSummonReconnect = true;
         else if ("--require-reconnect-ground-loot".equals(arg)) config.requireReconnectGroundLoot = true;
+        else if ("--require-stale-transport".equals(arg)) config.requireStaleTransport = true;
         else if ("--require-item-failure-corrections".equals(arg)) config.requireItemFailureCorrections = true;
         else if ("--verbose".equals(arg)) config.verbose = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
@@ -13783,7 +13854,8 @@ public final class D2GSHeadlessClient {
           + " [--map-tour --tour-ai-observe --tour-ai-observe-millis 8000]"
           + " [--require-reconnect-visibility]"
           + " [--require-summon-reconnect]"
-          + " [--require-reconnect-ground-loot] [--attempts 20]");
+          + " [--require-reconnect-ground-loot] [--require-stale-transport]"
+          + " [--attempts 20]");
     }
   }
 }

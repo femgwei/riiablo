@@ -1765,6 +1765,28 @@ git diff --check
 下一迁移：继续真实旧 socket/generation 延迟命令拒绝与跨进程 checkpoint restore 验收，
 并在这些边界通过后再评估 M8-A 收尾条件。
 
+### M8-A 第 17 批：旧 socket transport token 延迟帧门禁（2026-10-25）
+
+本批完成旧 socket 连接槽位复用下的真实延迟入站帧验收，仍不把 M8-A/M8 整体标记为完成。
+
+- 新增 headless-only 入站延迟故障注入：`EntitySync` 帧可延迟固定 Tick 后再回到统一
+  `packets` 队列；默认属性关闭，不改变生产传输路径。
+- 新增 `:server:d2gs:headlessStaleTransport`，旧连接发送绝对位置帧后立即断开，同一角色
+  重连复用连接槽位；延迟帧释放时必须因旧 `transportToken` 被丢弃，新 actor 的 baseline
+  位置保持不变，输出 `stale_transport_pass ... delayedFrameDropped=true slotReuse=true`。
+- 该 gate 覆盖 socket transport token 层；session generation/跨进程 checkpoint 的真实
+  重绑定与恢复仍需单独验收。
+
+验证命令：
+
+```powershell
+./gradlew.bat :server:d2gs:headlessStaleTransport --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+下一迁移：把同一延迟帧 gate 扩展到带 generation 的命令 admission，并继续跨进程 ECS/RNG/D2S
+checkpoint restore 验收。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
