@@ -25,6 +25,18 @@ public class GenericMonster extends AI {
   private float nextThink;
   private String state = "IDLE";
 
+  @Override String checkpointConfiguration() { return nativeAiName; }
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out); AiRuntimeState.writeTimer(out, nextThink);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, state);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply); float next = AiRuntimeState.readTimer(in);
+    String phase = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    if (phase == null) throw new IllegalArgumentException("AI phase");
+    if (apply) { nextThink = next; state = phase; }
+  }
+
   protected com.artemis.ComponentMapper<Class> mClass;
   protected com.artemis.ComponentMapper<Monster> mMonster;
   protected com.artemis.ComponentMapper<Position> mPosition;

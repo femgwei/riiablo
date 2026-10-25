@@ -2539,6 +2539,66 @@ lifetime 组合、v1/v2/v3 兼容、冻结结果恢复后的真实 projectile/GH
 以及前批列出的 Map/RoomEx、本地实体、任务/交易、资源 digest、其他结构订阅者副作用和真实 socket
 跨进程接管组合验收。M8-A、M8-D、M8 总体仍进行中，不能将本批标记为 M8 整体收尾。
 
+### M8-A 第 31 批：共享 AI 私有运行时与首组状态机恢复（2026-10-25）
+
+本批集中处理 AI 基类、绝对帧调度和首组实体 AI 的私有状态；不宣称全部 AI 类型或整只怪物
+已经可完整重启续跑，也不把对象状态机恢复等同于 Casting/Sequence、动作事件和移动路径恢复。
+
+实现与边界：
+
+- 新增显式 `AiRuntimeState` v1 和 `AiDecisionRuntimeCheckpoint` v1。按精确实现类型及宿主 ID
+  校验，不反射复制私有字段、不 Java serialization、不动态加载 checkpoint 中的类名。
+  字节解析只使用白名单构造器作 schema 校验，不注入、initialize、update 或抽取 RNG；
+  实际恢复原位覆盖目标 factory 已建立的 AI 对象，不替换其服务、mapper、订阅或交互器引用。
+- 基类保存 SLEEP、8 槽参数的实际长度/值、monsound、movementActive/running/velocity 缓存、
+  nextWarCryThink；私有兼容控制 RNG 保存 stream/context/state/drawCount，fallback 原生 seed
+  保存 presence 与 low/high 两字。未存在的流保持 null，不通过重新初始化或抽样“对齐”。
+  SLEEP/旧式 time 等允许原有正无穷 sentinel，NaN/负无穷及非法尺寸继续拒绝。
+- `NativeDecisionAI` 保存绝对 nextThinkFrame、双精度 elapsedFrames、dead、state、
+  decisionCount、lastDecisionTarget、lastApproach；不将绝对事件改成恢复时起算的相对延迟。
+  ReanimatedHorde 额外保存 resurrectionDelay/deathScheduled，VileDog 保存一次性 initialized，
+  GenericMonster 保存 nextThink/state 并校验不可变 nativeAiName 配置。
+- 本批精确白名单共 14 种实体 AI：QuillRat、Scarab、Fallen、Brute、Zombie、Skeleton、
+  GenericMonster、Andariel、DoomKnight、FlyingScimitar、BaalMinion、ReanimatedHorde、
+  PutridDefiler、VileDog；另支持共享 `AI.IDLE`，但不写回其跨实体共享字段。
+  6 种旧式 FSM 保存 current/previous/global、nextAction/time 与各自 aiParam/target 字段。
+  `CheckpointStateMachine` 保持原 DefaultStateMachine 的游戏行为，仅增加无回调值恢复入口，
+  不调用 changeState/enter/exit，历史 revert 行为保留；FSM owner 必须与宿主一致。
+  工作向量每次使用前重写，World 订阅由正常初始化重绑，二者不作为历史逻辑状态复制。
+- `UnitStateRuntimeCheckpoint` 升为 v4，既有 v3 尾部再追加逐实体 AI image，明确区分 wrapper
+  absent、present/null、共享 IDLE 与具体对象。presence、实现类型或 Generic 配置不符合真实宿主时
+  拒绝恢复；不凭镜像猜测构造/替换玩法 AI。v1/v2/v3 继续可读且不声称覆盖 AI 对象，不删除旧格式
+  未声明的对象状态。D2GC 外层仍 v7，原有 unit-state digest 自动覆盖新增字节；host 集合及 ID
+  必须一致，未覆盖本地 AIWrapper、未知实现/继承类和非法输入 fail closed。
+- 全部记录先预检，再应用；沿用 ECS/RNG/D2S 事务及最后一次 runtime 重应用。真实 factory
+  的 DoomKnight 新 World/独立 JVM 进行 35 步受控 action-completion 续跑，比较每步诊断、严格
+  canonical、原生 RNG 与 D2S；live/empty World 晚期 D2S 失败回滚也包含私有 AI 相位，
+  live 恢复保留实际 AI 对象身份。该用例显式在快照前清理动作/路径，不替代完整动作系统验收。
+
+原版参考：D2MOO `AI/AiTactics.cpp::AITACTICS_Idle` 使用 `dwGameFrame + nFrames` 调度
+EVENTTYPE_AITHINK，`AI/AiThink.cpp` 的 Fn014 QuillRat / Fn114 ReanimatedHorde。
+本批保留宿主已实现字段，不改概率、目标筛选、死亡/复活或模式规则。旧式 AI 中仍有
+`MathUtils.random` 分支，本批未把全局随机源改造成已绑定流，不宣称这些分支已获完整决定性续跑。
+
+验收覆盖：逐类字段 schema guard、全部支持类型值镜像、FSM 历史/无回调、正无穷 sentinel、
+私有 RNG 的零状态/计数/两字种子与后续序列、逐字节截断、未知枚举/版本/类型/宿主、
+多宿主预检零部分写入、旧版本 uncovered；真实 DoomKnight 的剩余 16 帧等待及首次攻击 RNG，
+AI-only 私有相位变化改变 canonical 而不改变 EntitySync/D2S/RNG，嵌套 AI 镜像损坏必须被校验和拒绝。
+
+真实资源：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。沿用第 30 批 checkpoint/factory/状态/目标/
+RNG/D2S 组合，扩大到本批 `AiRuntimeStateTest`、DoomKnight、NativeAiDecision、Act1NativeAi、
+VileDog、Scarab command/leader、Remaining20261017、WarCry、AIStepper、PutridDefiler、
+BaalCrabNode9、NativeAiPathCache/Command 及真实 factory 等回归。
+最终源码扩大回归：服务端 69 项、core 584 项，共 653 项通过，0 失败、0 跳过；
+其中新增 AI schema 测试 10 项。模块边界、桌面编译和 `git diff --check` 通过。
+三个真实 TCP gate 通过：固定 Tick `7→37`（30 步）、部分拾取后剩余 15 金币且 owner window
+保持、旧 socket 延迟帧丢弃且当前 generation 命令成功。TCP gate 仍为同进程；独立 JVM 的
+AI/RNG/D2S 续跑不等于真实 socket 跨进程接管。
+
+剩余与下一批：扩展其余 AI 类型的明确私有字段适配，并集中处理 Casting/Sequence/动作与
+ECS 移动路径；其他 pet/merc 运行时、未绑定 RNG 消费者、Map/RoomEx、本地实体、任务/交易、
+资源 digest、其他结构订阅者副作用及真实 socket 跨进程接管仍保留。M8-A、M8-D、M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

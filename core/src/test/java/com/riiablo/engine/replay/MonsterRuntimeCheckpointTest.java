@@ -157,7 +157,7 @@ class MonsterRuntimeCheckpointTest {
       source.monster.converted = true; source.monster.conversionOwnerId = 2;
       source.monster.nativeSelfResurrections = 9;
       UnitStateRuntimeCheckpoint full = UnitStateRuntimeCheckpoint.capture(source.world, new int[] {0, 1, 2}).get(0);
-      byte[] legacy = Arrays.copyOf(full.bytes(), full.bytes().length - 5 - full.monsterRuntime().bytes().length);
+      byte[] legacy = Arrays.copyOf(full.bytes(), full.bytes().length - 14 - full.monsterRuntime().bytes().length);
       legacy[3] = 2;
       UnitStateRuntimeCheckpoint record = UnitStateRuntimeCheckpoint.fromBytes(legacy);
       assertFalse(record.hasMonsterRuntime()); assertNull(record.monsterRuntime());

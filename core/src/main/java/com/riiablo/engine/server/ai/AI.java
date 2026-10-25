@@ -138,6 +138,45 @@ public abstract class AI implements Interactable.Interactor {
   private NativeRng specialAiRng;
   private D2Seed aiSeed;
 
+  String checkpointConfiguration() { return null; }
+
+  /** Explicit entity-owned values only; injected dependencies stay bound to the target World. */
+  void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    AiRuntimeState.writeTimer(out, SLEEP);
+    if (params == null || params.length > 8) throw new IllegalStateException("AI parameter layout");
+    out.writeInt(params.length); for (int p : params) out.writeInt(p);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, monsound);
+    out.writeBoolean(movementActive); out.writeBoolean(lastMovementRunning); out.writeInt(lastMovementVelocityBonus);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, nextWarCryThink);
+    out.writeBoolean(specialAiRng != null);
+    if (specialAiRng != null) {
+      NativeRng.Snapshot s = specialAiRng.snapshot();
+      com.riiablo.engine.replay.CheckpointIO.writeString(out, s.stream);
+      out.writeLong(s.contextId); out.writeInt(s.state); out.writeLong(s.drawCount);
+    }
+    out.writeBoolean(aiSeed != null);
+    if (aiSeed != null) { out.writeInt(aiSeed.getNLowSeed()); out.writeInt(aiSeed.getNHighSeed()); }
+  }
+
+  void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    float sleep = AiRuntimeState.readTimer(in);
+    int[] parameters = new int[com.riiablo.engine.replay.CheckpointIO.count(in, 8)];
+    for (int i = 0; i < parameters.length; i++) parameters[i] = in.readInt();
+    String sound = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    boolean moving = com.riiablo.engine.replay.CheckpointIO.readBoolean(in), running = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    int velocity = in.readInt(); float think = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    NativeRng.Snapshot special = null;
+    if (com.riiablo.engine.replay.CheckpointIO.readBoolean(in)) special = new NativeRng.Snapshot(
+        com.riiablo.engine.replay.CheckpointIO.readString(in), in.readLong(), in.readInt(), in.readLong());
+    D2Seed fallback = null;
+    if (com.riiablo.engine.replay.CheckpointIO.readBoolean(in)) fallback = new D2Seed(in.readInt(), in.readInt());
+    if (apply) {
+      SLEEP = sleep; params = parameters; monsound = sound;
+      movementActive = moving; lastMovementRunning = running; lastMovementVelocityBonus = velocity; nextWarCryThink = think;
+      specialAiRng = special == null ? null : NativeRng.fromSnapshot(special); aiSeed = fallback;
+    }
+  }
+
   protected final Files files() {
     return serverContext != null ? serverContext.files() : Riiablo.files;
   }

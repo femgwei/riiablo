@@ -11,12 +11,12 @@ import java.io.*;
 import java.util.*;
 
 /**
- * Explicit authoritative state-list and Monster component codec, not StateP reconstruction.
+ * Explicit authoritative state-list, Monster and supported AI object codec, not StateP reconstruction.
  * Per-network-entity records include component absence. Native memberships require
  * the owning TARGETS image; only explicitly typed removal lifecycles are supported.
  */
 public final class UnitStateRuntimeCheckpoint {
-  private static final int VERSION = 3;
+  private static final int VERSION = 4;
   public static final int MAX_BYTES = 1024 * 1024;
   private final byte[] bytes;
   private UnitStateRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
@@ -25,6 +25,11 @@ public final class UnitStateRuntimeCheckpoint {
   /** v1/v2 did not describe the complete Monster component, including absence. */
   public boolean hasMonsterRuntime() { return decode().hasMonsterRuntime; }
   public MonsterRuntimeCheckpoint monsterRuntime() { return decode().monsterRuntime; }
+  /** Null means v1-v3 did not cover the AI object, not an absent AIWrapper. */
+  public AiDecisionRuntimeCheckpoint aiDecisionRuntime() { return decode().aiDecision; }
+  public void validateAiHost(int id) {
+    AiDecisionRuntimeCheckpoint ai = decode().aiDecision; if (ai != null) ai.validateHost(id);
+  }
   public void validateMonsterCoverage(Set<Integer> ids) {
     MonsterRuntimeCheckpoint monster = decode().monsterRuntime;
     if (monster != null) monster.validateCoverage(ids);
@@ -50,8 +55,8 @@ public final class UnitStateRuntimeCheckpoint {
       if (!allocator.active(id) || !covered.add(id)) throw new IllegalArgumentException("unit-state capture host: " + id);
     }
     for (int id : allocator.activeIds()) {
-      if (!covered.contains(id) && world.getMapper(Monster.class).has(id)) {
-        throw new IllegalStateException("local monster requires owner checkpoint: " + id);
+      if (!covered.contains(id) && (world.getMapper(Monster.class).has(id) || world.getMapper(AIWrapper.class).has(id))) {
+        throw new IllegalStateException("local monster/AI requires owner checkpoint: " + id);
       }
     }
     Map<Integer, UnitStateRuntimeCheckpoint> result = new TreeMap<>();
@@ -87,6 +92,7 @@ public final class UnitStateRuntimeCheckpoint {
         if (monster != null) {
           byte[] image = monster.bytes(); out.writeInt(image.length); out.write(image);
         }
+        byte[] ai = AiDecisionRuntimeCheckpoint.capture(world, id).bytes(); out.writeInt(ai.length); out.write(ai);
         out.flush(); result.put(id, fromBytes(bytes.toByteArray()));
       } catch (IOException impossible) { throw new IllegalStateException(impossible); }
     }
@@ -104,6 +110,7 @@ public final class UnitStateRuntimeCheckpoint {
       }
       Decoded d = entry.getValue().decode();
       Monster monster = world.getMapper(Monster.class).get(id);
+      if (d.aiDecision != null) d.aiDecision.validateRestore(world, id);
       if (d.hasMonsterRuntime) {
         if (d.monsterRuntime == null) {
           if (monster != null) throw new IllegalStateException("unexpected monster runtime host: " + id);
@@ -140,6 +147,7 @@ public final class UnitStateRuntimeCheckpoint {
     for (Map.Entry<Integer, Decoded> entry : decoded.entrySet()) {
       int id = entry.getKey(); Decoded d = entry.getValue();
       if (d.monsterRuntime != null) d.monsterRuntime.restore(world, id);
+      if (d.aiDecision != null) d.aiDecision.restore(world, id);
       if (d.holder == null) {
         UnitStates old = world.getMapper(UnitStates.class).get(id);
         if (old != null && old.stateList != null) old.stateList.discardAll();
@@ -199,6 +207,11 @@ public final class UnitStateRuntimeCheckpoint {
             || d.converted != d.monsterRuntime.converted() || d.conversionOwner != d.monsterRuntime.conversionOwner())) {
           throw new IllegalArgumentException("conflicting monster state overlay");
         }
+      }
+      if (version >= 4) {
+        int length = CheckpointIO.count(in, AiDecisionRuntimeCheckpoint.MAX_BYTES);
+        if (length == 0 || length > in.available()) throw new IllegalArgumentException("AI decision image length");
+        byte[] image = new byte[length]; in.readFully(image); d.aiDecision = AiDecisionRuntimeCheckpoint.fromBytes(image);
       }
       if (in.read() != -1) throw new IllegalArgumentException("trailing unit-state runtime");
       return d;
@@ -342,6 +355,7 @@ public final class UnitStateRuntimeCheckpoint {
   }
 
   private static final class Decoded {
+    AiDecisionRuntimeCheckpoint aiDecision;
     boolean hasMonsterRuntime;
     MonsterRuntimeCheckpoint monsterRuntime;
     UnitStates holder;

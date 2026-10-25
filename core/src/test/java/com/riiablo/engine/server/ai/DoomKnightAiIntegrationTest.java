@@ -12,6 +12,25 @@ import com.riiablo.skill.SkillCodes;
 import org.junit.jupiter.api.Test;
 
 class DoomKnightAiIntegrationTest extends RiiabloTest {
+  @Test void checkpointRetainsAbsoluteThinkFrameAndFirstDecisionRngAcrossWorlds() {
+    try (Fixture source = new Fixture(row(), 0, 1); Fixture target = new Fixture(row(), 0, 1)) {
+      source.ai.params[0] = 0; source.ai.params[1] = 17;
+      Riiablo.engine = source.world; source.ai.update(Animation.FRAME_DURATION);
+      source.ai.params[0] = 100;
+      com.riiablo.engine.replay.MonsterRuntimeCheckpoint.capture(source.world, source.actor,
+          java.util.Collections.singleton(source.actor)).restore(target.world, target.actor);
+      AiRuntimeState.capture(source.ai, source.actor).restore(target.ai, target.actor);
+      assertEquals(source.ai.getDecisionDiagnostics(), target.ai.getDecisionDiagnostics());
+      for (Fixture f : new Fixture[] {source, target}) {
+        Riiablo.engine = f.world;
+        f.ai.update(16 * Animation.FRAME_DURATION); assertNull(f.casting());
+        f.ai.update(Animation.FRAME_DURATION + .00001f); assertNotNull(f.casting());
+      }
+      assertEquals(source.ai.monster.rngState, target.ai.monster.rngState);
+      assertEquals(source.ai.monster.nativeSeed.getNHighSeed(), target.ai.monster.nativeSeed.getNHighSeed());
+      assertArrayEquals(AiRuntimeState.capture(source.ai, source.actor).bytes(), AiRuntimeState.capture(target.ai, target.actor).bytes());
+    }
+  }
   private String row() {
     for (MonStats.Entry mon : Riiablo.files.monstats) {
       if ("DoomKnight".equals(mon.AI)) return mon.Id;

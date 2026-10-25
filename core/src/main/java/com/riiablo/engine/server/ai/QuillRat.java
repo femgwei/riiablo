@@ -1,6 +1,5 @@
 package com.riiablo.engine.server.ai;
 
-import com.badlogic.gdx.ai.fsm.DefaultStateMachine;
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
 import com.badlogic.gdx.math.MathUtils;
@@ -45,7 +44,7 @@ public class QuillRat extends AI {
 
   public QuillRat(int entityId) {
     super(entityId);
-    stateMachine = new DefaultStateMachine<>(entityId, State.IDLE);
+    stateMachine = new CheckpointStateMachine<>(entityId, State.IDLE);
   }
 
   @Override

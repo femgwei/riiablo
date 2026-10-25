@@ -8,6 +8,14 @@ import com.riiablo.engine.server.component.MapWrapper;
 public class ReanimatedHorde extends NativeDecisionAI {
   private float resurrectionDelay = -1f;
   private boolean deathScheduled;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out); com.riiablo.engine.replay.CheckpointIO.writeFloat(out, resurrectionDelay); out.writeBoolean(deathScheduled);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply); float delay = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    boolean scheduled = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) { resurrectionDelay = delay; deathScheduled = scheduled; }
+  }
   public ReanimatedHorde(int entityId) { super(entityId); }
 
   @Override protected boolean recoverRadiusMovement(com.badlogic.gdx.math.Vector2 destination,

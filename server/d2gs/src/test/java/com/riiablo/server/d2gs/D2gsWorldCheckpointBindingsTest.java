@@ -191,6 +191,87 @@ public class D2gsWorldCheckpointBindingsTest {
     }
   }
 
+  @Test public void decisionObjectResumesAcrossFactoryWorldAndIndependentJvm() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("decisions.chk"); String expected;
+    try (Fixture source = new Fixture()) {
+      source.populate(); source.populateDecisionAi(); source.server.writeReplayCheckpoint(path);
+      expected = continueDecisions(source);
+    }
+    assertEquals(expected, resumeDecisions(path));
+    Path output = temporary.getRoot().toPath().resolve("decisions-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "decisions").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("AI recovery child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  @Test public void privateAiOnlyChangeAltersCanonicalAndLateFailureRestoresDecisionPhase() {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture(); Fixture empty = new Fixture(); Fixture control = new Fixture()) {
+      source.populate(); source.populateDecisionAi();
+      D2gsCheckpointSnapshot before = source.server.captureReplayCheckpoint();
+      source.updateDecisionAi(0.013f); // Still before the pending absolute think event; only private elapsed time changes.
+      D2gsCheckpointSnapshot changed = source.server.captureReplayCheckpoint();
+      assertNotEquals(before.summary().canonical(), changed.summary().canonical());
+      for (int id : before.payloads().keySet()) assertArrayEquals(before.payloads().get(id), changed.payloads().get(id));
+      assertEquals(before.summary().nativeUnitRngStates(), changed.summary().nativeUnitRngStates());
+      assertEquals(before.d2sCheckpoint().canonical(), changed.d2sCheckpoint().canonical());
+      byte[] encoded = changed.toBytes(), nested = changed.unitStateRuntime().get(1).aiDecisionRuntime().bytes();
+      int offset = -1;
+      for (int i = 0; i <= encoded.length - nested.length; i++) {
+        if (java.util.Arrays.equals(nested, java.util.Arrays.copyOfRange(encoded, i, i + nested.length))) { offset = i; break; }
+      }
+      assertTrue(offset >= 0); nested[nested.length - 1] ^= 1;
+      com.riiablo.engine.replay.AiDecisionRuntimeCheckpoint.fromBytes(nested); // Still a valid diagnostic string.
+      encoded[offset + nested.length - 1] ^= 1;
+      try { D2gsCheckpointSnapshot.fromBytes(encoded); fail("private AI corruption accepted"); }
+      catch (IllegalArgumentException correct) {}
+      assertTrue(target.server.restoreReplayCheckpoint(changed).success());
+      assertTrue(control.server.restoreReplayCheckpoint(changed).success());
+      Object liveAi = target.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai;
+      CharData impostor = CharData.loadFromBuffer(0, ByteBuffer.wrap(before.d2sCheckpoint().entry(0).bytes()));
+      impostor.name = "ImpostorHero";
+      D2SCheckpoint wrong = D2SCheckpoint.of(java.util.Collections.singletonMap(0,
+          D2SCheckpoint.entry(0, 0, new D2SWriter96().writeD2S(D2SWriter96.createD2S(impostor)))));
+      D2gsCheckpointSnapshot incoming = D2gsCheckpointSnapshot.fromPayloads(before.tick(), before.payloads(),
+          before.summary().rngStates(), before.summary().nativeUnitRngStates(), wrong, before.sessionSnapshot())
+          .withTargetRuntime(before.targetRuntime()).withUnitStateRuntime(before.unitStateRuntime())
+          .withAllocatorState(before.allocatorState());
+      for (Fixture f : new Fixture[] {target, empty}) {
+        D2gsCheckpointSnapshot previous = f.server.captureReplayCheckpoint();
+        try { f.server.restoreReplayCheckpoint(incoming); fail("late D2S failure must restore private AI phase"); }
+        catch (IllegalStateException expected) {}
+        assertEquals(previous.summary().canonical(), f.server.captureReplayCheckpoint().summary().canonical());
+      }
+      assertSame(liveAi, target.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai);
+      assertEquals(continueDecisions(control), continueDecisions(target));
+    }
+  }
+
+  private static String resumeDecisions(Path path) throws Exception {
+    try (Fixture target = new Fixture()) {
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      return continueDecisions(target);
+    }
+  }
+
+  private static String continueDecisions(Fixture f) {
+    StringBuilder result = new StringBuilder("DECISIONS_CONTINUED");
+    for (int frame = 0; frame < 35; frame++) {
+      f.server.simulation.tick(null, null); f.updateDecisionAi(0.04f);
+      com.riiablo.engine.server.ai.AI ai = f.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai;
+      result.append('|').append(ai.getDecisionDiagnostics());
+      D2gsCheckpointSnapshot checkpoint = f.server.captureReplayCheckpoint();
+      result.append(':').append(checkpoint.summary().canonical()).append(':').append(checkpoint.d2sCheckpoint().canonical());
+    }
+    return result.toString();
+  }
+
   private static String resumeMonsters(Path path) throws Exception {
     try (Fixture target = new Fixture()) {
       target.map.createSyntheticArena(2, 1, 1); // Map itself is a prebuilt dependency, not imported runtime.
@@ -1267,7 +1348,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "monsters".equals(args[3])
+      try { System.out.println(args.length > 3 && "decisions".equals(args[3])
+          ? resumeDecisions(Path.of(args[0])) : args.length > 3 && "monsters".equals(args[3])
           ? resumeMonsters(Path.of(args[0])) : args.length > 3 && "targets".equals(args[3])
           ? resumeTargets(Path.of(args[0])) : args.length > 3 && "states".equals(args[3])
           ? resumeStates(Path.of(args[0])) : args.length > 3 && "allocator".equals(args[3])
@@ -1349,6 +1431,26 @@ public class D2gsWorldCheckpointBindingsTest {
     }
 
     CharData data() { return server.world.getMapper(Player.class).get(0).data; }
+
+    void populateDecisionAi() {
+      assertEquals(1, factory.createMonster(Riiablo.files.monstats.get("doomknight1"), 11f, 10f));
+      server.world.process(); updateDecisionAi(0.04f);
+    }
+
+    void updateDecisionAi(float delta) {
+      World previous = Riiablo.engine;
+      try {
+        Riiablo.engine = server.world;
+        com.riiablo.engine.server.ai.AI ai = server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai;
+        ai.update(delta);
+        // Controlled action-completion boundary: Casting/Sequence/path restoration is a later batch.
+        server.world.getMapper(com.riiablo.engine.server.component.Casting.class).remove(1);
+        server.world.getMapper(com.riiablo.engine.server.component.Sequence.class).remove(1);
+        server.world.getMapper(com.riiablo.engine.server.component.Pathfind.class).remove(1);
+        ai.onActionReturnedToNeutral();
+        com.artemis.EntityAllocatorCheckpoint.flushStructure(server.world);
+      } finally { Riiablo.engine = previous; }
+    }
 
     void prepareMonsterMap() {
       map.createSyntheticArena(2, 1, 1);

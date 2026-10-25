@@ -17,6 +17,26 @@ abstract class NativeDecisionAI extends AI {
   private int lastDecisionTarget = Engine.INVALID_ENTITY;
   private String lastApproach = "NOT_REQUESTED";
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out); out.writeLong(nextThinkFrame);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, state); out.writeBoolean(dead);
+    if (!Double.isFinite(elapsedFrames)) throw new IllegalArgumentException("AI elapsed frame");
+    out.writeDouble(elapsedFrames); out.writeLong(decisionCount); out.writeInt(lastDecisionTarget);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, lastApproach);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply); long due = in.readLong();
+    String phase = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    boolean killed = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    double elapsed = in.readDouble(); long count = in.readLong(); int target = in.readInt();
+    String approach = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    if (!Double.isFinite(elapsed) || elapsed < 0 || due < 0 || count < 0 || target < -1 || phase == null || approach == null) {
+      throw new IllegalArgumentException("AI decision runtime");
+    }
+    if (apply) { nextThinkFrame = due; state = phase; dead = killed; elapsedFrames = elapsed;
+      decisionCount = count; lastDecisionTarget = target; lastApproach = approach; }
+  }
+
   @Override
   public String getDecisionDiagnostics() {
     return "decisions=" + decisionCount + " target=" + lastDecisionTarget
