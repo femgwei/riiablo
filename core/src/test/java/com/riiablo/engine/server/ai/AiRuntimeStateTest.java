@@ -24,7 +24,14 @@ class AiRuntimeStateTest {
       BaalCrabClone::new, BaalTaunt::new, BaalTentacle::new, BaalThrone::new,
       Tentacle::new, TentacleHead::new, SuicideMinion::new, WillOWisp::new,
       SevenTIllusion::new, Spirit::new, SandMaggotQueen::new, Sarcophagus::new,
-      Ancient::new, SiegeTower::new, SiegeBeast::new, Succubus::new, SuccubusWitch::new);
+      Ancient::new, SiegeTower::new, SiegeBeast::new, Succubus::new, SuccubusWitch::new,
+      BatDemon::new, CatapultSpotter::new, ClawViperEx::new, DesertTurret::new,
+      ElementalBeast::new, FetishBlowgun::new, FingerMage::new, GenericSpawner::new,
+      GreaterMummy::new, HighPriest::new, InvisoSpawner::new, Izual::new,
+      MaggotEgg::new, Megademon::new, MinionSpawner::new, Mosquito::new,
+      Overseer::new, BaalToStairs::new, PantherJavelin::new, QuillMother::new,
+      BloodLord::new, Catapult::new, DeathMauler::new, FrozenHorror::new,
+      Griswold::new, HellMeteor::new, Minion::new, Smith::new);
 
   @Test void allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects() throws Exception {
     for (IntFunction<AI> factory : SCHEMAS) {
@@ -133,6 +140,27 @@ class AiRuntimeStateTest {
     expected.put(SiegeBeast.class, "");
     expected.put(Succubus.class, "");
     expected.put(SuccubusWitch.class, "");
+    expected.put(BatDemon.class, "phase loops regenBonus");
+    expected.put(CatapultSpotter.class, "lastShot shotType shotsRemaining");
+    expected.put(ClawViperEx.class, "nextShot charged");
+    expected.put(DesertTurret.class, "shotCount nextAction initialized aim");
+    expected.put(ElementalBeast.class, "phase");
+    expected.put(FetishBlowgun.class, "phase loops");
+    expected.put(FingerMage.class, "fleeing tries");
+    expected.put(GenericSpawner.class, "lastSpawn count");
+    expected.put(GreaterMummy.class, "healTarget reviveTarget candidates");
+    expected.put(HighPriest.class, "healHydraDeadline engaged");
+    expected.put(InvisoSpawner.class, "deadline remaining");
+    expected.put(Izual.class, "activated doldrums swings");
+    expected.put(MaggotEgg.class, "hatched");
+    expected.put(Megademon.class, "frame infernoAfter");
+    expected.put(MinionSpawner.class, "deadline count");
+    expected.put(Mosquito.class, "phase loops");
+    expected.put(Overseer.class, "rallyDeadline lastAttacker");
+    expected.put(BaalToStairs.class, "retired");
+    expected.put(PantherJavelin.class, "escape");
+    for (Class<?> type : Arrays.asList(QuillMother.class, BloodLord.class, Catapult.class,
+        DeathMauler.class, FrozenHorror.class, Griswold.class, HellMeteor.class, Minion.class, Smith.class)) expected.put(type, "");
     for (Class<?> type : Arrays.asList(Andariel.class, DoomKnight.class, FlyingScimitar.class, BaalMinion.class, Idle.class)) expected.put(type, "");
     for (IntFunction<AI> factory : SCHEMAS) {
       for (Class<?> type = factory.apply(0).getClass(); type != Object.class; type = type.getSuperclass()) {
@@ -324,6 +352,23 @@ class AiRuntimeStateTest {
         assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(clock, 3));
       }
     }
+  }
+
+  @Test void turretAndInfernoLocalFloatClocksRejectNonfiniteImages() throws Exception {
+    for (AI clock : new AI[] {new DesertTurret(3), new Megademon(3)}) {
+      String[] fields = clock instanceof DesertTurret ? new String[] {"nextAction"}
+          : new String[] {"frame", "infernoAfter"};
+      for (String field : fields) {
+        for (float invalid : new float[] {Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY}) {
+          put(clock, clock.getClass(), field, invalid);
+          assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(clock, 3));
+        }
+        put(clock, clock.getClass(), field, 0f);
+      }
+    }
+    byte[] bytes = AiRuntimeState.capture(new Megademon(3), 3).bytes();
+    java.nio.ByteBuffer.wrap(bytes).putInt(bytes.length - 4, Float.floatToRawIntBits(Float.NaN));
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.fromBytes(bytes));
   }
 
   enum Observed implements com.badlogic.gdx.ai.fsm.State<Integer> {

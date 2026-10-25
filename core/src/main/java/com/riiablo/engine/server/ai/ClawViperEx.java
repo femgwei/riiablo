@@ -14,6 +14,21 @@ import com.riiablo.map.Map;
 public class ClawViperEx extends NativeDecisionAI {
   private long nextShot;
   private boolean charged;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeLong(nextShot);
+    out.writeBoolean(charged);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    long savedNextShot = in.readLong();
+    boolean savedCharged = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      nextShot = savedNextShot;
+      charged = savedCharged;
+    }
+  }
+
   public ClawViperEx(int entityId) { super(entityId); }
   private void clearColor() {
     UnitStates states = mUnitStates.get(entityId);

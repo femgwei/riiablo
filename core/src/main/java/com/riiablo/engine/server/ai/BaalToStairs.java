@@ -13,6 +13,18 @@ import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 /** Fn138 follows the Worldstone portal and retires the transition monster. */
 public class BaalToStairs extends NativeDecisionAI {
   private boolean retired;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeBoolean(retired);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    boolean savedRetired = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      retired = savedRetired;
+    }
+  }
+
   public BaalToStairs(int entityId) { super(entityId); }
   @Override protected boolean beforeDecision() {
     if (retired) return false;

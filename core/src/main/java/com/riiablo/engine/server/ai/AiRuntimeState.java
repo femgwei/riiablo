@@ -122,6 +122,34 @@ public final class AiRuntimeState {
       case "SiegeBeast": return new SiegeBeast(id);
       case "Succubus": return new Succubus(id);
       case "SuccubusWitch": return new SuccubusWitch(id);
+      case "BatDemon": return new BatDemon(id);
+      case "CatapultSpotter": return new CatapultSpotter(id);
+      case "ClawViperEx": return new ClawViperEx(id);
+      case "DesertTurret": return new DesertTurret(id);
+      case "ElementalBeast": return new ElementalBeast(id);
+      case "FetishBlowgun": return new FetishBlowgun(id);
+      case "FingerMage": return new FingerMage(id);
+      case "GenericSpawner": return new GenericSpawner(id);
+      case "GreaterMummy": return new GreaterMummy(id);
+      case "HighPriest": return new HighPriest(id);
+      case "InvisoSpawner": return new InvisoSpawner(id);
+      case "Izual": return new Izual(id);
+      case "MaggotEgg": return new MaggotEgg(id);
+      case "Megademon": return new Megademon(id);
+      case "MinionSpawner": return new MinionSpawner(id);
+      case "Mosquito": return new Mosquito(id);
+      case "Overseer": return new Overseer(id);
+      case "BaalToStairs": return new BaalToStairs(id);
+      case "PantherJavelin": return new PantherJavelin(id);
+      case "QuillMother": return new QuillMother(id);
+      case "BloodLord": return new BloodLord(id);
+      case "Catapult": return new Catapult(id);
+      case "DeathMauler": return new DeathMauler(id);
+      case "FrozenHorror": return new FrozenHorror(id);
+      case "Griswold": return new Griswold(id);
+      case "HellMeteor": return new HellMeteor(id);
+      case "Minion": return new Minion(id);
+      case "Smith": return new Smith(id);
       default: throw new IllegalArgumentException("unsupported AI checkpoint schema: " + type);
     }
   }

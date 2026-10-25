@@ -12,6 +12,21 @@ import com.riiablo.engine.server.state.StateId;
 public class Overseer extends NativeDecisionAI {
   private long rallyDeadline;
   private int lastAttacker = Engine.INVALID_ENTITY;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeLong(rallyDeadline);
+    out.writeInt(lastAttacker);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    long savedRallyDeadline = in.readLong();
+    int savedLastAttacker = in.readInt();
+    if (apply) {
+      rallyDeadline = savedRallyDeadline;
+      lastAttacker = savedLastAttacker;
+    }
+  }
+
   public Overseer(int entityId) { super(entityId); }
   @Override public void onNativeHit(int attackerId) { lastAttacker = attackerId; }
 

@@ -10,6 +10,21 @@ public class Megademon extends NativeDecisionAI {
   private float frame;
   private float infernoAfter;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, frame);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, infernoAfter);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    float savedFrame = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float savedInfernoAfter = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    if (apply) {
+      frame = savedFrame;
+      infernoAfter = savedInfernoAfter;
+    }
+  }
+
   public Megademon(int entityId) { super(entityId); }
 
   @Override protected void beforeThink(float delta) {

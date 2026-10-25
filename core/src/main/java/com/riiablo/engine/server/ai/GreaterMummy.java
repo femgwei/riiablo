@@ -20,6 +20,24 @@ public class GreaterMummy extends NativeDecisionAI {
   private int reviveTarget;
   private int candidates;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(healTarget);
+    out.writeInt(reviveTarget);
+    out.writeInt(candidates);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedHealTarget = in.readInt();
+    int savedReviveTarget = in.readInt();
+    int savedCandidates = in.readInt();
+    if (apply) {
+      healTarget = savedHealTarget;
+      reviveTarget = savedReviveTarget;
+      candidates = savedCandidates;
+    }
+  }
+
   public GreaterMummy(int entityId) { super(entityId); }
 
   @Override

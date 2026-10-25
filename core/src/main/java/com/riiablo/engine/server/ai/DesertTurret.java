@@ -29,6 +29,24 @@ public class DesertTurret extends NativeDecisionAI {
   private boolean initialized;
   private final Vector2 aim = new Vector2();
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(shotCount);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, nextAction);
+    out.writeBoolean(initialized);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedShotCount = in.readInt();
+    float savedNextAction = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    boolean savedInitialized = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      shotCount = savedShotCount;
+      nextAction = savedNextAction;
+      initialized = savedInitialized;
+    }
+  }
+
   public DesertTurret(int entityId) {
     super(entityId);
   }

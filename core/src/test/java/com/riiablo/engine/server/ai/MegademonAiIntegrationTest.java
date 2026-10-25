@@ -13,6 +13,27 @@ import com.riiablo.skill.SkillCodes;
 import org.junit.jupiter.api.Test;
 
 class MegademonAiIntegrationTest extends RiiabloTest {
+  @Test void checkpointKeepsInfernoCooldownAfterRejectedCastAndAcrossFreshWorld() {
+    AiRuntimeState image;
+    try (Fixture f = new Fixture("megademon1", 0, 1)) {
+      f.ai.params[1] = 100; f.ai.params[2] = f.ai.params[4] = 0; f.ai.params[5] = 40;
+      f.probe.reject = true;
+      f.ai.update(Animation.FRAME_DURATION);
+      assertNull(f.casting());
+      f.probe.reject = false;
+      f.ai.update(8 * Animation.FRAME_DURATION);
+      image = AiRuntimeState.capture(f.ai, f.actor);
+    }
+    try (Fixture f = new Fixture("megademon1", 0, 1)) {
+      image.restore(f.ai, f.actor);
+      // Power-of-two frame advances avoid adding float rounding across the equality boundary.
+      f.ai.update(32 * Animation.FRAME_DURATION); // frame 41 equals the strict deadline.
+      assertNull(f.casting());
+      f.ai.update(8 * Animation.FRAME_DURATION); // next scheduled think after equality.
+      assertEquals(319, f.casting().skillId);
+    }
+  }
+
   @Test void rangedInfernoRequiresStrictSkillLevelRangeAndClearsExistingState() {
     for (int branch = 0; branch < 3; branch++) {
       try (Fixture f = new Fixture("megademon1", 0, 3)) {

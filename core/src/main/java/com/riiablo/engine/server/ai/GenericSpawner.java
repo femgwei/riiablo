@@ -11,6 +11,21 @@ import com.riiablo.map.Map;
 public class GenericSpawner extends NativeDecisionAI {
   private long lastSpawn;
   private int count;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeLong(lastSpawn);
+    out.writeInt(count);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    long savedLastSpawn = in.readLong();
+    int savedCount = in.readInt();
+    if (apply) {
+      lastSpawn = savedLastSpawn;
+      count = savedCount;
+    }
+  }
+
   public GenericSpawner(int entityId) { super(entityId); }
   @Override public void initialize() { super.initialize(); lastSpawn = nativeFrame(); }
   @Override protected void thinkWithoutTarget() { idle(20); }

@@ -13,6 +13,21 @@ public class HighPriest extends NativeDecisionAI {
   private long healHydraDeadline;
   private boolean engaged;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeLong(healHydraDeadline);
+    out.writeBoolean(engaged);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    long savedHealHydraDeadline = in.readLong();
+    boolean savedEngaged = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      healHydraDeadline = savedHealHydraDeadline;
+      engaged = savedEngaged;
+    }
+  }
+
   public HighPriest(int entityId) { super(entityId); }
 
 

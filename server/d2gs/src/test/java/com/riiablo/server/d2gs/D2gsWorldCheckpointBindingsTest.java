@@ -209,10 +209,12 @@ public class D2gsWorldCheckpointBindingsTest {
     } finally { if (child.isAlive()) child.destroyForcibly(); }
   }
 
-  @Test public void privateAiOnlyChangeAltersCanonicalAndLateFailureRestoresDecisionPhase() {
-    for (String row : new String[] {"doomknight1", "trap-firebolt", spiritRow()}) {
+  @Test public void privateAiOnlyChangeAltersCanonicalAndLateFailureRestoresDecisionPhase() throws Exception {
+    for (String row : new String[] {"doomknight1", "trap-firebolt", spiritRow(), rowForAi("BatDemon")}) {
       try (Fixture source = new Fixture(); Fixture target = new Fixture(); Fixture empty = new Fixture(); Fixture control = new Fixture()) {
-        source.populate(); source.populateDecisionAi(row);
+        source.populate();
+        if (row.equals(rowForAi("BatDemon"))) source.populateRegeneratingBatAi();
+        else source.populateDecisionAi(row);
         D2gsCheckpointSnapshot before = source.server.captureReplayCheckpoint();
         source.updateDecisionAi(0.013f); // Still before the pending absolute think event; only private elapsed time changes.
         D2gsCheckpointSnapshot changed = source.server.captureReplayCheckpoint();
@@ -297,9 +299,80 @@ public class D2gsWorldCheckpointBindingsTest {
   }
 
   private static String spiritRow() {
+    return rowForAi("Spirit");
+  }
+
+  private static String rowForAi(String ai) {
     for (com.riiablo.codec.excel.MonStats.Entry row : Riiablo.files.monstats)
-      if ("Spirit".equals(row.AI)) return row.Id;
-    throw new AssertionError("Missing Spirit row");
+      if (ai.equals(row.AI)) return row.Id;
+    throw new AssertionError("Missing AI row: " + ai);
+  }
+
+  @Test public void roostingBatRegenerationResumesAcrossFactoryWorldAndIndependentJvm() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("bat-decisions.chk"); String expected;
+    try (Fixture source = new Fixture()) {
+      source.populate(); source.populateRegeneratingBatAi();
+      assertEquals("BatDemon", source.server.captureReplayCheckpoint().unitStateRuntime().get(1).aiDecisionRuntime().implementation());
+      source.server.writeReplayCheckpoint(path);
+      expected = continueBatDecisions(source);
+    }
+    assertEquals(expected, resumeBatDecisions(path));
+    Path output = temporary.getRoot().toPath().resolve("bat-decisions-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "bat-decisions").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("bat recovery child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  @Test public void deathRemovesRestoredRoostingRegenBonusOnlyOnce() throws Exception {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      source.populate(); source.populateRegeneratingBatAi();
+      D2gsCheckpointSnapshot image = source.server.captureReplayCheckpoint();
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      World previous = Riiablo.engine;
+      try {
+        Riiablo.engine = target.server.world;
+        com.riiablo.engine.server.ai.AI ai = target.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai;
+        com.riiablo.attributes.Attributes attrs = target.server.world.getMapper(AttributesWrapper.class).get(1).attrs;
+        assertEquals(120, attrs.base().getValue(Stat.hpregen, 0));
+        ai.kill(); assertEquals(80, attrs.base().getValue(Stat.hpregen, 0));
+        assertEquals(80, attrs.getValue(Stat.hpregen, 0));
+        ai.kill(); assertEquals(80, attrs.base().getValue(Stat.hpregen, 0));
+        assertEquals(80, attrs.getValue(Stat.hpregen, 0));
+      } finally { Riiablo.engine = previous; }
+    }
+  }
+
+  private static String resumeBatDecisions(Path path) throws Exception {
+    try (Fixture target = new Fixture()) {
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      return continueBatDecisions(target);
+    }
+  }
+
+  private static String continueBatDecisions(Fixture f) {
+    StringBuilder result = new StringBuilder("BAT_DECISIONS_CONTINUED");
+    com.riiablo.attributes.Attributes attrs = f.server.world.getMapper(AttributesWrapper.class).get(1).attrs;
+    assertEquals(120, attrs.base().getValue(Stat.hpregen, 0));
+    assertEquals(120, attrs.getValue(Stat.hpregen, 0));
+    for (int frame = 0; frame < 45; frame++) {
+      f.server.simulation.tick(null, null); f.updateDecisionAi(0.04f);
+      // From initial frame 1: S3->S4 at 9/19, remove the bonus on S2 at frame 34.
+      int expectedRegen = frame < 32 ? 120 : 80;
+      assertEquals("bat base regen at continuation step " + frame, expectedRegen, attrs.base().getValue(Stat.hpregen, 0));
+      assertEquals("bat aggregate regen at continuation step " + frame, expectedRegen, attrs.getValue(Stat.hpregen, 0));
+      com.riiablo.engine.server.ai.AI ai = f.server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai;
+      D2gsCheckpointSnapshot after = f.server.captureReplayCheckpoint();
+      result.append('|').append(ai.getState()).append(':').append(ai.getDecisionDiagnostics())
+          .append(':').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
+    }
+    return result.toString();
   }
 
   private static String resumeSpiritDecisions(Path path) throws Exception {
@@ -1427,7 +1500,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "spirit-decisions".equals(args[3])
+      try { System.out.println(args.length > 3 && "bat-decisions".equals(args[3])
+          ? resumeBatDecisions(Path.of(args[0])) : args.length > 3 && "spirit-decisions".equals(args[3])
           ? resumeSpiritDecisions(Path.of(args[0])) : args.length > 3 && "trap-decisions".equals(args[3])
           ? resumeTrapDecisions(Path.of(args[0])) : args.length > 3 && "decisions".equals(args[3])
           ? resumeDecisions(Path.of(args[0])) : args.length > 3 && "monsters".equals(args[3])
@@ -1518,8 +1592,25 @@ public class D2gsWorldCheckpointBindingsTest {
     }
 
     void populateDecisionAi(String row) {
+      createDecisionAi(row); updateDecisionAi(0.04f);
+    }
+
+    com.riiablo.engine.server.ai.AI createDecisionAi(String row) {
       assertEquals(1, factory.createMonster(Riiablo.files.monstats.get(row), 11f, 10f));
-      server.world.process(); updateDecisionAi(0.04f);
+      server.world.process();
+      return server.world.getMapper(com.riiablo.engine.server.component.AIWrapper.class).get(1).ai;
+    }
+
+    void populateRegeneratingBatAi() throws Exception {
+      com.riiablo.engine.server.ai.AI ai = createDecisionAi(rowForAi("BatDemon"));
+      // Test-only parameters, not a global MonStats edit or a production state codec.
+      java.lang.reflect.Field params = com.riiablo.engine.server.ai.AI.class.getDeclaredField("params");
+      params.setAccessible(true); params.set(ai, new int[] {0, 0, 100, 0, 4, 0, 0, 0});
+      com.riiablo.attributes.Attributes attrs = server.world.getMapper(AttributesWrapper.class).get(1).attrs;
+      attrs.base().put(Stat.hpregen, 80); attrs.aggregate().put(Stat.hpregen, 80);
+      updateDecisionAi(0.04f);
+      assertEquals(120, attrs.base().getValue(Stat.hpregen, 0));
+      assertEquals(120, attrs.getValue(Stat.hpregen, 0));
     }
 
     boolean updateDecisionAi(float delta) {

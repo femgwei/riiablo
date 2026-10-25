@@ -2706,6 +2706,64 @@ Act5 等任务权威状态、Map/RoomEx、本地实体、未绑定 RNG、交易�
 及真实 socket 跨进程接管仍待后续组合验收。仅恢复 BaalThrone/Ancient 局部字段不等于恢复任务，
 仅恢复 WillOWisp 局部编队字段不等于完整多人编队/动作续跑。M8-A、M8-D、M8 总体继续进行中。
 
+### M8-A 第 34 批：召唤预算、炮塔冷却与循环/支援 AI 恢复（2026-10-25）
+
+本批集中扩展 28 类可共用标量状态策略的原生 AI，沿用精确具体类型白名单、纯构造原型、
+全记录预检、真实 factory 宿主原位覆盖与 ECS/RNG/D2S 回滚事务；不修改宿主玩法、概率或调度。
+
+- 新支持 BatDemon、CatapultSpotter、ClawViperEx、DesertTurret、ElementalBeast、FetishBlowgun、
+  FingerMage、GenericSpawner、GreaterMummy、HighPriest、InvisoSpawner、Izual、MaggotEgg、
+  Megademon、MinionSpawner、Mosquito、Overseer、BaalToStairs、PantherJavelin、QuillMother、
+  BloodLord、Catapult、DeathMauler、FrozenHorror、Griswold、HellMeteor、Minion、Smith。
+  白名单累计为 78 类实体 AI，另有共享 IDLE；未知类型及未声明派生类仍明确拒绝。
+- BatDemon 保存 phase/loops/regenBonus：回血增益既是属性值，也是后续撤销所需的 AI 账本，
+  只恢复其中一边会重复叠加或无法扣除。FetishBlowgun/Mosquito 保存 phase/loops，
+  FingerMage 保存 fleeing/tries，ElementalBeast 保存 phase，避免恢复时重启循环或技能阶段。
+- GenericSpawner 保存 lastSpawn/count，InvisoSpawner 保存 deadline/remaining，
+  MinionSpawner 保存 deadline/count，MaggotEgg 保存 hatched；已消耗的生成次数与孵化标记不重置。
+  GenericSpawner 的 initialize 会设置 lastSpawn，但镜像解析与应用都不调用 initialize。
+- CatapultSpotter 保存 lastShot/shotType/shotsRemaining；ClawViperEx 保存 nextShot/charged；
+  DesertTurret 保存 shotCount/nextAction/initialized；Megademon 保存 float frame/infernoAfter。
+  保持各自 long/float 和绝对帧/剩余秒数表示，不借本批把旧本地时钟改成共享时钟。
+- HighPriest 保存 healHydraDeadline/engaged；GreaterMummy 保存 healTarget/reviveTarget/candidates，
+  同时保留检查点时可查询的扫描结果；Overseer 保存 rallyDeadline/lastAttacker；
+  Izual 保存 activated/doldrums/swings，BaalToStairs 保存 retired，不在恢复时重放激活或退场逻辑。
+- DesertTurret aim 和 PantherJavelin escape 使用前会被覆盖，是 scratch 向量，不复制旧对象。
+  无自有可变字段的类型仍逐个列入白名单，继承 NativeDecisionAI/AI 的已审计状态，
+  不复制 mapper、服务、订阅、World/Map，也不通过反射式生产序列化或任意继承兜底。
+- AI v1、wrapper v1、unit-state v4、D2GC v7 保持不变，原有 50 类的字节布局不变，
+  新类型尾部仍由 unit-state canonical witness 覆盖。
+
+原版依据：D2MOO `AiThink.cpp::AITHINK_Fn029_BatDemon` 将栖息增益存入 dwAiParam[2]，
+并在离开栖息阶段时扣除；Fn040_MaggotEgg 的孵化后死亡标记；Fn094_DesertTurret 的初始化、
+短/长间隔和计数；Fn089_Megademon 在请求 Inferno 前消耗冷却，严格超过 deadline 才再施放；
+Fn121_MinionSpawner 的 deadline/已用次数。本批保存宿主现有表示，不顺带调整已有原版差异。
+
+验收扩展为 78 类逐字段往返、继承链字段策略、预检零写入、逐字节截断及 float 时钟非有限值
+拒绝。真实表/ECS 用例验证已提交孵化的蛋不重复请求孵化、用尽预算的 MinionSpawner 不再请求生成技能、DesertTurret
+跨新 World 连续 80 步保留方向射击与冷却（不重放初始化施法），以及被拒绝 Inferno 的剩余
+冷却和严格 deadline 等值边界。
+
+真实 D2GS factory 的 BatDemon 在已有 40 点栖息增益（base/aggregate 80→120）时保存，
+新 World 与独立 JVM 各续跑 45 步，逐步比较状态/诊断、canonical（含原生 RNG）和 D2S，
+并检查原 frame 34 离巢时仅扣除 40 点、恢复为 80。另验死亡时撤销一次、重复 kill 不重复扣除。
+AI-only witness 变化及现有/空 World 晚期 D2S 失败回滚增加有实际属性增益的 BatDemon，
+与 DoomKnight、TrapMissile、Spirit 一并验证，保持 live AI 对象身份。
+参数控制仅位于测试夹具，不改全局 MonStats。续跑仍显式清理动作组件，不宣称完整动作恢复。
+
+最终扩大回归使用真实 1.10f 资源 `G:\BaiduNetdiskDownload\Diablo II 1.10F`，
+沿用第 33 批的全部 AI、checkpoint/factory/状态/目标/RNG/D2S 范围。
+core 1017 项、服务端 73 项，共 1090 项通过，0 失败、0 跳过；模块边界、桌面编译及
+`git diff --check` 通过。三个真实 TCP gate 通过：固定 Tick `6→37`（31 步）、
+部分拾取后剩余 15 金币且 owner window 保持、旧 socket 延迟帧丢弃且当前 generation 命令成功。
+TCP gate 仍为同进程，不代表真实 socket 跨进程接管验收完成。
+
+剩余：其他 AI（包括带历史坐标或跨实体身份 token 的类型及旧 FSM）、Casting/Sequence 与
+冻结战斗记录、ECS 路径、其他 pet/merc 运行时，以及前批列出的任务、Map/RoomEx、交易、
+本地实体、未绑定 RNG、资源 digest、结构订阅副作用和真实 socket 跨进程接管组合验收。
+Izual/BaalToStairs 的局部标记不等于任务权威状态恢复，召唤器私有预算恢复也不等于
+RoomEx RNG、实际技能生成和完整战斗续跑全部覆盖。M8-A、M8-D、M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

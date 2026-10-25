@@ -10,6 +10,21 @@ import com.riiablo.map.Map;
 public class InvisoSpawner extends NativeDecisionAI {
   private long deadline;
   private int remaining;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeLong(deadline);
+    out.writeInt(remaining);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    long savedDeadline = in.readLong();
+    int savedRemaining = in.readInt();
+    if (apply) {
+      deadline = savedDeadline;
+      remaining = savedRemaining;
+    }
+  }
+
   public InvisoSpawner(int entityId) { super(entityId); }
   @Override protected void think(int targetId, float distance, boolean combat) {
     if (deadline == 0) remaining = params[0];

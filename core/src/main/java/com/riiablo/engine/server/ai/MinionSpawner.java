@@ -9,6 +9,21 @@ import com.riiablo.engine.server.component.Monster;
 public class MinionSpawner extends NativeDecisionAI {
   private long deadline;
   private int count;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeLong(deadline);
+    out.writeInt(count);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    long savedDeadline = in.readLong();
+    int savedCount = in.readInt();
+    if (apply) {
+      deadline = savedDeadline;
+      count = savedCount;
+    }
+  }
+
   public MinionSpawner(int entityId) { super(entityId); }
   @Override protected void think(int targetId, float distance, boolean combat) {
     if (count >= params[0]) return;

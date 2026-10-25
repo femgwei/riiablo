@@ -3,6 +3,21 @@ package com.riiablo.engine.server.ai;
 /** D2MOO AITHINK_Fn024_Mosquito, 0x6FCD5850. */
 public class Mosquito extends NativeDecisionAI {
   private int phase, loops;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(phase);
+    out.writeInt(loops);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPhase = in.readInt();
+    int savedLoops = in.readInt();
+    if (apply) {
+      phase = savedPhase;
+      loops = savedLoops;
+    }
+  }
+
   public Mosquito(int entityId) { super(entityId); }
 
   @Override protected void think(int targetId, float distance, boolean combat) {

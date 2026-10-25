@@ -7,6 +7,21 @@ import com.riiablo.engine.server.component.NativeAiCommand;
 /** D2MOO AITHINK_Fn096_FetishBlowgun, 0x6FCDFD50. */
 public class FetishBlowgun extends NativeDecisionAI {
   private int phase, loops;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(phase);
+    out.writeInt(loops);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPhase = in.readInt();
+    int savedLoops = in.readInt();
+    if (apply) {
+      phase = savedPhase;
+      loops = savedLoops;
+    }
+  }
+
   public FetishBlowgun(int entityId) { super(entityId); }
   @Override protected boolean beforeDecision() {
     com.artemis.ComponentMapper<NativeAiCommand> commands =

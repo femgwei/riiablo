@@ -10,6 +10,18 @@ public class ElementalBeast extends NativeDecisionAI {
 
   private int phase;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(phase);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPhase = in.readInt();
+    if (apply) {
+      phase = savedPhase;
+    }
+  }
+
   public ElementalBeast(int entityId) {
     super(entityId);
   }

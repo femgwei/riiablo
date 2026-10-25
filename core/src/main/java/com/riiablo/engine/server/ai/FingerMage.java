@@ -4,6 +4,21 @@ package com.riiablo.engine.server.ai;
 public class FingerMage extends NativeDecisionAI {
   private boolean fleeing;
   private int tries;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeBoolean(fleeing);
+    out.writeInt(tries);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    boolean savedFleeing = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    int savedTries = in.readInt();
+    if (apply) {
+      fleeing = savedFleeing;
+      tries = savedTries;
+    }
+  }
+
   public FingerMage(int entityId) { super(entityId); }
 
   @Override protected void think(int targetId, float distance, boolean combat) {

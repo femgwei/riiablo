@@ -13,6 +13,24 @@ public class CatapultSpotter extends NativeDecisionAI {
   private int shotType;
   private int shotsRemaining;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeLong(lastShot);
+    out.writeInt(shotType);
+    out.writeInt(shotsRemaining);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    long savedLastShot = in.readLong();
+    int savedShotType = in.readInt();
+    int savedShotsRemaining = in.readInt();
+    if (apply) {
+      lastShot = savedLastShot;
+      shotType = savedShotType;
+      shotsRemaining = savedShotsRemaining;
+    }
+  }
+
   public CatapultSpotter(int entityId) { super(entityId); }
 
   @Override protected boolean beforeDecision() {

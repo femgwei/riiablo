@@ -7,6 +7,24 @@ import com.riiablo.engine.Engine;
 /** AITHINK_Fn029_BatDemon and its special-AI transition callback Unk029. */
 public class BatDemon extends NativeDecisionAI {
   private int phase, loops, regenBonus;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(phase);
+    out.writeInt(loops);
+    out.writeInt(regenBonus);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPhase = in.readInt();
+    int savedLoops = in.readInt();
+    int savedRegenBonus = in.readInt();
+    if (apply) {
+      phase = savedPhase;
+      loops = savedLoops;
+      regenBonus = savedRegenBonus;
+    }
+  }
+
   public BatDemon(int entityId) { super(entityId); }
 
   @Override public boolean updateSpecialAiControl(float delta) {

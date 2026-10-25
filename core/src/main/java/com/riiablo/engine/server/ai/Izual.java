@@ -17,6 +17,24 @@ public class Izual extends NativeDecisionAI {
   private int doldrums;
   private int swings;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeBoolean(activated);
+    out.writeInt(doldrums);
+    out.writeInt(swings);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    boolean savedActivated = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    int savedDoldrums = in.readInt();
+    int savedSwings = in.readInt();
+    if (apply) {
+      activated = savedActivated;
+      doldrums = savedDoldrums;
+      swings = savedSwings;
+    }
+  }
+
   public Izual(int entityId) {
     super(entityId);
   }

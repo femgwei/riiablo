@@ -7,6 +7,18 @@ public class MaggotEgg extends NativeDecisionAI {
 
   private boolean hatched;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeBoolean(hatched);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    boolean savedHatched = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      hatched = savedHatched;
+    }
+  }
+
   public MaggotEgg(int entityId) {
     super(entityId);
   }
