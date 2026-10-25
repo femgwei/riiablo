@@ -20,6 +20,35 @@ import org.junit.Test;
 
 /** Verifies the D2GS checkpoint adapter without loading native maps or MPQs. */
 public class D2gsCheckpointSnapshotTest {
+  @Test public void occupiedLocalIdAndPendingDeletionFailBeforeAnyDeserialization() {
+    World source = worldWithEntities(2);
+    World target = worldWithEntities(0);
+    try {
+      FakeSerializer serializer = new FakeSerializer();
+      serializer.states.put(0, 10);
+      serializer.states.put(1, 20);
+      D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(source, serializer, 42L);
+      assertEquals(0, target.create()); // unrelated non-Networked entity
+      target.process();
+      D2gsCheckpointSnapshot.RestoreResult result = checkpoint.restoreExisting(target, serializer,
+          new FakeLifecycle());
+      assertFalse(result.success());
+      assertEquals(java.util.Arrays.asList(0), result.failedEntities);
+      assertTrue(result.createdEntities.isEmpty());
+      assertFalse(target.getMapper(Networked.class).has(0));
+      assertFalse(D2gsCheckpointSnapshot.isActive(target, 1));
+
+      target.getMapper(Networked.class).create(0);
+      target.process();
+      target.delete(0);
+      result = checkpoint.restoreExisting(target, serializer, new FakeLifecycle());
+      assertFalse(result.success());
+      assertEquals(java.util.Arrays.asList(0), result.failedEntities);
+      assertTrue(result.createdEntities.isEmpty());
+      assertFalse(D2gsCheckpointSnapshot.isActive(target, 1));
+    } finally { source.dispose(); target.dispose(); }
+  }
+
   @Test public void lifecycleAllocatesNeverBeforeAssignedIdsInAnEmptyWorld() {
     World source = worldWithEntities(2);
     World target = worldWithEntities(0);

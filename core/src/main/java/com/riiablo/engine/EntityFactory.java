@@ -52,8 +52,10 @@ public abstract class EntityFactory extends PassiveSystem implements com.riiablo
 
   private final Vector2 tmpVec2 = new Vector2();
 
+  protected int allocateEntity() { return world.create(); }
+
   protected final int createEntity(Class.Type type, String classname) {
-    int id = world.create();
+    int id = allocateEntity();
     mClass.create(id).type = type;
     mClassname.create(id).classname = classname;
     mFlags.create(id).flags = 0;

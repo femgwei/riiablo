@@ -52,6 +52,83 @@ public class D2gsWorldCheckpointBindingsTest {
   @BeforeClass public static void loadResources() { ServerEntityLifecycleTest.load110f(); }
   @AfterClass public static void unloadResources() { ServerEntityLifecycleTest.unload110f(); }
 
+  @Test public void sparsePlayerAndOwnedItemsResumeInANewWorldAndIndependentJvm() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("sparse.chk");
+    String expected;
+    try (Fixture source = new Fixture()) {
+      source.populate();
+      source.populateSparseItems();
+      source.server.writeReplayCheckpoint(path);
+      expected = continueSparse(source);
+    }
+    assertEquals(expected, resumeSparse(path));
+    Path output = temporary.getRoot().toPath().resolve("sparse-child.log");
+    Process process = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "sparse")
+        .redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("sparse recovery child JVM timed out", process.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, process.exitValue());
+      assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (process.isAlive()) process.destroyForcibly(); }
+  }
+
+  @Test public void sparseRestorePreservesLocalEntitiesInTheGaps() throws Exception {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      source.populate();
+      source.populateSparseItems();
+      D2gsCheckpointSnapshot checkpoint = source.server.captureReplayCheckpoint();
+      for (int i = 0; i < 10; i++) assertEquals(i, target.server.world.create());
+      target.server.world.getMapper(Position.class).create(1).position.set(91, 92);
+      target.server.world.process();
+      // Put higher checkpoint ids first in limbo. Restoring id 0 must hold
+      // these reservations until their own native factory calls arrive.
+      target.server.world.delete(9);
+      target.server.world.process();
+      target.server.world.delete(5);
+      target.server.world.process();
+      for (int id : new int[] {0, 2, 3, 4, 6, 7, 8}) target.server.world.delete(id);
+      target.server.world.process();
+      assertTrue(target.server.restoreReplayCheckpoint(checkpoint).success());
+      target.server.world.process();
+      assertEquals(checkpoint.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      assertEquals(91f, target.server.world.getMapper(Position.class).get(1).position.x, 0f);
+      assertFalse(target.server.world.getMapper(Networked.class).has(1));
+      assertEquals(4, target.server.world.getAspectSubscriptionManager().get(Aspect.all()).getEntities().size());
+    }
+  }
+
+  private static String resumeSparse(Path path) throws Exception {
+    try (Fixture target = new Fixture()) {
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      target.server.world.process();
+      D2gsCheckpointSnapshot restored = target.server.captureReplayCheckpoint();
+      assertEquals(archive.summary().canonical(), restored.summary().canonical());
+      assertEquals(archive.d2sCheckpoint().canonical(), restored.d2sCheckpoint().canonical());
+      assertEquals(3, target.server.world.getAspectSubscriptionManager().get(Aspect.all()).getEntities().size());
+      for (int id : new int[] {5, 9}) {
+        com.riiablo.engine.server.component.Item item = target.server.world
+            .getMapper(com.riiablo.engine.server.component.Item.class).get(id);
+        assertEquals(0, item.dropOwnerId);
+        assertEquals(123456L, item.dropOwnerUntilMillis);
+        assertEquals(7, item.dropPartyId);
+        assertEquals(234567L, item.dropPartyUntilMillis);
+        assertTrue(item.partyShareGold);
+      }
+      return continueSparse(target);
+    }
+  }
+
+  private static String continueSparse(Fixture fixture) {
+    for (int i = 0; i < 3; i++) fixture.server.simulation.tick(() -> fixture.server.world
+        .getMapper(Position.class).get(0).position.add(1, 0), null);
+    D2gsCheckpointSnapshot after = fixture.server.captureReplayCheckpoint();
+    return "SPARSE_CONTINUED|" + after.summary().canonical() + "|" + after.d2sCheckpoint().canonical();
+  }
+
   @Test public void newWorldRestoresFullCharacterAndClaimsTheArchivedActor() throws Exception {
     Path path = temporary.getRoot().toPath().resolve("world.chk");
     D2gsCheckpointSnapshot checkpoint;
@@ -157,6 +234,7 @@ public class D2gsWorldCheckpointBindingsTest {
   @Test public void failedD2sIdentityRollsBackLiveAndNewWorldBindings() {
     try (Fixture source = new Fixture(); Fixture empty = new Fixture()) {
       source.populate();
+      source.populateSparseItems();
       source.data().restorePotionCheckpoint(new CharData.PotionCheckpoint(111, 30, 90, 60, 45));
       D2gsCheckpointSnapshot archive = source.server.captureReplayCheckpoint();
       CharData impostor = CharData.loadFromBuffer(0,
@@ -188,6 +266,11 @@ public class D2gsWorldCheckpointBindingsTest {
         assertEquals(before.summary().canonical(), after.summary().canonical());
         assertEquals(before.d2sCheckpoint().canonical(), after.d2sCheckpoint().canonical());
       }
+      assertTrue(empty.server.world.getAspectSubscriptionManager().get(Aspect.all()).getEntities().isEmpty());
+      // All skipped reservations and rolled-back native creations are reusable.
+      java.util.Set<Integer> allocated = new java.util.HashSet<>();
+      for (int i = 0; i < 10; i++) allocated.add(empty.server.world.create());
+      for (int i = 0; i < 10; i++) assertTrue(allocated.contains(i));
       assertEquals(9, source.data().progressionRevision());
       assertSame(source.data().getStats(),
           source.server.world.getMapper(AttributesWrapper.class).get(0).attrs);
@@ -366,8 +449,9 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "potions".equals(args[3])
-          ? resumePotions(Path.of(args[0])) : resume(Path.of(args[0]), Long.parseLong(args[1]))); }
+      try { System.out.println(args.length > 3 && "sparse".equals(args[3])
+          ? resumeSparse(Path.of(args[0])) : args.length > 3 && "potions".equals(args[3])
+              ? resumePotions(Path.of(args[0])) : resume(Path.of(args[0]), Long.parseLong(args[1]))); }
       finally { unloadResources(); }
     }
   }
@@ -433,6 +517,28 @@ public class D2gsWorldCheckpointBindingsTest {
     }
 
     CharData data() { return server.world.getMapper(Player.class).get(0).data; }
+
+    void populateSparseItems() {
+      java.util.List<Integer> gaps = new java.util.ArrayList<>();
+      for (int id = 1; id < 5; id++) gaps.add(server.world.create());
+      createOwnedItem(5, "hp1");
+      for (int id = 6; id < 9; id++) gaps.add(server.world.create());
+      createOwnedItem(9, "mp1");
+      for (int id : gaps) server.world.delete(id);
+      server.world.process();
+    }
+
+    private void createOwnedItem(int expectedId, String code) {
+      assertEquals(expectedId, factory.createItem(new ItemGenerator().generateStartItem(code,
+          1000 + expectedId, -1), 12f + expectedId, 10f));
+      com.riiablo.engine.server.component.Item item = server.world
+          .getMapper(com.riiablo.engine.server.component.Item.class).get(expectedId);
+      item.dropOwnerId = 0;
+      item.dropOwnerUntilMillis = 123456L;
+      item.dropPartyId = 7;
+      item.dropPartyUntilMillis = 234567L;
+      item.partyShareGold = true;
+    }
     @Override public void close() { server.world.dispose(); }
   }
 }

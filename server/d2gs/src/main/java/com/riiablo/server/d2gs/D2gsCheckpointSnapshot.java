@@ -32,9 +32,10 @@ import com.riiablo.net.packet.d2gs.D2GSData;
 
 /**
  * D2GS-owned checkpoint payload containing the authoritative network state for
- * every currently networked ECS entity.  The summary is immutable and can be
- * retained by the replay recorder; payload bytes are used only by the
- * same-world restore adapter.
+ * every currently networked ECS entity. The summary is immutable and can be
+ * retained by the replay recorder; payloads may be restored into another world
+ * when the native lifecycle and authoritative runtime bindings are installed.
+ * Network component coverage alone is not a complete simulation snapshot.
  */
 public final class D2gsCheckpointSnapshot {
   private static final int ECS_WIRE_MAGIC = 0x44324745; // "D2GE"
@@ -53,6 +54,9 @@ public final class D2gsCheckpointSnapshot {
    * an authoritative world.
    */
   public interface EntityLifecycle {
+    /** Brackets creation, application, deletion and any internal rollback; must not tick the world. */
+    default void beginRestore(World world) {}
+    default void endRestore(World world) {}
     int createEntity(World world, int expectedEntityId, ByteBuffer payload);
     boolean deleteEntity(World world, int entityId);
   }
@@ -565,6 +569,16 @@ public final class D2gsCheckpointSnapshot {
 
   private RestoreResult restoreExisting(World world, SerializationManager serializer,
       EntityLifecycle lifecycle, boolean captureRollback) {
+    if (lifecycle != null) lifecycle.beginRestore(world);
+    try {
+      return restoreEntities(world, serializer, lifecycle, captureRollback);
+    } finally {
+      if (lifecycle != null) lifecycle.endRestore(world);
+    }
+  }
+
+  private RestoreResult restoreEntities(World world, SerializationManager serializer,
+      EntityLifecycle lifecycle, boolean captureRollback) {
     List<Integer> missing = new ArrayList<>();
     List<Integer> failed = new ArrayList<>();
     List<Integer> unexpected = new ArrayList<>();
@@ -580,11 +594,19 @@ public final class D2gsCheckpointSnapshot {
       int entityId = entry.getKey();
       if (!isActive(world, entityId)) {
         missing.add(entityId);
+      } else if (!world.getMapper(Networked.class).has(entityId)
+          || com.artemis.PendingEntityDeletion.isDeleted(world, entityId)) {
+        // Never deserialize a network checkpoint over an unrelated local
+        // entity, or resurrect a deletion that the batch processor will purge.
+        failed.add(entityId);
       }
     }
     Collections.sort(missing);
     Collections.sort(failed);
     Collections.sort(unexpected);
+    if (!failed.isEmpty()) {
+      return result(0, missing, failed, unexpected, created, deleted, false);
+    }
     if (lifecycle == null && (!missing.isEmpty() || !unexpected.isEmpty())) {
       return result(0, missing, failed, unexpected, created, deleted, false);
     }

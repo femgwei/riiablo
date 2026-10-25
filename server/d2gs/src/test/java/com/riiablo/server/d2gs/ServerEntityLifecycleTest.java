@@ -1,12 +1,14 @@
 package com.riiablo.server.d2gs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.backends.headless.HeadlessApplication;
 import com.riiablo.Files;
 import com.riiablo.Riiablo;
@@ -23,6 +25,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.map.Map;
 import com.riiablo.mpq.MPQFileHandleResolver;
+import com.riiablo.save.CharData;
 import java.io.File;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -46,17 +49,53 @@ public class ServerEntityLifecycleTest {
     if (Gdx.app != null) Gdx.app.exit();
   }
 
+  @Test public void sparseNativeInitializationFailureLeavesNoGhostAndCanBeRetried() {
+    ServerEntityFactory sourceFactory = new ServerEntityFactory();
+    SerializationManager sourceSerializer = new SerializationManager();
+    World source = world(sourceFactory, sourceSerializer);
+    FailingFactory targetFactory = new FailingFactory();
+    SerializationManager targetSerializer = new SerializationManager();
+    World target = world(targetFactory, targetSerializer);
+    try {
+      for (int i = 0; i < 6; i++) source.create();
+      assertEquals(6, sourceFactory.createPlayer("CheckpointHero", Riiablo.AMAZON, 10f, 10f));
+      source.process();
+      D2gsCheckpointSnapshot archive = D2gsCheckpointSnapshot.capture(source, sourceSerializer, 77L);
+      ServerEntityLifecycle lifecycle = new ServerEntityLifecycle(target, targetFactory, Riiablo.files);
+      D2gsCheckpointSnapshot.RestoreResult failed = archive.restoreExisting(target, targetSerializer, lifecycle);
+      assertFalse(failed.success());
+      assertTrue(failed.rolledBack);
+      target.process();
+      assertTrue(target.getAspectSubscriptionManager().get(com.artemis.Aspect.all()).getEntities().isEmpty());
+      assertEquals(NativePlayerTargetSlots.UNREGISTERED, target.getSystem(NativePlayerTargetSlots.class).slotOf(6));
+      java.util.Set<Integer> reused = new java.util.HashSet<>();
+      for (int i = 0; i < 7; i++) reused.add(target.create());
+      for (int i = 0; i < 7; i++) assertTrue(reused.contains(i));
+      for (int id : reused) target.delete(id);
+      target.process();
+
+      targetFactory.fail = false;
+      assertTrue(archive.restoreExisting(target, targetSerializer, lifecycle).success());
+      target.process();
+      assertEquals(archive.summary().canonical(),
+          D2gsCheckpointSnapshot.capture(target, targetSerializer, 77L).summary().canonical());
+      assertEquals(1, target.getAspectSubscriptionManager().get(com.artemis.Aspect.all()).getEntities().size());
+    } finally { source.dispose(); target.dispose(); }
+  }
+
+  private static final class FailingFactory extends ServerEntityFactory {
+    boolean fail = true;
+    @Override public int createPlayer(CharData data, Vector2 position) {
+      int id = super.createPlayer(data, position);
+      if (fail) throw new IllegalStateException("injected failure after native allocation");
+      return id;
+    }
+  }
+
   @Test public void realFactoryRestoresDeletedPlayerAndStableCheckpointDigest() {
     ServerEntityFactory factory = new ServerEntityFactory();
     SerializationManager serializer = new SerializationManager();
-    World world = new World(new WorldConfigurationBuilder()
-        .with(new net.mostlyoriginal.api.event.common.EventSystem(), new ItemManager(),
-            new ObjectInteractor(), new WarpInteractor(), new ItemInteractor(),
-            factory, new NativePlayerTargetSlots(), new CofManager(), serializer)
-        .build()
-        .register("factory", factory)
-        .register("map", new Map(0, 0))
-        .register("townPortalRegistry", new TownPortalRegistry()));
+    World world = world(factory, serializer);
     try {
       int entity = factory.createPlayer("CheckpointHero", Riiablo.AMAZON, 10f, 10f);
       world.process();
@@ -82,5 +121,14 @@ public class ServerEntityLifecycleTest {
     } finally {
       world.dispose();
     }
+  }
+
+  private static World world(ServerEntityFactory factory, SerializationManager serializer) {
+    return new World(new WorldConfigurationBuilder()
+        .with(new net.mostlyoriginal.api.event.common.EventSystem(), new ItemManager(),
+            new ObjectInteractor(), new WarpInteractor(), new ItemInteractor(),
+            factory, new NativePlayerTargetSlots(), new CofManager(), serializer)
+        .build().register("factory", factory).register("map", new Map(0, 0))
+        .register("townPortalRegistry", new TownPortalRegistry()));
   }
 }

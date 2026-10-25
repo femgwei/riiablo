@@ -1,6 +1,7 @@
 package com.riiablo.server.d2gs;
 
 import com.artemis.World;
+import com.artemis.CheckpointEntityAllocation;
 import com.badlogic.gdx.math.Vector2;
 import com.google.flatbuffers.ByteBufferUtil;
 import com.riiablo.Files;
@@ -38,15 +39,27 @@ import java.nio.ByteBuffer;
  * rebuild a networked entity, while the normal serializer applies the
  * mutable component state immediately afterwards.
  *
- * <p>Artemis does not expose arbitrary entity-id allocation.  The bridge
- * therefore accepts a create only when the factory returns the requested id;
- * a different allocation is rejected instead of silently remapping a network
- * identity.</p>
+ * <p>A bounded Artemis allocation scope reserves sparse ids without publishing
+ * placeholder entities or remapping network references. Unused reservations
+ * are recycled at the end of the restore, including failure/rollback.</p>
  */
 public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.EntityLifecycle {
   private final World world;
   private final ServerEntityFactory factory;
   private final ItemReader itemReader;
+  private CheckpointEntityAllocation allocation;
+
+  @Override public void beginRestore(World target) {
+    if (target != world) throw new IllegalArgumentException("world");
+    if (allocation != null) throw new IllegalStateException("nested checkpoint restore");
+    allocation = new CheckpointEntityAllocation(world);
+  }
+
+  @Override public void endRestore(World target) {
+    if (target != world) throw new IllegalArgumentException("world");
+    if (allocation != null) allocation.close();
+    allocation = null;
+  }
 
   public ServerEntityLifecycle(World world, EntityFactory factory, Files files) {
     if (world == null) throw new NullPointerException("world");
@@ -63,7 +76,18 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
   public int createEntity(World target, int expectedEntityId, ByteBuffer payload) {
     if (target != world) throw new IllegalArgumentException("world");
     if (expectedEntityId < 0 || payload == null
-        || D2gsCheckpointSnapshot.isActive(world, expectedEntityId)) return Engine.INVALID_ENTITY;
+        || (D2gsCheckpointSnapshot.isActive(world, expectedEntityId)
+            && (allocation == null || !allocation.isReserved(expectedEntityId)))) {
+      return Engine.INVALID_ENTITY;
+    }
+    if (allocation == null) {
+      beginRestore(target);
+      try {
+        return createEntity(target, expectedEntityId, payload);
+      } finally {
+        endRestore(target);
+      }
+    }
     try {
       D2GS envelope = D2GS.getRootAsD2GS(
           ByteBufferUtil.removeSizePrefix(payload.duplicate()));
@@ -74,37 +98,24 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
       if (position == null || !Float.isFinite(position.x()) || !Float.isFinite(position.y())) {
         return Engine.INVALID_ENTITY;
       }
-      int entityId;
-      switch (Class.Type.valueOf(sync.type())) {
-        case PLR:
-          entityId = createPlayer(sync, position);
-          break;
-        case MON:
-          entityId = createMonster(sync, position);
-          break;
-        case OBJ:
-          entityId = createObject(sync, position);
-          break;
-        case ITM:
-          entityId = createItem(sync, position);
-          break;
-        case WRP:
-          entityId = createWarp(sync, position);
-          break;
-        case MIS:
-          entityId = createMissile(sync, position);
-          break;
-        default:
-          return Engine.INVALID_ENTITY;
-      }
-      if (entityId != expectedEntityId) {
-        if (D2gsCheckpointSnapshot.isActive(world, entityId)) world.delete(entityId);
-        return entityId;
-      }
+      int entityId = factory.createCheckpointEntity(() -> allocation.create(expectedEntityId),
+          () -> createNativeEntity(sync, position));
       markCheckpointInsertion(entityId);
       return entityId;
     } catch (RuntimeException ignored) {
       return Engine.INVALID_ENTITY;
+    }
+  }
+
+  private int createNativeEntity(EntitySync sync, PositionP position) {
+    switch (Class.Type.valueOf(sync.type())) {
+      case PLR: return createPlayer(sync, position);
+      case MON: return createMonster(sync, position);
+      case OBJ: return createObject(sync, position);
+      case ITM: return createItem(sync, position);
+      case WRP: return createWarp(sync, position);
+      case MIS: return createMissile(sync, position);
+      default: return Engine.INVALID_ENTITY;
     }
   }
 

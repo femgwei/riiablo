@@ -2054,6 +2054,77 @@ HEALTHPOT/MANAPOT、PotionRecoverySystem 和 CharData 药剂计算实现；本�
 下一批集中处理完整地图/native factory 的实体集和系统恢复前置条件，再接真实 TCP 重启。
 M8-A、M8-D 与 M8 总体继续保持进行中。
 
+### M8-A 第 24 批：稀疏 native entity ID、恢复冲突保护与跨 JVM 实体集（2026-10-25）
+
+完成日期：2026-10-25。本批合并处理 native factory 无法命中稀疏 ID 的前置缺口、
+无关本地实体/待删除实体的占用冲突，以及真实工厂创建失败与晚期 D2S 失败后的清理。
+
+- 新增 pinned Artemis 2.3 的同包 `CheckpointEntityAllocation`，只调用原 allocator 的
+  `create/clean`，不反射或改写私有 free-list，也不调用 `World.process()`。恢复批次内暂存
+  跳过的裸 ID，不给它们附加组件或提交 subscription changed；结束时回收未使用的预留。
+  一批只扫描一次稀疏间隙，也能从乱序 limbo 中保留并随后使用更高的目标 ID。
+  生产分配范围明确限制为 `0..999999`，超界、活实体占用、待删除和已关闭 scope 均拒绝。
+- `EntityFactory` 的默认创建仍走 `world.create()`；仅 `ServerEntityFactory` checkpoint
+  单实体初始化 scope 使用指定分配器。native 初始化在分配后抛错时，显式删除本次实体，
+  不把不可见于 subscription 的半成品留到下一 Tick。普通创建与客户端创建路径不变。
+- `EntityLifecycle.beginRestore/endRestore` 覆盖创建、反序列化、删除和内部回滚；
+  finally 关闭分配 scope。`D2gsCheckpointSnapshot` 在任何创建/反序列化之前，拒绝
+  checkpoint ID 已被非 Networked 本地实体占用、或尚在 Artemis 删除批次内的情况。
+  不覆盖本地实体，不通过额外 Tick 清空删除队列，不静默重映射 owner/entity 引用。
+- 真实 1.10f 角色与两件带 owner/party 窗口的地面药剂形成 `{0,5,9}` 实体集，落盘后
+  分别在新 World 和独立 JVM 恢复，严格比较 ECS/world/D2S canonical，再与原 World
+  连续运行三个固定 Tick 的摘要比较。另测乱序回收队列优先返回 9、5 时，仍能先恢复
+  角色 0，并保留间隙内活跃本地实体 1 的位置与身份。
+- 注入 native player 已初始化后的异常，验证下一正常 flush 后无 ghost、玩家 target
+  slot 释放、所有预留/失败 ID 可复用、同一 lifecycle 可重试恢复；晚期错误 D2S identity
+  回滚也扩展到稀疏角色/物品实体集，检查完整摘要不变且空 World 不留占位实体。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointStoreTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointRecoveryTest `
+  --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest `
+  --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest `
+  :core:test --tests com.artemis.CheckpointEntityAllocationTest `
+  --tests com.riiablo.engine.D2gsCommandAdapterTest `
+  --tests com.riiablo.engine.replay.CheckpointRngRegistryTest `
+  --tests com.riiablo.engine.replay.NativeUnitRandomRegistryTest `
+  --tests com.riiablo.save.D2SCheckpointRegistryTest `
+  --tests com.riiablo.engine.server.PotionRecoverySystemTest `
+  --tests com.riiablo.engine.server.NativePlayerTargetSlotsTest `
+  --tests com.riiablo.engine.server.NativePathIdentityTest `
+  --tests 'com.riiablo.engine.server.ServerEntityFactory*Test' `
+  --tests com.riiablo.presentation.ClientEntityFactoryWaypointTest `
+  :server:d2gs:headlessSimulationTick :server:d2gs:headlessReconnectGroundLoot `
+  :server:d2gs:headlessStaleTransport :desktop:compileJava `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：服务端 42 项、core 59 项，共 101 项通过，0 失败、0 跳过；模块边界、服务端/
+core/桌面端编译通过。三个真实 TCP gate 通过：固定 Tick `7→38`（31 步）、部分拾取后
+剩余 15 金币和 owner window 在重连后保持、同槽旧 socket 延迟帧丢弃且当前 generation
+命令成功。它们仍是同进程网络回归，不等于跨进程 socket 接管。
+
+真实资源：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。本批不改暗黑规则或伤害/RNG
+公式；分配适配依据 pinned `artemis-odb:2.3.0` 的 `EntityManager.obtain/free/clean`、
+`World.create`、`BatchChangeProcessor` 和 `ComponentManager.synchronize` 源码，
+工厂沿用既有 D2MOO 规则实现。
+
+剩余问题/下一迁移：精确恢复已有实体 ID **不代表**恢复原 allocator 的 nextId/limbo 顺序，
+本批可能改变下一次普通分配的 ID；原分配器状态仍需归档后才能验收“创建新实体”的完全
+确定性续跑。资源门禁使用最小 Map 和真实角色/物品工厂，并非完整地图/所有单位类型覆盖。
+审查确认 `MissileP` 只含 identity/owner/range/skill/level/lifetime，未保存施放时的完整
+伤害包、附着/其他瞬态字段；按 ID 顺序重建时 owner 也可能尚未恢复，不能把相同摘要当作
+投射物结算等价的证明。下一批优先集中补齐投射物运行时与重建依赖、原分配器状态，再推进
+Map/AI/任务/交易等系统隐藏状态与真实 socket 跨进程重启的组合验收。
+M8-A、M8-D 与 M8 总体继续保持进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

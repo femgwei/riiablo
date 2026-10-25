@@ -78,6 +78,35 @@ import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
 public class ServerEntityFactory extends EntityFactory {
+  private java.util.function.IntSupplier checkpointAllocation;
+  private int checkpointAllocatedId = Engine.INVALID_ENTITY;
+
+  /** Assemble exactly one native entity using a checkpoint-scoped allocator. */
+  public final int createCheckpointEntity(java.util.function.IntSupplier allocation,
+      java.util.function.IntSupplier initialize) {
+    if (allocation == null || initialize == null) throw new NullPointerException();
+    if (checkpointAllocation != null) throw new IllegalStateException("nested checkpoint creation");
+    checkpointAllocation = allocation;
+    checkpointAllocatedId = Engine.INVALID_ENTITY;
+    boolean completed = false;
+    try {
+      int id = initialize.getAsInt();
+      if (id != checkpointAllocatedId) throw new IllegalStateException("checkpoint allocation mismatch");
+      completed = true;
+      return id;
+    } finally {
+      if (!completed && checkpointAllocatedId >= 0) world.delete(checkpointAllocatedId);
+      checkpointAllocation = null;
+      checkpointAllocatedId = Engine.INVALID_ENTITY;
+    }
+  }
+
+  @Override protected int allocateEntity() {
+    if (checkpointAllocation == null) return super.allocateEntity();
+    if (checkpointAllocatedId >= 0) throw new IllegalStateException("multiple checkpoint allocations");
+    return checkpointAllocatedId = checkpointAllocation.getAsInt();
+  }
+
   private final java.util.IdentityHashMap<Map.Zone, com.d2moo.common.drlg.D2Seed> legacySpawnSeeds =
       new java.util.IdentityHashMap<>();
   static byte nativeMonsterWeaponClass(int resolvedClass) {
