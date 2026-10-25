@@ -6405,6 +6405,7 @@ public class D2GS extends ApplicationAdapter {
           }
           if (worldD2s) worldReplayBindings.restorePlayerMetadata(checkpoint);
         }
+        checkpoint.restoreUnitStateRuntime(world);
         if (sessionSnapshot != null) {
           authoritativeSessions.restore(sessionSnapshot);
           pendingSessionRebindKeys.clear();
@@ -6460,6 +6461,7 @@ public class D2GS extends ApplicationAdapter {
             }
             if (worldD2s) worldReplayBindings.restorePlayerMetadata(before);
           }
+          before.restoreUnitStateRuntime(world);
           authoritativeSessions.restore(liveSessionSnapshot);
           pendingSessionRebindKeys.clear();
           pendingSessionRebindKeys.addAll(livePendingRebindKeys);

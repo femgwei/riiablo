@@ -7,6 +7,36 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class StaminaMaximumTest extends RiiabloTest {
+  @Test void checkpointRetainsAllOperandsAndContinuesEquipmentStateAndVitalityWithoutCompounding() throws Exception {
+    Attributes source = attributes(100 * 256 + 1, 40 * 256 + 3);
+    Attributes gear = Attributes.obtainStandard();
+    gear.base().put(Stat.skill_staminapercent, 50);
+    gear.base().put(Stat.skill_passive_staminapercent, 25);
+    gear.base().put(Stat.vitality, 4);
+    new AttributesUpdater().update(source, CharacterClass.BARBARIAN.entry()).add(gear.base()).apply();
+    source.staminaMaximum().applyStatePercent(source, 17, 23);
+    Attributes target = attributes(1, 1);
+    target.base().setAll(source.base());
+    target.aggregate().setAll(source.aggregate());
+    target.restoreAggregateRevision(source.aggregateRevision());
+    target.staminaMaximum().restoreCheckpoint(source.staminaMaximum().checkpoint());
+    for (java.lang.reflect.Field field : StaminaMaximum.class.getDeclaredFields()) {
+      if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) || field.isSynthetic()) continue;
+      field.setAccessible(true);
+      assertEquals(field.get(source.staminaMaximum()), field.get(target.staminaMaximum()), field.getName());
+    }
+    for (int percent : new int[] {17, 0, 31, -10}) {
+      source.staminaMaximum().applyStatePercent(source, percent, 11);
+      target.staminaMaximum().applyStatePercent(target, percent, 11);
+      source.staminaMaximum().increaseForVitality(source, 257);
+      target.staminaMaximum().increaseForVitality(target, 257);
+      assertPool(target, source.get(Stat.maxstamina).encodedValues(), source.get(Stat.stamina).encodedValues());
+      assertArrayEquals(source.staminaMaximum().checkpoint(), target.staminaMaximum().checkpoint());
+    }
+    long[] invalid = target.staminaMaximum().checkpoint(); invalid[1] = Long.MAX_VALUE;
+    assertThrows(IllegalArgumentException.class, () -> target.staminaMaximum().restoreCheckpoint(invalid));
+  }
+
   @Test void levelUpKeepsPercentageMaximumAndSubsequentStateRefreshDoesNotCompoundIt() {
     com.riiablo.save.CharData data = com.riiablo.save.CharData.obtain().clear().set(
         Riiablo.NORMAL, false, "StaminaLevel", Riiablo.BARBARIAN);

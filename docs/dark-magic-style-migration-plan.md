@@ -2291,6 +2291,93 @@ World.process 尾部、BatchChangeProcessor.update/getPendingPurge 与 Component
 不能仅靠 allocator 元数据回滚。真实 socket 的跨进程重启接管仍缺组合 gate，现有三个网络
 gate 仅为同进程回归。M8-A、M8-D 与 M8 总体继续保持进行中。
 
+### M8-A 第 27 批：单位状态、DOT 与资源折叠上下文恢复（2026-10-25）
+
+完成日期：2026-10-25。本批将普通单位状态的服务端运行时、属性依赖、
+新 World/独立 JVM 续跑和失败回滚合并交付；不宣称完整怪物 AI 或完整状态生命周期已迁移。
+
+- 新增显式版本化 `UnitStateRuntimeCheckpoint`，与客户端 `StateP` 分离。
+  每个 Networked 实体都有一条记录，包括 UnitStates 不存在和 stateList 为 null 的情况；
+  恢复会清除目标中不应存在的状态组件，不保留目标的旧状态，也不将服务端状态变成 snapshotOnly。
+  单位 runtime 保存同步/药水标志、已应用的最大资源百分比、原始/上次结算上限和 aggregate revision。
+- UnitState 显式保存剩余/初始持续时间、来源/技能、curse 仲裁元数据、永久/stat-list 类别、
+  所有修正值、精确 DOT rate、毒伤载荷、周期 delay/countdown、Thunder Storm 前目标、
+  地面拖尾坐标、运行值、同步/到期标志、Conversion save-list 标量、mastery 类型，
+  以及每条 native stat/layer/operation/encodedValue 和私有 legacy projection baseline。
+  保留列表顺序、多来源同状态、多个匿名永久 stat-list，以及独立的 state/GFX flags；
+  不使用 addState 刷新合并，不由技能等级重算已施放的效果，不重新抽取 RNG。
+- 携带 UnitStates 的单位同时保存 Attributes 的 base/aggregate/remaining 三层 encoded stat、
+  type、aggregate revision、盾牌/跑动上下文的 presence/value 和难度抗性标志。
+  StaminaMaximum 显式保存原始上限、上次输出、装备/状态的两类百分比、bonus、
+  rebuild 中间值及 revision，防止恢复后把已加成的上限当成原始输入再次放大。
+  这不是任意 Attributes 对象图序列化；非空额外 source lists 明确拒绝，等待其 owner 适配。
+- 完整 D2GC envelope 升为 v6：在 v5 allocator 段后增加可选的 unit-state runtime count
+  和逐实体 length/bytes。count=-1 表示历史/明确未覆盖的子集，count=0 表示已覆盖的空实体集。
+  覆盖集必须与 ECS payload 完全相同；元数据与覆盖标志纳入 canonical digest，
+  禁止纯 ECS 导出静默丢弃。`withUnitStateRuntime(null)` 是显式选择旧子集能力，
+  其他 with 方法保留此元数据；v1–v5 按原有能力继续读取，不虚构权威状态运行时。
+- runtime 恢复先验证所有 host/字段，再无回调地替换 state-list 和属性。
+  ECS 应用/内部回滚均包含此段；D2GS 在 D2S 更换 CharData/Attributes 指针后再次应用，
+  晚期 RNG/D2S/session 失败也在 D2S 回滚之后恢复原 runtime。整个过程不运行
+  StateUpdater、不触发状态移除/插入效果、不补跑 World.process 或额外仿真 Tick。
+- 非 null RemovalCallback、CONVERSION、PREGNANT，以及活动 curse/conversion target
+  membership 均 fail closed；不能将闭包静默丢弃或只凭 stateId 假造原生命周期。
+  已分离的普通层/无此类依赖的状态可以归档；TARGETS registry/order、
+  Conversion/Pregnant 回调重绑定仍需后续与怪物/目标系统共同迁移。
+- 新增 UnitState 全字段 schema 审计（反射只用于测试）、私有 projection baseline/holder
+  标量/flags/匿名重复层/组件缺失/null-list round-trip、所有截断边界、非法 boolean、
+  非有限 rate、未知 hook/活动 target membership 拒绝、后一个 host 无效时前一个不变。
+  属性用例验证三层 encoded 值、64-bit revision、combat presence 和 stamina 操作数，
+  并覆盖装备百分比与 vitality/状态刷新续算；不通过重建属性来弱化比较。
+- 真实 1.10f Player 同时携带精确 poison、Battle Orders 类资源增益、两个来源的 cold 层、
+  两个匿名永久 stat-list 和进行中的蓝药。运行 3 Tick 后归档，新 World 与独立 JVM
+  再续跑 32 Tick，逐 Tick 严格比较完整 canonical/药水运行时并比较最终 D2S。
+  显式断言剩余 5 次毒伤每帧 64 encoded、duration=1 的末次仍结算，
+  第 10 Tick 增益到期后最大生命/法力/体力回到原值。晚期错误 D2S 在 live/空 World
+  均完整回滚，之后再与未失败基准连续比较 14 Tick。
+
+验证命令：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointStoreTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointRecoveryTest `
+  --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest `
+  --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest `
+  :core:test --tests com.riiablo.engine.replay.UnitStateRuntimeCheckpointTest `
+  --tests com.riiablo.engine.replay.UnitStateAttributeCheckpointTest `
+  --tests com.riiablo.attributes.StaminaMaximumTest `
+  --tests com.riiablo.engine.server.state.StateListTest `
+  --tests com.riiablo.engine.server.PotionRecoverySystemTest `
+  --tests com.riiablo.engine.replay.MissileRuntimeCheckpointTest `
+  --tests com.artemis.EntityAllocatorCheckpointTest `
+  --tests com.artemis.CheckpointEntityAllocationTest `
+  --tests com.riiablo.engine.replay.CheckpointRngRegistryTest `
+  --tests com.riiablo.engine.replay.NativeUnitRandomRegistryTest `
+  --tests com.riiablo.save.D2SCheckpointRegistryTest `
+  --tests com.riiablo.engine.server.NativePlayerTargetSlotsTest `
+  --tests 'com.riiablo.engine.server.ServerEntityFactory*Test' `
+  :server:d2gs:headlessSimulationTick :server:d2gs:headlessReconnectGroundLoot `
+  :server:d2gs:headlessStaleTransport :desktop:compileJava `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：服务端 54 项、core 89 项，共 143 项通过，0 失败、0 跳过；模块边界与桌面编译通过。
+三个真实 TCP gate 通过：固定 Tick `7→37`（30 步）、部分拾取后剩余 15 金币和 owner
+window 保持、旧 socket 延迟帧丢弃且当前 generation 命令成功。三个网络 gate 仍为同进程，
+上述独立 JVM 状态验收不等于 socket 跨进程接管。
+
+真实资源：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。本批不改暗黑公式、状态到期顺序、
+DOT 或 RNG 算法；只保存并恢复现有 StateUpdater/UnitState/Attributes/StaminaMaximum 的输入与相位。
+仍待迁移：完整怪物 AI、TARGETS/回调生命周期、周期技能及其他未绑定 RNG 消费者、
+本地实体组件、Map/RoomEx、任务/交易等隐藏运行时、资源内容 digest、
+结构订阅者系统级副作用的完整回滚，以及真实 socket 跨进程重启接管组合验收。
+M8-A、M8-D 和 M8 总体继续保持进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

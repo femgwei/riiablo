@@ -932,6 +932,21 @@ public class StateList {
     this.entityId = entityId;
   }
 
+  /** Runtime restore is not an insertion/removal event: retain exact order,
+   * anonymous duplicates and flag bits, without callbacks or target rejoining.
+   * Active target memberships require a separate target-registry checkpoint. */
+  public void replaceFromCheckpoint(java.util.List<UnitState> restored, StateFlags restoredFlags,
+      NativeTargetNode node) {
+    discardAll();
+    nativeTargetNode = node;
+    for (UnitState source : restored) {
+      UnitState state = statePool.obtain();
+      state.copyFrom(source);
+      states.add(state);
+    }
+    flags.copyFrom(restoredFlags);
+  }
+
   /**
    * 获取所属实体ID
    * 

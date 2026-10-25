@@ -52,6 +52,131 @@ public class D2gsWorldCheckpointBindingsTest {
   @BeforeClass public static void loadResources() { ServerEntityLifecycleTest.load110f(); }
   @AfterClass public static void unloadResources() { ServerEntityLifecycleTest.unload110f(); }
 
+  @Test public void authoritativeStatesAndModifiedResourceOperandsResumeAcrossJvmRestart() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("states.chk");
+    String expected;
+    try (Fixture source = new Fixture(true, false, true)) {
+      source.populate(); source.populateStates();
+      source.server.writeReplayCheckpoint(path);
+      expected = continueStates(source);
+    }
+    assertEquals(expected, resumeStates(path));
+    Path output = temporary.getRoot().toPath().resolve("states-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "states").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("state recovery child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue());
+      assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  private static String resumeStates(Path path) throws Exception {
+    try (Fixture target = new Fixture(true, false, true)) {
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      assertFalse(target.server.world.getMapper(com.riiablo.engine.server.component.UnitStates.class)
+          .get(0).snapshotOnly);
+      return continueStates(target);
+    }
+  }
+
+  @Test public void stateRuntimeHasFullCoverageIntegrityAndNoImplicitEcsDowngrade() {
+    try (Fixture source = new Fixture(true, false, true)) {
+      source.populate(); source.populateStates();
+      D2gsCheckpointSnapshot original = source.server.captureReplayCheckpoint();
+      com.riiablo.engine.server.component.UnitStates holder = source.server.world.getMapper(
+          com.riiablo.engine.server.component.UnitStates.class).get(0);
+      holder.stateList.getState(com.riiablo.engine.server.state.StateId.POISON).initialDuration += 23;
+      D2gsCheckpointSnapshot changed = source.server.captureReplayCheckpoint();
+      assertArrayEquals(original.payloads().get(0), changed.payloads().get(0));
+      assertNotEquals(original.summary().canonical(), changed.summary().canonical());
+      assertTrue(changed.withWorldIdentity(1, 0).withAllocatorState(null)
+          .withMissileRuntime(changed.missileRuntime()).unitStateRuntime() != null);
+      try { changed.withUnitStateRuntime(java.util.Collections.emptyMap()); fail("partial state coverage accepted"); }
+      catch (IllegalArgumentException expected) {}
+      try { changed.withAllocatorState(null).toEcsBytes(); fail("state runtime discarded"); }
+      catch (IllegalStateException expected) {}
+      byte[] encoded = changed.toBytes(), runtime = changed.unitStateRuntime().get(0).bytes();
+      int offset = -1;
+      for (int i = 0; i <= encoded.length - runtime.length; i++) {
+        if (java.util.Arrays.equals(runtime, java.util.Arrays.copyOfRange(encoded, i, i + runtime.length))) {
+          offset = i; break;
+        }
+      }
+      assertTrue(offset >= 0);
+      encoded[offset + 7] ^= 1; // Valid appliedMaxLifePercent scalar, invalid canonical witness.
+      try { D2gsCheckpointSnapshot.fromBytes(encoded); fail("state witness corruption accepted"); }
+      catch (IllegalArgumentException expected) {}
+      D2gsCheckpointSnapshot legacy = changed.withUnitStateRuntime(null);
+      assertNull(D2gsCheckpointSnapshot.fromBytes(legacy.toBytes()).unitStateRuntime());
+      assertNotEquals(changed.summary().canonical(), legacy.summary().canonical());
+    }
+  }
+
+  private static String continueStates(Fixture fixture) {
+    StringBuilder result = new StringBuilder("STATES_CONTINUED");
+    com.riiablo.engine.server.state.StateList states = fixture.server.world.getMapper(
+        com.riiablo.engine.server.component.UnitStates.class).get(0).stateList;
+    assertEquals(5, states.getStateDuration(com.riiablo.engine.server.state.StateId.POISON));
+    for (int i = 1; i <= 32; i++) {
+      int before = fixture.data().getStats().get(Stat.hitpoints).encodedValues();
+      fixture.server.simulation.tick(null, null);
+      if (i <= 5) {
+        assertEquals("poison includes the final duration=1 frame", 64,
+            before - fixture.data().getStats().get(Stat.hitpoints).encodedValues());
+      }
+      if (i == 5) assertFalse(states.hasState(com.riiablo.engine.server.state.StateId.POISON));
+      if (i == 10) {
+        assertFalse(states.hasState(com.riiablo.engine.server.state.StateId.BATTLEORDERS));
+        assertEquals(40 * 256, fixture.data().getStats().get(Stat.maxhp).encodedValues());
+        assertEquals(20 * 256, fixture.data().getStats().get(Stat.maxmana).encodedValues());
+        assertEquals(60 * 256, fixture.data().getStats().get(Stat.maxstamina).encodedValues());
+      }
+      D2gsCheckpointSnapshot checkpoint = fixture.server.captureReplayCheckpoint();
+      result.append('|').append(checkpoint.summary().canonical()).append(':')
+          .append(fixture.data().capturePotionCheckpoint().canonical());
+    }
+    assertEquals(2, states.size()); // Two independent permanent anonymous lists.
+    return result.append('|').append(fixture.server.captureReplayCheckpoint().d2sCheckpoint().canonical()).toString();
+  }
+
+  @Test public void lateD2sFailureRestoresLiveStatesStatsAndNextTickWithoutReapplyingBuffs() {
+    try (Fixture source = new Fixture(true, false, true); Fixture empty = new Fixture(true, false, true)) {
+      source.populate(); source.populateStates();
+      D2gsCheckpointSnapshot archive = source.server.captureReplayCheckpoint();
+      CharData impostor = CharData.loadFromBuffer(0, ByteBuffer.wrap(archive.d2sCheckpoint().entry(0).bytes()));
+      impostor.name = "ImpostorHero";
+      D2SCheckpoint wrong = D2SCheckpoint.of(java.util.Collections.singletonMap(0,
+          D2SCheckpoint.entry(0, 0, new D2SWriter96().writeD2S(D2SWriter96.createD2S(impostor)))));
+      D2gsCheckpointSnapshot incoming = D2gsCheckpointSnapshot.fromPayloads(archive.tick(), archive.payloads(),
+          archive.summary().rngStates(), archive.summary().nativeUnitRngStates(), wrong, archive.sessionSnapshot())
+          .withAllocatorState(archive.allocatorState()).withUnitStateRuntime(archive.unitStateRuntime());
+      try (Fixture control = new Fixture(true, false, true)) {
+        for (int i = 0; i < 2; i++) source.server.simulation.tick(null, null);
+        D2gsCheckpointSnapshot before = source.server.captureReplayCheckpoint();
+        assertTrue(control.server.restoreReplayCheckpoint(before).success());
+        for (Fixture target : new Fixture[] {source, empty}) {
+          D2gsCheckpointSnapshot previous = target.server.captureReplayCheckpoint();
+          try { target.server.restoreReplayCheckpoint(incoming); fail("late D2S failure must roll back"); }
+          catch (IllegalStateException expected) {
+            assertEquals("checkpoint restore transaction rolled back", expected.getMessage());
+          }
+          assertEquals(previous.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+          assertEquals(previous.d2sCheckpoint().canonical(), target.server.captureReplayCheckpoint().d2sCheckpoint().canonical());
+        }
+        for (int i = 0; i < 14; i++) {
+          source.server.simulation.tick(null, null); control.server.simulation.tick(null, null);
+          assertEquals(control.server.captureReplayCheckpoint().summary().canonical(),
+              source.server.captureReplayCheckpoint().summary().canonical());
+        }
+      }
+    }
+  }
+
   @Test public void allocatorFifoAndHighWaterMarkContinueRealItemCreationAcrossJvmRestart() throws Exception {
     Path path = temporary.getRoot().toPath().resolve("allocator.chk");
     String expected;
@@ -626,7 +751,7 @@ public class D2gsWorldCheckpointBindingsTest {
           D2SCheckpoint.entry(0, 0, save)));
       D2gsCheckpointSnapshot expected = D2gsCheckpointSnapshot.fromPayloads(77,
           java.util.Collections.emptyMap(), null, null, legacyD2s, null);
-      for (int version : new int[] {1, 2, 3, 4}) {
+      for (int version : new int[] {1, 2, 3, 4, 5}) {
         java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
         java.io.DataOutputStream out = new java.io.DataOutputStream(bytes);
         out.writeInt(0x44324743);
@@ -644,6 +769,7 @@ public class D2gsWorldCheckpointBindingsTest {
         out.writeInt(version == 1 ? 0 : -1); // absent sessions
         if (version >= 3) out.writeBoolean(false); // absent world identity
         if (version >= 4) out.writeInt(0); // absent missile runtime
+        if (version >= 5) out.writeBoolean(false); // absent allocator
         for (String witness : new String[] {expected.summary().canonical(), legacyD2s.canonical()}) {
           byte[] encoded = witness.getBytes(StandardCharsets.UTF_8);
           out.writeInt(encoded.length);
@@ -728,7 +854,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "allocator".equals(args[3])
+      try { System.out.println(args.length > 3 && "states".equals(args[3])
+          ? resumeStates(Path.of(args[0])) : args.length > 3 && "allocator".equals(args[3])
           ? resumeAllocator(Path.of(args[0])) : args.length > 3 && "projectiles".equals(args[3])
           ? resumeProjectiles(Path.of(args[0])) : args.length > 3 && "sparse".equals(args[3])
           ? resumeSparse(Path.of(args[0])) : args.length > 3 && "potions".equals(args[3])
@@ -745,12 +872,15 @@ public class D2gsWorldCheckpointBindingsTest {
 
     Fixture(boolean potions) { this(potions, false); }
 
-    Fixture(boolean potions, boolean projectiles) {
+    Fixture(boolean potions, boolean projectiles) { this(potions, projectiles, false); }
+
+    Fixture(boolean potions, boolean projectiles, boolean states) {
       WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
           .with(new net.mostlyoriginal.api.event.common.EventSystem(), new ItemManager(),
               new ObjectInteractor(), new WarpInteractor(), new ItemInteractor(), factory,
               new NativePlayerTargetSlots(), new CofManager(), new SerializationManager());
       if (potions) builder.with(new PotionRecoverySystem());
+      if (states) builder.with(new com.riiablo.engine.server.StateUpdater());
       if (projectiles) builder.with(new com.riiablo.engine.server.Pathfinder(),
           new com.riiablo.engine.server.MissileCollisionSystem());
       server.world = new World(builder.build().register("factory", factory).register("map", new Map(1, 0))
@@ -803,6 +933,28 @@ public class D2gsWorldCheckpointBindingsTest {
     }
 
     CharData data() { return server.world.getMapper(Player.class).get(0).data; }
+
+    void populateStates() {
+      com.riiablo.engine.server.state.StateList states = server.world.getMapper(
+          com.riiablo.engine.server.component.UnitStates.class).get(0).stateList;
+      com.riiablo.engine.server.state.UnitState poison = states.addState(
+          com.riiablo.engine.server.state.StateId.POISON, 8, 1, -1);
+      poison.exactDamagePerFrame = 0.25f; poison.damageType = 4;
+      com.riiablo.engine.server.state.UnitState orders = states.addState(
+          com.riiablo.engine.server.state.StateId.BATTLEORDERS, 13, 4, -1);
+      orders.maxLifeModifier = 37; orders.maxManaModifier = 23;
+      orders.setStatContribution(Stat.skill_staminapercent, 0,
+          com.riiablo.attributes.NativeStatResolver.Operation.ADD, 31);
+      states.addStateLayer(com.riiablo.engine.server.state.StateId.COLD, 6, 1, 14, 7).velocityModifier = -17;
+      states.addStateLayer(com.riiablo.engine.server.state.StateId.COLD, 4, 2, 15, 8).animationRateModifier = -12;
+      states.addAnonymousStatList(0).setStatContribution(Stat.firemindam, 7,
+          com.riiablo.attributes.NativeStatResolver.Operation.ADD, 333);
+      states.addAnonymousStatList(0).setStatContribution(Stat.firemindam, 8,
+          com.riiablo.attributes.NativeStatResolver.Operation.ADD, 444);
+      consumePotion(data(), "mp1", 4400);
+      for (int i = 0; i < 3; i++) server.simulation.tick(null, null);
+      assertEquals(5, states.getStateDuration(com.riiablo.engine.server.state.StateId.POISON));
+    }
 
     void populateProjectiles() {
       // A mid-game checkpoint must restore a consumed skill combat stream,

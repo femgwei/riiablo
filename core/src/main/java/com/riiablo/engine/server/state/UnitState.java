@@ -834,6 +834,165 @@ public class UnitState {
     this.conversionOriginalMaxHpEncoded = other.conversionOriginalMaxHpEncoded;
   }
 
+  /** Explicit checkpoint schema; deliberately not the lossy network copy.
+   * Unknown runtime hooks cannot be reconstructed and must fail closed. */
+  public void writeCheckpoint(java.io.DataOutputStream out) throws java.io.IOException {
+    if (removalCallback != null || stateId == StateId.CONVERSION || stateId == StateId.PREGNANT) {
+      throw new IllegalStateException("unsupported state removal lifecycle: " + stateId);
+    }
+    out.writeInt(stateId);
+    out.writeInt(level);
+    out.writeInt(duration);
+    out.writeInt(initialDuration);
+    out.writeInt(sourceEntityId);
+    out.writeInt(skillId);
+    out.writeInt(curseGroup);
+    out.writeInt(curseStrength);
+    out.writeInt(damageModifier);
+    out.writeInt(defenseModifier);
+    out.writeInt(attackModifier);
+    out.writeInt(velocityModifier);
+    out.writeInt(runtimeValue);
+    out.writeInt(animationRateModifier);
+    out.writeInt(lifeLeechModifier);
+    out.writeInt(stunLength);
+    out.writeInt(fireResistModifier);
+    out.writeInt(coldResistModifier);
+    out.writeInt(lightResistModifier);
+    out.writeInt(poisonResistModifier);
+    out.writeInt(magicResistModifier);
+    out.writeInt(skillModifier);
+    out.writeInt(experienceModifier);
+    out.writeInt(manaRecoveryModifier);
+    out.writeInt(maxStaminaModifier);
+    out.writeInt(maxLifeModifier);
+    out.writeInt(maxManaModifier);
+    out.writeInt(staminaRecoveryModifier);
+    out.writeInt(masteryAttackRatingModifier);
+    out.writeInt(masteryDamageModifier);
+    out.writeInt(masteryCriticalChance);
+    out.writeInt(damagePerFrame);
+    out.writeInt(damageType);
+    out.writeInt(poisonMinDamage);
+    out.writeInt(poisonMaxDamage);
+    out.writeInt(poisonLengthOverride);
+    out.writeInt(periodicDelayFrames);
+    out.writeInt(periodicCountdownFrames);
+    out.writeInt(thunderStormTargetId);
+    out.writeInt(conversionOriginalLevel);
+    out.writeInt(conversionOriginalMaxHpEncoded);
+    out.writeInt(projectedDamageModifier);
+    out.writeInt(projectedDefenseModifier);
+    out.writeInt(projectedAttackModifier);
+    out.writeInt(projectedVelocityModifier);
+    out.writeInt(projectedAnimationRateModifier);
+    out.writeInt(projectedFireResistModifier);
+    out.writeInt(projectedColdResistModifier);
+    out.writeInt(projectedLightResistModifier);
+    out.writeInt(projectedPoisonResistModifier);
+    out.writeInt(projectedMagicResistModifier);
+    out.writeBoolean(basicStatList);
+    out.writeBoolean(trailPositionSet);
+    out.writeBoolean(throwingMastery);
+    out.writeBoolean(isNew);
+    out.writeBoolean(needsSync);
+    out.writeBoolean(expired);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, trailX);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, trailY);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, exactDamagePerFrame);
+    com.riiablo.engine.replay.CheckpointIO.writeString(out, masteryItemType);
+    out.writeInt(statContributions.size());
+    for (StatContribution stat : statContributions) {
+      out.writeInt(stat.statId); out.writeInt(stat.layer);
+      out.writeInt(stat.operation.ordinal()); out.writeInt(stat.encodedValue);
+    }
+  }
+
+  public static UnitState readCheckpoint(java.io.DataInputStream in) throws java.io.IOException {
+    UnitState state = new UnitState();
+    state.stateId = in.readInt();
+    state.level = in.readInt();
+    state.duration = in.readInt();
+    state.initialDuration = in.readInt();
+    state.sourceEntityId = in.readInt();
+    state.skillId = in.readInt();
+    state.curseGroup = in.readInt();
+    state.curseStrength = in.readInt();
+    state.damageModifier = in.readInt();
+    state.defenseModifier = in.readInt();
+    state.attackModifier = in.readInt();
+    state.velocityModifier = in.readInt();
+    state.runtimeValue = in.readInt();
+    state.animationRateModifier = in.readInt();
+    state.lifeLeechModifier = in.readInt();
+    state.stunLength = in.readInt();
+    state.fireResistModifier = in.readInt();
+    state.coldResistModifier = in.readInt();
+    state.lightResistModifier = in.readInt();
+    state.poisonResistModifier = in.readInt();
+    state.magicResistModifier = in.readInt();
+    state.skillModifier = in.readInt();
+    state.experienceModifier = in.readInt();
+    state.manaRecoveryModifier = in.readInt();
+    state.maxStaminaModifier = in.readInt();
+    state.maxLifeModifier = in.readInt();
+    state.maxManaModifier = in.readInt();
+    state.staminaRecoveryModifier = in.readInt();
+    state.masteryAttackRatingModifier = in.readInt();
+    state.masteryDamageModifier = in.readInt();
+    state.masteryCriticalChance = in.readInt();
+    state.damagePerFrame = in.readInt();
+    state.damageType = in.readInt();
+    state.poisonMinDamage = in.readInt();
+    state.poisonMaxDamage = in.readInt();
+    state.poisonLengthOverride = in.readInt();
+    state.periodicDelayFrames = in.readInt();
+    state.periodicCountdownFrames = in.readInt();
+    state.thunderStormTargetId = in.readInt();
+    state.conversionOriginalLevel = in.readInt();
+    state.conversionOriginalMaxHpEncoded = in.readInt();
+    state.projectedDamageModifier = in.readInt();
+    state.projectedDefenseModifier = in.readInt();
+    state.projectedAttackModifier = in.readInt();
+    state.projectedVelocityModifier = in.readInt();
+    state.projectedAnimationRateModifier = in.readInt();
+    state.projectedFireResistModifier = in.readInt();
+    state.projectedColdResistModifier = in.readInt();
+    state.projectedLightResistModifier = in.readInt();
+    state.projectedPoisonResistModifier = in.readInt();
+    state.projectedMagicResistModifier = in.readInt();
+    state.basicStatList = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    state.trailPositionSet = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    state.throwingMastery = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    state.isNew = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    state.needsSync = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    state.expired = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    state.trailX = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    state.trailY = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    state.exactDamagePerFrame = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    state.masteryItemType = com.riiablo.engine.replay.CheckpointIO.readString(in);
+    int count = com.riiablo.engine.replay.CheckpointIO.count(in, 65536);
+    int previousId = -1, previousLayer = -1;
+    for (int i = 0; i < count; i++) {
+      int id = in.readInt(), layer = in.readInt(), operation = in.readInt(), value = in.readInt();
+      if (id < 0 || id > 511 || layer < 0 || id < previousId
+          || id == previousId && layer <= previousLayer || value == 0
+          || operation < 0 || operation >= NativeStatResolver.Operation.values().length) {
+        throw new IllegalArgumentException("state stat contribution");
+      }
+      state.statContributions.add(new StatContribution(id, layer,
+          NativeStatResolver.Operation.values()[operation], value));
+      previousId = id; previousLayer = layer;
+    }
+    if (state.stateId != StateId.NONE && !StateId.isValid(state.stateId)
+        || state.stateId == StateId.CONVERSION || state.stateId == StateId.PREGNANT
+        || state.duration < 0 || state.initialDuration < 0
+        || state.sourceEntityId < -1 || state.skillId < -1 || state.thunderStormTargetId < -1) {
+      throw new IllegalArgumentException("state runtime identity/lifetime");
+    }
+    return state;
+  }
+
   @Override
   public String toString() {
     return "UnitState{" +

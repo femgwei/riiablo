@@ -224,6 +224,14 @@ public final class Attributes implements Iterable<StatRef> {
     return combatRunningKnown;
   }
 
+  /** Restores presence as well as values; unknown context is not false context. */
+  public void restoreCombatContext(boolean shieldKnown, boolean hasShield, int blockFactor,
+      boolean runningKnown, boolean running) {
+    if (blockFactor < 0) throw new IllegalArgumentException("combat block factor");
+    combatShieldKnown = shieldKnown; combatHasShield = hasShield; combatBlockFactor = blockFactor;
+    combatRunningKnown = runningKnown; combatRunning = running;
+  }
+
   public boolean combatRunning() {
     return combatRunning;
   }

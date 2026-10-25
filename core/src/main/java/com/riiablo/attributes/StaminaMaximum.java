@@ -10,6 +10,27 @@ public final class StaminaMaximum {
   private long revision = -1;
   private int rebuildMaximum, rebuildCurrent;
 
+  /** Exact runtime operands, not a recalculation from the already modified maximum. */
+  public long[] checkpoint() {
+    return new long[] {rawMaximum, resolvedMaximum, equipmentPercent, equipmentPassivePercent,
+        statePercent, statePassivePercent, bonusMaximum, equipmentBonus, revision,
+        rebuildMaximum, rebuildCurrent};
+  }
+
+  public void restoreCheckpoint(long[] values) {
+    if (values == null || values.length != 11 || values[8] < -1) {
+      throw new IllegalArgumentException("stamina maximum checkpoint");
+    }
+    for (int i : new int[] {0, 1, 2, 3, 4, 5, 9, 10}) {
+      if (values[i] != (int) values[i]) throw new IllegalArgumentException("stamina operand");
+    }
+    rawMaximum = (int) values[0]; resolvedMaximum = (int) values[1];
+    equipmentPercent = (int) values[2]; equipmentPassivePercent = (int) values[3];
+    statePercent = (int) values[4]; statePassivePercent = (int) values[5];
+    bonusMaximum = values[6]; equipmentBonus = values[7]; revision = values[8];
+    rebuildMaximum = (int) values[9]; rebuildCurrent = (int) values[10];
+  }
+
   void beginRebuild(Attributes attrs) {
     StatListRef live = attrs.aggregate().containsAny(Stat.maxstamina) ? attrs.aggregate() : attrs.base();
     rebuildMaximum = encoded(live, Stat.maxstamina);

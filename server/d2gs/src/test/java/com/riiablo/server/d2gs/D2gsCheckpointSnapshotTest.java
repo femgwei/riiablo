@@ -148,7 +148,7 @@ public class D2gsCheckpointSnapshotTest {
     int[] ids = networkedIds(source);
     for (int id : ids) sourceSerializer.states.put(id, id + 40);
     D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(
-        source, sourceSerializer, 55L);
+        source, sourceSerializer, 55L).withUnitStateRuntime(null);
 
     byte[] encoded = checkpoint.toEcsBytes();
     D2gsCheckpointSnapshot transferred = D2gsCheckpointSnapshot.fromEcsBytes(encoded);
@@ -159,7 +159,7 @@ public class D2gsCheckpointSnapshotTest {
     D2gsCheckpointSnapshot.RestoreResult result = transferred.restoreExisting(
         resumed, resumedSerializer);
     D2gsCheckpointSnapshot restored = D2gsCheckpointSnapshot.capture(
-        resumed, resumedSerializer, 55L);
+        resumed, resumedSerializer, 55L).withUnitStateRuntime(null);
     assertTrue(result.success());
     assertEquals(ids.length, result.appliedEntities);
     assertEquals(checkpoint.summary().canonical(), transferred.summary().canonical());
@@ -171,7 +171,8 @@ public class D2gsCheckpointSnapshotTest {
     FakeSerializer serializer = new FakeSerializer();
     int id = networkedIds(world)[0];
     serializer.states.put(id, 77);
-    byte[] encoded = D2gsCheckpointSnapshot.capture(world, serializer, 8L).toEcsBytes();
+    byte[] encoded = D2gsCheckpointSnapshot.capture(world, serializer, 8L)
+        .withUnitStateRuntime(null).toEcsBytes();
 
     byte[] tampered = java.util.Arrays.copyOf(encoded, encoded.length);
     tampered[tampered.length - 1] ^= 1;
@@ -233,10 +234,10 @@ public class D2gsCheckpointSnapshotTest {
     D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.fromPayloads(5L,
         java.util.Collections.emptyMap());
     byte[] current = checkpoint.toBytes();
-    // v3 adds world presence, v4 adds an empty missile-runtime count.
-    byte[] legacy = new byte[current.length - 6];
+    // v3 world presence, v4 missile count, v5 allocator presence, v6 state count.
+    byte[] legacy = new byte[current.length - 10];
     System.arraycopy(current, 0, legacy, 0, 36);
-    System.arraycopy(current, 42, legacy, 36, current.length - 42);
+    System.arraycopy(current, 46, legacy, 36, current.length - 46);
     java.nio.ByteBuffer bytes = java.nio.ByteBuffer.wrap(legacy);
     bytes.putInt(4, 1); // original complete envelope version
     bytes.putInt(28, 0); // v1 encoded absent D2S as zero entries
@@ -270,9 +271,9 @@ public class D2gsCheckpointSnapshotTest {
         com.riiablo.save.D2SCheckpoint.of(java.util.Collections.emptyMap()),
         new AuthoritativeSessionRegistry().snapshot());
     byte[] current = checkpoint.toBytes();
-    byte[] legacy = new byte[current.length - 6];
+    byte[] legacy = new byte[current.length - 10];
     System.arraycopy(current, 0, legacy, 0, 36);
-    System.arraycopy(current, 42, legacy, 36, current.length - 42);
+    System.arraycopy(current, 46, legacy, 36, current.length - 46);
     java.nio.ByteBuffer.wrap(legacy).putInt(4, 2);
     D2gsCheckpointSnapshot restored = D2gsCheckpointSnapshot.fromBytes(legacy);
     assertEquals(checkpoint.summary().canonical(), restored.summary().canonical());
@@ -292,7 +293,8 @@ public class D2gsCheckpointSnapshotTest {
     assertEquals(rng, checkpoint.summary().rngStates());
     D2gsCheckpointSnapshot drifted = D2gsCheckpointSnapshot.fromPayloads(
         7L, checkpoint.payloads(), java.util.Collections.singletonList(
-            new SimulationCheckpoint.RngState("combat.hit", id, 1235, 9)));
+            new SimulationCheckpoint.RngState("combat.hit", id, 1235, 9)))
+        .withUnitStateRuntime(checkpoint.unitStateRuntime());
     assertEquals(1, checkpoint.summary().diff(drifted.summary()).size());
     assertEquals("rng:combat.hit#" + id,
         checkpoint.summary().diff(drifted.summary()).get(0).field);
