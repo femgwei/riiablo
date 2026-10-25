@@ -11,6 +11,20 @@ public class SandMaggotQueen extends NativeDecisionAI {
   private int spawned;
   private int spawnPhase;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(spawned);
+    out.writeInt(spawnPhase);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedSpawned = in.readInt();
+    int savedSpawnPhase = in.readInt();
+    if (apply) {
+      spawned = savedSpawned;
+      spawnPhase = savedSpawnPhase;
+    }
+  }
   public SandMaggotQueen(int entityId) {
     super(entityId);
   }

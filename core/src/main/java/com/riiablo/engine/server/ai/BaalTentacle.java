@@ -13,6 +13,26 @@ public class BaalTentacle extends NativeDecisionAI {
   private float frame;
   private float expireFrame = Float.NaN;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(ownerId);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, frame);
+    // NaN is the uninitialized lifetime sentinel; finite clocks retain the shared strict codec.
+    out.writeBoolean(!Float.isNaN(expireFrame));
+    if (!Float.isNaN(expireFrame)) com.riiablo.engine.replay.CheckpointIO.writeFloat(out, expireFrame);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedOwnerId = in.readInt();
+    float savedFrame = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    float savedExpireFrame = com.riiablo.engine.replay.CheckpointIO.readBoolean(in)
+        ? com.riiablo.engine.replay.CheckpointIO.readFloat(in) : Float.NaN;
+    if (apply) {
+      ownerId = savedOwnerId;
+      frame = savedFrame;
+      expireFrame = savedExpireFrame;
+    }
+  }
   public BaalTentacle(int entityId) {
     super(entityId);
   }

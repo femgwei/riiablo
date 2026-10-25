@@ -2654,6 +2654,58 @@ generation 命令成功。TCP gate 仍为同进程，未扩展成真实 socket �
 以及前批 Map/RoomEx、本地实体、未绑定 RNG、任务/交易、资源 digest、结构订阅副作用和
 真实 socket 跨进程接管组合验收。M8-A、M8-D、M8 总体继续进行中。
 
+### M8-A 第 33 批：分身、潜伏计时与一次性 AI 阶段恢复（2026-10-25）
+
+本批将可共用字段策略和验收的 17 类 AI 集中适配，沿用真实 factory 宿主原位恢复、
+全记录预检与 ECS/RNG/D2S 事务，不修改 AI 决策概率、技能、目标选择或既有调度语义。
+
+- 新支持 BaalCrabClone、BaalTaunt、BaalTentacle、BaalThrone、Tentacle、TentacleHead、
+  SuicideMinion、WillOWisp、SevenTIllusion、Spirit、SandMaggotQueen、Sarcophagus、
+  Ancient、SiegeTower、SiegeBeast、Succubus、SuccubusWitch。精确白名单累计为 50 类实体 AI，
+  另有共享 IDLE；未知类与未声明派生类仍拒绝，不采用反射式生产序列化或动态类加载。
+- BaalTaunt 保留 neutralFrames；BaalTentacle 保留 ownerId、本地 frame 和 expireFrame。
+  expireFrame 的 NaN 是宿主尚未初始化寿命的合法 sentinel，单独用严格 boolean presence 编码，
+  已初始化时使用有限 float codec。不会把 NaN 扩散到其他帧钟，也不会恢复时重抽寿命。
+- Tentacle/TentacleHead 通过显式父类 codec 保留 phase、双精度 frame/changeAfter；
+  Tentacle 另外保留 ownerId。BaalCrabClone 复用已审计的 BaalCrab 历史 anchor/anchored、
+  目标计数/评分和 NativeDecisionAI 状态，不因没有自有字段而跳过父类数据。
+- SuicideMinion 保留 deadline、explosionFrame（含 -1 sentinel）、detonated、hitRequested；
+  Spirit/SevenTIllusion 保留 attacked；SandMaggotQueen 保留 spawned/spawnPhase，
+  Sarcophagus 保留 spawned/nextSpawn；WillOWisp 保留 phase/count/indexOrDeadline。
+- BaalThrone 保留 preparedWave/transformed/castWave，但不把这些局部标记当作任务系统的
+  权威波次状态。Ancient、SiegeTower/SiegeBeast、Succubus/SuccubusWitch 没有额外实例字段，
+  仍逐个声明具体类型，继承状态走同一显式 codec，不放开任意子类。
+- AI v1、wrapper v1、unit-state v4、D2GC v7 版本保持不变，原有 33 类布局不变；
+  新类型的私有尾部自动进入 unit-state canonical witness。构造原型时不初始化宿主、不抽 RNG。
+
+原版依据：D2MOO `AiThink.cpp::AITHINK_Fn097_Spirit` 的先提交一次性标记、后请求攻击、
+用尽后等待 50 帧；Fn139_BaalTentacle 的仅首次设置随机寿命及严格超过 deadline 才死亡；
+Fn056_Tentacle/Fn057_TentacleHead 的潜伏阶段及秒数转换的绝对 deadline。
+本批仅保存宿主已经实现的表示，不借 checkpoint 调整它们与原版的既有差异。
+
+验收扩展为 50 类逐字段标量比对、继承链完整字段策略、预检零写入、逐字节截断、
+非有限局部帧钟拒绝；专门验证寿命 unset/finite 两种表示、非法 presence、带 NaN 的有限分支
+被拒绝，及 BaalCrab/Clone 锚点值与目标向量对象身份。真实触手验证剩余寿命到期不重抽，
+Tentacle/Head 验证跨新 World 保留潜伏阶段和剩余延迟，Spirit 验证目标丢失/重新出现不重置攻击。
+
+真实 D2GS factory 的 Spirit 在第一发动作完成后保存，在新 World 与独立 JVM 各续跑 120 步，
+逐步比对状态/诊断、严格 canonical（含原生 RNG）和 D2S，且每步断言不再创建攻击动作。
+AI-only canonical 变化和晚期 D2S 失败回滚扩大为 DoomKnight、TrapMissile、Spirit 三类，
+覆盖现有/空 World 与 live AI 身份保持。所有行为续跑用例仍采用受控动作完成边界，
+不宣称恢复 Casting/Sequence、真实技能伤害或跨进程 socket。
+
+最终扩大回归使用真实 1.10f 资源 `G:\BaiduNetdiskDownload\Diablo II 1.10F`，
+范围沿用第 32 批的全部 AI、checkpoint/factory/状态/目标/RNG/D2S 回归。
+core 1012 项、服务端 71 项，共 1083 项通过，0 失败、0 跳过；模块边界、桌面编译及
+`git diff --check` 通过。三个真实 TCP gate 通过：固定 Tick `7→38`（31 步）、
+部分拾取后剩余 15 金币且 owner window 保持、旧 socket 延迟帧丢弃且当前 generation 命令成功。
+TCP gate 仍为同进程，不代表真实 socket 跨进程接管验收完成。
+
+剩余：其他未适配 AI、Casting/Sequence 与冻结战斗记录、ECS 路径、其他 pet/merc 运行时；
+Act5 等任务权威状态、Map/RoomEx、本地实体、未绑定 RNG、交易、资源 digest、结构订阅副作用
+及真实 socket 跨进程接管仍待后续组合验收。仅恢复 BaalThrone/Ancient 局部字段不等于恢复任务，
+仅恢复 WillOWisp 局部编队字段不等于完整多人编队/动作续跑。M8-A、M8-D、M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

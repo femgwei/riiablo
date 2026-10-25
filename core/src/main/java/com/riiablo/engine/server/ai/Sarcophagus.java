@@ -10,6 +10,20 @@ public class Sarcophagus extends NativeDecisionAI {
   private int spawned;
   private float nextSpawn;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(spawned);
+    com.riiablo.engine.replay.CheckpointIO.writeFloat(out, nextSpawn);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedSpawned = in.readInt();
+    float savedNextSpawn = com.riiablo.engine.replay.CheckpointIO.readFloat(in);
+    if (apply) {
+      spawned = savedSpawned;
+      nextSpawn = savedNextSpawn;
+    }
+  }
   public Sarcophagus(int entityId) {
     super(entityId);
   }

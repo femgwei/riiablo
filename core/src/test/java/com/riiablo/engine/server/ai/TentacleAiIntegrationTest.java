@@ -174,6 +174,36 @@ class TentacleAiIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test void checkpointRestoresInheritedSubmergePhaseAndRemainingDelay() {
+    for (String type : new String[] {"Tentacle", "TentacleHead"}) {
+      AiRuntimeState image;
+      try (Fixture f = fixture(type, 1f)) {
+        if (type.equals("Tentacle"))
+          f.world.getMapper(Monster.class).get(f.actor).minionOwnerId = owner(f, "mephisto");
+        f.ai.update(Animation.FRAME_DURATION);
+        assertEquals(skillId(f, 0), f.casting().skillId);
+        f.finishAction(); // Only the AI phase is checkpointed, not the held reverse animation.
+        f.ai.update(8 * Animation.FRAME_DURATION);
+        assertNull(f.casting());
+        image = AiRuntimeState.capture(f.ai, f.actor);
+        f.ai.update(16 * Animation.FRAME_DURATION);
+        assertNull(f.casting());
+        f.ai.update(2 * Animation.FRAME_DURATION);
+        assertEquals(skillId(f, 1), f.casting().skillId);
+      }
+      try (Fixture f = fixture(type, 1f)) {
+        if (type.equals("Tentacle"))
+          f.world.getMapper(Monster.class).get(f.actor).minionOwnerId = owner(f, "mephisto");
+        image.restore(f.ai, f.actor);
+        f.ai.update(16 * Animation.FRAME_DURATION);
+        assertNull(f.casting(), "restored phase must not restart submerge");
+        f.ai.update(2 * Animation.FRAME_DURATION);
+        assertEquals(skillId(f, 1), f.casting().skillId);
+        assertEquals(f.actor, f.casting().targetId);
+      }
+    }
+  }
+
   private static Fixture fixture(String ai, float distance) {
     String rowId = rowIdForAi(ai);
     Fixture f = new Fixture(rowId, 0, distance);

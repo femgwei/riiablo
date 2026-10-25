@@ -18,6 +18,23 @@ abstract class TentacleAI extends NativeDecisionAI {
   private double frame;
   private double changeAfter;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(phase);
+    AiRuntimeState.writeFiniteDouble(out, frame);
+    AiRuntimeState.writeFiniteDouble(out, changeAfter);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPhase = in.readInt();
+    double savedFrame = AiRuntimeState.readFiniteDouble(in);
+    double savedChangeAfter = AiRuntimeState.readFiniteDouble(in);
+    if (apply) {
+      phase = savedPhase;
+      frame = savedFrame;
+      changeAfter = savedChangeAfter;
+    }
+  }
   TentacleAI(int entityId) {
     super(entityId);
   }

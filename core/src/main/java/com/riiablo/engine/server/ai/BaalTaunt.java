@@ -10,6 +10,17 @@ public class BaalTaunt extends NativeDecisionAI {
 
   private int neutralFrames;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(neutralFrames);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedNeutralFrames = in.readInt();
+    if (apply) {
+      neutralFrames = savedNeutralFrames;
+    }
+  }
   public BaalTaunt(int entityId) {
     super(entityId);
   }

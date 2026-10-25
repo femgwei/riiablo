@@ -111,6 +111,25 @@ class SpiritAiIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test void checkpointKeepsSpentAttackAcrossFreshWorldAndTargetLoss() {
+    AiRuntimeState image;
+    try (Fixture f = new Fixture(row(), 0, 1)) {
+      f.ai.update(Animation.FRAME_DURATION);
+      assertNotNull(f.casting());
+      f.finishAction();
+      image = AiRuntimeState.capture(f.ai, f.actor);
+    }
+    try (Fixture f = new Fixture(row(), 0, 1)) {
+      image.restore(f.ai, f.actor);
+      for (int i = 0; i < 10; i++) {
+        f.targetPosition().set(i % 2 == 0 ? 1000 : 11, 10);
+        f.ai.update(51 * Animation.FRAME_DURATION);
+        assertNull(f.casting()); assertNull(f.sequence());
+        assertEquals("IDLE", f.ai.getState());
+      }
+    }
+  }
+
   private static final class CountingSpirit extends Spirit {
     int decisions;
     CountingSpirit(int entityId) { super(entityId); }

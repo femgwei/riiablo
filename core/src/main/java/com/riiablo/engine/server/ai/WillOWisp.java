@@ -40,6 +40,23 @@ public class WillOWisp extends NativeDecisionAI {
   // Original dwAiParam[2] alternates between participant index and cooldown.
   private long indexOrDeadline;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(phase);
+    out.writeInt(count);
+    out.writeLong(indexOrDeadline);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPhase = in.readInt();
+    int savedCount = in.readInt();
+    long savedIndexOrDeadline = in.readLong();
+    if (apply) {
+      phase = savedPhase;
+      count = savedCount;
+      indexOrDeadline = savedIndexOrDeadline;
+    }
+  }
   public WillOWisp(int entityId) { super(entityId); }
 
   @Override protected void think(int targetId, float distance, boolean combat) {

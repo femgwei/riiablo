@@ -10,6 +10,17 @@ import com.riiablo.engine.server.event.DeathEvent;
 public class Tentacle extends TentacleAI {
   private int ownerId = Engine.INVALID_ENTITY;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(ownerId);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedOwnerId = in.readInt();
+    if (apply) {
+      ownerId = savedOwnerId;
+    }
+  }
   public Tentacle(int entityId) {
     super(entityId);
   }

@@ -14,6 +14,23 @@ public class BaalThrone extends NativeDecisionAI {
   private int preparedWave = -1;
   private boolean transformed;
   private int castWave = -1;
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeInt(preparedWave);
+    out.writeBoolean(transformed);
+    out.writeInt(castWave);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    int savedPreparedWave = in.readInt();
+    boolean savedTransformed = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    int savedCastWave = in.readInt();
+    if (apply) {
+      preparedWave = savedPreparedWave;
+      transformed = savedTransformed;
+      castWave = savedCastWave;
+    }
+  }
   public BaalThrone(int entityId) { super(entityId); }
 
   private boolean statePresent(int id, String name) {

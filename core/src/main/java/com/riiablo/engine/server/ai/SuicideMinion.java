@@ -13,6 +13,26 @@ public class SuicideMinion extends NativeDecisionAI {
   private boolean detonated;
   private boolean hitRequested;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeLong(deadline);
+    out.writeLong(explosionFrame);
+    out.writeBoolean(detonated);
+    out.writeBoolean(hitRequested);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    long savedDeadline = in.readLong();
+    long savedExplosionFrame = in.readLong();
+    boolean savedDetonated = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    boolean savedHitRequested = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      deadline = savedDeadline;
+      explosionFrame = savedExplosionFrame;
+      detonated = savedDetonated;
+      hitRequested = savedHitRequested;
+    }
+  }
   public SuicideMinion(int entityId) { super(entityId); }
 
   @Override protected void think(int targetId, float distance, boolean combat) {

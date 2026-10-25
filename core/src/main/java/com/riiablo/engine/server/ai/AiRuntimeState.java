@@ -105,6 +105,23 @@ public final class AiRuntimeState {
       case "TrapPoison": return new TrapPoison(id);
       case "TrapMelee": return new TrapMelee(id);
       case "TrapLeftArrow": return new TrapLeftArrow(id);
+      case "BaalCrabClone": return new BaalCrabClone(id);
+      case "BaalTaunt": return new BaalTaunt(id);
+      case "BaalTentacle": return new BaalTentacle(id);
+      case "BaalThrone": return new BaalThrone(id);
+      case "Tentacle": return new Tentacle(id);
+      case "TentacleHead": return new TentacleHead(id);
+      case "SuicideMinion": return new SuicideMinion(id);
+      case "WillOWisp": return new WillOWisp(id);
+      case "SevenTIllusion": return new SevenTIllusion(id);
+      case "Spirit": return new Spirit(id);
+      case "SandMaggotQueen": return new SandMaggotQueen(id);
+      case "Sarcophagus": return new Sarcophagus(id);
+      case "Ancient": return new Ancient(id);
+      case "SiegeTower": return new SiegeTower(id);
+      case "SiegeBeast": return new SiegeBeast(id);
+      case "Succubus": return new Succubus(id);
+      case "SuccubusWitch": return new SuccubusWitch(id);
       default: throw new IllegalArgumentException("unsupported AI checkpoint schema: " + type);
     }
   }

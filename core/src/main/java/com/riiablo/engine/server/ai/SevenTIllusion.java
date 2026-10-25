@@ -9,6 +9,17 @@ import com.riiablo.skill.SkillCodes;
 public class SevenTIllusion extends NativeDecisionAI {
   private boolean attacked;
 
+  @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
+    super.writeRuntime(out);
+    out.writeBoolean(attacked);
+  }
+  @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
+    super.readRuntime(in, apply);
+    boolean savedAttacked = com.riiablo.engine.replay.CheckpointIO.readBoolean(in);
+    if (apply) {
+      attacked = savedAttacked;
+    }
+  }
   public SevenTIllusion(int entityId) { super(entityId); }
 
   @Override protected void thinkWithoutTarget() { act(); }

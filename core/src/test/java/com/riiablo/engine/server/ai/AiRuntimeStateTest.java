@@ -20,7 +20,11 @@ class AiRuntimeStateTest {
       BaalCrab::new, Diablo::new, Mephisto::new, Duriel::new, Summoner::new, OblivionKnight::new,
       AbyssKnight::new, ArcaneTower::new, TrapMissile::new, TrapNova::new, TrapRightArrow::new,
       TrappedSoul::new, ThornHulk::new, VileMother::new, ZakarumPriest::new, ZakarumZealot::new,
-      TrapPoison::new, TrapMelee::new, TrapLeftArrow::new);
+      TrapPoison::new, TrapMelee::new, TrapLeftArrow::new,
+      BaalCrabClone::new, BaalTaunt::new, BaalTentacle::new, BaalThrone::new,
+      Tentacle::new, TentacleHead::new, SuicideMinion::new, WillOWisp::new,
+      SevenTIllusion::new, Spirit::new, SandMaggotQueen::new, Sarcophagus::new,
+      Ancient::new, SiegeTower::new, SiegeBeast::new, Succubus::new, SuccubusWitch::new);
 
   @Test void allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects() throws Exception {
     for (IntFunction<AI> factory : SCHEMAS) {
@@ -111,7 +115,30 @@ class AiRuntimeStateTest {
     expected.put(TrapPoison.class, "");
     expected.put(TrapMelee.class, "");
     expected.put(TrapLeftArrow.class, "");
+    expected.put(BaalCrabClone.class, "");
+    expected.put(BaalTaunt.class, "neutralFrames");
+    expected.put(BaalTentacle.class, "ownerId frame expireFrame");
+    expected.put(BaalThrone.class, "preparedWave transformed castWave");
+    expected.put(TentacleAI.class, "phase frame changeAfter");
+    expected.put(Tentacle.class, "ownerId");
+    expected.put(TentacleHead.class, "");
+    expected.put(SuicideMinion.class, "deadline explosionFrame detonated hitRequested");
+    expected.put(WillOWisp.class, "phase count indexOrDeadline");
+    expected.put(SevenTIllusion.class, "attacked");
+    expected.put(Spirit.class, "attacked");
+    expected.put(SandMaggotQueen.class, "spawned spawnPhase");
+    expected.put(Sarcophagus.class, "spawned nextSpawn");
+    expected.put(Ancient.class, "");
+    expected.put(SiegeTower.class, "");
+    expected.put(SiegeBeast.class, "");
+    expected.put(Succubus.class, "");
+    expected.put(SuccubusWitch.class, "");
     for (Class<?> type : Arrays.asList(Andariel.class, DoomKnight.class, FlyingScimitar.class, BaalMinion.class, Idle.class)) expected.put(type, "");
+    for (IntFunction<AI> factory : SCHEMAS) {
+      for (Class<?> type = factory.apply(0).getClass(); type != Object.class; type = type.getSuperclass()) {
+        assertTrue(expected.containsKey(type), "missing field policy: " + type.getName());
+      }
+    }
     for (Map.Entry<Class<?>, String> e : expected.entrySet()) {
       Set<String> actual = new TreeSet<>();
       for (Field f : e.getKey().getDeclaredFields()) {
@@ -231,16 +258,19 @@ class AiRuntimeStateTest {
   }
 
   @Test void bossAnchorIsHistoryRatherThanScratchAndKeepsTheTargetVectorIdentity() throws Exception {
-    BaalCrab source = new BaalCrab(4), target = new BaalCrab(4);
-    com.badlogic.gdx.math.Vector2 anchor = (com.badlogic.gdx.math.Vector2) get(source, BaalCrab.class, "anchor");
-    anchor.set(14.125f, -6.5f); put(source, BaalCrab.class, "anchored", true);
-    Object targetAnchor = get(target, BaalCrab.class, "anchor");
-    AiRuntimeState.capture(source, 4).restore(target, 4);
-    assertSame(targetAnchor, get(target, BaalCrab.class, "anchor"));
-    assertNotSame(anchor, targetAnchor); assertEquals(anchor, targetAnchor);
-    assertEquals(true, get(target, BaalCrab.class, "anchored"));
-    anchor.x = Float.NaN;
-    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(source, 4));
+    for (boolean clone : new boolean[] {false, true}) {
+      BaalCrab source = clone ? new BaalCrabClone(4) : new BaalCrab(4);
+      BaalCrab target = clone ? new BaalCrabClone(4) : new BaalCrab(4);
+      com.badlogic.gdx.math.Vector2 anchor = (com.badlogic.gdx.math.Vector2) get(source, BaalCrab.class, "anchor");
+      anchor.set(14.125f, -6.5f); put(source, BaalCrab.class, "anchored", true);
+      Object targetAnchor = get(target, BaalCrab.class, "anchor");
+      AiRuntimeState.capture(source, 4).restore(target, 4);
+      assertSame(targetAnchor, get(target, BaalCrab.class, "anchor"));
+      assertNotSame(anchor, targetAnchor); assertEquals(anchor, targetAnchor);
+      assertEquals(true, get(target, BaalCrab.class, "anchored"));
+      anchor.x = Float.NaN;
+      assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(source, 4));
+    }
   }
 
   @Test void everyExtendedSchemaRejectsEachTruncationAndNonfiniteLocalClocks() throws Exception {
@@ -260,6 +290,38 @@ class AiRuntimeStateTest {
           }
           f.setDouble(source, saved);
         }
+      }
+    }
+  }
+
+  @Test void tentacleUninitializedLifetimeIsExplicitAndDoesNotRearmAnExistingClock() throws Exception {
+    BaalTentacle source = new BaalTentacle(3), target = new BaalTentacle(3);
+    put(target, BaalTentacle.class, "expireFrame", 175f);
+    byte[] unset = AiRuntimeState.capture(source, 3).bytes();
+    AiRuntimeState image = AiRuntimeState.fromBytes(unset);
+    image.validateRestore(target, 3);
+    assertEquals(175f, get(target, BaalTentacle.class, "expireFrame"));
+    image.restore(target, 3);
+    assertTrue(Float.isNaN((Float) get(target, BaalTentacle.class, "expireFrame")));
+    assertNull(get(source, AI.class, "aiSeed"));
+    assertNull(get(target, AI.class, "aiSeed"));
+    byte[] badKind = unset.clone(); badKind[badKind.length - 1] = 2;
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.fromBytes(badKind));
+    put(source, BaalTentacle.class, "expireFrame", 175.125f);
+    image = AiRuntimeState.capture(source, 3); image.restore(target, 3);
+    assertEquals(175.125f, get(target, BaalTentacle.class, "expireFrame"));
+    byte[] badClock = image.bytes();
+    java.nio.ByteBuffer.wrap(badClock).putInt(badClock.length - 4, Float.floatToRawIntBits(Float.NaN));
+    assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.fromBytes(badClock));
+    for (float invalid : new float[] {Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY}) {
+      put(source, BaalTentacle.class, "expireFrame", invalid);
+      assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(source, 3));
+    }
+    for (String field : new String[] {"frame", "nextSpawn"}) {
+      AI clock = field.equals("frame") ? new BaalTentacle(3) : new Sarcophagus(3);
+      for (float invalid : new float[] {Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY}) {
+        put(clock, clock.getClass(), field, invalid);
+        assertThrows(IllegalArgumentException.class, () -> AiRuntimeState.capture(clock, 3));
       }
     }
   }
