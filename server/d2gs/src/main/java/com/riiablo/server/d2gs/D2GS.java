@@ -6288,7 +6288,8 @@ public class D2GS extends ApplicationAdapter {
         ? null : replayD2sRegistry.capture();
     if (rngStates == null && replayRngRegistry != null) rngStates = replayRngRegistry.snapshot();
     return D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber(), rngStates,
-        nativeUnitRngStates, d2sCheckpoint, authoritativeSessions.snapshot()).withWorldIdentity(seed, diff);
+        nativeUnitRngStates, d2sCheckpoint, authoritativeSessions.snapshot()).withWorldIdentity(seed, diff)
+        .withAllocatorFrom(world);
   }
 
   public D2gsCheckpointSnapshot replayCheckpoint() { return replayCheckpoint; }
@@ -6379,7 +6380,8 @@ public class D2GS extends ApplicationAdapter {
     java.util.Set<String> livePendingRebindKeys = new HashSet<>(pendingSessionRebindKeys);
     D2gsCheckpointSnapshot previousReplayCheckpoint = replayCheckpoint;
     D2gsCheckpointSnapshot before = D2gsCheckpointSnapshot.capture(world, serializer, liveTick,
-        liveRngStates, liveNativeUnitRngStates, liveD2sCheckpoint, liveSessionSnapshot);
+        liveRngStates, liveNativeUnitRngStates, liveD2sCheckpoint, liveSessionSnapshot)
+        .withAllocatorFrom(world);
     D2gsCheckpointSnapshot.RestoreResult result = lifecycle == null
         ? checkpoint.restoreExisting(world, serializer)
         : checkpoint.restoreExisting(world, serializer, lifecycle);
@@ -6432,6 +6434,7 @@ public class D2GS extends ApplicationAdapter {
               }
             }
           }
+          com.artemis.EntityAllocatorCheckpoint.flushStructure(world);
           D2gsCheckpointSnapshot.RestoreResult ecsRollback = lifecycle == null
               ? before.restoreExisting(world, serializer)
               : before.restoreExisting(world, serializer, lifecycle);

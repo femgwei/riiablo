@@ -2209,6 +2209,88 @@ NativeMissileAcceleration（PathMisc.cpp sub_6FD5CEB0），只保存既有计算
 真实 socket 的跨进程重启接管仍缺组合 gate；现有网络 gate 仅是同进程回归。
 M8-A、M8-D 与 M8 总体继续保持进行中。
 
+### M8-A 第 26 批：原 allocator 队列、高水位与创建实体确定性续跑（2026-10-25）
+
+完成日期：2026-10-25。本批集中处理上一批保留的 `nextId/limbo` 缺口，并将 native
+创建失败、删除失败和晚期 D2S 失败后的 allocator 回滚放在同一交付中。
+
+- 新增针对 pinned `artemis-odb:2.3.0` 的 `EntityAllocatorCheckpoint`：显式归档
+  nextId 和逻辑 FIFO 顺序的 free-id 数组，active/recycled 集由二者的补集确定。
+  最大 nextId 为 1000000；拒绝重复、负数、越界 ID、异常长度、版本、截断及尾随字节。
+  capture 校验实际 entity store、recycled 标记、free-list、free-id 组件清理的一致性。
+- Artemis 没有公开这三个字段，因此窄适配器只反射访问 EntityManager 的 `nextId`、
+  `limbo`、`recycled`，检查声明类型、可见性、final/static 布局，并拒绝替代实现。
+  不使用 Unsafe，不替换第三方 EntityManager 类，不遍历或序列化组件对象图。
+  扩容仍走原 manager.create，保证已注册的组件/bit-vector store 正常扩容；回退高水位时
+  只裁去已清理且没有活实体的尾部缓存。升级 Artemis 时必须重新审计此版本适配器。
+  上批 `CheckpointEntityAllocation` 本身仍只走普通分配 API，本批没有改写其行为。
+- 完整 `D2GC` envelope 升为 v5：在 v4 missile runtime 段后、canonical witness 前追加
+  allocator presence，以及可选的 length/bytes；内部 codec v1 为 version/nextId/count/
+  orderedFreeIds。allocator bytes 纳入 world digest；禁止带此元数据的纯 ECS 降级。
+  v1/v2/v3/v4 继续可读，不为旧归档虚构原分配顺序；`.withAllocatorState(null)` 明确选择
+  历史子集恢复，不提供 allocator 确定性保证。其他 with 方法必须保留 allocator 元数据。
+- D2GS 自动 capture allocator，要求完成删除清理且实际 Networked 集与已发布 payload 集
+  一致：拒绝 pending deletion 或尚未进入 subscription 的网络实体，不能将它们静默当作
+  不需恢复的本地实体。归档应位于正常 Tick/结构提交边界，不通过额外仿真 Tick 补救。
+- 精确恢复前要求非 Networked 本地实体的 ID 集已经与归档一致：缺失的地图/宿主实体需由
+  对应 owner 先重建，外来本地实体占用 archived free-id 时必须拒绝，不能覆盖或重映射。
+  该检查只保证本地 ID 集相同，不证明本地组件/地图内容相同；旧子集恢复仍可保留额外本地实体。
+- 带 allocator 的恢复事务先执行 native set reconciliation，关闭 sparse allocation scope，
+  再完成 subscription 与 native component purge，最后恢复原 FIFO/recycled/nextId。
+  结构 flush 沿用 BatchChangeProcessor.update 和 World.process 尾部的 clean 顺序，只通知
+  结构订阅者，不调用任何 system.process，不推进仿真时钟。失败时清除半成品、重建原实体集，
+  再恢复原 allocator；D2GS 外层晚期 RNG/D2S/session 回滚同样恢复此状态，包括旧归档失败。
+- 真实 1.10f Player 0 + owned ground items 5/9，制造 nextId=18、15 个乱序回收 ID 和
+  没有活实体的高位空洞；目标 World 先分配/回收到 30，恢复后与原 World 连续执行 22 次
+  真实物品工厂创建，穿插删除并逐步比较 ID、完整 checkpoint canonical 和最终 D2S。
+  新 World 和独立 JVM 均严格比对，越过原 free-list 后达到 nextId=24；不只检查恢复瞬间。
+  另覆盖队列 head 偏移、全空高位区间、回退到 nextId=0 后再次扩容、匹配/冲突本地实体、
+  native 工厂初始化后抛错、删除已生效却返回失败，以及晚期错误 D2S 的完整回滚。
+
+验证命令：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointStoreTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointRecoveryTest `
+  --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest `
+  --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest `
+  :core:test --tests com.artemis.EntityAllocatorCheckpointTest `
+  --tests com.artemis.CheckpointEntityAllocationTest `
+  --tests com.riiablo.engine.replay.MissileRuntimeCheckpointTest `
+  --tests com.riiablo.engine.replay.CheckpointRngRegistryTest `
+  --tests com.riiablo.engine.replay.NativeUnitRandomRegistryTest `
+  --tests com.riiablo.save.D2SCheckpointRegistryTest `
+  --tests com.riiablo.engine.server.NativePathIdentityTest `
+  --tests com.riiablo.engine.server.NativePlayerTargetSlotsTest `
+  --tests com.riiablo.engine.server.PotionRecoverySystemTest `
+  --tests 'com.riiablo.engine.server.ServerEntityFactory*Test' `
+  --tests com.riiablo.presentation.ClientEntityFactoryWaypointTest `
+  :server:d2gs:headlessSimulationTick :server:d2gs:headlessReconnectGroundLoot `
+  :server:d2gs:headlessStaleTransport :desktop:compileJava `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：服务端 51 项、core 63 项，共 114 项通过，0 失败、0 跳过；包含新增 allocator
+codec/恢复 5 项、真实 World 3 项、envelope/删除失败回滚 2 项，并强化已有 native 工厂
+失败与晚期 D2S 回滚用例。模块边界、服务端/core/桌面编译通过。三个真实 TCP gate
+通过：固定 Tick `6→37`（31 步）、部分拾取后剩余 15 金币与 owner window 在重连后保持、
+旧 socket 延迟帧丢弃且同槽当前 generation 命令成功；没有将其当作跨进程 socket gate。
+
+真实资源：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。本批不改暗黑规则、伤害/RNG
+公式；依据 pinned Artemis 源码的 EntityManager.obtain/free/clean、IntDeque.popFirst、
+World.process 尾部、BatchChangeProcessor.update/getPendingPurge 与 ComponentManager.clean。
+
+剩余问题/下一迁移：allocator 和已覆盖角色/物品/投射物的续跑不等于完整 World 恢复。
+本地实体的组件内容、Map/RoomEx 碰撞/房间状态、怪物 AI/状态持续时间、任务/交易等系统隐藏
+运行时、其他 RNG 消费者和资源内容 digest 仍需逐项收口。结构订阅者的所有系统级副作用也
+不能仅靠 allocator 元数据回滚。真实 socket 的跨进程重启接管仍缺组合 gate，现有三个网络
+gate 仅为同进程回归。M8-A、M8-D 与 M8 总体继续保持进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

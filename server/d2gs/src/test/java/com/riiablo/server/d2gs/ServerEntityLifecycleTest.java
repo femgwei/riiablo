@@ -1,6 +1,7 @@
 package com.riiablo.server.d2gs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -60,11 +61,16 @@ public class ServerEntityLifecycleTest {
       for (int i = 0; i < 6; i++) source.create();
       assertEquals(6, sourceFactory.createPlayer("CheckpointHero", Riiablo.AMAZON, 10f, 10f));
       source.process();
-      D2gsCheckpointSnapshot archive = D2gsCheckpointSnapshot.capture(source, sourceSerializer, 77L);
+      for (int i = 0; i < 6; i++) source.delete(i);
+      source.process();
+      D2gsCheckpointSnapshot archive = D2gsCheckpointSnapshot.capture(source, sourceSerializer, 77L)
+          .withAllocatorState(com.artemis.EntityAllocatorCheckpoint.capture(source));
+      byte[] allocatorBefore = com.artemis.EntityAllocatorCheckpoint.capture(target).bytes();
       ServerEntityLifecycle lifecycle = new ServerEntityLifecycle(target, targetFactory, Riiablo.files);
       D2gsCheckpointSnapshot.RestoreResult failed = archive.restoreExisting(target, targetSerializer, lifecycle);
       assertFalse(failed.success());
       assertTrue(failed.rolledBack);
+      assertArrayEquals(allocatorBefore, com.artemis.EntityAllocatorCheckpoint.capture(target).bytes());
       target.process();
       assertTrue(target.getAspectSubscriptionManager().get(com.artemis.Aspect.all()).getEntities().isEmpty());
       assertEquals(NativePlayerTargetSlots.UNREGISTERED, target.getSystem(NativePlayerTargetSlots.class).slotOf(6));
@@ -78,7 +84,8 @@ public class ServerEntityLifecycleTest {
       assertTrue(archive.restoreExisting(target, targetSerializer, lifecycle).success());
       target.process();
       assertEquals(archive.summary().canonical(),
-          D2gsCheckpointSnapshot.capture(target, targetSerializer, 77L).summary().canonical());
+          D2gsCheckpointSnapshot.capture(target, targetSerializer, 77L)
+              .withAllocatorState(com.artemis.EntityAllocatorCheckpoint.capture(target)).summary().canonical());
       assertEquals(1, target.getAspectSubscriptionManager().get(com.artemis.Aspect.all()).getEntities().size());
     } finally { source.dispose(); target.dispose(); }
   }

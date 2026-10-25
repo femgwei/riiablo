@@ -20,6 +20,59 @@ import org.junit.Test;
 
 /** Verifies the D2GS checkpoint adapter without loading native maps or MPQs. */
 public class D2gsCheckpointSnapshotTest {
+  @Test public void allocatorOrderChangesDigestAndTamperedWitnessOrEcsDowngradeIsRejected() {
+    D2gsCheckpointSnapshot original = D2gsCheckpointSnapshot.fromPayloads(9, java.util.Collections.emptyMap())
+        .withAllocatorState(com.artemis.EntityAllocatorCheckpoint.of(3, new int[] {2, 0, 1}));
+    D2gsCheckpointSnapshot changed = original.withAllocatorState(
+        com.artemis.EntityAllocatorCheckpoint.of(3, new int[] {0, 2, 1}));
+    assertFalse(original.summary().canonical().equals(changed.summary().canonical()));
+    assertEquals(original.payloads().keySet(), changed.payloads().keySet());
+    try { original.toEcsBytes(); org.junit.Assert.fail("allocator metadata discarded"); }
+    catch (IllegalStateException expected) {}
+    byte[] encoded = original.toBytes(), state = original.allocatorState().bytes();
+    int offset = -1;
+    for (int i = 0; i <= encoded.length - state.length; i++) {
+      if (java.util.Arrays.equals(state, java.util.Arrays.copyOfRange(encoded, i, i + state.length))) {
+        offset = i; break;
+      }
+    }
+    assertTrue(offset >= 0);
+    System.arraycopy(changed.allocatorState().bytes(), 0, encoded, offset, state.length);
+    assertIllegalArgument(() -> D2gsCheckpointSnapshot.fromBytes(encoded));
+    World live = worldWithEntities(1);
+    try {
+      D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.capture(live, new FakeSerializer(), 1);
+      assertIllegalArgument(() -> checkpoint.withAllocatorState(com.artemis.EntityAllocatorCheckpoint.of(1, new int[] {0})));
+    } finally { live.dispose(); }
+  }
+
+  @Test public void allocatorTransactionRollsBackDeletionFailureAndNextAllocationWithoutTicking() {
+    World source = worldWithEntities(2), target = worldWithEntities(3);
+    try {
+      FakeSerializer serializer = new FakeSerializer();
+      for (int id = 0; id < 3; id++) serializer.states.put(id, 100 + id);
+      D2gsCheckpointSnapshot archive = D2gsCheckpointSnapshot.capture(source, serializer, 7)
+          .withAllocatorState(com.artemis.EntityAllocatorCheckpoint.capture(source));
+      byte[] before = com.artemis.EntityAllocatorCheckpoint.capture(target).bytes();
+      boolean[] fail = {true};
+      D2gsCheckpointSnapshot.EntityLifecycle lifecycle = new D2gsCheckpointSnapshot.EntityLifecycle() {
+        @Override public int createEntity(World world, int expectedId, java.nio.ByteBuffer bytes) {
+          int id = world.create(); world.getMapper(Networked.class).create(id); return id;
+        }
+        @Override public boolean deleteEntity(World world, int id) {
+          world.delete(id);
+          if (fail[0]) { fail[0] = false; return false; }
+          return true;
+        }
+      };
+      D2gsCheckpointSnapshot.RestoreResult result = archive.restoreExisting(target, serializer, lifecycle);
+      assertFalse(result.success()); assertTrue(result.rolledBack);
+      org.junit.Assert.assertArrayEquals(before, com.artemis.EntityAllocatorCheckpoint.capture(target).bytes());
+      org.junit.Assert.assertArrayEquals(new int[] {0, 1, 2}, networkedIds(target));
+      assertEquals(3, target.create());
+    } finally { source.dispose(); target.dispose(); }
+  }
+
   @Test public void occupiedLocalIdAndPendingDeletionFailBeforeAnyDeserialization() {
     World source = worldWithEntities(2);
     World target = worldWithEntities(0);
@@ -181,9 +234,9 @@ public class D2gsCheckpointSnapshotTest {
         java.util.Collections.emptyMap());
     byte[] current = checkpoint.toBytes();
     // v3 adds world presence, v4 adds an empty missile-runtime count.
-    byte[] legacy = new byte[current.length - 5];
+    byte[] legacy = new byte[current.length - 6];
     System.arraycopy(current, 0, legacy, 0, 36);
-    System.arraycopy(current, 41, legacy, 36, current.length - 41);
+    System.arraycopy(current, 42, legacy, 36, current.length - 42);
     java.nio.ByteBuffer bytes = java.nio.ByteBuffer.wrap(legacy);
     bytes.putInt(4, 1); // original complete envelope version
     bytes.putInt(28, 0); // v1 encoded absent D2S as zero entries
@@ -217,9 +270,9 @@ public class D2gsCheckpointSnapshotTest {
         com.riiablo.save.D2SCheckpoint.of(java.util.Collections.emptyMap()),
         new AuthoritativeSessionRegistry().snapshot());
     byte[] current = checkpoint.toBytes();
-    byte[] legacy = new byte[current.length - 5];
+    byte[] legacy = new byte[current.length - 6];
     System.arraycopy(current, 0, legacy, 0, 36);
-    System.arraycopy(current, 41, legacy, 36, current.length - 41);
+    System.arraycopy(current, 42, legacy, 36, current.length - 42);
     java.nio.ByteBuffer.wrap(legacy).putInt(4, 2);
     D2gsCheckpointSnapshot restored = D2gsCheckpointSnapshot.fromBytes(legacy);
     assertEquals(checkpoint.summary().canonical(), restored.summary().canonical());

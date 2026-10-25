@@ -52,6 +52,112 @@ public class D2gsWorldCheckpointBindingsTest {
   @BeforeClass public static void loadResources() { ServerEntityLifecycleTest.load110f(); }
   @AfterClass public static void unloadResources() { ServerEntityLifecycleTest.unload110f(); }
 
+  @Test public void allocatorFifoAndHighWaterMarkContinueRealItemCreationAcrossJvmRestart() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("allocator.chk");
+    String expected;
+    try (Fixture source = new Fixture()) {
+      source.populate(); source.populateSparseItems();
+      java.util.List<Integer> temporaryIds = new java.util.ArrayList<>();
+      int id;
+      do { id = source.server.world.create(); temporaryIds.add(id); } while (id < 17);
+      source.server.world.process();
+      java.util.Collections.rotate(temporaryIds, 3);
+      for (int deleted : temporaryIds) {
+        source.server.world.delete(deleted); source.server.world.process();
+      }
+      D2gsCheckpointSnapshot archive = source.server.captureReplayCheckpoint();
+      assertEquals(18, archive.allocatorState().nextId());
+      assertEquals(15, archive.allocatorState().freeIds().length);
+      source.server.writeReplayCheckpoint(path);
+      expected = continueAllocator(source);
+    }
+    assertEquals(expected, resumeAllocator(path));
+    Path output = temporary.getRoot().toPath().resolve("allocator-child.log");
+    Process process = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "allocator")
+        .redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("allocator recovery child JVM timed out", process.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, process.exitValue());
+      assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (process.isAlive()) process.destroyForcibly(); }
+  }
+
+  private static String resumeAllocator(Path path) throws Exception {
+    try (Fixture target = new Fixture()) {
+      // Different target history must not leak its tail or queue into restore.
+      for (int i = 0; i < 30; i++) target.server.world.create();
+      target.server.world.process();
+      for (int i = 29; i >= 0; i--) target.server.world.delete(i);
+      target.server.world.process();
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      assertArrayEquals(archive.allocatorState().bytes(),
+          com.artemis.EntityAllocatorCheckpoint.capture(target.server.world).bytes());
+      return continueAllocator(target);
+    }
+  }
+
+  private static String continueAllocator(Fixture fixture) {
+    StringBuilder result = new StringBuilder("ALLOCATOR_CONTINUED");
+    int recycled = -1;
+    for (int step = 0; step < 22; step++) {
+      int id = fixture.factory.createItem(new ItemGenerator().generateStartItem("hp1", 2000 + step, -1),
+          12f + step, 10f);
+      if (step == 0) recycled = id;
+      if (step == 5) fixture.server.world.delete(recycled);
+      fixture.server.simulation.tick(null, null);
+      result.append('|').append(id).append(':').append(fixture.server.captureReplayCheckpoint().summary().canonical());
+    }
+    assertEquals(24, fixture.server.captureReplayCheckpoint().allocatorState().nextId());
+    return result.append('|').append(fixture.server.captureReplayCheckpoint().d2sCheckpoint().canonical()).toString();
+  }
+
+  @Test public void exactAllocatorRestoreRejectsForeignLocalsAndPendingDeletesWithoutMutation() {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      source.populate(); source.populateSparseItems();
+      D2gsCheckpointSnapshot archive = source.server.captureReplayCheckpoint();
+      target.server.world.create(); target.server.world.process();
+      byte[] before = com.artemis.EntityAllocatorCheckpoint.capture(target.server.world).bytes();
+      try { target.server.restoreReplayCheckpoint(archive); fail("foreign local entity overwritten"); }
+      catch (IllegalStateException expected) { assertEquals("allocator local entity set mismatch", expected.getMessage()); }
+      assertArrayEquals(before, com.artemis.EntityAllocatorCheckpoint.capture(target.server.world).bytes());
+      assertFalse(target.server.world.getMapper(Networked.class).has(0));
+      target.server.world.delete(0);
+      try { target.server.captureReplayCheckpoint(); fail("pending deletion was silently archived"); }
+      catch (IllegalStateException expected) { assertEquals("allocator deletion batch is pending", expected.getMessage()); }
+    }
+  }
+
+  @Test public void allocatorRequiresPrebuiltLocalsAndPublishedNetworkInsertions() {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      source.populate(); source.populateSparseItems();
+      assertEquals(1, source.server.world.create());
+      source.server.world.getMapper(Position.class).create(1).position.set(91, 92);
+      source.server.world.process();
+      D2gsCheckpointSnapshot archive = source.server.captureReplayCheckpoint();
+      try { target.server.restoreReplayCheckpoint(archive); fail("missing local entity invented"); }
+      catch (IllegalStateException expected) { assertEquals("allocator local entity set mismatch", expected.getMessage()); }
+      assertEquals(0, com.artemis.EntityAllocatorCheckpoint.capture(target.server.world).nextId());
+      assertEquals(0, target.server.world.create()); assertEquals(1, target.server.world.create());
+      target.server.world.getMapper(Position.class).create(1).position.set(91, 92);
+      target.server.world.process(); target.server.world.delete(0); target.server.world.process();
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      assertEquals(91f, target.server.world.getMapper(Position.class).get(1).position.x, 0f);
+      assertEquals(source.server.world.create(), target.server.world.create());
+      source.factory.createItem(new ItemGenerator().generateStartItem("hp1", 3000, -1), 12, 10);
+      try { source.server.captureReplayCheckpoint(); fail("unpublished network insertion archived as local"); }
+      catch (IllegalStateException expected) {
+        assertEquals("allocator checkpoint requires published network entities", expected.getMessage());
+      }
+      source.server.world.process();
+      assertNotNull(source.server.captureReplayCheckpoint().allocatorState());
+    }
+  }
+
   @Test public void inFlightProjectilesResumeTheirCollisionAndDamageTimelineAcrossJvmRestart() throws Exception {
     Path path = temporary.getRoot().toPath().resolve("projectiles.chk");
     String expected;
@@ -150,7 +256,7 @@ public class D2gsWorldCheckpointBindingsTest {
           D2SCheckpoint.entry(0, 0, new D2SWriter96().writeD2S(D2SWriter96.createD2S(impostor)))));
       D2gsCheckpointSnapshot incoming = D2gsCheckpointSnapshot.fromPayloads(archive.tick(), archive.payloads(),
           archive.summary().rngStates(), archive.summary().nativeUnitRngStates(), wrong, archive.sessionSnapshot())
-          .withMissileRuntime(archive.missileRuntime());
+          .withMissileRuntime(archive.missileRuntime()).withAllocatorState(archive.allocatorState());
       Missile live = source.server.world.getMapper(Missile.class).get(1);
       live.nativeFrame += 11;
       live.damage.base().put(Stat.firemindam, 99);
@@ -246,7 +352,9 @@ public class D2gsWorldCheckpointBindingsTest {
     try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
       source.populate();
       source.populateSparseItems();
-      D2gsCheckpointSnapshot checkpoint = source.server.captureReplayCheckpoint();
+      // Legacy subset restore still permits foreign locals; an exact allocator
+      // archive must reject them because they occupy archived reusable ids.
+      D2gsCheckpointSnapshot checkpoint = source.server.captureReplayCheckpoint().withAllocatorState(null);
       for (int i = 0; i < 10; i++) assertEquals(i, target.server.world.create());
       target.server.world.getMapper(Position.class).create(1).position.set(91, 92);
       target.server.world.process();
@@ -260,7 +368,8 @@ public class D2gsWorldCheckpointBindingsTest {
       target.server.world.process();
       assertTrue(target.server.restoreReplayCheckpoint(checkpoint).success());
       target.server.world.process();
-      assertEquals(checkpoint.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      assertEquals(checkpoint.summary().canonical(), target.server.captureReplayCheckpoint()
+          .withAllocatorState(null).summary().canonical());
       assertEquals(91f, target.server.world.getMapper(Position.class).get(1).position.x, 0f);
       assertFalse(target.server.world.getMapper(Networked.class).has(1));
       assertEquals(4, target.server.world.getAspectSubscriptionManager().get(Aspect.all()).getEntities().size());
@@ -412,7 +521,7 @@ public class D2gsWorldCheckpointBindingsTest {
           D2SCheckpoint.entry(0, 0, bytes)));
       D2gsCheckpointSnapshot incoming = D2gsCheckpointSnapshot.fromPayloads(archive.tick(),
           archive.payloads(), archive.summary().rngStates(), archive.summary().nativeUnitRngStates(),
-          invalid, archive.sessionSnapshot());
+          invalid, archive.sessionSnapshot()).withAllocatorState(archive.allocatorState());
       source.data().getStats().base().put(Stat.gold, 8765);
       source.data().update();
       source.data().restoreProgressionRevision(9);
@@ -517,7 +626,7 @@ public class D2gsWorldCheckpointBindingsTest {
           D2SCheckpoint.entry(0, 0, save)));
       D2gsCheckpointSnapshot expected = D2gsCheckpointSnapshot.fromPayloads(77,
           java.util.Collections.emptyMap(), null, null, legacyD2s, null);
-      for (int version : new int[] {1, 2, 3}) {
+      for (int version : new int[] {1, 2, 3, 4}) {
         java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
         java.io.DataOutputStream out = new java.io.DataOutputStream(bytes);
         out.writeInt(0x44324743);
@@ -534,6 +643,7 @@ public class D2gsWorldCheckpointBindingsTest {
         if (version >= 3) out.writeBoolean(false); // absent potion state
         out.writeInt(version == 1 ? 0 : -1); // absent sessions
         if (version >= 3) out.writeBoolean(false); // absent world identity
+        if (version >= 4) out.writeInt(0); // absent missile runtime
         for (String witness : new String[] {expected.summary().canonical(), legacyD2s.canonical()}) {
           byte[] encoded = witness.getBytes(StandardCharsets.UTF_8);
           out.writeInt(encoded.length);
@@ -618,7 +728,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "projectiles".equals(args[3])
+      try { System.out.println(args.length > 3 && "allocator".equals(args[3])
+          ? resumeAllocator(Path.of(args[0])) : args.length > 3 && "projectiles".equals(args[3])
           ? resumeProjectiles(Path.of(args[0])) : args.length > 3 && "sparse".equals(args[3])
           ? resumeSparse(Path.of(args[0])) : args.length > 3 && "potions".equals(args[3])
               ? resumePotions(Path.of(args[0])) : resume(Path.of(args[0]), Long.parseLong(args[1]))); }
