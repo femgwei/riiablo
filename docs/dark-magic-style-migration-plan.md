@@ -2125,6 +2125,90 @@ core/桌面端编译通过。三个真实 TCP gate 通过：固定 Tick `7→38`
 Map/AI/任务/交易等系统隐藏状态与真实 socket 跨进程重启的组合验收。
 M8-A、M8-D 与 M8 总体继续保持进行中。
 
+### M8-A 第 25 批：投射物运行时、无重掷重建与跨 JVM 命中续跑（2026-10-25）
+
+完成日期：2026-10-25。本批集中补齐上一批发现的 MissileP 子集不足，以及按 ID 重建时
+owner 尚未恢复导致的伤害/RNG 依赖；不把这项交付视为完整 World checkpoint 已完成。
+
+- 新增显式版本化 `MissileRuntimeCheckpoint`，保存 Missile 的全部标量、四个路径向量、
+  五步加速相位、native pSeed 双字及兼容镜像、施放时 physical/elemental packet、
+  damage 的 base/aggregate/remaining 编码三元组与 aggregate revision、next-hit 表、
+  已命中集合、跨 projectile 共享 cast 集合和指向另一 projectile.hitTargets 的别名。
+  Baal owner lifetime 区分 null/current/stale，恢复后不把旧引用绑定到复用 ID 的新 incarnation。
+  行记录和资产句柄由 native factory 重建，不归档宿主对象图，不使用生产反射或 Java 序列化。
+- runtime schema 测试逐字段对照 Missile：未来增加字段而未显式决定归档策略将失败。
+  解析不依赖 Riiablo.files；拒绝非法 bool/presence、非有限浮点数、重复/乱序集合与 stat、
+  超界长度、截断、尾随字节、共享组冲突、缺失 current owner identity 和 ECS/runtime
+  identity 不符。damage 若带附加属性列表或 shield/running/difficulty 上下文，capture
+  显式失败，不静默丢弃这些未支持的属性上下文。
+- 完整 `D2GC` envelope 升为 v4：在 v3 worldIdentity 后、canonical witness 前追加
+  `runtimeCount` 和逐条 `entityId/length/runtimeBytes`；每条最多 1 MiB。
+  runtime bytes 纳入 world digest，纯网络 EntitySync 字节保持不变；有 runtime 时禁止
+  降为仅 ECS 的 envelope。保留 v1/v2/v3 读取；旧归档没有 runtime 时仍只具历史子集能力。
+- `ServerEntityFactory.createCheckpointMissile` 仅在 checkpoint allocation scope 内使用，
+  只组装结构、行/资产、碰撞与位置组件，跳过 owner 属性/施法模式读取、伤害计算、创建时
+  暴击抽取和 slow-missile 重算。全部 ECS payload 应用后统一恢复 runtime 与共享引用；
+  投射物 ID 低于 owner ID 也能重建。内部失败与晚期 D2S 失败的事务回滚同样恢复 runtime。
+- 首次命中逐帧测试暴露技能/特殊投射物的兼容 `CombatSystem` 流未接 checkpoint，现将其
+  接入 D2GS 自动 World RNG binding，保存 state/drawCount，恢复原系统持有的 RNG 对象。
+  只为已有序列添加稳定身份，不改 seed 推导、LCG 算法或抽取顺序，不冒称原版 pSeed。
+  旧归档省略该流后发生晚期失败，也必须回滚到实际战斗消费者持有的对象，不能恢复脱离
+  消费者的 registry 副本。显式 host registry override 仍支持。
+- 真实 1.10f 最小 Map + Player 0、Monster owner 5、Fire Bolt 1/2，预跑后落盘，在新
+  World 和独立 JVM 恢复；兼容战斗流先消耗七次，确保不是碰巧从相同初始 seed 开始。
+  逐帧严格比较后续 35 Tick canonical、全部 native RNG、实际碰撞后的生命值及最终 D2S，
+  且必须观察到真实玩家受伤。另用真实工厂创建 ordinary arrow，之后改变 owner 属性，
+  验证创建时 critical/elemental packet 原样恢复，下一 Tick 与原 World 摘要一致。
+
+验证命令：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+./gradlew.bat :server:d2gs:test `
+  --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointStoreTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest `
+  --tests com.riiablo.server.d2gs.D2gsCheckpointRecoveryTest `
+  --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest `
+  --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest `
+  :core:test --tests com.riiablo.engine.replay.MissileRuntimeCheckpointTest `
+  --tests com.artemis.CheckpointEntityAllocationTest `
+  --tests com.riiablo.engine.replay.CheckpointRngRegistryTest `
+  --tests com.riiablo.engine.replay.NativeUnitRandomRegistryTest `
+  --tests com.riiablo.save.D2SCheckpointRegistryTest `
+  --tests com.riiablo.engine.server.NativePathIdentityTest `
+  --tests com.riiablo.engine.server.PotionRecoverySystemTest `
+  --tests com.riiablo.engine.server.FireBoltGoldenDamageTest `
+  --tests com.riiablo.engine.server.FireBallGoldenDamageTest `
+  --tests com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest `
+  --tests com.riiablo.engine.server.MonsterMissileElementalIntegrationTest `
+  --tests com.riiablo.engine.server.MonsterMissileCreationCriticalIntegrationTest `
+  --tests com.riiablo.engine.server.combat.OrdinaryWeaponDamageTest `
+  --tests com.d2moo.testutil.NativeMissileAccelerationTest `
+  :server:d2gs:headlessSimulationTick :server:d2gs:headlessReconnectGroundLoot `
+  :server:d2gs:headlessStaleTransport :desktop:compileJava `
+  --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：服务端 46 项、core 112 项，共 158 项通过，0 失败、0 跳过；其中新增 runtime
+codec 6 项、真实 World 投射物集成 4 项。模块边界、服务端/core/桌面编译通过；三个
+真实 TCP gate 通过：固定 Tick `6→37`（31 步）、重连后剩余 15 金币与 owner window
+保持、同槽旧 socket 延迟帧丢弃且当前 generation 命令成功。追加普通 arrow 用例后重跑
+上述六组服务端测试；强化逐字段断言后重跑上述十四组 core 测试，计数不重复累加。
+
+真实资源：`G:\BaiduNetdiskDownload\Diablo II 1.10F`。本批不改暗黑规则或伤害公式；
+沿用已审计的 MissileDamageResolver / NativeMissilePhysicalDamage / NativeMissileElementalDamage
+（D2MOO MISSILE_Get*Damage、MISSMODE_RollDamageValue、SUNITDMG 相关实现）与
+NativeMissileAcceleration（PathMisc.cpp sub_6FD5CEB0），只保存既有计算结果和相位。
+
+剩余问题/下一迁移：原 allocator 的 nextId/limbo 顺序仍未归档，本批不保证恢复后新创建
+实体得到与连续运行相同的 ID；需要结合删除批次及回滚单独处理。路径控制字段覆盖不等于
+完整地图/房间碰撞状态已恢复；共享集合仅覆盖归档网络投射物之间的关系，外部系统持有的
+集合引用仍依赖系统级恢复。Map/AI/任务/交易等隐藏运行时和其他随机消费者仍需逐项收口。
+真实 socket 的跨进程重启接管仍缺组合 gate；现有网络 gate 仅是同进程回归。
+M8-A、M8-D 与 M8 总体继续保持进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

@@ -48,6 +48,15 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
   private final ServerEntityFactory factory;
   private final ItemReader itemReader;
   private CheckpointEntityAllocation allocation;
+  private boolean restoreMissileRuntime;
+
+  @Override public int createEntity(World target, int expectedEntityId, ByteBuffer payload,
+      boolean restoreRuntime) {
+    boolean previous = restoreMissileRuntime;
+    restoreMissileRuntime = restoreRuntime;
+    try { return createEntity(target, expectedEntityId, payload); }
+    finally { restoreMissileRuntime = previous; }
+  }
 
   @Override public void beginRestore(World target) {
     if (target != world) throw new IllegalArgumentException("world");
@@ -224,8 +233,11 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
     Vector2 direction = vector(sync, ComponentP.AngleP);
     if (direction.isZero()) direction = vector(sync, ComponentP.VelocityP);
     if (direction.isZero()) direction.set(1f, 0f);
-    int entityId = factory.createMissile(missile.missileId(), direction,
-        new Vector2(position.x(), position.y()), missile.ownerId());
+    int entityId = restoreMissileRuntime
+        ? factory.createCheckpointMissile(missile.missileId(), direction,
+            new Vector2(position.x(), position.y()), missile.ownerId())
+        : factory.createMissile(missile.missileId(), direction,
+            new Vector2(position.x(), position.y()), missile.ownerId());
     if (entityId >= 0 && world.getMapper(Missile.class).has(entityId)) {
       Missile component = world.getMapper(Missile.class).get(entityId);
       component.range = missile.range();

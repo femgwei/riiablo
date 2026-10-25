@@ -8,6 +8,18 @@ public final class NativeMissileAcceleration {
   private int acceleration;
   private int maximum;
 
+  public int counter() { return counter; }
+  public int acceleration() { return acceleration; }
+  public int maximum() { return maximum; }
+
+  /** Checkpoint boundary only; does not advance the path. */
+  public void restore(int counter, int acceleration, int maximum) {
+    if (counter < 0 || counter >= 5) throw new IllegalArgumentException("acceleration counter");
+    this.counter = counter;
+    this.acceleration = acceleration;
+    this.maximum = maximum;
+  }
+
   public void initialize(int acceleration, int maximumVelocity) {
     this.acceleration = acceleration;
     maximum = maximumVelocity;

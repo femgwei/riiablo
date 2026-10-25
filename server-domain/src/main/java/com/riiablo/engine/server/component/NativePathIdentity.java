@@ -21,6 +21,11 @@ public class NativePathIdentity extends PooledComponent {
 
   public Token token() { return token; }
 
+  /** A checkpoint's stale lifetime reference must never bind to a recycled owner. */
+  public static Token retiredToken(World world, int entityId) {
+    return new Token(Objects.requireNonNull(world), entityId);
+  }
+
   @Override protected void reset() { token = null; }
 
   /** Retain this immutable token, not the pooled component. Comparison is by identity. */

@@ -1521,6 +1521,17 @@ public class ServerEntityFactory extends EntityFactory {
 
   private int createMissile(int missileId, Vector2 angle, Vector2 position,
       int ownerId, int damageLevel) {
+    return createMissile(missileId, angle, position, ownerId, damageLevel, false);
+  }
+
+  /** Restores structure only; the checkpoint supplies cast-time damage and runtime afterwards. */
+  public final int createCheckpointMissile(int missileId, Vector2 angle, Vector2 position, int ownerId) {
+    if (checkpointAllocation == null) throw new IllegalStateException("checkpoint allocation scope required");
+    return createMissile(missileId, angle, position, ownerId, 1, true);
+  }
+
+  private int createMissile(int missileId, Vector2 angle, Vector2 position,
+      int ownerId, int damageLevel, boolean restoring) {
     Missiles.Entry missile = files().Missiles.get(missileId);
     int id = super.createEntity(Class.Type.MIS, missile.Missile);
     com.riiablo.engine.server.component.Missile missileComponent = mMissile.create(id);
@@ -1533,45 +1544,47 @@ public class ServerEntityFactory extends EntityFactory {
     }
     missileComponent.rngState = NativeRng.forUnit(gameSeed(), id).state();
 
-    Attributes ownerAttrs = ownerId >= 0 && mAttributesWrapper.has(ownerId)
-        ? mAttributesWrapper.get(ownerId).attrs : null;
-    Monster ownerMonster = ownerId >= 0 && mMonster.has(ownerId)
-        ? mMonster.get(ownerId) : null;
-    int ownerMode = ownerId >= 0 && mCofReference.has(ownerId)
-        ? mCofReference.get(ownerId).mode : -1;
-    MissileDamageResolver.initialize(files(), missileComponent, ownerAttrs, ownerMonster,
-        ownerMode, Math.max(1, damageLevel), map == null ? 0 : map.getDifficulty(),
-        ownerId >= 0 && mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null,
-        // Weapon-owned creation is initialized explicitly below.
-        ownerId < 0 || !world.getMapper(Mercenary.class).has(ownerId));
+    if (!restoring) {
+      Attributes ownerAttrs = ownerId >= 0 && mAttributesWrapper.has(ownerId)
+          ? mAttributesWrapper.get(ownerId).attrs : null;
+      Monster ownerMonster = ownerId >= 0 && mMonster.has(ownerId)
+          ? mMonster.get(ownerId) : null;
+      int ownerMode = ownerId >= 0 && mCofReference.has(ownerId)
+          ? mCofReference.get(ownerId).mode : -1;
+      MissileDamageResolver.initialize(files(), missileComponent, ownerAttrs, ownerMonster,
+          ownerMode, Math.max(1, damageLevel), map == null ? 0 : map.getDifficulty(),
+          ownerId >= 0 && mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null,
+          // Weapon-owned creation is initialized explicitly below.
+          ownerId < 0 || !world.getMapper(Mercenary.class).has(ownerId));
 
-    int dispatchSkill = ownerId >= 0 && mCasting.has(ownerId)
-        ? mCasting.get(ownerId).skillId : com.riiablo.skill.SkillCodes.attack;
-    if (ownerId >= 0 && (mPlayer.has(ownerId) || world.getMapper(Mercenary.class).has(ownerId))
-        && (dispatchSkill == com.riiablo.skill.SkillCodes.attack
-            || dispatchSkill == com.riiablo.skill.SkillCodes.throw_
-            || dispatchSkill == com.riiablo.skill.SkillCodes.left_hand_throw)) {
-      boolean throwing = dispatchSkill == com.riiablo.skill.SkillCodes.throw_
-          || dispatchSkill == com.riiablo.skill.SkillCodes.left_hand_throw;
-      com.riiablo.engine.server.combat.WeaponAttackSource source =
-          com.riiablo.engine.server.combat.WeaponAttackSource.forUnit(world, ownerId, throwing,
-              dispatchSkill == com.riiablo.skill.SkillCodes.left_hand_throw);
-      MissileDamageResolver.initializeOrdinaryWeapon(files(), missileComponent, ownerAttrs, source,
-          mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null,
-          Math.max(1, damageLevel), throwing, NativeUnitRandom.unit(world, gameSeed(), ownerId));
-    }
+      int dispatchSkill = ownerId >= 0 && mCasting.has(ownerId)
+          ? mCasting.get(ownerId).skillId : com.riiablo.skill.SkillCodes.attack;
+      if (ownerId >= 0 && (mPlayer.has(ownerId) || world.getMapper(Mercenary.class).has(ownerId))
+          && (dispatchSkill == com.riiablo.skill.SkillCodes.attack
+              || dispatchSkill == com.riiablo.skill.SkillCodes.throw_
+              || dispatchSkill == com.riiablo.skill.SkillCodes.left_hand_throw)) {
+        boolean throwing = dispatchSkill == com.riiablo.skill.SkillCodes.throw_
+            || dispatchSkill == com.riiablo.skill.SkillCodes.left_hand_throw;
+        com.riiablo.engine.server.combat.WeaponAttackSource source =
+            com.riiablo.engine.server.combat.WeaponAttackSource.forUnit(world, ownerId, throwing,
+                dispatchSkill == com.riiablo.skill.SkillCodes.left_hand_throw);
+        MissileDamageResolver.initializeOrdinaryWeapon(files(), missileComponent, ownerAttrs, source,
+            mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null,
+            Math.max(1, damageLevel), throwing, NativeUnitRandom.unit(world, gameSeed(), ownerId));
+      }
 
-    if (ownerMonster != null && !world.getMapper(Mercenary.class).has(ownerId)) {
-      NativeUnitRandom creationRng = NativeUnitRandom.monster(ownerMonster, gameSeed(), ownerId);
-      MissileDamageResolver.captureMonsterCreationCritical(missileComponent, ownerAttrs,
-          mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null, creationRng::nextInt);
-      ownerMonster.rngState = creationRng.state();
+      if (ownerMonster != null && !world.getMapper(Mercenary.class).has(ownerId)) {
+        NativeUnitRandom creationRng = NativeUnitRandom.monster(ownerMonster, gameSeed(), ownerId);
+        MissileDamageResolver.captureMonsterCreationCritical(missileComponent, ownerAttrs,
+            mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null, creationRng::nextInt);
+        ownerMonster.rngState = creationRng.state();
+      }
     }
 
     Position missilePosition = mPosition.create(id);
     missilePosition.invalidateNativePrecision();
     missilePosition.position.set(position);
-    MapWrapper ownerMap = ownerId >= 0 && mMapWrapper.has(ownerId)
+    MapWrapper ownerMap = !restoring && ownerId >= 0 && mMapWrapper.has(ownerId)
         ? mMapWrapper.get(ownerId) : null;
     Map.Zone missileZone = ownerMap != null && ownerMap.zone != null
         && ownerMap.zone.findRoomEx(position.x, position.y) != null
@@ -1581,7 +1594,7 @@ public class ServerEntityFactory extends EntityFactory {
         ? missileZone.findRoomEx(position.x, position.y) : null;
     missileComponent.roomId = missileRoom != null ? missileRoom.id : -1;
     float velocity = missile.Vel;
-    int slowPercent = slowMissileVelocityPercent(ownerId, missile);
+    int slowPercent = restoring ? 0 : slowMissileVelocityPercent(ownerId, missile);
     if (slowPercent > 0) velocity = velocity * slowPercent / 100f;
     mVelocity.create(id).velocity.set(angle).setLength(velocity);
     missileComponent.acceleration.initialize(missile.Accel, missile.MaxVel);

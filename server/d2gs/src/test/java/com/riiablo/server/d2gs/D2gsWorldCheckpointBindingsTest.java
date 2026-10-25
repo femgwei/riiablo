@@ -52,6 +52,173 @@ public class D2gsWorldCheckpointBindingsTest {
   @BeforeClass public static void loadResources() { ServerEntityLifecycleTest.load110f(); }
   @AfterClass public static void unloadResources() { ServerEntityLifecycleTest.unload110f(); }
 
+  @Test public void inFlightProjectilesResumeTheirCollisionAndDamageTimelineAcrossJvmRestart() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("projectiles.chk");
+    String expected;
+    try (Fixture source = new Fixture(false, true)) {
+      source.populate();
+      source.populateProjectiles();
+      source.server.writeReplayCheckpoint(path);
+      expected = continueProjectiles(source);
+    }
+    assertEquals(expected, resumeProjectiles(path));
+    Path output = temporary.getRoot().toPath().resolve("projectile-child.log");
+    Process process = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "projectiles")
+        .redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("projectile recovery child JVM timed out", process.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, process.exitValue());
+      assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (process.isAlive()) process.destroyForcibly(); }
+  }
+
+  private static String resumeProjectiles(Path path) throws Exception {
+    try (Fixture target = new Fixture(false, true)) {
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertEquals(java.util.Arrays.asList(0, 1, 2, 5), new java.util.ArrayList<>(archive.payloads().keySet()));
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      java.util.Map<Integer, com.riiablo.engine.replay.MissileRuntimeCheckpoint> restored =
+          com.riiablo.engine.replay.MissileRuntimeCheckpoint.capture(target.server.world, new int[] {1, 2});
+      for (int id : new int[] {1, 2}) assertArrayEquals(archive.missileRuntime().get(id).bytes(), restored.get(id).bytes());
+      assertSame(target.server.world.getMapper(Missile.class).get(1).sharedHitTargets,
+          target.server.world.getMapper(Missile.class).get(2).sharedHitTargets);
+      // Lower missile ids were assembled before owner 5. Native structure
+      // restoration must not re-roll or consult its not-yet-restored stats.
+      for (SimulationCheckpoint.NativeUnitRngState state : archive.summary().nativeUnitRngStates()) {
+        NativeUnitRandom random = NativeUnitRandom.unit(target.server.world, 1, (int) state.contextId);
+        assertEquals(state.lowSeed, random.state());
+        assertEquals(state.highSeed, random.high());
+      }
+      return continueProjectiles(target);
+    }
+  }
+
+  @Test public void nativeFactoryPacketsRemainFrozenWhenOwnerCreationStateHasChanged() {
+    try (Fixture source = new Fixture(false, true); Fixture target = new Fixture(false, true)) {
+      source.populate(); source.populateProjectiles();
+      com.riiablo.attributes.Attributes owner = source.server.world.getMapper(AttributesWrapper.class).get(5).attrs;
+      owner.base().put(Stat.passive_critical_strike, 100);
+      owner.base().put(Stat.firemindam, 2); owner.base().put(Stat.firemaxdam, 3); owner.reset();
+      source.server.world.getSystem(CofManager.class).setMode(5, com.riiablo.engine.Engine.Monster.MODE_A1, true);
+      assertEquals(3, source.factory.createMissile(Riiablo.files.Missiles.get("arrow"),
+          new Vector2(-1, 0), new Vector2(-10, 10), 5, 1));
+      Missile original = source.server.world.getMapper(Missile.class).get(3);
+      assertTrue(original.nativePhysical.criticalCaptured);
+      assertTrue(original.nativePhysical.creationCritical);
+      assertNotNull(original.nativeElemental);
+      // The checkpoint owner no longer has the state used to create this cast.
+      owner.base().put(Stat.passive_critical_strike, 0);
+      owner.base().put(Stat.firemindam, 0); owner.base().put(Stat.firemaxdam, 0); owner.reset();
+      source.server.simulation.tick(null, null);
+      D2gsCheckpointSnapshot archive = D2gsCheckpointSnapshot.fromBytes(source.server.captureReplayCheckpoint().toBytes());
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      Missile restored = target.server.world.getMapper(Missile.class).get(3);
+      assertTrue(restored.nativePhysical.creationCritical);
+      assertEquals(original.nativeElemental.minimum(1), restored.nativeElemental.minimum(1));
+      assertArrayEquals(archive.missileRuntime().get(3).bytes(),
+          com.riiablo.engine.replay.MissileRuntimeCheckpoint.capture(target.server.world, new int[] {1, 2, 3}).get(3).bytes());
+      source.server.simulation.tick(null, null); target.server.simulation.tick(null, null);
+      assertEquals(source.server.captureReplayCheckpoint().summary().canonical(),
+          target.server.captureReplayCheckpoint().summary().canonical());
+    }
+  }
+
+  private static String continueProjectiles(Fixture fixture) {
+    int before = fixture.data().getStats().get(Stat.hitpoints).encodedValues();
+    StringBuilder timeline = new StringBuilder("PROJECTILES_CONTINUED");
+    for (int i = 0; i < 35; i++) {
+      fixture.server.simulation.tick(null, null);
+      D2gsCheckpointSnapshot checkpoint = fixture.server.captureReplayCheckpoint();
+      timeline.append('|').append(checkpoint.summary().canonical());
+    }
+    int after = fixture.data().getStats().get(Stat.hitpoints).encodedValues();
+    assertTrue("restored in-flight Fire Bolt must hit the real player", after < before);
+    return timeline.append('|').append(after).append('|')
+        .append(fixture.server.captureReplayCheckpoint().d2sCheckpoint().canonical()).toString();
+  }
+
+  @Test public void lateD2sFailureRestoresLiveProjectileRuntimeAndClearsNewWorldCreations() {
+    try (Fixture source = new Fixture(false, true); Fixture empty = new Fixture(false, true)) {
+      source.populate(); source.populateProjectiles();
+      D2gsCheckpointSnapshot archive = source.server.captureReplayCheckpoint();
+      CharData impostor = CharData.loadFromBuffer(0, ByteBuffer.wrap(archive.d2sCheckpoint().entry(0).bytes()));
+      impostor.name = "ImpostorHero";
+      D2SCheckpoint wrong = D2SCheckpoint.of(java.util.Collections.singletonMap(0,
+          D2SCheckpoint.entry(0, 0, new D2SWriter96().writeD2S(D2SWriter96.createD2S(impostor)))));
+      D2gsCheckpointSnapshot incoming = D2gsCheckpointSnapshot.fromPayloads(archive.tick(), archive.payloads(),
+          archive.summary().rngStates(), archive.summary().nativeUnitRngStates(), wrong, archive.sessionSnapshot())
+          .withMissileRuntime(archive.missileRuntime());
+      Missile live = source.server.world.getMapper(Missile.class).get(1);
+      live.nativeFrame += 11;
+      live.damage.base().put(Stat.firemindam, 99);
+      live.damage.reset();
+      live.hitTargets.add(55);
+      live.sharedHitTargets.add(57);
+      for (Fixture target : new Fixture[] {source, empty}) {
+        D2gsCheckpointSnapshot before = target.server.captureReplayCheckpoint();
+        try { target.server.restoreReplayCheckpoint(incoming); fail("late D2S error must roll back"); }
+        catch (IllegalStateException expected) {
+          assertEquals("checkpoint restore transaction rolled back", expected.getMessage());
+        }
+        if (target == empty) target.server.world.process(); // deletion flush, no live missile tick
+        assertEquals(before.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+        assertEquals(before.d2sCheckpoint().canonical(), target.server.captureReplayCheckpoint().d2sCheckpoint().canonical());
+      }
+      // Old archives lack the system stream. A late failure must rebind the
+      // live combat RNG object, rather than restore a detached registry copy.
+      D2gsCheckpointSnapshot legacy = D2gsCheckpointSnapshot.fromPayloads(archive.tick(), archive.payloads(),
+          java.util.Collections.emptyList(), archive.summary().nativeUnitRngStates(), wrong, archive.sessionSnapshot())
+          .withMissileRuntime(archive.missileRuntime());
+      D2gsCheckpointSnapshot beforeLegacy = source.server.captureReplayCheckpoint();
+      try { source.server.restoreReplayCheckpoint(legacy); fail("late legacy error must roll back"); }
+      catch (IllegalStateException expected) {
+        assertEquals("checkpoint restore transaction rolled back", expected.getMessage());
+      }
+      assertEquals(beforeLegacy.summary().canonical(), source.server.captureReplayCheckpoint().summary().canonical());
+      com.riiablo.engine.server.NativeRng combatRng = source.server.world.getSystem(
+          com.riiablo.engine.server.MissileCollisionSystem.class).checkpointCombatRng();
+      assertSame(combatRng, source.server.replayRngRegistry().get(combatRng.streamName(), combatRng.contextId()));
+      assertTrue(empty.server.world.getAspectSubscriptionManager().get(Aspect.all()).getEntities().isEmpty());
+    }
+  }
+
+  @Test public void projectileRuntimeChangesDigestWithoutChangingWirePayloadAndRejectsTampering() {
+    try (Fixture source = new Fixture(false, true)) {
+      source.populate(); source.populateProjectiles();
+      D2gsCheckpointSnapshot before = source.server.captureReplayCheckpoint();
+      source.server.world.getMapper(Missile.class).get(1).hitTargets.add(333);
+      D2gsCheckpointSnapshot changed = source.server.captureReplayCheckpoint();
+      byte[] wrongOwner = changed.missileRuntime().get(1).bytes();
+      ByteBuffer.wrap(wrongOwner).putInt(12, 0);
+      java.util.Map<Integer, com.riiablo.engine.replay.MissileRuntimeCheckpoint> wrongRuntime =
+          new java.util.TreeMap<>(changed.missileRuntime());
+      wrongRuntime.put(1, com.riiablo.engine.replay.MissileRuntimeCheckpoint.fromBytes(wrongOwner));
+      try { changed.withMissileRuntime(wrongRuntime); fail("runtime/ECS owner mismatch accepted"); }
+      catch (IllegalArgumentException expected) {}
+      for (int id : before.payloads().keySet()) assertArrayEquals(before.payloads().get(id), changed.payloads().get(id));
+      assertNotEquals(before.summary().canonical(), changed.summary().canonical());
+      byte[] bytes = changed.toBytes();
+      byte[] runtime = changed.missileRuntime().get(1).bytes();
+      int offset = -1;
+      for (int i = 0; i <= bytes.length - runtime.length; i++) {
+        boolean matches = true;
+        for (int j = 0; j < runtime.length && matches; j++) matches = bytes[i + j] == runtime[j];
+        if (matches) { offset = i; break; }
+      }
+      assertTrue(offset >= 0);
+      bytes[offset + 11] ^= 1; // finite range mutation: structural parse succeeds, witness must fail
+      try { D2gsCheckpointSnapshot.fromBytes(bytes); fail("runtime corruption accepted"); }
+      catch (IllegalArgumentException expected) {}
+      D2gsCheckpointSnapshot onlyRuntime = D2gsCheckpointSnapshot.fromPayloads(before.tick(), before.payloads())
+          .withMissileRuntime(before.missileRuntime());
+      try { onlyRuntime.toEcsBytes(); fail("runtime metadata discarded"); }
+      catch (IllegalStateException expected) {}
+    }
+  }
+
   @Test public void sparsePlayerAndOwnedItemsResumeInANewWorldAndIndependentJvm() throws Exception {
     Path path = temporary.getRoot().toPath().resolve("sparse.chk");
     String expected;
@@ -350,7 +517,7 @@ public class D2gsWorldCheckpointBindingsTest {
           D2SCheckpoint.entry(0, 0, save)));
       D2gsCheckpointSnapshot expected = D2gsCheckpointSnapshot.fromPayloads(77,
           java.util.Collections.emptyMap(), null, null, legacyD2s, null);
-      for (int version : new int[] {1, 2}) {
+      for (int version : new int[] {1, 2, 3}) {
         java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
         java.io.DataOutputStream out = new java.io.DataOutputStream(bytes);
         out.writeInt(0x44324743);
@@ -364,7 +531,9 @@ public class D2gsWorldCheckpointBindingsTest {
         out.writeInt(0);
         out.writeInt(save.length);
         out.write(save);
+        if (version >= 3) out.writeBoolean(false); // absent potion state
         out.writeInt(version == 1 ? 0 : -1); // absent sessions
+        if (version >= 3) out.writeBoolean(false); // absent world identity
         for (String witness : new String[] {expected.summary().canonical(), legacyD2s.canonical()}) {
           byte[] encoded = witness.getBytes(StandardCharsets.UTF_8);
           out.writeInt(encoded.length);
@@ -449,7 +618,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "sparse".equals(args[3])
+      try { System.out.println(args.length > 3 && "projectiles".equals(args[3])
+          ? resumeProjectiles(Path.of(args[0])) : args.length > 3 && "sparse".equals(args[3])
           ? resumeSparse(Path.of(args[0])) : args.length > 3 && "potions".equals(args[3])
               ? resumePotions(Path.of(args[0])) : resume(Path.of(args[0]), Long.parseLong(args[1]))); }
       finally { unloadResources(); }
@@ -462,13 +632,18 @@ public class D2gsWorldCheckpointBindingsTest {
 
     Fixture() { this(false); }
 
-    Fixture(boolean potions) {
+    Fixture(boolean potions) { this(potions, false); }
+
+    Fixture(boolean potions, boolean projectiles) {
       WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
           .with(new net.mostlyoriginal.api.event.common.EventSystem(), new ItemManager(),
               new ObjectInteractor(), new WarpInteractor(), new ItemInteractor(), factory,
               new NativePlayerTargetSlots(), new CofManager(), new SerializationManager());
       if (potions) builder.with(new PotionRecoverySystem());
+      if (projectiles) builder.with(new com.riiablo.engine.server.Pathfinder(),
+          new com.riiablo.engine.server.MissileCollisionSystem());
       server.world = new World(builder.build().register("factory", factory).register("map", new Map(1, 0))
+          .register("serverContext", new com.riiablo.engine.server.ServerGameplayContext(Riiablo.files, 1))
           .register("townPortalRegistry", new TownPortalRegistry()));
       server.factory = factory;
       server.simulation = new AuthoritativeSimulation(server.world);
@@ -517,6 +692,33 @@ public class D2gsWorldCheckpointBindingsTest {
     }
 
     CharData data() { return server.world.getMapper(Player.class).get(0).data; }
+
+    void populateProjectiles() {
+      // A mid-game checkpoint must restore a consumed skill combat stream,
+      // not merely happen to restart at the same seed before its first hit.
+      for (int i = 0; i < 7; i++) server.world.getSystem(
+          com.riiablo.engine.server.MissileCollisionSystem.class).checkpointCombatRng().nextInt();
+      for (int id = 1; id < 5; id++) assertEquals(id, server.world.create());
+      assertEquals(5, factory.createMonster(Riiablo.files.monstats.get("quillrat1").hcIdx, -20f, 10f));
+      for (int id = 1; id < 5; id++) server.world.delete(id);
+      server.world.process();
+      com.badlogic.gdx.utils.IntSet common = new com.badlogic.gdx.utils.IntSet();
+      for (int id = 1; id <= 2; id++) {
+        assertEquals(id, factory.createMissile(Riiablo.files.Missiles.get("firebolt").Id,
+            new Vector2(1f, 0f), new Vector2(0f, 10f), 5));
+        Missile missile = server.world.getMapper(Missile.class).get(id);
+        assertTrue(com.riiablo.engine.server.missile.MissileDamageResolver.initializeSkill(Riiablo.files,
+            missile, Riiablo.files.skills.get("Fire Bolt"), server.world.getMapper(AttributesWrapper.class).get(5).attrs, 3));
+        missile.acceleration.restore(4, 64, 50);
+        missile.nativeFrame = 7;
+        missile.nativeLifetimeFrames = 80;
+        missile.range = 100f;
+        missile.distanceTraveled = 1.75f;
+        missile.shareHitTargets(common);
+      }
+      for (int i = 0; i < 3; i++) server.simulation.tick(null, null);
+      assertEquals(2, server.captureReplayCheckpoint().missileRuntime().size());
+    }
 
     void populateSparseItems() {
       java.util.List<Integer> gaps = new java.util.ArrayList<>();

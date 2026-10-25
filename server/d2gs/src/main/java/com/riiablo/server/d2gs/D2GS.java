@@ -6244,10 +6244,14 @@ public class D2GS extends ApplicationAdapter {
     worldReplayBindings = new D2gsWorldCheckpointBindings(world, seed);
     replayD2sRegistry = worldReplayBindings.d2sRegistry();
     replayNativeUnitRngRegistry = worldReplayBindings.nativeRegistry();
+    replayRngRegistry = worldReplayBindings.compatibilityRegistry();
   }
 
   private void refreshWorldReplayBindings() {
     if (worldReplayBindings == null) return;
+    if (replayRngRegistry == worldReplayBindings.compatibilityRegistry()) {
+      worldReplayBindings.refreshCompatibilityRng();
+    }
     if (replayD2sRegistry == worldReplayBindings.d2sRegistry()) worldReplayBindings.refreshPlayers();
     if (replayNativeUnitRngRegistry == worldReplayBindings.nativeRegistry()) {
       replayNativeUnitRngRegistry = worldReplayBindings.captureNativeRegistry();
@@ -6327,6 +6331,8 @@ public class D2GS extends ApplicationAdapter {
         && replayNativeUnitRngRegistry == worldReplayBindings.nativeRegistry();
     boolean worldD2s = worldReplayBindings != null
         && replayD2sRegistry == worldReplayBindings.d2sRegistry();
+    boolean worldCompatibility = worldReplayBindings != null
+        && replayRngRegistry == worldReplayBindings.compatibilityRegistry();
     if (worldNative) worldReplayBindings.validateNativeStates(checkpoint);
     java.util.List<com.riiablo.engine.replay.SimulationCheckpoint.RngState> rngStates =
         checkpoint.summary().rngStates();
@@ -6380,6 +6386,7 @@ public class D2GS extends ApplicationAdapter {
     if (result.success()) {
       try {
         if (replayRngRegistry != null) {
+          if (worldCompatibility) replayRngRegistry = worldReplayBindings.prepareCompatibilityRestore();
           replayRngRegistry.restore(rngStates);
         }
         if (replayNativeUnitRngRegistry != null) {
@@ -6431,8 +6438,10 @@ public class D2GS extends ApplicationAdapter {
           if (!ecsRollback.success()) {
             throw new IllegalStateException("ECS rollback failed: " + ecsRollback.failedEntities);
           }
-          if (replayRngRegistry != null) replayRngRegistry.restore(
-              liveRngStates == null ? java.util.Collections.emptyList() : liveRngStates);
+          if (replayRngRegistry != null) {
+            if (worldCompatibility) replayRngRegistry = worldReplayBindings.prepareCompatibilityRestore();
+            replayRngRegistry.restore(liveRngStates == null ? java.util.Collections.emptyList() : liveRngStates);
+          }
           if (replayNativeUnitRngRegistry != null) {
             if (worldNative) replayNativeUnitRngRegistry = worldReplayBindings.prepareNativeRestore(
                 liveNativeUnitRngStates);

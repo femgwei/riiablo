@@ -180,10 +180,10 @@ public class D2gsCheckpointSnapshotTest {
     D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.fromPayloads(5L,
         java.util.Collections.emptyMap());
     byte[] current = checkpoint.toBytes();
-    // v3 adds a world-presence byte after the empty session list. v1/v2 did not.
-    byte[] legacy = new byte[current.length - 1];
+    // v3 adds world presence, v4 adds an empty missile-runtime count.
+    byte[] legacy = new byte[current.length - 5];
     System.arraycopy(current, 0, legacy, 0, 36);
-    System.arraycopy(current, 37, legacy, 36, current.length - 37);
+    System.arraycopy(current, 41, legacy, 36, current.length - 41);
     java.nio.ByteBuffer bytes = java.nio.ByteBuffer.wrap(legacy);
     bytes.putInt(4, 1); // original complete envelope version
     bytes.putInt(28, 0); // v1 encoded absent D2S as zero entries
@@ -217,9 +217,9 @@ public class D2gsCheckpointSnapshotTest {
         com.riiablo.save.D2SCheckpoint.of(java.util.Collections.emptyMap()),
         new AuthoritativeSessionRegistry().snapshot());
     byte[] current = checkpoint.toBytes();
-    byte[] legacy = new byte[current.length - 1];
+    byte[] legacy = new byte[current.length - 5];
     System.arraycopy(current, 0, legacy, 0, 36);
-    System.arraycopy(current, 37, legacy, 36, current.length - 37);
+    System.arraycopy(current, 41, legacy, 36, current.length - 41);
     java.nio.ByteBuffer.wrap(legacy).putInt(4, 2);
     D2gsCheckpointSnapshot restored = D2gsCheckpointSnapshot.fromBytes(legacy);
     assertEquals(checkpoint.summary().canonical(), restored.summary().canonical());

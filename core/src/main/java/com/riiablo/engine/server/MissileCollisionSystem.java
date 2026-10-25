@@ -77,9 +77,18 @@ import com.riiablo.map.DT1;
 public class MissileCollisionSystem extends IteratingSystem {
   @Override
   protected void initialize() {
-    if (serverContext != null) combatSystemResolver = new CombatSystem(
-        NativeRng.forUnit(serverContext.gameSeed(), 1));
+    if (serverContext != null) {
+      NativeRng seed = NativeRng.forUnit(serverContext.gameSeed(), 1);
+      compatibilityCombatRng = NativeRng.fromSnapshot(new NativeRng.Snapshot(
+          "missile.compat-combat", 0, seed.state(), 0));
+      combatSystemResolver = new CombatSystem(compatibilityCombatRng);
+    }
   }
+
+  private NativeRng compatibilityCombatRng;
+
+  /** Existing skill/special combat sequence; null only for legacy global fixtures. */
+  public NativeRng checkpointCombatRng() { return compatibilityCombatRng; }
 
   private CombatSystem combatSystemResolver = new CombatSystem();
   @com.artemis.annotations.Wire(name = "serverContext", failOnNull = false)

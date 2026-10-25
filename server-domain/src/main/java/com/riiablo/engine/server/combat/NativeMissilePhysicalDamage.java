@@ -40,6 +40,16 @@ public final class NativeMissilePhysicalDamage {
         ownerCriticalCaptured, ownerCritical);
   }
 
+  /** Restores an already computed packet, without drawing creation critical again. */
+  public static NativeMissilePhysicalDamage restore(int minimum, int maximum, int damagePercent,
+      int demonPercent, int undeadPercent, boolean bypassUndead, boolean criticalCaptured,
+      boolean creationCritical, boolean ownerCriticalCaptured, boolean ownerCritical) {
+    if (damagePercent < -90 || (!criticalCaptured && creationCritical)
+        || (!ownerCriticalCaptured && ownerCritical)) throw new IllegalArgumentException("physical snapshot");
+    return new NativeMissilePhysicalDamage(minimum, maximum, damagePercent, demonPercent,
+        undeadPercent, bypassUndead, criticalCaptured, creationCritical, ownerCriticalCaptured, ownerCritical);
+  }
+
   public NativeMissilePhysicalDamage withCreationCritical(boolean critical) {
     return new NativeMissilePhysicalDamage(minimum, maximum, damagePercent,
         demonPercent, undeadPercent, bypassUndead, true, critical, ownerCriticalCaptured, ownerCritical);

@@ -5,8 +5,11 @@ import com.artemis.World;
 import com.artemis.utils.IntBag;
 import com.google.flatbuffers.ByteBufferUtil;
 import com.riiablo.engine.replay.NativeUnitRandomRegistry;
+import com.riiablo.engine.replay.CheckpointRngRegistry;
 import com.riiablo.engine.replay.SimulationCheckpoint;
 import com.riiablo.engine.server.NativeUnitRandom;
+import com.riiablo.engine.server.NativeRng;
+import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
@@ -34,16 +37,36 @@ final class D2gsWorldCheckpointBindings {
   private final D2SCheckpointRegistry d2s;
   private final Set<Integer> players = new HashSet<>();
   private NativeUnitRandomRegistry nativeRng;
+  private CheckpointRngRegistry compatibilityRng = new CheckpointRngRegistry();
 
   D2gsWorldCheckpointBindings(World world, int gameSeed) {
     this.world = world;
     this.gameSeed = gameSeed;
     d2s = new D2SCheckpointRegistry((entityId, entry, decoded) -> binding(entityId));
     nativeRng = newNativeRegistry();
+    refreshCompatibilityRng();
   }
 
   D2SCheckpointRegistry d2sRegistry() { return d2s; }
   NativeUnitRandomRegistry nativeRegistry() { return nativeRng; }
+  CheckpointRngRegistry compatibilityRegistry() { return compatibilityRng; }
+
+  CheckpointRngRegistry prepareCompatibilityRestore() {
+    // A legacy archive may remove this stream from the registry. Rebind the
+    // actual system-owned object before restoring/rolling back, never a copy
+    // reconstructed by the registry and detached from combat consumers.
+    compatibilityRng = new CheckpointRngRegistry();
+    refreshCompatibilityRng();
+    return compatibilityRng;
+  }
+
+  void refreshCompatibilityRng() {
+    MissileCollisionSystem missiles = world.getSystem(MissileCollisionSystem.class);
+    NativeRng rng = missiles == null ? null : missiles.checkpointCombatRng();
+    if (rng != null && compatibilityRng.get(rng.streamName(), rng.contextId()) == null) {
+      compatibilityRng.register(rng);
+    }
+  }
 
   void refreshPlayers() {
     Set<Integer> live = new HashSet<>();

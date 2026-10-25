@@ -286,6 +286,12 @@ public final class Attributes implements Iterable<StatRef> {
     return aggregateRevision;
   }
 
+  /** Runtime checkpoint boundary; does not rebuild stats or advance a revision. */
+  public void restoreAggregateRevision(long revision) {
+    if (revision < 0) throw new IllegalArgumentException("aggregate revision");
+    aggregateRevision = revision;
+  }
+
   public void clear()  {
     staminaMaximum = new StaminaMaximum();
     difficultyResistanceIncluded = false;

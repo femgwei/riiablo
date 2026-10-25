@@ -25,6 +25,7 @@ import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.AuthoritativeSessionRegistry;
 import com.riiablo.engine.replay.SimulationCheckpoint;
+import com.riiablo.engine.replay.MissileRuntimeCheckpoint;
 import com.riiablo.save.D2SCheckpoint;
 import com.riiablo.save.CharData;
 import com.riiablo.net.packet.d2gs.D2GS;
@@ -41,7 +42,7 @@ public final class D2gsCheckpointSnapshot {
   private static final int ECS_WIRE_MAGIC = 0x44324745; // "D2GE"
   private static final int ECS_WIRE_VERSION = 1;
   private static final int CHECKPOINT_WIRE_MAGIC = 0x44324743; // "D2GC"
-  private static final int CHECKPOINT_WIRE_VERSION = 3;
+  private static final int CHECKPOINT_WIRE_VERSION = 4;
   private static final int MAX_ECS_ENTITIES = 1_000_000;
   private static final int MAX_ECS_PAYLOAD = 16 * 1024 * 1024;
   private static final int MAX_CHECKPOINT_STRING = 64 * 1024 * 1024;
@@ -58,6 +59,9 @@ public final class D2gsCheckpointSnapshot {
     default void beginRestore(World world) {}
     default void endRestore(World world) {}
     int createEntity(World world, int expectedEntityId, ByteBuffer payload);
+    default int createEntity(World world, int expectedEntityId, ByteBuffer payload, boolean restoreRuntime) {
+      return createEntity(world, expectedEntityId, payload);
+    }
     boolean deleteEntity(World world, int entityId);
   }
 
@@ -107,10 +111,12 @@ public final class D2gsCheckpointSnapshot {
   private final D2SCheckpoint d2sCheckpoint;
   private final AuthoritativeSessionRegistry.Snapshot sessionSnapshot;
   private final WorldIdentity worldIdentity;
+  private final Map<Integer, MissileRuntimeCheckpoint> missileRuntime;
 
   private D2gsCheckpointSnapshot(long tick, SimulationCheckpoint summary,
       Map<Integer, byte[]> payloads, D2SCheckpoint d2sCheckpoint,
-      AuthoritativeSessionRegistry.Snapshot sessionSnapshot, WorldIdentity worldIdentity) {
+      AuthoritativeSessionRegistry.Snapshot sessionSnapshot, WorldIdentity worldIdentity,
+      Map<Integer, MissileRuntimeCheckpoint> missileRuntime) {
     this.tick = tick;
     this.summary = summary;
     TreeMap<Integer, byte[]> copy = new TreeMap<>();
@@ -121,6 +127,7 @@ public final class D2gsCheckpointSnapshot {
     this.d2sCheckpoint = d2sCheckpoint;
     this.sessionSnapshot = sessionSnapshot;
     this.worldIdentity = worldIdentity;
+    this.missileRuntime = Collections.unmodifiableMap(new TreeMap<>(missileRuntime));
   }
 
   /** Captures the same EntitySync state used for an authoritative baseline. */
@@ -171,7 +178,7 @@ public final class D2gsCheckpointSnapshot {
     for (int entityId : ids) payloads.put(entityId,
         serialize(serializer, entityId, 0L, 0L));
     return fromPayloads(tick, payloads, rngStates, nativeUnitRngStates, d2sCheckpoint,
-        sessionSnapshot);
+        sessionSnapshot).withMissileRuntime(MissileRuntimeCheckpoint.capture(world, ids));
   }
 
   /** Builds a snapshot from serialized EntitySync envelopes for deterministic tests/tools. */
@@ -215,6 +222,15 @@ public final class D2gsCheckpointSnapshot {
       List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates,
       D2SCheckpoint d2sCheckpoint, AuthoritativeSessionRegistry.Snapshot sessionSnapshot,
       WorldIdentity worldIdentity) {
+    return fromPayloads(tick, payloads, rngStates, nativeUnitRngStates, d2sCheckpoint,
+        sessionSnapshot, worldIdentity, Collections.emptyMap());
+  }
+
+  private static D2gsCheckpointSnapshot fromPayloads(long tick, Map<Integer, byte[]> payloads,
+      List<SimulationCheckpoint.RngState> rngStates,
+      List<SimulationCheckpoint.NativeUnitRngState> nativeUnitRngStates,
+      D2SCheckpoint d2sCheckpoint, AuthoritativeSessionRegistry.Snapshot sessionSnapshot,
+      WorldIdentity worldIdentity, Map<Integer, MissileRuntimeCheckpoint> missileRuntime) {
     if (tick < 0L) throw new IllegalArgumentException("tick");
     if (payloads == null) throw new NullPointerException("payloads");
     TreeMap<Integer, String> entityDigests = new TreeMap<>();
@@ -236,6 +252,31 @@ public final class D2gsCheckpointSnapshot {
     if (sessionSnapshot != null) canonical.append("|sessions:")
         .append(digest(sessionSnapshot.canonical()));
     if (worldIdentity != null) canonical.append("|world:").append(worldIdentity.canonical());
+    MissileRuntimeCheckpoint.validate(missileRuntime);
+    for (Map.Entry<Integer, MissileRuntimeCheckpoint> entry : new TreeMap<>(missileRuntime).entrySet()) {
+      byte[] payload = copy.get(entry.getKey());
+      if (payload == null || entry.getValue() == null) throw new IllegalArgumentException("missile payload missing");
+      D2GS packet = D2GS.getRootAsD2GS(com.google.flatbuffers.ByteBufferUtil.removeSizePrefix(
+          ByteBuffer.wrap(payload)));
+      if (packet.dataType() != D2GSData.EntitySync) throw new IllegalArgumentException("missile envelope");
+      com.riiablo.net.packet.d2gs.EntitySync sync = (com.riiablo.net.packet.d2gs.EntitySync)
+          packet.data(new com.riiablo.net.packet.d2gs.EntitySync());
+      boolean matched = false;
+      for (int i = 0; i < sync.componentTypeLength(); i++) {
+        if (sync.componentType(i) == com.riiablo.net.packet.d2gs.ComponentP.MissileP) {
+          com.riiablo.net.packet.d2gs.MissileP missile = (com.riiablo.net.packet.d2gs.MissileP)
+              sync.component(new com.riiablo.net.packet.d2gs.MissileP(), i);
+          matched = missile.missileId() == entry.getValue().missileId()
+              && missile.ownerId() == entry.getValue().ownerId();
+        }
+      }
+      if (sync.entityId() != entry.getKey()
+          || sync.type() != com.riiablo.engine.server.component.Class.Type.MIS.ordinal() || !matched) {
+        throw new IllegalArgumentException("missile ECS/runtime identity mismatch");
+      }
+      canonical.append("|missile-runtime:").append(entry.getKey()).append(':')
+          .append(digest(entry.getValue().bytes()));
+    }
     if (d2sCheckpoint != null) {
       for (D2SCheckpoint.Entry entry : d2sCheckpoint.entries().values()) {
         if (entry.potionCheckpoint() != null) canonical.append("|player-runtime:")
@@ -244,7 +285,8 @@ public final class D2gsCheckpointSnapshot {
     }
     SimulationCheckpoint summary = SimulationCheckpoint.of(tick, digest(canonical.toString()),
         entityDigests, rngStates, nativeUnitRngStates);
-    return new D2gsCheckpointSnapshot(tick, summary, copy, d2sCheckpoint, sessionSnapshot, worldIdentity);
+    return new D2gsCheckpointSnapshot(tick, summary, copy, d2sCheckpoint, sessionSnapshot, worldIdentity,
+        missileRuntime);
   }
 
   public long tick() { return tick; }
@@ -252,10 +294,16 @@ public final class D2gsCheckpointSnapshot {
   public D2SCheckpoint d2sCheckpoint() { return d2sCheckpoint; }
   public AuthoritativeSessionRegistry.Snapshot sessionSnapshot() { return sessionSnapshot; }
   public WorldIdentity worldIdentity() { return worldIdentity; }
+  public Map<Integer, MissileRuntimeCheckpoint> missileRuntime() { return missileRuntime; }
+
+  public D2gsCheckpointSnapshot withMissileRuntime(Map<Integer, MissileRuntimeCheckpoint> runtime) {
+    return fromPayloads(tick, payloads, summary.rngStates(), summary.nativeUnitRngStates(),
+        d2sCheckpoint, sessionSnapshot, worldIdentity, runtime);
+  }
 
   public D2gsCheckpointSnapshot withWorldIdentity(int seed, int difficulty) {
     return fromPayloads(tick, payloads, summary.rngStates(), summary.nativeUnitRngStates(),
-        d2sCheckpoint, sessionSnapshot, new WorldIdentity(seed, difficulty));
+        d2sCheckpoint, sessionSnapshot, new WorldIdentity(seed, difficulty), missileRuntime);
   }
   public Map<Integer, byte[]> payloads() {
     Map<Integer, byte[]> copy = new TreeMap<>();
@@ -283,7 +331,8 @@ public final class D2gsCheckpointSnapshot {
    */
   public byte[] toEcsBytes() {
     if (!summary.rngStates().isEmpty() || !summary.nativeUnitRngStates().isEmpty()
-        || d2sCheckpoint != null || sessionSnapshot != null || worldIdentity != null) {
+        || d2sCheckpoint != null || sessionSnapshot != null || worldIdentity != null
+        || !missileRuntime.isEmpty()) {
       throw new IllegalStateException("ECS envelope cannot discard checkpoint metadata");
     }
     try {
@@ -426,6 +475,13 @@ public final class D2gsCheckpointSnapshot {
         output.writeInt(worldIdentity.seed);
         output.writeInt(worldIdentity.difficulty);
       }
+      output.writeInt(missileRuntime.size());
+      for (Map.Entry<Integer, MissileRuntimeCheckpoint> entry : missileRuntime.entrySet()) {
+        output.writeInt(entry.getKey());
+        byte[] runtime = entry.getValue().bytes();
+        output.writeInt(runtime.length);
+        output.write(runtime);
+      }
       writeString(output, summary.canonical());
       writeString(output, d2sCheckpoint == null ? "" : d2sCheckpoint.canonical());
       output.flush();
@@ -513,11 +569,25 @@ public final class D2gsCheckpointSnapshot {
       if (version >= 3 && readPresence(input, "world identity")) {
         identity = new WorldIdentity(input.readInt(), input.readInt());
       }
+      Map<Integer, MissileRuntimeCheckpoint> missiles = new TreeMap<>();
+      if (version >= 4) {
+        int count = readCount(input, "missile runtime count");
+        for (int i = 0; i < count; i++) {
+          int id = input.readInt(), length = input.readInt();
+          if (id < 0 || length <= 0 || length > MissileRuntimeCheckpoint.MAX_BYTES) {
+            throw new IllegalArgumentException("missile runtime entry");
+          }
+          byte[] runtime = new byte[length]; input.readFully(runtime);
+          if (missiles.put(id, MissileRuntimeCheckpoint.fromBytes(runtime)) != null) {
+            throw new IllegalArgumentException("duplicate missile runtime");
+          }
+        }
+      }
       String expectedSummary = readString(input, "summary canonical");
       String expectedD2s = readString(input, "D2S canonical");
       if (input.read() != -1) throw new IllegalArgumentException("trailing checkpoint bytes");
       D2gsCheckpointSnapshot result = fromPayloads(tick, payloads, rngStates, nativeStates,
-          d2s, sessions, identity);
+          d2s, sessions, identity, missiles);
       if (!result.summary.canonical().equals(expectedSummary)) {
         throw new IllegalArgumentException("checkpoint summary mismatch");
       }
@@ -617,7 +687,7 @@ public final class D2gsCheckpointSnapshot {
       for (Integer entityId : missing) {
         try {
           int createdId = lifecycle.createEntity(world, entityId,
-              ByteBuffer.wrap(payloads.get(entityId)).duplicate());
+              ByteBuffer.wrap(payloads.get(entityId)).duplicate(), missileRuntime.containsKey(entityId));
           if (createdId != entityId || !isActive(world, entityId)) {
             if (isActive(world, createdId)) {
               lifecycle.deleteEntity(world, createdId);
@@ -652,6 +722,12 @@ public final class D2gsCheckpointSnapshot {
         return failure(world, serializer, lifecycle, before, missing, failed, unexpected,
             created, deleted);
       }
+    }
+    try {
+      MissileRuntimeCheckpoint.restore(world, missileRuntime);
+    } catch (RuntimeException invalidRuntime) {
+      failed.addAll(missileRuntime.keySet());
+      return failure(world, serializer, lifecycle, before, missing, failed, unexpected, created, deleted);
     }
     if (lifecycle != null) {
       for (Integer entityId : unexpected) {
@@ -697,6 +773,7 @@ public final class D2gsCheckpointSnapshot {
           Packet packet = Packet.obtain(1, ByteBuffer.wrap(entry.getValue()).duplicate());
           serializer.deserialize(entry.getKey(), packet.data);
         }
+        MissileRuntimeCheckpoint.restore(world, before.missileRuntime);
         return true;
       }
       for (Integer entityId : created) {
@@ -713,7 +790,7 @@ public final class D2gsCheckpointSnapshot {
       for (Integer entityId : before.payloads.keySet()) {
         if (!isActive(world, entityId)) {
           int createdId = lifecycle.createEntity(world, entityId,
-              ByteBuffer.wrap(before.payloads.get(entityId)).duplicate());
+              ByteBuffer.wrap(before.payloads.get(entityId)).duplicate(), before.missileRuntime.containsKey(entityId));
           if (createdId != entityId || !isActive(world, entityId)) return false;
         }
       }
@@ -722,6 +799,7 @@ public final class D2gsCheckpointSnapshot {
         Packet packet = Packet.obtain(1, ByteBuffer.wrap(entry.getValue()).duplicate());
         serializer.deserialize(entry.getKey(), packet.data);
       }
+      MissileRuntimeCheckpoint.restore(world, before.missileRuntime);
       return true;
     } catch (Throwable ignored) {
       return false;

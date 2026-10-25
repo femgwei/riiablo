@@ -80,6 +80,19 @@ public final class NativeMissileElementalDamage {
     }
   }
 
+  /** Raw 8.8 endpoints have already been scaled; never run mixed() on restore. */
+  public static NativeMissileElementalDamage restore(int type, int[] minimum, int[] maximum,
+      int coldLength, int poisonLength, int poisonCount) {
+    if (type < DAMAGE_PHYSICAL || type >= DAMAGE_TYPE_COUNT || minimum.length != DAMAGE_TYPE_COUNT
+        || maximum.length != DAMAGE_TYPE_COUNT || coldLength < 0 || poisonLength < 0) {
+      throw new IllegalArgumentException("elemental snapshot");
+    }
+    return new NativeMissileElementalDamage(type, minimum[DAMAGE_FIRE], maximum[DAMAGE_FIRE],
+        minimum[DAMAGE_LIGHTNING], maximum[DAMAGE_LIGHTNING], minimum[DAMAGE_COLD], maximum[DAMAGE_COLD],
+        minimum[DAMAGE_POISON], maximum[DAMAGE_POISON], minimum[DAMAGE_MAGIC], maximum[DAMAGE_MAGIC],
+        coldLength, poisonLength, poisonCount);
+  }
+
   public int maximum(int damageType) {
     switch (damageType) {
       case DAMAGE_FIRE: return fireMax;
