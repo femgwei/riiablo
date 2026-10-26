@@ -3820,6 +3820,35 @@ checkpoint recovery 与 World bindings 回归通过；本批不改变 FlatBuffer
 
 下一迁移：M8-A/M8-C/M8-D 最终联合收口，完成全量 replay/save/reconnect 与旧直连入口审计。
 
+### M8-C/M8-D 第 51 批：旧物品 cursor 入口删除与统一 ingress 收口（2026-10-26）
+
+完成日期：2026-10-26；代码提交：待本批提交后回填。
+
+- 删除 D2GS 中已由 `isLegacyItemRequest` 统一拒绝、且没有生产调用者的旧
+  `GroundToCursor`、`CursorToGround`、`StoreToCursor`、`CursorToStore`、body/belt 和
+  swap handler 及对应 switch 分支，避免旧 cursor 协议继续伪装成生产 owner。
+- 保留 `ItemMoveRequest` → `submitD2gsHandler` → 固定 Tick ingress 的唯一物品事务入口；旧
+  协议仍在统一入口处记录拒绝，不再触发 `ItemManager` 直接写入或回显原始 packet。
+- 与 M8-A 的 socket/generation 门禁组合验证，确认旧 transport、checkpoint 和物品入口删除
+  不改变实体恢复、重连 baseline 或 D2S/FlatBuffer 字段。
+
+验证：
+
+```powershell
+.\gradlew.bat :server:d2gs:compileJava :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.InventorySnapshotTransportTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：D2GS 编译与定向 ingress/物品传输回归通过；旧 cursor/body/belt handler 在生产源码中
+无剩余调用者。生成的 `SoundP.java` EOF 空行噪声已清理。本批不改变物品规则、D2S 布局或
+协议字段。
+
+剩余问题：M8-A 的完整 Casting/Sequence/Leap、动态路径游标、地图/事务/未绑定 RNG，及
+M8-C 的 `ClientGameplayContext` 表现兼容构造仍待最终联合收口；M8-D 还需完成全量 handler
+唯一入口审计和旧 transport owner 删除。
+
+下一迁移：M8-A/M8-C/M8-D 最终 replay/save/reconnect 验收与全量旧入口审计。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
