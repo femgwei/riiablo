@@ -3822,7 +3822,7 @@ checkpoint recovery 与 World bindings 回归通过；本批不改变 FlatBuffer
 
 ### M8-C/M8-D 第 51 批：旧物品 cursor 入口删除与统一 ingress 收口（2026-10-26）
 
-完成日期：2026-10-26；代码提交：待本批提交后回填。
+完成日期：2026-10-26；代码提交：`616c55397`。
 
 - 删除 D2GS 中已由 `isLegacyItemRequest` 统一拒绝、且没有生产调用者的旧
   `GroundToCursor`、`CursorToGround`、`StoreToCursor`、`CursorToStore`、body/belt 和
