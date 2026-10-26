@@ -137,14 +137,14 @@ class CombatPositionCheckpointTest {
         assertThrows(IllegalArgumentException.class, () -> CombatPositionCheckpoint.fromBytes(truncated));
       }
       CompanionRuntimeCheckpoint current = f.companions(); byte[] companion = current.bytes();
-      int tail = companion.length - (1 + 4 + current.positionHistory().bytes().length + 1 + 8);
-      for (int offset : new int[] {tail, companion.length - 9}) {
+      int tail = companion.length - (1 + 4 + current.positionHistory().bytes().length + 1 + 8 + 1);
+      for (int offset : new int[] {tail, companion.length - 10, companion.length - 1}) {
         byte[] bad = companion.clone(); bad[offset] = 2;
         assertThrows(IllegalArgumentException.class, () -> CompanionRuntimeCheckpoint.fromBytes(bad));
       }
       byte[] badLength = companion.clone(); ByteBuffer.wrap(badLength).putInt(tail + 1, Integer.MAX_VALUE);
       assertThrows(IllegalArgumentException.class, () -> CompanionRuntimeCheckpoint.fromBytes(badLength));
-      byte[] badClock = companion.clone(); ByteBuffer.wrap(badClock).putLong(companion.length - 8, -1L);
+      byte[] badClock = companion.clone(); ByteBuffer.wrap(badClock).putLong(companion.length - 9, -1L);
       assertThrows(IllegalArgumentException.class, () -> CompanionRuntimeCheckpoint.fromBytes(badClock));
       f.capture.restoreCheckpointTick(Long.MAX_VALUE);
       byte[] before = f.image().bytes(); assertThrows(IllegalStateException.class, f.world::process);
@@ -187,7 +187,7 @@ class CombatPositionCheckpointTest {
     try (Fixture a = new Fixture(4, true); Fixture b = new Fixture(4, true)) {
       a.world.process(); for (int i = 0; i < 5; i++) b.world.process();
       CompanionRuntimeCheckpoint current = a.companions();
-      int tail = 1 + 4 + current.positionHistory().bytes().length + 1 + 8;
+      int tail = 1 + 4 + current.positionHistory().bytes().length + 1 + 8 + 1;
       byte[] old = Arrays.copyOf(current.bytes(), current.bytes().length - tail);
       ByteBuffer.wrap(old).putInt(2); CompanionRuntimeCheckpoint legacy = CompanionRuntimeCheckpoint.fromBytes(old);
       assertFalse(legacy.hasPositionHistoryCoverage()); assertNull(legacy.positionHistory());

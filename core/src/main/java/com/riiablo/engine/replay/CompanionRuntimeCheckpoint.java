@@ -17,7 +17,7 @@ import java.util.*;
  * Includes shared owner/combat position history, not equipment Item references or actions.
  */
 public final class CompanionRuntimeCheckpoint {
-  private static final int VERSION = 3;
+  private static final int VERSION = 4;
   public static final int MAX_BYTES = 48 * 1024 * 1024;
   private final byte[] bytes;
   private CompanionRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
@@ -28,6 +28,8 @@ public final class CompanionRuntimeCheckpoint {
   /** Null when absent or uncovered; hasPositionHistoryCoverage distinguishes old archives. */
   public CombatPositionCheckpoint positionHistory() { return decode().history; }
   public boolean hasPositionHistoryCoverage() { return decode().historyCovered; }
+  public MercenaryServiceCheckpoint mercenaryService() { return decode().service; }
+  public boolean hasMercenaryServiceCoverage() { return decode().serviceCovered; }
 
   private static final class Binding {
     @Wire(name = "combatPositionHistory", failOnNull = false) CombatPositionHistory history;
@@ -96,6 +98,12 @@ public final class CompanionRuntimeCheckpoint {
       CombatPositionCaptureSystem capture = world.getSystem(CombatPositionCaptureSystem.class);
       out.writeBoolean(capture != null);
       if (capture != null) out.writeLong(capture.checkpointTick());
+      boolean service = world.getSystem(com.riiablo.engine.server.quest.NativeMercenaryRewardSystem.class) != null;
+      out.writeBoolean(service);
+      if (service) {
+        byte[] image = MercenaryServiceCheckpoint.capture(world, ids).bytes();
+        out.writeInt(image.length); out.write(image);
+      }
       out.flush(); CompanionRuntimeCheckpoint result = fromBytes(bytes.toByteArray());
       result.validateRestore(world); return result;
     } catch (IOException impossible) { throw new IllegalStateException(impossible); }
@@ -132,6 +140,12 @@ public final class CompanionRuntimeCheckpoint {
       throw new IllegalStateException("companion host missing: " + id);
     }
     if (d.summons != null) d.summons.validateRestore(world);
+    if (d.serviceCovered) {
+      if ((d.service != null) != (world.getSystem(com.riiablo.engine.server.quest.NativeMercenaryRewardSystem.class) != null)) {
+        throw new IllegalStateException("hireling service topology mismatch");
+      }
+      if (d.service != null) d.service.validateRestore(world);
+    }
     if (d.historyCovered) {
       Binding b = binding(world);
       if ((b.history != null) != (d.history != null)
@@ -166,6 +180,7 @@ public final class CompanionRuntimeCheckpoint {
   public void restore(World world) {
     validateRestore(world); Decoded d = decode();
     if (d.summons != null) d.summons.restore(world);
+    if (d.service != null) d.service.restore(world);
     for (Map.Entry<Integer, Mercenary> entry : d.mercenaries.entrySet()) {
       int id = entry.getKey(); Mercenary m = entry.getValue();
       if (m == null) world.getMapper(Mercenary.class).remove(id);
@@ -270,11 +285,22 @@ public final class CompanionRuntimeCheckpoint {
           if (d.captureTick < 0 || d.history == null) throw new IllegalArgumentException("position capture tick/history");
         }
       }
+      if (version >= 4) {
+        d.serviceCovered = true;
+        if (CheckpointIO.readBoolean(in)) {
+          int length = CheckpointIO.count(in, MercenaryServiceCheckpoint.MAX_BYTES);
+          if (length == 0 || length > in.available()) throw new IllegalArgumentException("hireling service length");
+          byte[] image = new byte[length]; in.readFully(image); d.service = MercenaryServiceCheckpoint.fromBytes(image);
+          d.service.validateComponents(d.mercenaries);
+        }
+      }
       if (in.read() != -1) throw new IllegalArgumentException("trailing companion runtime");
       return d;
     } catch (IOException e) { throw new IllegalArgumentException("truncated companion runtime", e); }
   }
   private static final class Decoded {
+    boolean serviceCovered;
+    MercenaryServiceCheckpoint service;
     boolean historyCovered;
     CombatPositionCheckpoint history;
     Long captureTick;

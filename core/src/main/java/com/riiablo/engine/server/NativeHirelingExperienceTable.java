@@ -454,4 +454,32 @@ public final class NativeHirelingExperienceTable {
   }
 
   public int size() { return rows.size; }
+
+  /** Exact installed row identity for service checkpoints; not a whole-content/session digest. */
+  public byte[] checkpointIdentity() {
+    try {
+      java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+      java.io.DataOutputStream out = new java.io.DataOutputStream(bytes);
+      out.writeInt(rows.size);
+      for (Row r : rows) {
+        for (int value : new int[] {r.hirelingId, r.level, r.experiencePerLevel, r.hitpoints,
+            r.hitpointsPerLevel, r.defense, r.defensePerLevel, r.strength, r.strengthPerLevel,
+            r.dexterity, r.dexterityPerLevel, r.attackRate, r.attackRatePerLevel, r.damageMin,
+            r.damageMax, r.damagePerLevel, r.resist, r.resistPerLevel, r.defaultChance,
+            r.seller, r.difficulty, r.gold, r.nameCount}) out.writeInt(value);
+        for (int[] values : new int[][] {r.chances, r.chancePerLevels, r.skills, r.skillModes,
+            r.skillLevels, r.skillLevelsPerLevel}) for (int value : values) out.writeInt(value);
+        for (String value : new String[] {r.description, r.nameFirst}) {
+          out.writeBoolean(value != null);
+          if (value != null) {
+            byte[] utf8 = value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            out.writeInt(utf8.length); out.write(utf8);
+          }
+        }
+      }
+      out.flush(); return java.security.MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray());
+    } catch (java.io.IOException | java.security.NoSuchAlgorithmException impossible) {
+      throw new IllegalStateException(impossible);
+    }
+  }
 }

@@ -21,6 +21,9 @@ public final class UnitStateRuntimeCheckpoint {
   private final byte[] bytes;
   private UnitStateRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
   public byte[] bytes() { return bytes.clone(); }
+  public Attributes.Type attributesType() {
+    Decoded d = decode(); return d.attributes == null ? null : Attributes.Type.values()[d.type];
+  }
   public boolean requiresTargetRuntime() { return decode().requiresTargets; }
   /** v1/v2 did not describe the complete Monster component, including absence. */
   public boolean hasMonsterRuntime() { return decode().hasMonsterRuntime; }
@@ -299,6 +302,40 @@ public final class UnitStateRuntimeCheckpoint {
     target.resolvedMaxLifeEncoded = source.resolvedMaxLifeEncoded;
     target.resolvedMaxManaEncoded = source.resolvedMaxManaEncoded;
     target.observedAggregateRevision = source.observedAggregateRevision;
+  }
+
+  static final int MAX_ATTRIBUTES_BYTES = 16 * 1024;
+
+  /** Shared raw codec for a saved hireling whose level-scoped entity/corpse no longer exists. */
+  static byte[] captureAttributesImage(Attributes attrs) {
+    try {
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      writeAttributes(new DataOutputStream(bytes), attrs);
+      byte[] image = bytes.toByteArray(); decodeAttributesImage(image); return image;
+    } catch (IOException impossible) { throw new IllegalStateException(impossible); }
+  }
+
+  static void validateAttributesImage(Attributes attrs, byte[] image) {
+    Decoded d = decodeAttributesImage(image);
+    if (attrs == null || attrs.type().ordinal() != d.type) throw new IllegalStateException("saved hireling attribute type");
+    for (int[][] list : d.attributes) for (int[] stat : list) {
+      if (attrs.table().entry((short) stat[0]) == null) throw new IllegalArgumentException("unknown saved hireling attribute");
+    }
+  }
+
+  static void restoreAttributesImage(Attributes attrs, byte[] image) {
+    validateAttributesImage(attrs, image); applyAttributes(attrs, decodeAttributesImage(image));
+  }
+
+  static void validateAttributesImage(byte[] image) { decodeAttributesImage(image); }
+
+  private static Decoded decodeAttributesImage(byte[] image) {
+    if (image == null || image.length == 0 || image.length > MAX_ATTRIBUTES_BYTES) throw new IllegalArgumentException("saved hireling attributes length");
+    try {
+      DataInputStream in = new DataInputStream(new ByteArrayInputStream(image));
+      Decoded d = new Decoded(); readAttributes(in, d);
+      if (in.read() != -1) throw new IllegalArgumentException("trailing saved hireling attributes"); return d;
+    } catch (IOException e) { throw new IllegalArgumentException("truncated saved hireling attributes", e); }
   }
 
   private static void writeAttributes(DataOutputStream out, Attributes attrs) throws IOException {

@@ -40,6 +40,7 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.replay.SimulationCheckpoint;
+import com.riiablo.engine.replay.UnitStateRuntimeCheckpoint;
 import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.map.Map;
 import com.riiablo.item.Item;
@@ -801,6 +802,182 @@ public class D2gsWorldCheckpointBindingsTest {
     return -1;
   }
 
+  @Test public void hirelingServiceRostersAndDeadRecordsResumeAcrossWorldAndJvmRestart() throws Exception {
+    for (boolean dead : new boolean[] {false, true}) {
+      Path path = temporary.getRoot().toPath().resolve("hireling-service-" + dead + ".chk"); String expected;
+      try (Fixture source = new Fixture(false, false, false, true, true, true)) {
+        source.populate(); source.populateHirelingService(dead); source.server.writeReplayCheckpoint(path);
+        expected = continueHirelingService(source);
+      }
+      assertEquals(expected, resumeHirelingService(path));
+      Path output = temporary.getRoot().toPath().resolve("hireling-service-" + dead + ".log");
+      Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+          System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+          Riiablo.home.path(), "hireling-service").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+      try {
+        assertTrue("Hireling service child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+        String log = Files.readString(output, StandardCharsets.UTF_8);
+        assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+      } finally { if (child.isAlive()) child.destroyForcibly(); }
+    }
+  }
+
+  private static String resumeHirelingService(Path path) throws Exception {
+    try (Fixture target = new Fixture(false, false, false, true, true, true)) {
+      target.prepareMonsterMap(); D2gsCheckpointSnapshot image = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      assertEquals(image.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      assertEquals(image.d2sCheckpoint().canonical(), target.server.captureReplayCheckpoint().d2sCheckpoint().canonical());
+      return continueHirelingService(target);
+    }
+  }
+
+  private static String continueHirelingService(Fixture f) {
+    com.riiablo.engine.server.quest.NativeMercenaryRewardSystem service = f.rewards();
+    com.riiablo.engine.server.pet.MercenaryManager manager = service.checkpointManager();
+    com.riiablo.engine.server.pet.MercenaryManager.ActiveMercenary active = manager.getPlayerMercenary(0);
+    boolean dead = active.state == com.riiablo.engine.server.pet.MercenaryManager.STATE_DEAD;
+    assertNotNull(active); assertEquals(dead ? -1 : 1, active.entityId);
+    assertFalse("Checkpoint restore must not regrant a free hireling", service.grantFreeRogue(0));
+    if (!dead) assertSame(f.data().getMerc().getStats(), f.server.world.getMapper(AttributesWrapper.class).get(active.entityId).attrs);
+    else {
+      assertEquals(37, f.data().getMerc().getItems().equipmentRevision());
+      assertEquals(9, f.data().getMerc().getStats().remaining().getValue(Stat.dexterity, 0));
+    }
+    int seed = service.hirelingOffers(0, 198).first().seed;
+    StringBuilder result = new StringBuilder("HIRELING_SERVICE_CONTINUED|").append(dead);
+    for (int frame = 0; frame < 6; frame++) {
+      final int tick = frame;
+      f.server.simulation.tick(() -> {
+        int current = service.hirelingOffers(0, 198).first().seed;
+        if (tick < 2) assertEquals(seed, current); else assertNotEquals(seed, current);
+        service.hirelingOffers(0, 252); // New menu after restart consumes only the restored manager stream.
+      }, null);
+      D2gsCheckpointSnapshot after = f.server.captureReplayCheckpoint();
+      result.append('|').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
+    }
+    if (dead) {
+      f.data().getStats().base().put(Stat.gold, 100000); f.data().getStats().aggregate().put(Stat.gold, 100000);
+      assertTrue(service.resurrectMercenary(0));
+      com.artemis.EntityAllocatorCheckpoint.flushStructure(f.server.world);
+      assertTrue(manager.getPlayerMercenary(0).entityId >= 0);
+      assertSame(f.data().getMerc().getStats(), f.server.world.getMapper(AttributesWrapper.class).get(manager.getPlayerMercenary(0).entityId).attrs);
+      assertEquals(100000 - manager.calculateResurrectCost(active.definition, active.level), service.getPlayerGold(0));
+      assertFalse(service.resurrectMercenary(0)); // no double payment / entity creation
+      result.append('|').append(f.server.captureReplayCheckpoint().summary().canonical());
+    }
+    return result.toString();
+  }
+
+  @Test public void hirelingServiceOnlyChangesAreCanonicalAndNestedWitnessIsStrict() throws Exception {
+    try (Fixture f = new Fixture(false, false, false, true, true, true)) {
+      f.populate(); f.populateHirelingService(false);
+      D2gsCheckpointSnapshot before = f.server.captureReplayCheckpoint();
+      try { before.withUnitStateRuntime(null); fail("hireling shared attributes left uncovered"); }
+      catch (IllegalArgumentException expected) {}
+      java.util.Map<Integer, UnitStateRuntimeCheckpoint> uncovered = new java.util.TreeMap<>(before.unitStateRuntime());
+      uncovered.put(1, UnitStateRuntimeCheckpoint.fromBytes(new byte[] {0, 0, 0, 1, 0}));
+      try { before.withUnitStateRuntime(uncovered); fail("hireling attribute-less state accepted"); }
+      catch (IllegalArgumentException expected) {}
+      f.rewards().checkpointManager().advanceRuntimeMillis(1);
+      D2gsCheckpointSnapshot changed = f.server.captureReplayCheckpoint();
+      assertNotEquals(before.summary().canonical(), changed.summary().canonical());
+      assertEquals(before.d2sCheckpoint().canonical(), changed.d2sCheckpoint().canonical());
+      for (int id : before.payloads().keySet()) assertArrayEquals(before.payloads().get(id), changed.payloads().get(id));
+      byte[] archive = before.toBytes(), manager = before.targetRuntime().companionRuntime().mercenaryService().manager().bytes();
+      int offset = indexOf(archive, manager); assertTrue(offset >= 0);
+      ByteBuffer.wrap(archive).putInt(offset + 16, 0); // valid zero RNG state, wrong file witness
+      try { D2gsCheckpointSnapshot.fromBytes(archive); fail("hireling manager witness tamper accepted"); }
+      catch (IllegalArgumentException expected) {}
+      byte[] nested = before.targetRuntime().companionRuntime().mercenaryService().bytes();
+      for (int n = 0; n < nested.length; n += 13) {
+        try { com.riiablo.engine.replay.MercenaryServiceCheckpoint.fromBytes(java.util.Arrays.copyOf(nested, n)); fail("truncated service accepted"); }
+        catch (IllegalArgumentException expected) {}
+      }
+    }
+  }
+
+  @Test public void hirelingServiceAndSharedAttributesRollBackAfterLateD2sFailure() throws Exception {
+    try (Fixture source = new Fixture(false, false, false, true, true, true);
+        Fixture target = new Fixture(false, false, false, true, true, true);
+        Fixture empty = new Fixture(false, false, false, true, true, true)) {
+      source.populate(); source.populateHirelingService(false); target.prepareMonsterMap(); empty.prepareMonsterMap();
+      D2gsCheckpointSnapshot image = source.server.captureReplayCheckpoint();
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      com.riiablo.engine.server.pet.MercenaryManager.ActiveMercenary active = target.rewards().checkpointManager().getPlayerMercenary(0);
+      target.rewards().checkpointManager().advanceRuntimeMillis(40);
+      CharData impostor = CharData.loadFromBuffer(0, ByteBuffer.wrap(image.d2sCheckpoint().entry(0).bytes())); impostor.name = "ImpostorHero";
+      D2SCheckpoint wrong = D2SCheckpoint.of(java.util.Collections.singletonMap(0,
+          D2SCheckpoint.entry(0, 0, new D2SWriter96().writeD2S(D2SWriter96.createD2S(impostor)))));
+      D2gsCheckpointSnapshot incoming = image.withD2sCheckpoint(wrong);
+      for (Fixture f : new Fixture[] {target, empty}) {
+        D2gsCheckpointSnapshot before = f.server.captureReplayCheckpoint();
+        try { f.server.restoreReplayCheckpoint(incoming); fail("late D2S failure must roll back hireling service"); }
+        catch (IllegalStateException expected) {}
+        assertEquals(before.summary().canonical(), f.server.captureReplayCheckpoint().summary().canonical());
+        assertEquals(before.d2sCheckpoint().canonical(), f.server.captureReplayCheckpoint().d2sCheckpoint().canonical());
+      }
+      assertSame(active, target.rewards().checkpointManager().getPlayerMercenary(0));
+      assertSame(target.data().getMerc().getStats(), target.server.world.getMapper(AttributesWrapper.class).get(active.entityId).attrs);
+      assertTrue(empty.rewards().checkpointManager().checkpointActiveMercenaries().isEmpty());
+    }
+  }
+
+  @Test public void hirelingServiceRejectsUncoveredItemsOwnersAndForeignCallbacksBeforeWriting() {
+    try (Fixture f = new Fixture(false, false, false, true, true, true)) {
+      f.populate();
+      com.riiablo.engine.replay.MercenaryServiceCheckpoint empty =
+          f.server.captureReplayCheckpoint().targetRuntime().companionRuntime().mercenaryService();
+      f.populateHirelingService(false);
+      com.riiablo.engine.replay.MercenaryServiceCheckpoint image =
+          f.server.captureReplayCheckpoint().targetRuntime().companionRuntime().mercenaryService();
+      byte[] before = com.riiablo.engine.server.pet.MercenaryManagerCheckpoint.capture(f.rewards().checkpointManager()).bytes();
+      com.riiablo.item.Item item = new com.riiablo.item.Item();
+      f.data().getMerc().getItems().getItems().add(item);
+      try {
+        for (com.riiablo.engine.replay.MercenaryServiceCheckpoint candidate :
+            new com.riiablo.engine.replay.MercenaryServiceCheckpoint[] {empty, image}) {
+          try { candidate.restore(f.server.world); fail("uncovered hireling Items overwritten"); }
+          catch (IllegalStateException expected) { assertTrue(expected.getMessage().contains("Item graph")); }
+        }
+        try { com.riiablo.engine.replay.MercenaryServiceCheckpoint.capture(f.server.world, new int[] {0, 1}); fail("Items captured"); }
+        catch (IllegalStateException expected) {}
+        assertSame(item, f.data().getMerc().getItems().getItems().first());
+        assertArrayEquals(before, com.riiablo.engine.server.pet.MercenaryManagerCheckpoint.capture(f.rewards().checkpointManager()).bytes());
+      } finally { f.data().getMerc().getItems().getItems().clear(); }
+      try { com.riiablo.engine.replay.MercenaryServiceCheckpoint.capture(f.server.world, new int[] {0}); fail("missing entity coverage"); }
+      catch (IllegalArgumentException expected) {}
+      f.rewards().checkpointManager().setCallback(null);
+      try {
+        try { image.restore(f.server.world); fail("foreign callback accepted"); }
+        catch (IllegalStateException expected) { assertTrue(expected.getMessage().contains("callback owner")); }
+        assertArrayEquals(before, com.riiablo.engine.server.pet.MercenaryManagerCheckpoint.capture(f.rewards().checkpointManager()).bytes());
+      } finally { f.rewards().checkpointManager().setCallback(f.rewards()); }
+    }
+  }
+
+  @Test public void legacyCompanionV3LeavesServiceUncoveredAndTopologyMismatchIsAtomic() {
+    try (Fixture f = new Fixture(false, false, false, true, true, true);
+        Fixture absent = new Fixture(false, false, false, true, true)) {
+      f.populate(); absent.populate();
+      com.riiablo.engine.replay.CompanionRuntimeCheckpoint current = f.server.captureReplayCheckpoint().targetRuntime().companionRuntime();
+      byte[] old = java.util.Arrays.copyOf(current.bytes(), current.bytes().length - 1 - 4 - current.mercenaryService().bytes().length);
+      ByteBuffer.wrap(old).putInt(3);
+      com.riiablo.engine.replay.CompanionRuntimeCheckpoint legacy = com.riiablo.engine.replay.CompanionRuntimeCheckpoint.fromBytes(old);
+      assertFalse(legacy.hasMercenaryServiceCoverage()); assertNull(legacy.mercenaryService());
+      f.rewards().checkpointManager().advanceRuntimeMillis(123);
+      byte[] before = com.riiablo.engine.server.pet.MercenaryManagerCheckpoint.capture(f.rewards().checkpointManager()).bytes();
+      legacy.restore(f.server.world);
+      assertArrayEquals(before, com.riiablo.engine.server.pet.MercenaryManagerCheckpoint.capture(f.rewards().checkpointManager()).bytes());
+      try { current.restore(absent.server.world); fail("missing hireling service accepted"); }
+      catch (IllegalStateException expected) { assertTrue(expected.getMessage().contains("service topology")); }
+      D2gsCheckpointSnapshot previous = f.server.captureReplayCheckpoint();
+      try { absent.server.captureReplayCheckpoint().targetRuntime().restore(f.server.world); fail("covered service absence accepted"); }
+      catch (IllegalStateException expected) {}
+      assertEquals(previous.summary().canonical(), f.server.captureReplayCheckpoint().summary().canonical());
+    }
+  }
+
   @Test public void combatHistoryAndRealActioneerResumeAcrossWorldAndJvmRestart() throws Exception {
     Path path = temporary.getRoot().toPath().resolve("combat-history.chk"); String expected;
     try (Fixture source = new Fixture(false, false, false, true, true)) {
@@ -929,7 +1106,7 @@ public class D2gsWorldCheckpointBindingsTest {
       // Last record is absent hostile 2; mutate the prior mercenary's soft target ID, preserving nested schema.
       byte[] nested = before.targetRuntime().companionRuntime().bytes();
       int nestedOffset = indexOf(archive, nested); assertTrue(nestedOffset >= 0);
-      int hirelingPrefixLength = nested.length - 2 - 4 - before.targetRuntime().companionRuntime().summonRuntime().bytes().length;
+      int hirelingPrefixLength = nested.length - 3 - 4 - before.targetRuntime().companionRuntime().summonRuntime().bytes().length;
       ByteBuffer.wrap(archive).putInt(nestedOffset + hirelingPrefixLength - 9, 0);
       try { D2gsCheckpointSnapshot.fromBytes(archive); fail("valid nested runtime tamper accepted"); }
       catch (IllegalArgumentException expected) {}
@@ -2215,7 +2392,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "combat-history".equals(args[3])
+      try { System.out.println(args.length > 3 && "hireling-service".equals(args[3])
+          ? resumeHirelingService(Path.of(args[0])) : args.length > 3 && "combat-history".equals(args[3])
           ? resumeCombatHistory(Path.of(args[0])) : args.length > 3 && "summons".equals(args[3])
           ? resumeSummons(Path.of(args[0])) : args.length > 3 && "companions".equals(args[3])
           ? resumeCompanions(Path.of(args[0])) : args.length > 3 && "navi".equals(args[3])
@@ -2261,6 +2439,10 @@ public class D2gsWorldCheckpointBindingsTest {
     }
 
     Fixture(boolean potions, boolean projectiles, boolean states, boolean companions, boolean history) {
+      this(potions, projectiles, states, companions, history, false);
+    }
+
+    Fixture(boolean potions, boolean projectiles, boolean states, boolean companions, boolean history, boolean service) {
       WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
           .with(new net.mostlyoriginal.api.event.common.EventSystem(), new ItemManager(),
               new ObjectInteractor(), new WarpInteractor(), new ItemInteractor(), factory,
@@ -2269,6 +2451,7 @@ public class D2gsWorldCheckpointBindingsTest {
       if (potions) builder.with(new PotionRecoverySystem());
       if (states) builder.with(new com.riiablo.engine.server.StateUpdater());
       if (projectiles) builder.with(new com.riiablo.engine.server.MissileCollisionSystem());
+      if (service) builder.with(new com.riiablo.engine.server.quest.NativeMercenaryRewardSystem());
       if (companions) builder.with(new com.riiablo.engine.server.Actioneer(),
           new com.riiablo.engine.server.MercenaryFollowSystem(), new com.riiablo.engine.server.MercenarySkillSystem(),
           new com.riiablo.engine.server.SummonedPetSystem(), new com.riiablo.engine.server.AssassinTrapSystem());
@@ -2280,6 +2463,7 @@ public class D2gsWorldCheckpointBindingsTest {
         configuration.register("combatPositionHistory", server.combatPositionHistory);
       }
       server.world = new World(configuration);
+      if (service) rewards().setDifficulty(0);
       if (history && companions) {
         // Controlled idle units: exercise the real combat history consumer, not unrelated action codecs.
         server.world.getSystem(com.riiablo.engine.server.MercenaryFollowSystem.class).setEnabled(false);
@@ -2332,6 +2516,28 @@ public class D2gsWorldCheckpointBindingsTest {
     }
 
     CharData data() { return server.world.getMapper(Player.class).get(0).data; }
+
+    com.riiablo.engine.server.quest.NativeMercenaryRewardSystem rewards() {
+      return server.world.getSystem(com.riiablo.engine.server.quest.NativeMercenaryRewardSystem.class);
+    }
+
+    void populateHirelingService(boolean dead) {
+      prepareMonsterMap();
+      data().getStats().base().put(Stat.level, 25); data().getStats().aggregate().put(Stat.level, 25);
+      data().getStats().base().put(Stat.gold, 100000); data().getStats().aggregate().put(Stat.gold, 100000);
+      assertTrue(rewards().hireAct1Rogue(0));
+      com.artemis.EntityAllocatorCheckpoint.flushStructure(server.world);
+      assertEquals(1, rewards().mercenaryEntityId(0));
+      rewards().hirelingOffers(0, 198);
+      if (dead) {
+        rewards().checkpointManager().onMercenaryDeath(0);
+        assertTrue(rewards().checkpointManager().discardDeadMercenaryEntity(0, 1));
+        server.world.delete(1); com.artemis.EntityAllocatorCheckpoint.flushStructure(server.world);
+        data().getMerc().getItems().restoreEquipmentRevision(37);
+        data().getMerc().getStats().remaining().put(Stat.dexterity, 9);
+      }
+      rewards().checkpointManager().advanceRuntimeMillis(599960);
+    }
 
     void populateHirelingRuntime() {
       World world = server.world;

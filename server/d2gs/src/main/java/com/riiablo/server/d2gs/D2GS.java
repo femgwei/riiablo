@@ -6405,6 +6405,7 @@ public class D2GS extends ApplicationAdapter {
           }
           if (worldD2s) worldReplayBindings.restorePlayerMetadata(checkpoint);
         }
+        checkpoint.restoreCompanionBindingsAfterD2s(world);
         checkpoint.restoreUnitStateRuntime(world);
         if (sessionSnapshot != null) {
           authoritativeSessions.restore(sessionSnapshot);
@@ -6436,12 +6437,7 @@ public class D2GS extends ApplicationAdapter {
             }
           }
           com.artemis.EntityAllocatorCheckpoint.flushStructure(world);
-          D2gsCheckpointSnapshot.RestoreResult ecsRollback = lifecycle == null
-              ? before.restoreExisting(world, serializer)
-              : before.restoreExisting(world, serializer, lifecycle);
-          if (!ecsRollback.success()) {
-            throw new IllegalStateException("ECS rollback failed: " + ecsRollback.failedEntities);
-          }
+          before.restoreTransactionRollback(world, serializer, lifecycle);
           if (replayRngRegistry != null) {
             if (worldCompatibility) replayRngRegistry = worldReplayBindings.prepareCompatibilityRestore();
             replayRngRegistry.restore(liveRngStates == null ? java.util.Collections.emptyList() : liveRngStates);
@@ -6461,6 +6457,7 @@ public class D2GS extends ApplicationAdapter {
             }
             if (worldD2s) worldReplayBindings.restorePlayerMetadata(before);
           }
+          before.restoreCompanionBindingsAfterD2s(world);
           before.restoreUnitStateRuntime(world);
           authoritativeSessions.restore(liveSessionSnapshot);
           pendingSessionRebindKeys.clear();

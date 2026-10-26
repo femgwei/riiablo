@@ -287,21 +287,47 @@ public class MercenaryManager {
   //==========================================================================
 
   /** 雇佣兵定义表（类型 -> 定义列表） */
-  private final IntMap<Array<MercenaryDefinition>> mercDefinitions = new IntMap<>();
+  final IntMap<Array<MercenaryDefinition>> mercDefinitions = new IntMap<>();
 
   /** NPC 雇佣兵列表（NPC ID -> 列表） */
-  private final IntMap<NpcMercenaryList> npcLists = new IntMap<>();
-  private final IntMap<IntMap<NpcMercenaryList>> playerLists = new IntMap<>();
+  final IntMap<NpcMercenaryList> npcLists = new IntMap<>();
+  final IntMap<IntMap<NpcMercenaryList>> playerLists = new IntMap<>();
 
   /** 玩家雇佣兵（玩家 ID -> 雇佣兵） */
-  private final IntMap<ActiveMercenary> playerMercs = new IntMap<>();
+  final IntMap<ActiveMercenary> playerMercs = new IntMap<>();
 
   /** 经验表 */
-  private final long[] expTable = new long[99];
+  final long[] expTable = new long[99];
 
   /** Optional native Hireling.txt table; the legacy table remains the safe fallback. */
-  private NativeHirelingExperienceTable nativeExperienceTable;
-  private int rosterDifficulty = -1;
+  NativeHirelingExperienceTable nativeExperienceTable;
+  int rosterDifficulty = -1;
+  long runtimeMillis;
+  com.riiablo.engine.server.NativeRng rosterRng;
+
+  /** Install once before offers or saved hirelings are loaded; standalone tools retain wall time. */
+  public void enableCheckpointRuntime(int gameSeed) {
+    if (rosterRng != null || playerMercs.size != 0 || npcLists.size != 0 || playerLists.size != 0) {
+      throw new IllegalStateException("hireling runtime already started");
+    }
+    rosterRng = com.riiablo.engine.server.NamedRngStreams.open(gameSeed, "hireling-roster", 0);
+    runtimeMillis = 0;
+  }
+  public void advanceRuntimeMillis(long elapsed) {
+    if (elapsed < 0 || runtimeMillis > Long.MAX_VALUE - elapsed) throw new IllegalArgumentException("hireling clock overflow");
+    runtimeMillis += elapsed;
+  }
+  private long now() { return rosterRng == null ? System.currentTimeMillis() : runtimeMillis; }
+  private double random() {
+    if (rosterRng != null && rosterRng.drawCount() == Long.MAX_VALUE) throw new IllegalStateException("hireling RNG exhausted");
+    return rosterRng == null ? Math.random() : rosterRng.nextInt() / 2147483648.0;
+  }
+  public MercenaryCallback checkpointCallback() { return callback; }
+  public java.util.Map<Integer, ActiveMercenary> checkpointActiveMercenaries() {
+    java.util.Map<Integer, ActiveMercenary> result = new java.util.TreeMap<>();
+    for (IntMap.Entry<ActiveMercenary> entry : playerMercs) result.put(entry.key, entry.value);
+    return java.util.Collections.unmodifiableMap(result);
+  }
 
   public void setRosterDifficulty(int difficulty) {
     if (rosterDifficulty == difficulty) return;
@@ -366,8 +392,8 @@ public class MercenaryManager {
     }
 
     // 检查是否需要刷新
-    long now = System.currentTimeMillis();
-    if (now - list.lastRefreshTime > REFRESH_INTERVAL) {
+    long now = now();
+    if (list.available.size == 0 && list.lastRefreshTime == 0 || now - list.lastRefreshTime > REFRESH_INTERVAL) {
       refreshMercenaryList(list, playerLevel);
     }
 
@@ -398,7 +424,7 @@ public class MercenaryManager {
       list.mercType = mercenaryTypeForNpc(npcId);
       lists.put(npcId, list);
     }
-    if (System.currentTimeMillis() - list.lastRefreshTime > REFRESH_INTERVAL) {
+    if (list.available.size == 0 && list.lastRefreshTime == 0 || now() - list.lastRefreshTime > REFRESH_INTERVAL) {
       refreshMercenaryList(list, level);
     }
     return list.available;
@@ -409,7 +435,7 @@ public class MercenaryManager {
     NpcMercenaryList list = lists == null ? null : lists.get(npcId);
     if (list == null || index < 0 || index >= list.available.size
         || list.available.get(index).seed != seed
-        || System.currentTimeMillis() - list.lastRefreshTime > REFRESH_INTERVAL) return false;
+        || now() - list.lastRefreshTime > REFRESH_INTERVAL) return false;
     return hireFromList(playerId, list, index, true);
   }
 
@@ -444,7 +470,7 @@ public class MercenaryManager {
     merc.level = available.level;
     merc.experience = getExpForLevel(available.definition.hirelingId(), available.level);
     merc.state = STATE_HIRED;
-    merc.hireTime = System.currentTimeMillis();
+    merc.hireTime = now();
 
     // 计算属性
     merc.maxLife = calculateMercLife(available.definition, available.level);
@@ -620,7 +646,7 @@ public class MercenaryManager {
     merc.level = safeLevel;
     merc.experience = Math.max(0L, Math.min(0xFFFFFFFFL, experience));
     merc.state = dead ? STATE_DEAD : STATE_HIRED;
-    merc.hireTime = System.currentTimeMillis();
+    merc.hireTime = now();
     merc.maxLife = calculateMercLife(definition, safeLevel);
     merc.currentLife = dead ? 0 : merc.maxLife;
     playerMercs.put(playerId, merc);
@@ -659,7 +685,7 @@ public class MercenaryManager {
     merc.level = available.level;
     merc.experience = getExpForLevel(available.definition.hirelingId(), available.level);
     merc.state = STATE_HIRED;
-    merc.hireTime = System.currentTimeMillis();
+    merc.hireTime = now();
     merc.maxLife = calculateMercLife(available.definition, available.level);
     merc.currentLife = merc.maxLife;
     return merc;
@@ -947,12 +973,12 @@ public class MercenaryManager {
         NativeHirelingExperienceTable.Row row = eligible.get(i % eligible.size);
         AvailableMercenary candidate = new AvailableMercenary();
         candidate.definition = nativeDefinition(row);
-        candidate.seed = 1 + (int) (Math.random() * (Integer.MAX_VALUE - 1));
+        candidate.seed = 1 + (int) (random() * (Integer.MAX_VALUE - 1));
         candidate.nameId = i;
-        candidate.level = Math.max(1, Math.min(playerLevel, row.level + (int) (Math.random() * 5)));
+        candidate.level = Math.max(1, Math.min(playerLevel, row.level + (int) (random() * 5)));
         list.available.add(candidate);
       }
-      list.lastRefreshTime = System.currentTimeMillis();
+      list.lastRefreshTime = now();
       return;
     }
 
@@ -962,14 +988,14 @@ public class MercenaryManager {
     }
 
     // 生成 3-6 个可用雇佣兵
-    int count = 3 + (int)(Math.random() * 4);
+    int count = 3 + (int)(random() * 4);
     for (int i = 0; i < count; i++) {
-      MercenaryDefinition def = defs.get((int)(Math.random() * defs.size));
+      MercenaryDefinition def = defs.get((int)(random() * defs.size));
 
       AvailableMercenary available = new AvailableMercenary();
       available.definition = def;
-      available.seed = 1 + (int) (Math.random() * (Integer.MAX_VALUE - 1));
-      available.nameId = def.nameId + (int)(Math.random() * 10);
+      available.seed = 1 + (int) (random() * (Integer.MAX_VALUE - 1));
+      available.nameId = def.nameId + (int)(random() * 10);
       available.hired = false;
       // MONSTERS_HirelingInit never creates a hireling above its owner: it
       // starts from the difficulty row and applies at most four level-ups.
@@ -977,13 +1003,13 @@ public class MercenaryManager {
       // upper bound so a newly hired mercenary can earn experience normally.
       int minimumLevel = Math.max(1, playerLevel - 5);
       int maximumLevel = Math.max(1, playerLevel - 1);
-      available.level = minimumLevel + (int) (Math.random()
+      available.level = minimumLevel + (int) (random()
           * (maximumLevel - minimumLevel + 1));
 
       list.available.add(available);
     }
 
-    list.lastRefreshTime = System.currentTimeMillis();
+    list.lastRefreshTime = now();
     log.debug("Refreshed mercenary list for NPC {}: {} mercs available", 
         list.npcId, list.available.size);
   }

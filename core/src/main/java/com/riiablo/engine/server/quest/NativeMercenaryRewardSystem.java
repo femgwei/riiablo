@@ -81,6 +81,7 @@ public class NativeMercenaryRewardSystem extends ContextualQuestSystem
     // interface returns null and used to overwrite the valid injection.
     EntityFactory systemFactory = world.getSystem(EntityFactory.class);
     if (systemFactory != null) factory = systemFactory;
+    mercenaries.enableCheckpointRuntime(gameSeed());
     mercenaries.setCallback(this);
     hirelingTable = com.riiablo.engine.server.NativeHirelingExperienceTable.load();
     mercenaries.setNativeExperienceTable(hirelingTable);
@@ -114,6 +115,18 @@ public class NativeMercenaryRewardSystem extends ContextualQuestSystem
 
   MercenaryManager mercenaries() {
     return mercenaries;
+  }
+
+  public MercenaryManager checkpointManager() { return mercenaries; }
+  public int checkpointDifficulty() { return difficultyOverride; }
+  public void restoreCheckpointDifficulty(int value) {
+    if (value < -1 || value > 2) throw new IllegalArgumentException("hireling service difficulty");
+    difficultyOverride = value; // Do not clear restored offers via setRosterDifficulty.
+  }
+
+  @Override protected void processSystem() {
+    long elapsed = Math.round(Math.max(0f, world.getDelta()) * 1000.0);
+    mercenaries.advanceRuntimeMillis(elapsed);
   }
 
   /** Hires the first available Act I Rogue through the same entity transaction as A1Q2. */
