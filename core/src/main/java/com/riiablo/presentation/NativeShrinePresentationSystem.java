@@ -39,7 +39,7 @@ public final class NativeShrinePresentationSystem extends IteratingSystem {
   protected Map map;
   protected OverlayManager overlays;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Override
   protected void process(int entityId) {

@@ -3844,8 +3844,8 @@ git diff --check
 协议字段。
 
 剩余问题：M8-A 的完整 Casting/Sequence/Leap、动态路径游标、地图/事务/未绑定 RNG，及
-M8-C 的 `ClientGameplayContext` 表现兼容构造仍待最终联合收口；M8-D 还需完成全量 handler
-唯一入口审计和旧 transport owner 删除。
+M8-C/M8-D 的最终双客户端 replay/save/reconnect、表现替换、全量旧 transport/直连 owner
+审计仍待联合收口。
 
 下一迁移：M8-A/M8-C/M8-D 最终 replay/save/reconnect 验收与全量旧入口审计。
 
@@ -3894,6 +3894,20 @@ M8-C 的 `ClientGameplayContext` 表现兼容构造仍待最终联合收口；M8
 - 剩余出口：D2GS checkpoint 仍需把 Casting/Sequence/Leap 和动态路径游标纳入同一恢复事务，
   并完成真实 D2S round-trip、跨 JVM 继续仿真及地图/事务 RNG 绑定校验；这些继续留在批次 B，
   不拆为新增批次。
+
+### 批次 C 实施记录（2026-10-26，进行中）
+
+- D2GS 删除了旧 absolute-coordinate `EntitySync` 的生产写入、校验和开关；该数据类型只保留
+  服务端快照方向，客户端移动统一经固定 tick `MovementIntent` ingress。Headless 合成夹具的
+  位置/移动输入已改为 `RunToLocation`，不再设置 legacy transport 属性。
+- 表现系统的 `clientContext` 改为由 Artemis host 显式注入，生产初始化不再从 `Riiablo` 全局
+  创建 `ClientGameplayContext`；静态测试/工具兼容入口仍集中在 `fromGlobals()`。
+- 验证：core/D2GS 编译、D2GS ingress/快照/checkpoint 定向测试、core 表现回归，以及真实
+  1.10f `headlessMovementIntent`、`headlessStaleTransport`、`headlessDelayedDeleteFrames`、
+  `headlessEntityIdReuse`、`headlessCrossAreaBaseline` 全部通过。
+- 剩余出口：完整双客户端 replay/save/reconnect 与客户端表现替换验收、旧 Netty/直连 owner
+  的最终静态清单，以及批次 B 的完整 Casting/Sequence/Leap、动态路径、D2S/跨 JVM 和地图/事务
+  RNG checkpoint；这些仍留在冻结批次 B/C 内，不拆为新增批次。
 
 ### M0 完成记录（2026-10-21）
 

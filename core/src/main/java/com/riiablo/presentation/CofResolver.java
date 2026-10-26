@@ -33,7 +33,7 @@ public class CofResolver extends PassiveSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
 
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   protected void inserted(int entityId) {
     // Block reactions are short-lived.  Queue the player's BL COF when the

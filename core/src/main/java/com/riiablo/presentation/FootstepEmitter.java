@@ -38,7 +38,7 @@ public class FootstepEmitter extends BaseEntitySystem {
 
   protected Map map;
   @com.artemis.annotations.Wire(name = "clientContext")
-  protected ClientPresentationServices clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientPresentationServices clientContext ;
 
   private int previousFrame = -1;
   private byte previousMode = -1;

@@ -46,7 +46,7 @@ public class SkillCastHandler extends PassiveSystem {
   protected EntityFactory factory;
 
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   private void playSound(String sound) {
     if (sound != null && !sound.isEmpty() && clientContext.audio() != null) {

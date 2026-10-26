@@ -24,7 +24,7 @@ public class OverlayManager extends IteratingSystem {
   static final int SHRINE_ICON_STATE = Integer.MIN_VALUE + 0x5249;
   protected ComponentMapper<com.riiablo.presentation.component.Overlay> mOverlay;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
   private AssetManager assets;
   private final IntMap<Array<OwnedOverlay>> owned = new IntMap<>();
   private boolean disposed;

@@ -92,7 +92,7 @@ public final class WeatherRenderSystem extends BaseSystem {
   protected ShapeRenderer shapes;
 
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   private final Matrix4 projection = new Matrix4();
   private final Vector2 renderPosition = new Vector2();

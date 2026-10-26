@@ -36,7 +36,7 @@ public class ZoneEntryDisplayer extends BaseSystem {
   private AssetReferenceScope references;
   private boolean disposed;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Subscribe
   public void onZoneChanged(ZoneChangeEvent event) {

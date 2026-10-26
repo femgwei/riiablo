@@ -53,7 +53,7 @@ public class CofLayerCacher extends IteratingSystem {
   protected ComponentMapper<CofReference> mCofReference;
 
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   protected CofManager cofs;
 

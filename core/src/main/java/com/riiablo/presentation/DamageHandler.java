@@ -26,7 +26,7 @@ public class DamageHandler extends PassiveSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Class> mClass;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Subscribe
   public void onDamageEvent(DamageAppliedEvent event) {

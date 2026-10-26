@@ -25,7 +25,7 @@ public class CofLoader extends IteratingSystem {
   protected ComponentMapper<CofWrapper> mCofWrapper;
   protected ComponentMapper<CofDescriptor> mCofDescriptor;
   @com.artemis.annotations.Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Override
   protected void process(int entityId) {

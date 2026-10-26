@@ -22,7 +22,7 @@ public class ElementalHitPresentationSystem extends PassiveSystem {
   protected ComponentMapper<Position> mPosition;
   protected OverlayManager overlays;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Subscribe
   public void onDamage(DamageAppliedEvent event) {

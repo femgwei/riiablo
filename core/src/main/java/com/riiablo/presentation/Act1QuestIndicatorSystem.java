@@ -52,7 +52,7 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
 
   private final Array<MarkerPosition> markers = new Array<>();
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
   private Label marker;
   private static final AssetDescriptor<DCC> QUEST_MARKER_DESCRIPTOR =
       new AssetDescriptor<>("data\\global\\overlays\\NPCSpeechBalloon.dcc", DCC.class);

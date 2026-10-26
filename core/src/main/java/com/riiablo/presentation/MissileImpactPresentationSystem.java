@@ -41,7 +41,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   @com.artemis.annotations.Wire(failOnNull = false)
   protected OverlayManager overlays;
   @com.artemis.annotations.Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   private final Vector2 direction = new Vector2(1f, 0f);
 

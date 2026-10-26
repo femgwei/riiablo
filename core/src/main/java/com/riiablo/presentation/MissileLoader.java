@@ -27,7 +27,7 @@ public class MissileLoader extends IteratingSystem {
   protected ComponentMapper<Angle> mAngle;
 
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Override
   protected void process(int entityId) {

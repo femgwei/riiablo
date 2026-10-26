@@ -20,7 +20,7 @@ public class CofUnloader extends BaseEntitySystem {
 
   protected ComponentMapper<CofDescriptor> mCofDescriptor;
   @com.artemis.annotations.Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Override
   protected void processSystem() {}

@@ -77,7 +77,7 @@ public class AutomapRenderer extends BaseSystem {
   private final com.badlogic.gdx.math.Vector2 markerPlayer = new com.badlogic.gdx.math.Vector2();
 
   @com.artemis.annotations.Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Wire(name = "iso")
   protected IsometricCamera iso;

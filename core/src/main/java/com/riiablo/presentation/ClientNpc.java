@@ -32,7 +32,7 @@ import com.riiablo.widget.NpcMenu;
 public final class ClientNpc extends Npc {
   private static final Logger log = LogManager.getLogger(ClientNpc.class);
   @com.artemis.annotations.Wire(name = "clientContext", failOnNull = false)
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
   private NpcMenu menu;
   private MenuManager menuManager;
   private DialogManager dialogManager;

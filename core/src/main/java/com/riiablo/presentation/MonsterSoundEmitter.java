@@ -42,7 +42,7 @@ public class MonsterSoundEmitter extends IteratingSystem {
   protected ComponentMapper<SummonedPet> mSummonedPet;
 
   @Wire(name = "clientContext")
-  protected ClientMonsterAudioServices clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientMonsterAudioServices clientContext ;
 
   private final IntMap<State> states = new IntMap<>();
 

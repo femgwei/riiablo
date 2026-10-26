@@ -64,7 +64,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
   protected OverlayManager overlayManager;
 
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Override
   public int createPlayer(CharData charData, Vector2 position) {

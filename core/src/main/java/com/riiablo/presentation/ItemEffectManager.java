@@ -17,7 +17,7 @@ public class ItemEffectManager extends BaseEntitySystem {
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
   private final IntMap<Animation.AnimationListener> dropSoundListeners = new IntMap<>();
 
   @Override

@@ -40,7 +40,7 @@ public class StateOverlaySystem extends IteratingSystem {
   @Wire protected OverlayManager overlays;
   @Wire protected CofManager cofs;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   private final IntSet missingOverlayLogged = new IntSet();
   private final IntSet venomTransformActive = new IntSet();

@@ -152,7 +152,6 @@ import com.riiablo.net.packet.d2gs.SpendStatPointRequest;
 import com.riiablo.net.packet.d2gs.SpendStatPointResult;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.Disconnect;
-import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.RunToEntity;
 import com.riiablo.net.packet.d2gs.RunToLocation;
@@ -162,8 +161,6 @@ import com.riiablo.net.packet.d2gs.GoldRequest;
 import com.riiablo.net.packet.d2gs.GoldResult;
 import com.riiablo.net.packet.d2gs.GoldOperation;
 import com.riiablo.net.packet.d2gs.Ping;
-import com.riiablo.net.packet.d2gs.PositionP;
-import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.NpcServiceRequest;
 import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.NpcServiceStock;
@@ -189,8 +186,6 @@ import com.riiablo.net.packet.d2gs.SnapshotResyncRequest;
 import com.riiablo.net.packet.d2gs.SnapshotBaseline;
 import com.riiablo.net.packet.d2gs.SnapshotBaselinePhase;
 import com.riiablo.net.SizePrefixedPacketAccumulator;
-import com.riiablo.net.AuthoritativeMovementValidator;
-import com.riiablo.net.MovementInputSequenceTracker;
 import com.riiablo.net.MovementIntent;
 import com.riiablo.net.MovementIntentScheduler;
 import com.riiablo.save.CharData;
@@ -5944,10 +5939,6 @@ public class D2GS extends ApplicationAdapter {
 
   private static final int PORT = 6114;
   private static final int MAX_CLIENTS = Riiablo.MAX_PLAYERS;
-  /** Explicit test-only bridge for older smoke scenarios that place actors directly. */
-  private static final boolean ALLOW_LEGACY_ENTITY_SYNC =
-      Boolean.getBoolean("riiablo.d2gs.allowLegacyEntitySync");
-
   public static void main(String[] args) {
     Options options = new Options()
         .addOption("home", true, "directory containing D2 MPQ files")
@@ -6042,8 +6033,6 @@ public class D2GS extends ApplicationAdapter {
   final java.util.Map<String, short[]> disconnectedQuestRecords =
       new java.util.concurrent.ConcurrentHashMap<>();
   final long[] nextMovementLogTime = new long[MAX_CLIENTS];
-  final MovementInputSequenceTracker[] movementInputs =
-      new MovementInputSequenceTracker[MAX_CLIENTS];
   final MovementIntentScheduler[] movementIntents =
       new MovementIntentScheduler[MAX_CLIENTS];
   /** Rate limit for diagnostic queue samples; movement semantics remain unchanged. */
@@ -6172,8 +6161,7 @@ public class D2GS extends ApplicationAdapter {
     this.home = home;
     this.seed = seed;
     this.diff = diff;
-    for (int i = 0; i < movementInputs.length; i++) {
-      movementInputs[i] = new MovementInputSequenceTracker();
+    for (int i = 0; i < movementIntents.length; i++) {
       movementIntents[i] = new MovementIntentScheduler();
       combatIntents[i] = new CombatIntentScheduler();
     }
@@ -6938,7 +6926,6 @@ public class D2GS extends ApplicationAdapter {
         + " questRevision=" + loadedQuestRevision
         + " inventoryRevision=" + authoritativeItems.revision(entityId)
         + " waypointActs=" + Riiablo.NUM_ACTS);
-    movementInputs[packet.id].reset();
     movementIntents[packet.id].reset();
     nextMovementQueueLogTime[packet.id] = 0L;
     lastAppliedMovementIntent[packet.id] = 0L;
@@ -7252,7 +7239,6 @@ public class D2GS extends ApplicationAdapter {
       numClients--;
       connected &= ~(1 << id);
     }
-    movementInputs[id].reset();
     movementIntents[id].reset();
     nextMovementQueueLogTime[id] = 0L;
     combatIntents[id].reset();
@@ -7578,9 +7564,12 @@ public class D2GS extends ApplicationAdapter {
     outPackets.offer(response);
   }
 
+  /**
+   * Absolute-coordinate EntitySync is a server snapshot format, never a client
+   * movement command. Clients must use the fixed-tick MovementIntent ingress.
+   */
   private void Synchronize(Packet packet) {
     int entityId = player.get(packet.id, Engine.INVALID_ENTITY);
-    assert entityId != Engine.INVALID_ENTITY;
     EntitySync movement = (EntitySync) packet.data.data(new EntitySync());
     if (movement.entityId() != entityId) {
       Gdx.app.error(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
@@ -7588,117 +7577,13 @@ public class D2GS extends ApplicationAdapter {
           + " reason=ownership");
       return;
     }
-    if (!ALLOW_LEGACY_ENTITY_SYNC) {
-      if (movement.inputSequence() > 0L) {
-        sync.acknowledgeMovement(entityId, movement.inputSequence(), true);
-      }
-      Gdx.app.log(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
-          + " player=" + entityId + " sequence=" + movement.inputSequence()
-          + " reason=legacy_absolute_protocol_disabled");
-      return;
+    if (movement.inputSequence() > 0L) {
+      sync.acknowledgeMovement(entityId, movement.inputSequence(), true);
     }
-    if (isPlayerDead(entityId)) {
-      Gdx.app.log(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
-          + " player=" + entityId + " reason=player_dead");
-      return;
-    }
-
-    long inputSequence = movement.inputSequence();
-    long sequenceAdvance = movementInputs[packet.id].accept(inputSequence);
-    if (sequenceAdvance < 0L) {
-      Gdx.app.log(TAG, "[NET_MOVE] phase=stale_drop connection=" + packet.id
-          + " player=" + entityId + " sequence=" + inputSequence
-          + " processed=" + movementInputs[packet.id].lastProcessed());
-      return;
-    }
-
-    boolean rejected = false;
-    AuthoritativeMovementValidator.Result validation =
-        AuthoritativeMovementValidator.Result.ACCEPTED;
-    if (inputSequence != 0L) {
-      PositionP requestedPosition = findPosition(movement);
-      VelocityP requestedVelocity = findVelocity(movement);
-      Position authoritativePosition = world.getMapper(Position.class).get(entityId);
-      Velocity authoritativeVelocity = world.getMapper(Velocity.class).get(entityId);
-      Size size = world.getMapper(Size.class).get(entityId);
-      float maximumSpeed = authoritativeVelocity == null ? 0f : Math.max(
-          authoritativeVelocity.speed(false), authoritativeVelocity.speed(true));
-      int collisionSize = size == null ? Size.INSIGNIFICANT : size.size;
-      if (requestedPosition == null || requestedVelocity == null
-          || authoritativePosition == null || authoritativeVelocity == null) {
-        validation = AuthoritativeMovementValidator.Result.INVALID_NUMBER;
-      } else {
-        final Vector2 from = authoritativePosition.position;
-        final Ray<Vector2> movementRay = new Ray<>(new Vector2(), new Vector2());
-        final Collision<Vector2> movementCollision =
-            new Collision<>(new Vector2(), new Vector2());
-        validation = AuthoritativeMovementValidator.validate(
-            from.x, from.y, requestedPosition.x(), requestedPosition.y(),
-            requestedVelocity.x(), requestedVelocity.y(), maximumSpeed,
-            sequenceAdvance,
-            (fromX, fromY, toX, toY) -> {
-              if (map == null || map.getZone(fromX, fromY) == null
-                  || map.getZone(toX, toY) == null) return true;
-              movementRay.start.set(fromX, fromY);
-              movementRay.end.set(toX, toY);
-              return map.castRay(movementRay, DT1.Tile.FLAG_BLOCK_WALK,
-                  collisionSize, movementCollision);
-            });
-      }
-      rejected = validation != AuthoritativeMovementValidator.Result.ACCEPTED;
-      sync.acknowledgeMovement(entityId, inputSequence, rejected);
-    }
-
-    if (rejected) {
-      Velocity velocity = world.getMapper(Velocity.class).get(entityId);
-      if (velocity != null) velocity.velocity.setZero();
-      Gdx.app.log(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
-          + " player=" + entityId + " sequence=" + inputSequence
-          + " reason=" + validation.name().toLowerCase());
-      return;
-    }
-
-    sync.sync(entityId, packet.data);
-    long now = TimeUtils.millis();
-    if (now >= nextMovementLogTime[packet.id]) {
-      nextMovementLogTime[packet.id] = now + 1000L;
-      com.riiablo.engine.server.component.Position position = world.getMapper(
-          com.riiablo.engine.server.component.Position.class).get(entityId);
-      com.riiablo.engine.server.component.Velocity velocity = world.getMapper(
-          com.riiablo.engine.server.component.Velocity.class).get(entityId);
-      com.riiablo.engine.server.component.CofReference cof = world.getMapper(
-          com.riiablo.engine.server.component.CofReference.class).get(entityId);
-      Gdx.app.log(TAG, String.format(
-          "[NET_MOVE] phase=server_receive connection=%d player=%d pos=(%.2f,%.2f) "
-              + "velocity=(%.2f,%.2f) mode=%d",
-          packet.id, entityId,
-          position != null ? position.position.x : Float.NaN,
-          position != null ? position.position.y : Float.NaN,
-          velocity != null ? velocity.velocity.x : Float.NaN,
-          velocity != null ? velocity.velocity.y : Float.NaN,
-          cof != null ? cof.mode & 0xFF : -1)
-          + " sequence=" + inputSequence);
-    }
+    Gdx.app.log(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
+        + " player=" + entityId + " sequence=" + movement.inputSequence()
+        + " reason=absolute_entity_sync_removed_use_movement_intent");
   }
-
-  private static PositionP findPosition(EntitySync sync) {
-    for (int i = 0; i < sync.componentLength(); i++) {
-      if (sync.componentType(i) == ComponentP.PositionP) {
-        return (PositionP) sync.component(new PositionP(), i);
-      }
-    }
-    return null;
-  }
-
-  private static VelocityP findVelocity(EntitySync sync) {
-    for (int i = 0; i < sync.componentLength(); i++) {
-      if (sync.componentType(i) == ComponentP.VelocityP) {
-        return (VelocityP) sync.component(new VelocityP(), i);
-      }
-    }
-    return null;
-  }
-
   /** Handles untrusted combat input; all damage and projectile creation stays on the server. */
   private void CastSkillRequest(Packet packet) {
     int entityId = getPlayerEntityId(packet);

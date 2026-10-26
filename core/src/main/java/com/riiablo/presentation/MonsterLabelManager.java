@@ -45,7 +45,7 @@ public class MonsterLabelManager extends BaseEntitySystem {
   @Wire(name = "batch")
   protected PaletteIndexedBatch batch;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   private final Vector2 tmpVec2 = new Vector2();
   private MonsterLabel monsterLabel;

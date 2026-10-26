@@ -16,7 +16,7 @@ public class ObjectBreakSoundEmitter extends BaseEntitySystem {
   private final IntSet present = new IntSet();
 
   @com.artemis.annotations.Wire(name = "clientContext")
-  protected ClientPresentationServices clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientPresentationServices clientContext ;
 
   @Override protected void inserted(int entityId) { present.add(entityId); }
   @Override protected void removed(int entityId) { present.remove(entityId); }

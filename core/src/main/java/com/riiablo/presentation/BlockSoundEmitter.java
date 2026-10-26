@@ -19,7 +19,7 @@ public class BlockSoundEmitter extends PassiveSystem {
   protected ComponentMapper<Class> mClass;
 
   @Wire(name = "clientContext")
-  protected ClientPresentationServices clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientPresentationServices clientContext ;
 
   @Subscribe
   public void onModeChanged(ModeChangeEvent event) {

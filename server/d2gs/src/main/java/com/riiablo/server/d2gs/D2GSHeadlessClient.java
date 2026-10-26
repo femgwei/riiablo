@@ -80,6 +80,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -95,6 +96,7 @@ import io.netty.buffer.Unpooled;
  * systems directly.</p>
  */
 public final class D2GSHeadlessClient {
+  private static final AtomicLong HEADLESS_MOVEMENT_SEQUENCE = new AtomicLong();
   private static final String TAG = "[HEADLESS_COMBAT]";
   private static final int DEFAULT_PORT = 6114;
   private static final int MAX_PACKET_SIZE = 1 << 20;
@@ -239,12 +241,6 @@ public final class D2GSHeadlessClient {
         // Keep the default headless run readable: stage results and warnings
         // remain visible, while DRLG and recipient-cache traces stay opt-in.
         System.setProperty("riiablo.d2gs.quiet", "true");
-      }
-      // A few older combat fixtures deliberately place actors next to a
-      // deterministic target. Production D2GS leaves this bridge disabled.
-      if (!config.requireSnapshotOrder && !config.requireSnapshotResync
-          && !config.requireSimulationTick && !config.requireMovementIntent && !config.mapTour) {
-        System.setProperty("riiablo.d2gs.allowLegacyEntitySync", "true");
       }
       log("server_start", "home=" + config.home + " seed=" + config.seed);
       D2GS.main(new String[] {
@@ -12704,17 +12700,7 @@ public final class D2GSHeadlessClient {
   }
 
   private static ByteBuffer positionPacket(int playerId, float x, float y) {
-    FlatBufferBuilder builder = new FlatBufferBuilder(128);
-    int position = PositionP.createPositionP(builder, x, y);
-    int types = EntitySync.createComponentTypeVector(builder,
-        new byte[] {ComponentP.PositionP});
-    int components = EntitySync.createComponentVector(builder, new int[] {position});
-    int sync = EntitySync.createEntitySync(builder, playerId, 2, 0, types, components,
-        0L, 0L, 0L, 0L, 0L, -1);
-    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
-        builder, D2GSData.EntitySync, sync);
-    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
-    return builder.dataBuffer();
+    return movementIntentPacket(x, y, HEADLESS_MOVEMENT_SEQUENCE.incrementAndGet(), 0L, 0L);
   }
 
   private static ByteBuffer movementPacket(
@@ -12725,20 +12711,11 @@ public final class D2GSHeadlessClient {
   private static ByteBuffer movementPacket(
       int playerId, float x, float y, float velocityX, float velocityY,
       long inputSequence) {
-    FlatBufferBuilder builder = new FlatBufferBuilder(192);
-    int position = PositionP.createPositionP(builder, x, y);
-    int velocity = VelocityP.createVelocityP(builder, velocityX, velocityY);
-    int angle = AngleP.createAngleP(builder, velocityX, velocityY);
-    int types = EntitySync.createComponentTypeVector(builder, new byte[] {
-        ComponentP.PositionP, ComponentP.VelocityP, ComponentP.AngleP});
-    int components = EntitySync.createComponentVector(
-        builder, new int[] {position, velocity, angle});
-    int sync = EntitySync.createEntitySync(builder, playerId, 2, 0, types, components,
-        0L, 0L, inputSequence, 0L, 0L, -1);
-    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
-        builder, D2GSData.EntitySync, sync);
-    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
-    return builder.dataBuffer();
+    long sequence = inputSequence > 0L
+        ? inputSequence : HEADLESS_MOVEMENT_SEQUENCE.incrementAndGet();
+    float targetX = x + velocityX * 8f;
+    float targetY = y + velocityY * 8f;
+    return movementIntentPacket(targetX, targetY, sequence, 0L, 0L);
   }
 
   private static ByteBuffer movementIntentPacket(

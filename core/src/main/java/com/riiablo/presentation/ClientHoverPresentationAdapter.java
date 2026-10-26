@@ -23,7 +23,7 @@ public final class ClientHoverPresentationAdapter extends BaseSystem
   protected ComponentMapper<Item> mItem;
 
   @Wire(name = "clientContext", failOnNull = false)
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Override public ClientHoverBounds bounds(int entityId) {
     if (!mBBoxWrapper.has(entityId) || mBBoxWrapper.get(entityId).box == null) return null;

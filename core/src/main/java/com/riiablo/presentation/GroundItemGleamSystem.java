@@ -42,7 +42,7 @@ public final class GroundItemGleamSystem extends BaseEntitySystem {
   @com.artemis.annotations.Wire(name = "batch")
   protected PaletteIndexedBatch batch;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   private final IntMap<GleamState> states = new IntMap<>();
   private final Vector2 screen = new Vector2();

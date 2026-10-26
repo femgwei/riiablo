@@ -28,7 +28,7 @@ public class ItemLoader extends IteratingSystem {
   protected ComponentMapper<Selectable> mSelectable;
 
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   private final BBox MIN_BBOX = new BBox() {{
     xMin = -DT1.Tile.SUBTILE_WIDTH50;

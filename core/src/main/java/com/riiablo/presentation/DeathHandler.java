@@ -96,7 +96,7 @@ public class DeathHandler extends PassiveSystem
   @Wire(name = "map")
   protected Map map;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
   
   @Subscribe
   public void onDeathEvent(DeathEvent event) {

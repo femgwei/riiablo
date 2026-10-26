@@ -52,7 +52,7 @@ public class CofLayerLoader extends IteratingSystem {
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
   @com.artemis.annotations.Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   @Override
   protected void process(int entityId) {

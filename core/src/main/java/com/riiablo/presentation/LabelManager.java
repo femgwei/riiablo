@@ -46,7 +46,7 @@ public class LabelManager extends IteratingSystem {
   @Wire(name = "iso")
   protected IsometricCamera iso;
   @Wire(name = "clientContext")
-  protected ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
+  protected ClientGameplayContext clientContext ;
 
   private final Vector2 tmpVec2 = new Vector2();
   private final Array<Actor> labels = new Array<>();
