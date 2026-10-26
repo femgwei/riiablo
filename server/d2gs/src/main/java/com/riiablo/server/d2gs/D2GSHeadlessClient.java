@@ -6444,6 +6444,11 @@ public final class D2GSHeadlessClient {
       }
     }
 
+    // Socket close only wakes the client thread; the authoritative disconnect
+    // is posted back to the D2GS thread. Wait for that handoff before opening
+    // the replacement socket so delete→rebind ordering is deterministic.
+    first.awaitEntityInactive(first.playerId, first.deadline());
+
     D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
     try (Socket socket = reconnected.openSocket();
          DataInputStream input = input(socket);

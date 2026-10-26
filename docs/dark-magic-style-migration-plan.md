@@ -3730,7 +3730,7 @@ replay、完整网络事件统一出口和回放校验仍属于 M8，不能在 M
 
 ### M8-A 第 48 批：佣兵/召唤物装备树生命周期与 socket checkpoint 验收（2026-10-26）
 
-完成日期：2026-10-26；代码提交：待本批提交后回填。
+完成日期：2026-10-26；代码提交：`c682e5223`。
 
 - 统一主动解雇佣兵与登出卸载的所有权语义：主动解雇会清除 `MercData` 的完整装备树、socket
   子树、属性镜像和身份字段；登出卸载仍只删除运行时实体并保留 D2S `MercData`，避免 socket
@@ -3790,6 +3790,35 @@ git diff --check
 M8-D 最终网络事件统一出口仍待后续批次。
 
 下一迁移：M8-A/M8-D 联合收尾验收，覆盖真实双 socket transport 与最终旧入口清理。
+
+### M8-A/M8-D 第 50 批：真实 socket 接管与跨区域删除门禁（2026-10-26）
+
+完成日期：2026-10-26；代码提交：待本批提交后回填。
+
+- 将真实 1.10f headless transport 验收合并为同一批：旧 socket 延迟帧、连接槽复用、
+  generation-aware resync、延迟删除、实体 ID 复用，以及跨区域 tombstone 与重连 baseline。
+- 修正跨区域 reconnect 夹具的生命周期竞态：关闭 socket 后等待 D2GS 应用线程完成权威实体
+  删除，再建立替代连接，确保测试验证的是生产 delete→rebind 顺序，而不是依赖线程调度窗口。
+- 保持 transport token、generation 和实体 incarnation 三重门禁；旧区域 tombstone 不得污染
+  新区域复用的实体 ID，替代连接必须收到完整 baseline 并继续执行 resync。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+.\\gradlew.bat :server:d2gs:headlessStaleTransport :server:d2gs:headlessDelayedDeleteFrames :server:d2gs:headlessEntityIdReuse :server:d2gs:headlessCrossAreaBaseline --no-daemon --max-workers=1 --console=plain
+.\\gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsCheckpointRecoveryTest --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：真实 1.10f 四项 socket/lifecycle headless gate 全部通过；跨区域 gate 覆盖 source
+level→destination level 的实体 ID 复用、incarnation 递增、旧 tombstone 丢弃和重连 baseline。
+checkpoint recovery 与 World bindings 回归通过；本批不改变 FlatBuffer/D2S 字段或 D2 行为公式。
+
+剩余问题：M8-A 仍有完整 Casting/Sequence/Leap、动态路径游标、地图/事务/未绑定 RNG 的
+完整恢复范围；M8-C 表现依赖和 M8-D 最终旧 handler/transport owner 清理仍待联合收尾。
+
+下一迁移：M8-A/M8-C/M8-D 最终联合收口，完成全量 replay/save/reconnect 与旧直连入口审计。
 
 ### M0 完成记录（2026-10-21）
 
