@@ -3479,7 +3479,7 @@ Blood Moor Fallen/Shaman 测试房间不可用，后者等待死亡佣兵登录�
 
 ### M8-A 第 45 批：Iron Golem sourceItem 运行态树与所有权恢复（2026-10-26）
 
-完成日期：2026-10-26；本批代码待提交。
+完成日期：2026-10-26；代码提交：`a6a42e73f`。
 
 本批将 `SummonRuntimeCheckpoint` 升至 v2，集中完成已实现 Iron Golem `sourceItem` 的恢复依赖：
 
