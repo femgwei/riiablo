@@ -56,8 +56,22 @@ public final class SimulationTickCoordinator {
     Objects.requireNonNull(commandHandler, "commandHandler");
     Objects.requireNonNull(simulation, "simulation");
     Objects.requireNonNull(eventHandler, "eventHandler");
+    advance(() -> {}, simulation, () -> events.drain(tick + 1L, eventHandler), commandHandler);
+  }
+
+  /** Runs host input/output hooks around the fixed command/simulation phases. */
+  public void advance(Runnable commandPhase, TickStep simulation, Runnable eventPhase) {
+    advance(commandPhase, simulation, eventPhase, command -> {});
+  }
+
+  private void advance(Runnable commandPhase, TickStep simulation, Runnable eventPhase,
+      Consumer<SimulationCommandEnvelope> commandHandler) {
+    Objects.requireNonNull(commandPhase, "commandPhase");
+    Objects.requireNonNull(eventPhase, "eventPhase");
+    Objects.requireNonNull(commandHandler, "commandHandler");
     long next = tick + 1L;
     phase = Phase.COMMANDS;
+    commandPhase.run();
     commands.drain(next, command -> {
       replayRecorder.recordCommand(command);
       commandHandler.accept(command);
@@ -65,7 +79,7 @@ public final class SimulationTickCoordinator {
     phase = Phase.SIMULATION;
     simulation.run(next);
     phase = Phase.EVENTS;
-    events.drain(next, eventHandler);
+    eventPhase.run();
     phase = Phase.STRUCTURAL_COMMIT;
     structuralChanges.flush();
     tick = next;
@@ -75,5 +89,13 @@ public final class SimulationTickCoordinator {
   public void clear() {
     commands.clear(); events.clear(); structuralChanges.clear();
     tick = 0L; phase = Phase.IDLE;
+  }
+
+  /** Restores the coordinator clock after an authoritative checkpoint apply. */
+  public void restore(long checkpointTick) {
+    if (checkpointTick < 0L) throw new IllegalArgumentException("checkpointTick");
+    commands.clear(); events.clear(); structuralChanges.clear();
+    tick = checkpointTick;
+    phase = Phase.IDLE;
   }
 }

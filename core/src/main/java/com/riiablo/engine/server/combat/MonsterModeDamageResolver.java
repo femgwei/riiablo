@@ -6,6 +6,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.MonsterStatsCalculator;
+import com.riiablo.engine.server.NamedRngStreams;
 
 /** Resolves the native MonStats attack and elemental profile for one monster mode. */
 public final class MonsterModeDamageResolver {
@@ -43,7 +44,9 @@ public final class MonsterModeDamageResolver {
   /** Resolves a mode profile with the game-wide LoD multiplayer combat rules. */
   public static Profile resolve(MonStats.Entry monster, int level, int difficulty, int mode,
       int playerCount, boolean expansion) {
-    return resolve(Riiablo.files, bound -> MathUtils.random(bound - 1), monster,
+    int contextId = monster == null ? 0 : monster.hcIdx;
+    return resolve(Riiablo.files, NamedRngStreams
+        .open(Riiablo.gameSeed, "monster.mode-elements", contextId)::nextInt, monster,
         level, difficulty, mode, playerCount, expansion);
   }
 

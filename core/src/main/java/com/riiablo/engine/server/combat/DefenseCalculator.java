@@ -1,12 +1,11 @@
 package com.riiablo.engine.server.combat;
 
-import com.badlogic.gdx.math.MathUtils;
-
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.engine.server.NamedRngStreams;
 
 /**
  * 防御计算器 - 基于 D2MOD SUnitDmg.cpp 移植
@@ -32,7 +31,7 @@ public class DefenseCalculator {
 
   /** Compatibility entry point for callers without an explicit RNG. */
   public DefenseCalculator() {
-    this(bound -> MathUtils.random(bound - 1));
+    this(NamedRngStreams.open(0, "defense.compatibility", 0L)::nextInt);
   }
 
   public DefenseCalculator(java.util.function.IntUnaryOperator random) {

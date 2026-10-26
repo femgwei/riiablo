@@ -1,12 +1,14 @@
 package com.riiablo.engine.server.combat;
 
-import com.badlogic.gdx.math.MathUtils;
+import java.util.Objects;
+import java.util.function.IntUnaryOperator;
 
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.engine.server.NamedRngStreams;
 
 /**
  * 伤害计算器 - 基于 D2MOD SUnitDmg.cpp 移植
@@ -27,9 +29,17 @@ import com.riiablo.logger.Logger;
  */
 public class DamageCalculator {
   private static final Logger log = LogManager.getLogger(DamageCalculator.class);
+  private final IntUnaryOperator random;
 
+  /** Compatibility constructor backed by a named deterministic stream. */
+  public DamageCalculator() {
+    this(NamedRngStreams.open(0, "damage.compatibility", 0L)::nextInt);
+  }
 
-  public DamageCalculator() {}
+  /** Binds the calculator to the authoritative world/attack RNG stream. */
+  public DamageCalculator(IntUnaryOperator random) {
+    this.random = Objects.requireNonNull(random, "random");
+  }
 
   //==========================================================================
   // 伤害结果标志位 (D2MOD: D2DamageResultFlags)
@@ -149,7 +159,7 @@ public class DamageCalculator {
    */
   public boolean isHitSuccessful(int attackerAR, int defenderDef, int attackerLvl, int defenderLvl) {
     int hitChance = calculateHitChance(attackerAR, defenderDef, attackerLvl, defenderLvl);
-    int roll = MathUtils.random(99);
+    int roll = random.applyAsInt(100);
     boolean hit = roll < hitChance;
     log.debug("Hit check: AR={}, Def={}, attLvl={}, defLvl={}, hitChance={}%, roll={}, result={}", 
         attackerAR, defenderDef, attackerLvl, defenderLvl, hitChance, roll, hit ? "HIT" : "MISS");
@@ -217,7 +227,7 @@ public class DamageCalculator {
     if (finalMax > finalMin) {
       // ITEMS_RollLimitedRandomNumber uses [0, bound), while LibGDX's
       // MathUtils.random(int) is inclusive at the upper bound.
-      damage += MathUtils.random(finalMax - finalMin - 1);
+      damage += random.applyAsInt(finalMax - finalMin);
     }
     
     // 6. 应用技能伤害系数（128 = 100%）
@@ -260,7 +270,7 @@ public class DamageCalculator {
     // 在范围内随机
     int damage = finalMin;
     if (finalMax > finalMin) {
-      damage += MathUtils.random(finalMax - finalMin - 1);
+      damage += random.applyAsInt(finalMax - finalMin);
     }
     
     return Math.max(damage, 0);
@@ -336,19 +346,19 @@ public class DamageCalculator {
     // D2MOD: 按优先级检查暴击
     
     // 1. 武器精通暴击
-    if (masteryChance > 0 && MathUtils.random(99) < masteryChance) {
+    if (masteryChance > 0 && random.applyAsInt(100) < masteryChance) {
       log.debug("Weapon mastery critical strike triggered: {}%", masteryChance);
       return true;
     }
     
     // 2. 技能暴击
-    if (criticalStrikeChance > 0 && MathUtils.random(99) < criticalStrikeChance) {
+    if (criticalStrikeChance > 0 && random.applyAsInt(100) < criticalStrikeChance) {
       log.debug("Critical strike skill triggered: {}%", criticalStrikeChance);
       return true;
     }
     
     // 3. 装备致命一击
-    if (deadlyStrikeChance > 0 && MathUtils.random(99) < deadlyStrikeChance) {
+    if (deadlyStrikeChance > 0 && random.applyAsInt(100) < deadlyStrikeChance) {
       log.debug("Deadly strike triggered: {}%", deadlyStrikeChance);
       return true;
     }
@@ -413,7 +423,7 @@ public class DamageCalculator {
     int effectiveBlock = baseBlockChance + (dexterity - 15) / (Math.max(level, 1) * 2);
     effectiveBlock = Math.max(0, Math.min(75, effectiveBlock)); // 最大75%格挡
     
-    boolean blocked = MathUtils.random(99) < effectiveBlock;
+    boolean blocked = random.applyAsInt(100) < effectiveBlock;
     if (blocked) {
       log.debug("Block successful: blockChance={}%", effectiveBlock);
     }
@@ -651,7 +661,7 @@ public class DamageCalculator {
     if (minDamage < 1) minDamage = 1;
     if (maxDamage <= minDamage) maxDamage = minDamage + 1;
     
-    int baseDamage = minDamage + MathUtils.random(maxDamage - minDamage);
+    int baseDamage = minDamage + random.applyAsInt(maxDamage - minDamage + 1);
     
     if (damageBonus != 0) {
       baseDamage = baseDamage * (100 + damageBonus) / 100;

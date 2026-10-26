@@ -1,7 +1,5 @@
 package com.riiablo.engine.server.combat;
 
-import com.badlogic.gdx.math.MathUtils;
-
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
@@ -10,6 +8,7 @@ import com.riiablo.logger.Logger;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.engine.server.NamedRngStreams;
 
 /**
  * 战斗系统 - 基于 D2MOD SUnitDmg.cpp 移植
@@ -139,7 +138,8 @@ public class CombatSystem {
 
   /** Compatibility RNG for old tools that do not bind a server world. */
   public CombatSystem() {
-    java.util.function.IntUnaryOperator random = bound -> MathUtils.random(bound - 1);
+    java.util.function.IntUnaryOperator random = NamedRngStreams
+        .open(0, "combat.compatibility", 0L)::nextInt;
     this.rolls = new NativeCombatRolls(random);
     this.attackResolver = new NativeAttackResolver(rolls);
   }
@@ -1703,7 +1703,9 @@ public class CombatSystem {
   public static int rollNativeMissileDamage(int minimum, int maximum) {
     int min = Math.max(0, minimum);
     int max = Math.max(min, maximum);
-    return max > min ? MathUtils.random(min, max - 1) : min;
+    if (max <= min) return min;
+    return min + NamedRngStreams.open(0, "combat.missile-compatibility", 0L)
+        .nextInt(max - min);
   }
 
   //==========================================================================

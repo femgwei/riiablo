@@ -61,6 +61,22 @@ class AuthoritativeSimulationTest {
   }
 
   @Test
+  void renderDeltaUsesBoundedFixedStepAccumulator() {
+    World world = new World(new WorldConfigurationBuilder().build());
+    try {
+      AuthoritativeSimulation simulation = new AuthoritativeSimulation(world);
+      assertEquals(0, simulation.advance(0.01f, null, null));
+      assertEquals(1, simulation.advance(0.03f, null, null));
+      assertEquals(1, simulation.tickNumber());
+      assertEquals(8, simulation.advance(2f, null, null));
+      assertEquals(9, simulation.tickNumber());
+      assertEquals(0f, simulation.accumulatedSeconds(), 0.00001f);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void appliesInputThenOneFixedNativeFrameThenOutput() {
     List<String> phases = new ArrayList<>();
     RecordingSystem system = new RecordingSystem(phases);
@@ -121,6 +137,7 @@ class AuthoritativeSimulationTest {
       AuthoritativeSimulation simulation = new AuthoritativeSimulation(world);
       simulation.restoreFromCheckpoint(17L);
       assertEquals(17L, simulation.tickNumber());
+      assertEquals(17L, simulation.tickCoordinator().tick());
       assertSame(Thread.currentThread(), simulation.ownerThread());
       simulation.tick(null, null);
       assertEquals(18L, simulation.tickNumber());
@@ -143,6 +160,7 @@ class AuthoritativeSimulationTest {
 
       simulation.restoreFromCheckpoint(1L, true);
       assertEquals(1L, simulation.tickNumber());
+      assertEquals(1L, simulation.tickCoordinator().tick());
       simulation.tick(null, null);
       assertEquals(2L, simulation.tickNumber());
     } finally {

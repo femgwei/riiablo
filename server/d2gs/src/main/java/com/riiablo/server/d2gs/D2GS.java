@@ -6669,7 +6669,12 @@ public class D2GS extends ApplicationAdapter {
 
   @Override
   public void render() {
-    simulation.tick(this::applyIncomingPackets, this::dispatchOutgoingPackets);
+    float elapsed = Gdx.graphics == null ? com.riiablo.engine.SimulationClock.STEP_SECONDS
+        : Gdx.graphics.getDeltaTime();
+    if (!Float.isFinite(elapsed) || elapsed <= 0f) {
+      elapsed = com.riiablo.engine.SimulationClock.STEP_SECONDS;
+    }
+    simulation.advance(elapsed, this::applyIncomingPackets, this::dispatchOutgoingPackets);
   }
 
   private void applyIncomingPackets() {

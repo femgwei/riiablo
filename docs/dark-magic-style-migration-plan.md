@@ -3869,6 +3869,21 @@ M8-C 的 `ClientGameplayContext` 表现兼容构造仍待最终联合收口；M8
 
 批次 C 完成后才重新评估 M1/M3/M4/M5/M7/M8 的总出口；在此之前不提前标记主行完成。
 
+### 批次 A 实施记录（2026-10-26，进行中）
+
+- M3 已接入独立 40ms accumulator、最大追帧上限、command/simulation/event/structural
+  phase 顺序，以及 checkpoint 恢复时的 coordinator 时钟同步；D2GS render 使用实际 elapsed
+  time 驱动，不再把每次 render 直接当作一个 tick。
+- M4 已把 CombatSystem、DefenseCalculator、DamageCalculator 的兼容默认随机入口和
+  MonStats 模式元素解析入口切到命名 RNG stream；显式 RNG 注入和 NativeUnitRandom
+  生产路径保持不变，避免改变已绑定世界的随机序列。
+- M7-A 保持 MonsterAiPolicy、MapGenerationPolicy 的 policy/data 边界，并由本批回归覆盖。
+- 验证：`:core:compileJava :core:compileTestJava`、定向 deterministic/policy/RNG 回归、
+  `:server:d2gs:compileJava`、真实 1.10f `:server:d2gs:headlessStaleTransport` 全部通过。
+- 剩余出口：AI 具体类、地图生成、掉落及少数旧兼容工具仍有直接 LibGDX RNG 调用；需要在
+  本批继续完成命名 stream 审计和缺失策略/data-pack digest/version 门禁后，才能标记批次 A
+  完成。不得把这些遗留拆成新增批次。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21

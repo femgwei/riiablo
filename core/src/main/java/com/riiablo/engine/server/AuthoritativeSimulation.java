@@ -2,6 +2,7 @@ package com.riiablo.engine.server;
 
 import com.artemis.World;
 import com.riiablo.engine.SimulationClock;
+import com.riiablo.engine.SimulationTickCoordinator;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -24,6 +25,9 @@ public final class AuthoritativeSimulation {
   private volatile Thread ownerThread;
   private volatile long tick;
   private volatile float lastStepSeconds;
+  private final SimulationTickCoordinator tickCoordinator = new SimulationTickCoordinator();
+  private float accumulatedSeconds;
+  private static final int MAX_CATCH_UP_STEPS = 8;
   private final long epochMillis = System.currentTimeMillis();
   private volatile long serverTimeMillis;
 
@@ -35,21 +39,53 @@ public final class AuthoritativeSimulation {
   /** Runs one native authoritative frame in input/simulation/output order. */
   public void tick(Runnable applyIncoming, Runnable dispatchOutgoing) {
     assertOwnerThread();
-    tick++;
-    serverTimeMillis = epochMillis + tick * SimulationClock.STEP_MILLIS;
+    long nextTick = tick + 1L;
+    tick = nextTick;
+    serverTimeMillis = epochMillis + nextTick * SimulationClock.STEP_MILLIS;
     AuthoritativeSimulation previous = CURRENT.get();
     CURRENT.set(this);
     try {
-      if (applyIncoming != null) applyIncoming.run();
-      world.setDelta(STEP_SECONDS);
-      lastStepSeconds = world.getDelta();
-      world.process();
-      if (dispatchOutgoing != null) dispatchOutgoing.run();
+      tickCoordinator.advance(
+          () -> { if (applyIncoming != null) applyIncoming.run(); },
+          ignored -> {
+            world.setDelta(STEP_SECONDS);
+            lastStepSeconds = world.getDelta();
+            world.process();
+          },
+          () -> { if (dispatchOutgoing != null) dispatchOutgoing.run(); });
     } finally {
       if (previous == null) CURRENT.remove();
       else CURRENT.set(previous);
     }
   }
+
+  /**
+   * Advances the authoritative simulation from an arbitrary render/host delta.
+   * The accumulator is bounded so a suspended process cannot execute an
+   * unbounded catch-up burst when it becomes active again.
+   */
+  public int advance(float elapsedSeconds, Runnable applyIncoming,
+      Runnable dispatchOutgoing) {
+    assertOwnerThread();
+    if (!Float.isFinite(elapsedSeconds) || elapsedSeconds <= 0f) return 0;
+    accumulatedSeconds += Math.min(elapsedSeconds,
+        STEP_SECONDS * MAX_CATCH_UP_STEPS);
+    int steps = 0;
+    while (accumulatedSeconds + 0.000001f >= STEP_SECONDS
+        && steps < MAX_CATCH_UP_STEPS) {
+      tick(applyIncoming, dispatchOutgoing);
+      accumulatedSeconds -= STEP_SECONDS;
+      steps++;
+    }
+    if (steps == MAX_CATCH_UP_STEPS && accumulatedSeconds >= STEP_SECONDS) {
+      accumulatedSeconds %= STEP_SECONDS;
+    }
+    return steps;
+  }
+
+  public float accumulatedSeconds() { return accumulatedSeconds; }
+
+  public SimulationTickCoordinator tickCoordinator() { return tickCoordinator; }
 
   /** Simulation clock visible to serializers running inside the current tick. */
   public static AuthoritativeSimulation current() {
@@ -117,6 +153,8 @@ public final class AuthoritativeSimulation {
     }
     if (ownerThread == null) ownerThread = current;
     tick = checkpointTick;
+    tickCoordinator.restore(checkpointTick);
+    accumulatedSeconds = 0f;
     serverTimeMillis = epochMillis + checkpointTick * SimulationClock.STEP_MILLIS;
   }
 }
