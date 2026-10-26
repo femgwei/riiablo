@@ -3477,6 +3477,31 @@ Blood Moor Fallen/Shaman 测试房间不可用，后者等待死亡佣兵登录�
 本地实体、全局/未绑定 RNG、完整内容 digest、结构订阅副作用及真实 socket 跨进程
 接管继续保留。下一批优先集中处理装备 Item/sourceItem 的所有权与恢复依赖。
 
+### M8-A 第 45 批：Iron Golem sourceItem 运行态树与所有权恢复（2026-10-26）
+
+完成日期：2026-10-26；本批代码待提交。
+
+本批将 `SummonRuntimeCheckpoint` 升至 v2，集中完成已实现 Iron Golem `sourceItem` 的恢复依赖：
+
+- 新增 `ItemRuntimeCheckpoint` 与 `AttributesCheckpoint`，保存物品元数据、quality/随机字段、
+  属性 base/aggregate/remaining 三列表、属性列表顺序、dirty/frozen 标记、战斗上下文、耐力上限及
+  一层 socket 子树；恢复时通过目标 World 的 `ServerGameplayContext.Files` 重新绑定表行和属性表，
+  不复制源 World 的表对象、UI wrapper 或过期 `Item.data()` 缓存。
+- `SummonRuntimeCheckpoint` 对每个非空 `sourceItem` 保存完整运行态 Item 树，恢复前完成全部
+  Item/属性解析；拒绝循环、共享、外来表绑定及与地面物品、玩家/佣兵/尸体/石魔容器重复拥有的引用。
+  完整源 Item 无法安全编码时仍在写入前失败，不清除原对象；未覆盖的旧 v1 仍明确拒绝覆盖非空图。
+- 依据 D2MOO `SKILLS_SrvDo057_IronGolem`：地面金属物品被转交给石魔，之后不再由地面实体拥有；
+  本批只恢复既有 sourceItem 生命周期和属性，不扩展金属资格、伤害公式或死亡销毁规则。
+
+验证：`:core:compileJava`、`SummonRuntimeCheckpointTest`、`CompanionRuntimeCheckpointTest` 通过；
+此前 D2GS `D2gsWorldCheckpointBindingsTest` 佣兵/召唤绑定回归通过。首次回归发现旧版本损坏字节断言
+使用 v2 值，已修正为非法版本；生成的 `SoundP.java` EOF 噪声不纳入提交。
+
+剩余依赖：佣兵 `MercData` 装备槽/D2S 发布后的真实装备重绑、sourceItem 与完整 D2S 角色物品统一所有权、
+完整 Casting/Sequence/Leap/路径游标、地图/事务/未绑定 RNG、真实 socket 跨进程接管仍未完成；M8 总体继续进行中。
+
+下一迁移：M8-A 第 46 批，处理佣兵装备 Item 树与 D2S 装备槽重绑，随后再做 sourceItem/装备跨实体删除和重连验收。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

@@ -6,12 +6,14 @@ import com.riiablo.engine.server.NativePlayerTargetSlots;
 import com.riiablo.engine.server.component.NativeTargetNode;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.pet.PetType;
+import com.riiablo.item.ItemRuntimeCheckpoint;
+import com.riiablo.engine.server.ServerGameplayContext;
 import java.io.*;
 import java.util.*;
 
-/** Raw summon controllers and World quota high-water mark, not Item graphs or live actions. */
+/** Raw summon controllers, exclusively owned source Item trees, and World quota high-water mark. */
 public final class SummonRuntimeCheckpoint {
-  private static final int VERSION = 1;
+  private static final int VERSION = 2;
   public static final int MAX_BYTES = 32 * 1024 * 1024;
   private final byte[] bytes;
   private SummonRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
@@ -38,6 +40,7 @@ public final class SummonRuntimeCheckpoint {
     for (int id : allocator.activeIds()) if (!covered.contains(id) && world.getMapper(SummonedPet.class).has(id)) {
       throw new IllegalStateException("local summon requires owner checkpoint");
     }
+    validateItemOwnership(world);
     try {
       ByteArrayOutputStream bytes = new ByteArrayOutputStream(); DataOutputStream out = new DataOutputStream(bytes);
       out.writeInt(VERSION); out.writeLong(slots.checkpointPetSpawnSequence()); out.writeInt(covered.size());
@@ -45,7 +48,7 @@ public final class SummonRuntimeCheckpoint {
         SummonedPet pet = world.getMapper(SummonedPet.class).get(id);
         out.writeInt(id); out.writeBoolean(pet != null);
         if (pet == null) continue;
-        if (pet.sourceItem != null) throw new IllegalStateException("Iron Golem Item graph requires owner checkpoint");
+        byte[] sourceItem = pet.sourceItem == null ? null : ItemRuntimeCheckpoint.capture(pet.sourceItem).bytes();
         NativeTargetNode node = world.getMapper(NativeTargetNode.class).get(id);
         if (pet.hasDetachedTargetOrder() || pet.checkpointTargetNode() != node
             || node == null || !node.boundTo(slots)) {
@@ -57,6 +60,8 @@ public final class SummonRuntimeCheckpoint {
           }
         }
         writePet(out, pet);
+        out.writeBoolean(sourceItem != null);
+        if (sourceItem != null) { out.writeInt(sourceItem.length); out.write(sourceItem); }
       }
       out.flush(); SummonRuntimeCheckpoint result = fromBytes(bytes.toByteArray());
       result.validateRestore(world); return result;
@@ -68,6 +73,7 @@ public final class SummonRuntimeCheckpoint {
     if (world.getSystem(NativePlayerTargetSlots.class) == null) {
       throw new IllegalStateException("summon World order owner missing");
     }
+    validateItemOwnership(world);
     for (int id : EntityAllocatorCheckpoint.capture(world).activeIds()) {
       if (!d.pets.containsKey(id) && world.getMapper(SummonedPet.class).has(id)) {
         throw new IllegalStateException("cannot rewind quota around an uncovered live summon: " + id);
@@ -76,10 +82,13 @@ public final class SummonRuntimeCheckpoint {
     for (int id : d.pets.keySet()) {
       if (!world.getEntityManager().isActive(id)) throw new IllegalStateException("summon host missing: " + id);
       SummonedPet current = world.getMapper(SummonedPet.class).get(id);
-      if (current != null && current.sourceItem != null) {
+      if (current != null && current.sourceItem != null && d.version == 1) {
         throw new IllegalStateException("cannot overwrite uncovered Iron Golem Item graph");
       }
+      if (current != null && current.sourceItem != null) ItemRuntimeCheckpoint.capture(current.sourceItem);
     }
+    // Resolve every destination dependency before any component or quota mutation.
+    for (ItemRuntimeCheckpoint image : d.itemImages.values()) image.materialize(files(world));
   }
 
   /** TARGETS rebinds the shared node after this raw overlay; never calls set or consumes quota. */
@@ -87,7 +96,12 @@ public final class SummonRuntimeCheckpoint {
     validateRestore(world); Decoded d = decode();
     for (Map.Entry<Integer, SummonedPet> entry : d.pets.entrySet()) {
       if (entry.getValue() == null) world.getMapper(SummonedPet.class).remove(entry.getKey());
-      else copy(entry.getValue(), world.getMapper(SummonedPet.class).create(entry.getKey()));
+      else {
+        SummonedPet target = world.getMapper(SummonedPet.class).create(entry.getKey());
+        copy(entry.getValue(), target);
+        ItemRuntimeCheckpoint image = d.itemImages.get(entry.getKey());
+        target.sourceItem = image == null ? null : image.materialize(files(world));
+      }
     }
     world.getSystem(NativePlayerTargetSlots.class).restorePetSpawnSequence(d.sequence);
   }
@@ -161,8 +175,9 @@ public final class SummonRuntimeCheckpoint {
   private Decoded decode() {
     try {
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
-      if (in.readInt() != VERSION) throw new IllegalArgumentException("summon runtime version");
-      Decoded d = new Decoded(); d.sequence = in.readLong();
+      int version = in.readInt();
+      if (version < 1 || version > VERSION) throw new IllegalArgumentException("summon runtime version");
+      Decoded d = new Decoded(); d.version = version; d.sequence = in.readLong();
       if (d.sequence < 0) throw new IllegalArgumentException("summon spawn sequence");
       int count = CheckpointIO.count(in, 1000000), previous = -1; Set<Long> orders = new HashSet<>();
       for (int i = 0; i < count; i++) {
@@ -173,6 +188,11 @@ public final class SummonRuntimeCheckpoint {
           throw new IllegalArgumentException("summon quota order");
         }
         d.pets.put(id, p);
+        if (version >= 2 && p != null && CheckpointIO.readBoolean(in)) {
+          int length = CheckpointIO.count(in, ItemRuntimeCheckpoint.MAX_BYTES);
+          if (length == 0 || length > in.available()) throw new IllegalArgumentException("summon source Item length");
+          byte[] image = new byte[length]; in.readFully(image); d.itemImages.put(id, ItemRuntimeCheckpoint.fromBytes(image));
+        }
       }
       for (SummonedPet p : d.pets.values()) if (p != null && p.ownerId >= 0 && !d.pets.containsKey(p.ownerId)) {
         throw new IllegalArgumentException("summon owner outside checkpoint");
@@ -181,8 +201,59 @@ public final class SummonRuntimeCheckpoint {
       return d;
     } catch (IOException e) { throw new IllegalArgumentException("truncated summon runtime", e); }
   }
+  private static com.riiablo.Files files(World world) {
+    ServerGameplayContext context = world.getRegistered("serverContext");
+    if (context == null) throw new IllegalStateException("source Item requires World data owner");
+    return context.files();
+  }
+
+  /** Reject split ownership, including socket/Attributes aliases, instead of breaking it on restore. */
+  private static void validateItemOwnership(World world) {
+    IdentityHashMap<Object, Boolean> owned = new IdentityHashMap<>();
+    int[] ids = EntityAllocatorCheckpoint.capture(world).activeIds();
+    for (int id : ids) {
+      SummonedPet pet = world.getMapper(SummonedPet.class).get(id);
+      if (pet == null || pet.sourceItem == null) continue;
+      for (com.riiablo.item.Item item : tree(pet.sourceItem)) {
+        if (item.files() != files(world) || owned.put(item, true) != null
+            || item.attrs != null && owned.put(item.attrs, true) != null) {
+          throw new IllegalStateException("shared/foreign source Item owner");
+        }
+      }
+    }
+    if (owned.isEmpty()) return;
+    for (int id : ids) {
+      com.riiablo.engine.server.component.Item ground = world.getMapper(com.riiablo.engine.server.component.Item.class).get(id);
+      if (ground != null) rejectAlias(owned, ground.item);
+      com.riiablo.engine.server.component.AttributesWrapper attrs = world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(id);
+      if (attrs != null && owned.containsKey(attrs.attrs)) throw new IllegalStateException("shared source Item unit attributes");
+      com.riiablo.engine.server.component.Player player = world.getMapper(com.riiablo.engine.server.component.Player.class).get(id);
+      if (player == null || player.data == null) continue;
+      for (com.riiablo.item.Item item : player.data.getItems().getItems()) rejectAlias(owned, item);
+      for (com.riiablo.item.Item item : player.data.getMerc().getItems().getItems()) rejectAlias(owned, item);
+      for (com.riiablo.item.Item item : player.data.getCorpseItems()) rejectAlias(owned, item);
+      rejectAlias(owned, player.data.getGolemItem());
+    }
+  }
+  private static void rejectAlias(IdentityHashMap<Object, Boolean> owned, com.riiablo.item.Item root) {
+    for (com.riiablo.item.Item item : tree(root)) if (owned.containsKey(item) || owned.containsKey(item.attrs)) {
+      throw new IllegalStateException("source Item has another owner");
+    }
+  }
+  private static List<com.riiablo.item.Item> tree(com.riiablo.item.Item root) {
+    List<com.riiablo.item.Item> result = new ArrayList<>();
+    IdentityHashMap<com.riiablo.item.Item, Boolean> seen = new IdentityHashMap<>();
+    if (root != null) result.add(root);
+    for (int i = 0; i < result.size(); i++) {
+      com.riiablo.item.Item item = result.get(i);
+      if (item == null || seen.put(item, true) != null || result.size() > 1024) throw new IllegalStateException("cyclic/shared Item tree");
+      if (item.sockets != null) for (com.riiablo.item.Item socket : item.sockets) result.add(socket);
+    }
+    return result;
+  }
   private static final class Decoded {
-    long sequence;
+    int version; long sequence;
     final Map<Integer, SummonedPet> pets = new TreeMap<>();
+    final Map<Integer, ItemRuntimeCheckpoint> itemImages = new TreeMap<>();
   }
 }

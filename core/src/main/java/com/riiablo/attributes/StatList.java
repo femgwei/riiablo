@@ -112,6 +112,13 @@ public final class StatList {
     return this;
   }
 
+  int checkpointImmutableMask() { return immutable & 0xff; }
+
+  void restoreCheckpointImmutableMask(int mask) {
+    if ((mask & ~listsMask) != 0) throw new IllegalArgumentException("stat list immutable mask");
+    immutable = (byte) mask;
+  }
+
   private boolean isMutable(final int list) {
     return (immutable & index(list)) == 0;
   }

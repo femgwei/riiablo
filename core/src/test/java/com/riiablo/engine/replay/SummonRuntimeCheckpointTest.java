@@ -175,7 +175,7 @@ class SummonRuntimeCheckpointTest {
         assertThrows(IllegalArgumentException.class, () -> SummonRuntimeCheckpoint.fromBytes(truncated));
       }
       assertThrows(IllegalArgumentException.class, () -> SummonRuntimeCheckpoint.fromBytes(Arrays.copyOf(bytes, bytes.length + 1)));
-      byte[] bad = bytes.clone(); bad[3] = 2; final byte[] versionImage = bad;
+      byte[] bad = bytes.clone(); bad[3] = 3; final byte[] versionImage = bad;
       assertThrows(IllegalArgumentException.class, () -> SummonRuntimeCheckpoint.fromBytes(versionImage));
       bad = bytes.clone(); bad[20] = 2; final byte[] booleanImage = bad;
       assertThrows(IllegalArgumentException.class, () -> SummonRuntimeCheckpoint.fromBytes(booleanImage));
