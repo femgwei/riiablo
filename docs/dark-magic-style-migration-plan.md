@@ -3502,6 +3502,28 @@ Blood Moor Fallen/Shaman 测试房间不可用，后者等待死亡佣兵登录�
 
 下一迁移：M8-A 第 46 批，处理佣兵装备 Item 树与 D2S 装备槽重绑，随后再做 sourceItem/装备跨实体删除和重连验收。
 
+### M8-A 第 46 批：佣兵 MercData 装备树与 D2S 发布后重绑（2026-10-26）
+
+完成日期：2026-10-26；代码提交：`0e94b47e1`。
+
+- `MercenaryServiceCheckpoint` 升级为 v2，保存每个活跃佣兵的完整 `MercData` Item 树及
+  `equipmentRevision`；Item 使用与 Iron Golem 相同的运行态 codec，禁止共享、循环和外来表绑定。
+- D2S 发布后先通过当前 World 数据表物化装备，再原子替换目标 `MercData.ItemData`，随后恢复
+  equipmentRevision、共享 MercData stats 和无尸体属性镜像；不调用雇佣、装备事件、扣费或刷新。
+- 旧 service v1 继续可读，但遇到目标已有非空装备图时拒绝覆盖；v2 会在写入/恢复前校验目标
+  现有装备图可安全解析，避免晚失败时静默丢失装备。
+
+原版依据：D2MOO `source/D2Game/src/UNIT/SUnitNpc.cpp` 的雇佣实体与 D2S `MercData` 物品段；
+本批不改佣兵装备资格、属性公式或 D2S 二进制布局，只恢复已有 Item 所有权和槽位投影。
+
+验证：core 佣兵/companion 相关回归通过；`D2gsWorldCheckpointBindingsTest` 61 项通过、0 失败、
+0 跳过；`core:compileJava` 通过；`D2_HOME=G:\\BaiduNetdiskDownload\\Diablo II 1.10F`。
+
+剩余依赖：真实带装备佣兵 fixture 的跨 JVM D2S round-trip、sourceItem/佣兵/玩家/尸体删除顺序、
+完整 Casting/Sequence/Leap/动态路径游标、地图/事务/未绑定 RNG、真实 socket 跨进程接管仍未完成。
+
+下一迁移：M8-A 第 47 批，加入真实带装备佣兵 fixture，验收 D2S/独立 JVM 重连及实体删除回滚。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
