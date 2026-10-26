@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Leap;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.item.Item;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +35,10 @@ class ActionRuntimeCheckpointTest {
       casting.diabRun = new com.riiablo.engine.server.NativeDiabRun(77, new Vector2(21, 34), true);
       casting.diabRun.cursor = 0x120; casting.diabRun.remaining = 0x800;
       casting.diabRun.moving = true; casting.diabRun.pathStarted = true; casting.diabRun.loops = 2;
+      casting.impaleCombat = new CombatSystem.CombatResult();
+      casting.impaleCombat.hit = true; casting.impaleCombat.physicalDamage = 1234;
+      casting.impaleCombat.elementalDamage[CombatSystem.DAMAGE_FIRE] = 77;
+      casting.impaleCombat.poisonDamagePerFrame = 1.25f;
       Sequence sequence = source.world.getMapper(Sequence.class).create(sourceId)
           .sequence((byte) 8, (byte) 13);
       sequence.started = true;
@@ -63,8 +68,21 @@ class ActionRuntimeCheckpointTest {
           target.world.getMapper(Casting.class).get(targetId).monInferno.frame);
       assertEquals(casting.diabRun.cursor,
           target.world.getMapper(Casting.class).get(targetId).diabRun.cursor);
+      assertEquals(casting.impaleCombat.physicalDamage,
+          target.world.getMapper(Casting.class).get(targetId).impaleCombat.physicalDamage);
+      assertEquals(casting.impaleCombat.elementalDamage[CombatSystem.DAMAGE_FIRE],
+          target.world.getMapper(Casting.class).get(targetId).impaleCombat.elementalDamage[CombatSystem.DAMAGE_FIRE]);
       assertEquals(sequence.nativeJabFrame, target.world.getMapper(Sequence.class).get(targetId).nativeJabFrame);
       assertEquals(leap.elapsed, target.world.getMapper(Leap.class).get(targetId).elapsed);
+    }
+  }
+
+  @Test void rejectsNonFinitePortableActionValue() {
+    try (Fixture fixture = new Fixture()) {
+      int id = fixture.world.create();
+      Casting casting = fixture.world.getMapper(Casting.class).create(id);
+      casting.targetVec.set(Float.NaN, 1f);
+      assertThrows(IllegalArgumentException.class, () -> ActionRuntimeCheckpoint.capture(fixture.world, id));
     }
   }
 

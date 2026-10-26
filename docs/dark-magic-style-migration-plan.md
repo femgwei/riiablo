@@ -3857,8 +3857,8 @@ M8-C/M8-D 的最终双客户端 replay/save/reconnect、表现替换、全量旧
   `Sequence`、`Leap` 的可移植字段，以及 `Pathfind` 的图路径、目标游标、目标实体身份、
   阻塞/重寻路计时和移动诊断字段；恢复前先校验组件集合与身份，再在同一恢复事务中恢复。
 - 动作和路径编码使用稳定字段顺序、有限长度、有限浮点值和跨 JVM 原始字节 round-trip；
-  `NativeMonInferno`、`NativeDiabRun` 等已提供显式状态构造并纳入 round-trip；
-  `CombatResult`、`Item`、native MonSeq/Path 对象图等无法安全跨进程重建的活动引用仍会在捕获
+  `NativeMonInferno`、`NativeDiabRun` 和无外部对象引用的 `CombatResult` 已提供显式状态构造并
+  纳入 round-trip；`Item`、native MonSeq/Path 对象图等无法安全跨进程重建的活动引用仍会在捕获
   时明确拒绝，禁止静默丢失动作阶段。旧 v1-v5 unit-state image 仍按版本读取。
 - 增加动作/路径的独立 round-trip 与 malformed/旧版本回归，并修正 D2GS AI 覆盖测试在新增
   runtime 尾部后的定位方式。真实 D2GS checkpoint、D2S、socket 恢复和独立 JVM 回归继续通过。
@@ -3874,7 +3874,7 @@ git diff --check
 
 结果：核心 replay/checkpoint 回归和 D2GS checkpoint/D2S/独立恢复回归通过；本次仍属于冻结
 批次 B，未修改协议字段。批次 B 尚余地图/RoomEx 与事务运行态、未绑定 RNG、战斗摘要到可恢复
-replay 的最终校验，以及 native path/MonSeq 对象图的原生重建策略；批次 C 尚余最终双客户端
+replay 的最终校验，以及 Item/native path/MonSeq 对象图的原生重建策略；批次 C 尚余最终双客户端
 表现替换和旧 transport/直连 owner 全量审计。
 
 ## 剩余主线固定批次（2026-10-26 冻结）

@@ -9,6 +9,8 @@ import com.riiablo.engine.server.NativeMonInferno;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Leap;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.combat.NativeCombatConstants;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -43,6 +45,7 @@ public final class ActionRuntimeCheckpoint {
   private static final int INT_ARRAY = 10;
   private static final int MON_INFERNO = 11;
   private static final int DIAB_RUN = 12;
+  private static final int COMBAT_RESULT = 13;
 
   private final byte[] bytes;
 
@@ -281,6 +284,7 @@ public final class ActionRuntimeCheckpoint {
     if (type == IntArray.class) return INT_ARRAY;
     if (type == NativeMonInferno.class) return MON_INFERNO;
     if (type == NativeDiabRun.class) return DIAB_RUN;
+    if (type == CombatSystem.CombatResult.class) return COMBAT_RESULT;
     return 0;
   }
 
@@ -293,12 +297,14 @@ public final class ActionRuntimeCheckpoint {
       case CHAR: out.writeChar((Character) value); break;
       case INT: out.writeInt((Integer) value); break;
       case LONG: out.writeLong((Long) value); break;
-      case FLOAT: out.writeFloat((Float) value); break;
-      case DOUBLE: out.writeDouble((Double) value); break;
-      case VECTOR: Vector2 v = (Vector2) value; out.writeFloat(v.x); out.writeFloat(v.y); break;
+      case FLOAT: CheckpointIO.writeFloat(out, (Float) value); break;
+      case DOUBLE: writeDouble(out, (Double) value); break;
+      case VECTOR:
+        Vector2 v = (Vector2) value; CheckpointIO.writeFloat(out, v.x); CheckpointIO.writeFloat(out, v.y); break;
       case INT_ARRAY:
         IntArray a = (IntArray) value; out.writeInt(a.size); for (int i = 0; i < a.size; i++) out.writeInt(a.get(i)); break;
       case MON_INFERNO:
+        out.writeBoolean(value != null); if (value == null) break;
         NativeMonInferno inferno = (NativeMonInferno) value;
         out.writeInt(inferno.deadline); out.writeInt(inferno.interval); out.writeInt(inferno.tailFrames);
         out.writeInt(inferno.frame); out.writeInt(inferno.nextUpdate); out.writeInt(inferno.endFrame);
@@ -307,11 +313,17 @@ public final class ActionRuntimeCheckpoint {
         out.writeBoolean(inferno.impInferno); out.writeInt(inferno.sequenceCursor);
         break;
       case DIAB_RUN:
+        out.writeBoolean(value != null); if (value == null) break;
         NativeDiabRun run = (NativeDiabRun) value;
-        out.writeInt(run.targetId); out.writeFloat(run.destination.x); out.writeFloat(run.destination.y);
+        out.writeInt(run.targetId); CheckpointIO.writeFloat(out, run.destination.x);
+        CheckpointIO.writeFloat(out, run.destination.y);
         out.writeInt(run.cursor); out.writeInt(run.remaining); out.writeBoolean(run.moving);
         out.writeBoolean(run.pathStarted); out.writeBoolean(run.tail); out.writeBoolean(run.hitProcessed);
         out.writeBoolean(run.damageProcessed); out.writeInt(run.loops);
+        break;
+      case COMBAT_RESULT:
+        out.writeBoolean(value != null); if (value == null) break;
+        writeCombatResult(out, (CombatSystem.CombatResult) value);
         break;
       default: throw new IllegalArgumentException("action field tag");
     }
@@ -326,17 +338,23 @@ public final class ActionRuntimeCheckpoint {
       case CHAR: field.setChar(target, in.readChar()); break;
       case INT: field.setInt(target, in.readInt()); break;
       case LONG: field.setLong(target, in.readLong()); break;
-      case FLOAT: field.setFloat(target, in.readFloat()); break;
-      case DOUBLE: field.setDouble(target, in.readDouble()); break;
+      case FLOAT: field.setFloat(target, CheckpointIO.readFloat(in)); break;
+      case DOUBLE: field.setDouble(target, readDouble(in)); break;
       case VECTOR:
-        Vector2 v = (Vector2) field.get(target); v.set(in.readFloat(), in.readFloat()); break;
+        Vector2 v = (Vector2) field.get(target);
+        v.set(CheckpointIO.readFloat(in), CheckpointIO.readFloat(in)); break;
       case INT_ARRAY:
         IntArray a = (IntArray) field.get(target); a.clear(); int size = CheckpointIO.count(in, 256);
         for (int i = 0; i < size; i++) a.add(in.readInt()); break;
       case MON_INFERNO:
-        field.set(target, readInferno(in)); break;
+        if (!CheckpointIO.readBoolean(in)) field.set(target, null);
+        else field.set(target, readInferno(in)); break;
       case DIAB_RUN:
-        field.set(target, readDiabRun(in)); break;
+        if (!CheckpointIO.readBoolean(in)) field.set(target, null);
+        else field.set(target, readDiabRun(in)); break;
+      case COMBAT_RESULT:
+        if (!CheckpointIO.readBoolean(in)) field.set(target, null);
+        else field.set(target, readCombatResult(in)); break;
       default: throw new IllegalArgumentException("action field tag");
     }
   }
@@ -355,11 +373,71 @@ public final class ActionRuntimeCheckpoint {
 
   private static NativeDiabRun readDiabRun(DataInputStream in) throws IOException {
     NativeDiabRun value = new NativeDiabRun(in.readInt(),
-        new Vector2(in.readFloat(), in.readFloat()), true);
+        new Vector2(CheckpointIO.readFloat(in), CheckpointIO.readFloat(in)), true);
     value.cursor = in.readInt(); value.remaining = in.readInt(); value.moving = CheckpointIO.readBoolean(in);
     value.pathStarted = CheckpointIO.readBoolean(in); value.tail = CheckpointIO.readBoolean(in);
     value.hitProcessed = CheckpointIO.readBoolean(in); value.damageProcessed = CheckpointIO.readBoolean(in);
     value.loops = in.readInt(); return value;
+  }
+
+  private static void writeCombatResult(DataOutputStream out, CombatSystem.CombatResult value)
+      throws IOException {
+    if (value.elementalDamage == null
+        || value.elementalDamage.length != NativeCombatConstants.DAMAGE_TYPE_COUNT) {
+      throw new IllegalStateException("combat damage width");
+    }
+    out.writeBoolean(value.hit); out.writeBoolean(value.blocked); out.writeBoolean(value.blockAnimationAllowed);
+    out.writeInt(value.defenseType); out.writeBoolean(value.critical); out.writeBoolean(value.monsterCritical);
+    out.writeBoolean(value.deadlyStrike); out.writeBoolean(value.crushingBlow);
+    out.writeInt(value.physicalDamage); out.writeInt(value.physicalScale);
+    out.writeInt(value.elementalDamage.length);
+    for (int damage : value.elementalDamage) out.writeInt(damage);
+    out.writeInt(value.totalDamage); out.writeInt(value.elementalScale);
+    out.writeBoolean(value.nativeElementalSettlement); out.writeInt(value.lifeStolen); out.writeInt(value.manaStolen);
+    out.writeInt(value.snapshotLifeLeechPercent); out.writeInt(value.snapshotManaLeechPercent);
+    out.writeBoolean(value.fixedMonsterDrain); out.writeInt(value.lifeDrainFixed);
+    out.writeInt(value.manaDrainFixed); out.writeInt(value.staminaDrainFixed); out.writeInt(value.absorbedLife);
+    out.writeInt(value.hitChance); out.writeInt(value.attackRating); out.writeInt(value.targetDefense);
+    out.writeInt(value.hitRoll); out.writeInt(value.coldDuration); out.writeInt(value.poisonDuration);
+    CheckpointIO.writeFloat(out, value.poisonDamagePerFrame);
+    out.writeInt(value.poisonRawDamageFixed); out.writeInt(value.poisonPiercePercent);
+    out.writeInt(value.poisonBaseDuration);
+  }
+
+  private static CombatSystem.CombatResult readCombatResult(DataInputStream in) throws IOException {
+    CombatSystem.CombatResult value = new CombatSystem.CombatResult();
+    value.hit = CheckpointIO.readBoolean(in); value.blocked = CheckpointIO.readBoolean(in);
+    value.blockAnimationAllowed = CheckpointIO.readBoolean(in); value.defenseType = in.readInt();
+    value.critical = CheckpointIO.readBoolean(in); value.monsterCritical = CheckpointIO.readBoolean(in);
+    value.deadlyStrike = CheckpointIO.readBoolean(in); value.crushingBlow = CheckpointIO.readBoolean(in);
+    value.physicalDamage = in.readInt(); value.physicalScale = in.readInt();
+    int damageCount = CheckpointIO.count(in, NativeCombatConstants.DAMAGE_TYPE_COUNT);
+    if (damageCount != NativeCombatConstants.DAMAGE_TYPE_COUNT) {
+      throw new IllegalArgumentException("combat damage width");
+    }
+    for (int i = 0; i < damageCount; i++) value.elementalDamage[i] = in.readInt();
+    value.totalDamage = in.readInt(); value.elementalScale = in.readInt();
+    value.nativeElementalSettlement = CheckpointIO.readBoolean(in); value.lifeStolen = in.readInt();
+    value.manaStolen = in.readInt(); value.snapshotLifeLeechPercent = in.readInt();
+    value.snapshotManaLeechPercent = in.readInt(); value.fixedMonsterDrain = CheckpointIO.readBoolean(in);
+    value.lifeDrainFixed = in.readInt(); value.manaDrainFixed = in.readInt();
+    value.staminaDrainFixed = in.readInt(); value.absorbedLife = in.readInt();
+    value.hitChance = in.readInt(); value.attackRating = in.readInt(); value.targetDefense = in.readInt();
+    value.hitRoll = in.readInt(); value.coldDuration = in.readInt(); value.poisonDuration = in.readInt();
+    value.poisonDamagePerFrame = CheckpointIO.readFloat(in); value.poisonRawDamageFixed = in.readInt();
+    value.poisonPiercePercent = in.readInt(); value.poisonBaseDuration = in.readInt();
+    return value;
+  }
+
+  private static void writeDouble(DataOutputStream out, double value) throws IOException {
+    if (!Double.isFinite(value)) throw new IllegalArgumentException("nonfinite checkpoint value");
+    out.writeLong(Double.doubleToRawLongBits(value));
+  }
+
+  private static double readDouble(DataInputStream in) throws IOException {
+    double value = Double.longBitsToDouble(in.readLong());
+    if (!Double.isFinite(value)) throw new IllegalArgumentException("nonfinite checkpoint value");
+    return value;
   }
 
   private static void skipValue(DataInputStream in, int tag) throws IOException {
@@ -367,15 +445,32 @@ public final class ActionRuntimeCheckpoint {
       case BOOLEAN: in.readBoolean(); break; case BYTE: in.readByte(); break;
       case SHORT: in.readShort(); break; case CHAR: in.readChar(); break;
       case INT: in.readInt(); break; case LONG: in.readLong(); break;
-      case FLOAT: in.readFloat(); break; case DOUBLE: in.readDouble(); break;
-      case VECTOR: in.readFloat(); in.readFloat(); break;
+      case FLOAT: CheckpointIO.readFloat(in); break; case DOUBLE: readDouble(in); break;
+      case VECTOR: CheckpointIO.readFloat(in); CheckpointIO.readFloat(in); break;
       case INT_ARRAY: int size = CheckpointIO.count(in, 256); for (int i = 0; i < size; i++) in.readInt(); break;
       case MON_INFERNO:
+        if (!CheckpointIO.readBoolean(in)) break;
         for (int i = 0; i < 8; i++) in.readInt();
         in.readBoolean(); in.readBoolean(); in.readBoolean(); in.readInt(); break;
       case DIAB_RUN:
-        in.readInt(); in.readFloat(); in.readFloat(); in.readInt(); in.readInt();
+        if (!CheckpointIO.readBoolean(in)) break;
+        in.readInt(); CheckpointIO.readFloat(in); CheckpointIO.readFloat(in); in.readInt(); in.readInt();
         in.readBoolean(); in.readBoolean(); in.readBoolean(); in.readBoolean(); in.readBoolean(); in.readInt(); break;
+      case COMBAT_RESULT:
+        if (!CheckpointIO.readBoolean(in)) break;
+        in.readBoolean(); in.readBoolean(); in.readBoolean(); in.readInt();
+        in.readBoolean(); in.readBoolean(); in.readBoolean(); in.readBoolean();
+        in.readInt(); in.readInt();
+        int damageCount = CheckpointIO.count(in, NativeCombatConstants.DAMAGE_TYPE_COUNT);
+        if (damageCount != NativeCombatConstants.DAMAGE_TYPE_COUNT) {
+          throw new IllegalArgumentException("combat damage width");
+        }
+        for (int i = 0; i < damageCount; i++) in.readInt();
+        in.readInt(); in.readInt(); in.readBoolean();
+        in.readInt(); in.readInt(); in.readInt(); in.readInt(); in.readBoolean();
+        in.readInt(); in.readInt(); in.readInt(); in.readInt(); in.readInt(); in.readInt();
+        in.readInt(); in.readInt(); in.readInt(); in.readInt();
+        CheckpointIO.readFloat(in); in.readInt(); in.readInt(); in.readInt(); break;
       default: throw new IllegalArgumentException("action field tag");
     }
   }
