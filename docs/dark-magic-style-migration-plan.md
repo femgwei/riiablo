@@ -3524,6 +3524,32 @@ Blood Moor Fallen/Shaman 测试房间不可用，后者等待死亡佣兵登录�
 
 下一迁移：M8-A 第 47 批，加入真实带装备佣兵 fixture，验收 D2S/独立 JVM 重连及实体删除回滚。
 
+### M8-A 第 47 批：真实带装备佣兵 round-trip 与装备状态保持（2026-10-26）
+
+完成日期：2026-10-26；代码提交：`edd5ca03a`。
+
+- 将真实 D2GS checkpoint fixture 扩展为佣兵雇佣后创建并装备 `cap`，固定 body slot、Item id、
+  属性和 equipmentRevision；跨新 World 恢复后校验装备树、`Location.EQUIPPED`、`BodyLoc.HEAD`、
+  D2S canonical 与服务摘要完全一致。
+- `ItemData.replaceFromAuthoritativeSnapshot(snapshot, false)` 为 checkpoint 专用替换路径：重建
+  ownership/equipped 索引但不重新计算 aggregate 或发送装备事件，避免已验证的 Item/owner 属性
+  revision 在恢复时被二次重算；普通运行时入口仍保留原有重算和通知语义。
+- 真实 fixture 继续使用独立 JVM/D2S 文件恢复路径，验证活跃佣兵装备在恢复后可继续服务；旧 v1
+  未覆盖装备拒绝、共享/非法 Item 图预检和晚失败原子回滚测试保持通过。
+
+原版依据：D2MOO 雇佣实体使用 `MercData` 的装备/属性状态，D2SReader96/D2SWriter96 的 merc
+  item 段；本批不改物品资格、属性公式或 D2S 布局。
+
+验证：`D2gsWorldCheckpointBindingsTest.hirelingServiceRostersAndDeadRecordsResumeAcrossWorldAndJvmRestart`
+通过；完整该类 61 项通过，0 失败、0 跳过；`core:compileJava` 通过；资源路径为
+`G:\\BaiduNetdiskDownload\\Diablo II 1.10F`。
+
+剩余依赖：佣兵/玩家/sourceItem 跨容器删除顺序、带 socket 装备的真实跨 JVM fixture、完整
+Casting/Sequence/Leap/动态路径游标、地图/事务/未绑定 RNG、真实 socket 跨进程接管仍未完成。
+
+下一迁移：M8-A 第 48 批，集中处理装备/socket 删除生命周期与晚失败回滚，再进行带 socket 的
+独立 JVM D2S 验收。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
