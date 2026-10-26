@@ -415,9 +415,13 @@ public class D2gsWorldCheckpointBindingsTest {
         D2gsCheckpointSnapshot image = source.server.captureReplayCheckpoint();
         java.util.Map<Integer, com.riiablo.engine.replay.UnitStateRuntimeCheckpoint> records =
             new java.util.TreeMap<>(image.unitStateRuntime());
-        byte[] bytes = records.get(1).bytes();
+        com.riiablo.engine.replay.UnitStateRuntimeCheckpoint record = records.get(1);
+        byte[] bytes = record.bytes();
+        byte[] aiImage = record.aiDecisionRuntime().bytes();
+        int aiOffset = indexOf(bytes, aiImage);
+        assertTrue(aiOffset >= 0);
         // Food reference is the last ID/kind pair in this explicit Regurgitator schema.
-        ByteBuffer.wrap(bytes).putInt(bytes.length - 5, 999);
+        ByteBuffer.wrap(bytes).putInt(aiOffset + aiImage.length - 5, 999);
         records.put(1, com.riiablo.engine.replay.UnitStateRuntimeCheckpoint.fromBytes(bytes));
         if (lifetime == 2) assertNotEquals(image.summary().canonical(), image.withUnitStateRuntime(records).summary().canonical());
         else {

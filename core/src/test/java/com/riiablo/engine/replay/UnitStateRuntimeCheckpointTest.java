@@ -16,9 +16,11 @@ class UnitStateRuntimeCheckpointTest {
       source.getMapper(UnitStates.class).create(0).init(source, 0);
       Map<Integer, UnitStateRuntimeCheckpoint> current = UnitStateRuntimeCheckpoint.capture(source, new int[] {0, 1});
       byte[] bytes = current.get(0).bytes();
-      byte[] legacy = new byte[bytes.length - 12];
+      int actionTail = 4 + current.get(0).actionRuntime().bytes().length;
+      int pathTail = 4 + current.get(0).pathRuntime().bytes().length;
+      byte[] legacy = new byte[bytes.length - 12 - actionTail - pathTail];
       System.arraycopy(bytes, 0, legacy, 0, 5);
-      System.arraycopy(bytes, 6, legacy, 5, bytes.length - 17);
+      System.arraycopy(bytes, 6, legacy, 5, bytes.length - 17 - actionTail - pathTail);
       legacy[3] = 1; // v1 has neither requiresTargets nor Monster overlay presence.
       Map<Integer, UnitStateRuntimeCheckpoint> records = new TreeMap<>();
       records.put(0, UnitStateRuntimeCheckpoint.fromBytes(legacy));

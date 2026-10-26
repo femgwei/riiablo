@@ -119,6 +119,30 @@ public class Pathfind extends PooledComponent {
     return nativeTargetY;
   }
 
+  /** Stable path cursor used by the versioned authoritative checkpoint codec. */
+  public int checkpointTargetIndex() { return nativeTargetIndex; }
+
+  /** Rebuilds the portable graph-path iterator without invoking pathfinding. */
+  public void restoreCheckpoint(GraphPath restoredPath, int targetIndex) {
+    if (restoredPath == null) {
+      path = null;
+      targets = Collections.emptyIterator();
+      nativeTargetIndex = -1;
+      nativeTargetX = nativeTargetY = 0;
+      target.setZero();
+      return;
+    }
+    set(restoredPath, true);
+    if (targetIndex < 0 || targetIndex >= restoredPath.getCount()) {
+      if (targetIndex != -1) throw new IllegalArgumentException("path target index");
+      nativeTargetIndex = -1;
+      nativeTargetX = nativeTargetY = 0;
+      return;
+    }
+    while (nativeTargetIndex < targetIndex && advanceTarget()) {}
+    if (nativeTargetIndex != targetIndex) throw new IllegalArgumentException("path target index");
+  }
+
   public void recordMovement(
       boolean requested, float distance2, float delta, boolean dynamicBlocked) {
     if (requested && distance2 <= 0.000001f && delta > 0f) {

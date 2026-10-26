@@ -16,7 +16,7 @@ import java.util.*;
  * the owning TARGETS image; only explicitly typed removal lifecycles are supported.
  */
 public final class UnitStateRuntimeCheckpoint {
-  private static final int VERSION = 4;
+  private static final int VERSION = 6;
   public static final int MAX_BYTES = 1024 * 1024;
   private final byte[] bytes;
   private UnitStateRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
@@ -30,6 +30,10 @@ public final class UnitStateRuntimeCheckpoint {
   public MonsterRuntimeCheckpoint monsterRuntime() { return decode().monsterRuntime; }
   /** Null means v1-v3 did not cover the AI object, not an absent AIWrapper. */
   public AiDecisionRuntimeCheckpoint aiDecisionRuntime() { return decode().aiDecision; }
+  /** Transient Casting/Sequence/Leap phase captured alongside unit state. */
+  public ActionRuntimeCheckpoint actionRuntime() { return decode().actionRuntime; }
+  /** Portable Pathfind graph/cursor image; null means v1-v5 did not cover it. */
+  public PathfindRuntimeCheckpoint pathRuntime() { return decode().pathRuntime; }
   public void validateAiHost(int id) {
     AiDecisionRuntimeCheckpoint ai = decode().aiDecision; if (ai != null) ai.validateHost(id);
   }
@@ -101,6 +105,10 @@ public final class UnitStateRuntimeCheckpoint {
         AiDecisionRuntimeCheckpoint decision = AiDecisionRuntimeCheckpoint.capture(world, id);
         decision.validateCoverage(covered);
         byte[] ai = decision.bytes(); out.writeInt(ai.length); out.write(ai);
+        byte[] action = ActionRuntimeCheckpoint.capture(world, id).bytes();
+        out.writeInt(action.length); out.write(action);
+        byte[] path = PathfindRuntimeCheckpoint.capture(world, id).bytes();
+        out.writeInt(path.length); out.write(path);
         out.flush(); result.put(id, fromBytes(bytes.toByteArray()));
       } catch (IOException impossible) { throw new IllegalStateException(impossible); }
     }
@@ -122,6 +130,8 @@ public final class UnitStateRuntimeCheckpoint {
         d.aiDecision.validateCoverage(records.keySet());
         d.aiDecision.validateRestore(world, id);
       }
+      if (d.actionRuntime != null) d.actionRuntime.validateHost(world, id);
+      if (d.pathRuntime != null) d.pathRuntime.validateHost(world, id);
       if (d.hasMonsterRuntime) {
         if (d.monsterRuntime == null) {
           if (monster != null) throw new IllegalStateException("unexpected monster runtime host: " + id);
@@ -159,6 +169,8 @@ public final class UnitStateRuntimeCheckpoint {
       int id = entry.getKey(); Decoded d = entry.getValue();
       if (d.monsterRuntime != null) d.monsterRuntime.restore(world, id);
       if (d.aiDecision != null) d.aiDecision.restore(world, id);
+      if (d.actionRuntime != null) ActionRuntimeCheckpoint.restore(world, id, d.actionRuntime);
+      if (d.pathRuntime != null) PathfindRuntimeCheckpoint.restore(world, id, d.pathRuntime);
       if (d.holder == null) {
         UnitStates old = world.getMapper(UnitStates.class).get(id);
         if (old != null && old.stateList != null) old.stateList.discardAll();
@@ -223,6 +235,18 @@ public final class UnitStateRuntimeCheckpoint {
         int length = CheckpointIO.count(in, AiDecisionRuntimeCheckpoint.MAX_BYTES);
         if (length == 0 || length > in.available()) throw new IllegalArgumentException("AI decision image length");
         byte[] image = new byte[length]; in.readFully(image); d.aiDecision = AiDecisionRuntimeCheckpoint.fromBytes(image);
+      }
+      if (version >= 5) {
+        int length = CheckpointIO.count(in, ActionRuntimeCheckpoint.MAX_BYTES);
+        if (length == 0 || length > in.available()) throw new IllegalArgumentException("action runtime image length");
+        byte[] image = new byte[length]; in.readFully(image);
+        d.actionRuntime = ActionRuntimeCheckpoint.fromBytes(image);
+      }
+      if (version >= 6) {
+        int length = CheckpointIO.count(in, PathfindRuntimeCheckpoint.MAX_BYTES);
+        if (length == 0 || length > in.available()) throw new IllegalArgumentException("path runtime image length");
+        byte[] image = new byte[length]; in.readFully(image);
+        d.pathRuntime = PathfindRuntimeCheckpoint.fromBytes(image);
       }
       if (in.read() != -1) throw new IllegalArgumentException("trailing unit-state runtime");
       return d;
@@ -401,6 +425,8 @@ public final class UnitStateRuntimeCheckpoint {
 
   private static final class Decoded {
     AiDecisionRuntimeCheckpoint aiDecision;
+    ActionRuntimeCheckpoint actionRuntime;
+    PathfindRuntimeCheckpoint pathRuntime;
     boolean hasMonsterRuntime;
     MonsterRuntimeCheckpoint monsterRuntime;
     UnitStates holder;
