@@ -3764,6 +3764,33 @@ Sequence/Leap/动态路径游标、地图/事务/未绑定 RNG、真实 socket t
 下一迁移：M8-A 第 49 批，继续处理未覆盖的实体创建/删除恢复边界与真实 socket transport
 接管；若无新增生命周期缺口，再进入 M8-A/M8-D 联合收尾验收。
 
+### M8-A 第 49 批：恢复删除边界与 socket transport 生命周期收口（2026-10-26）
+
+完成日期：2026-10-26；代码提交：待本批提交后回填。
+
+- 收口 `ServerEntityLifecycle` 的恢复删除边界：Artemis 删除是延迟生效的，事务内以集合记录
+  已提交删除，重复删除在同一 restore 事务中明确失败，避免佣兵/召唤物/sourceItem 等所有权
+  清理被重复执行；每次 begin/end restore 都重置该门禁。
+- 复核 `D2gsCheckpointSnapshot` 的创建失败、unexpected 删除和 rollback 路径，确认 socket
+  transport token 的 stale frame/disconnect 门禁与实体删除事务共用同一连接 epoch。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+.\\gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：D2GS 定向生命周期/checkpoint 回归 26 项通过、0 失败；核心与 FlatBuffers 生成通过，
+未产生 `SoundP.java` 噪声。真实 1.10f 资源门禁按环境变量执行；本批不改变 D2S 布局或 socket
+字段，仅收口 transport/restore 生命周期边界。
+
+剩余问题：M8-A 的完整 Casting/Sequence/Leap/动态路径游标、地图/事务/未绑定 RNG，以及
+M8-D 最终网络事件统一出口仍待后续批次。
+
+下一迁移：M8-A/M8-D 联合收尾验收，覆盖真实双 socket transport 与最终旧入口清理。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21

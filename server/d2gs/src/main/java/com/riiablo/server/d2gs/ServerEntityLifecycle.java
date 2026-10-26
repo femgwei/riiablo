@@ -32,6 +32,8 @@ import com.riiablo.net.packet.d2gs.WarpP;
 import com.riiablo.save.CharData;
 import com.riiablo.attributes.Stat;
 import java.nio.ByteBuffer;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Production checkpoint lifecycle bridge backed by the authoritative
@@ -49,6 +51,8 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
   private final ItemReader itemReader;
   private CheckpointEntityAllocation allocation;
   private boolean restoreMissileRuntime;
+  /** Artemis deletion is deferred until process(); keep the transaction boundary explicit. */
+  private final Set<Integer> deletedInRestore = new HashSet<>();
 
   @Override public int createEntity(World target, int expectedEntityId, ByteBuffer payload,
       boolean restoreRuntime) {
@@ -61,6 +65,7 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
   @Override public void beginRestore(World target) {
     if (target != world) throw new IllegalArgumentException("world");
     if (allocation != null) throw new IllegalStateException("nested checkpoint restore");
+    deletedInRestore.clear();
     allocation = new CheckpointEntityAllocation(world);
   }
 
@@ -68,6 +73,7 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
     if (target != world) throw new IllegalArgumentException("world");
     if (allocation != null) allocation.close();
     allocation = null;
+    deletedInRestore.clear();
   }
 
   public ServerEntityLifecycle(World world, EntityFactory factory, Files files) {
@@ -141,6 +147,7 @@ public final class ServerEntityLifecycle implements D2gsCheckpointSnapshot.Entit
     if (target != world || !D2gsCheckpointSnapshot.isActive(world, entityId)) {
       return false;
     }
+    if (!deletedInRestore.add(entityId)) return false;
     CofManager cofs = world.getSystem(CofManager.class);
     if (cofs != null) cofs.cancelCheckpointInsertion(entityId);
     world.delete(entityId);
