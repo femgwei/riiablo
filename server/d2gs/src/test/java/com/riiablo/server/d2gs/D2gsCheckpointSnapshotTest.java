@@ -12,6 +12,7 @@ import com.riiablo.engine.AuthoritativeSessionRegistry;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.replay.SimulationCheckpoint;
+import com.riiablo.engine.replay.TransactionRuntimeCheckpoint;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import java.util.HashMap;
@@ -20,6 +21,19 @@ import org.junit.Test;
 
 /** Verifies the D2GS checkpoint adapter without loading native maps or MPQs. */
 public class D2gsCheckpointSnapshotTest {
+  @Test public void transactionRuntimeUsesV9EnvelopeAndSurvivesBytesRoundTrip() {
+    AuthoritativeSessionRegistry sessions = new AuthoritativeSessionRegistry();
+    assertTrue(sessions.connect(3, "hero", 0, 10L).accepted);
+    D2gsCheckpointSnapshot checkpoint = D2gsCheckpointSnapshot.fromPayloads(
+        10L, java.util.Collections.emptyMap(), null, null, null, sessions.snapshot())
+        .withTransactionRuntime(TransactionRuntimeCheckpoint.empty(9L));
+    byte[] encoded = checkpoint.toBytes();
+    assertEquals(9, java.nio.ByteBuffer.wrap(encoded).getInt(4));
+    D2gsCheckpointSnapshot decoded = D2gsCheckpointSnapshot.fromBytes(encoded);
+    assertEquals(checkpoint.summary().canonical(), decoded.summary().canonical());
+    assertEquals(9L, decoded.transactionRuntime().nextIngressRequestId());
+  }
+
   @Test public void v6EnvelopeRetainsNonemptyV1UnitStateRecordsWithoutInventingTargets() {
     World source = worldWithEntities(1);
     try {

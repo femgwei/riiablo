@@ -67,6 +67,7 @@ import com.riiablo.engine.D2gsCommandAdapter;
 import com.riiablo.engine.replay.CheckpointRngRegistry;
 import com.riiablo.engine.replay.NativeUnitRandomRegistry;
 import com.riiablo.engine.replay.MapRuntimeCheckpoint;
+import com.riiablo.engine.replay.TransactionRuntimeCheckpoint;
 import com.riiablo.engine.replay.SimulationReplayRecorder;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.RoomActivationSystem;
@@ -79,6 +80,7 @@ import com.riiablo.engine.server.AuthoritativeSimulation;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.ItemManager;
+import com.riiablo.engine.server.RequestCacheSnapshot;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.ServerEntityFactory;
@@ -6297,7 +6299,66 @@ public class D2GS extends ApplicationAdapter {
     if (rngStates == null && replayRngRegistry != null) rngStates = replayRngRegistry.snapshot();
     return D2gsCheckpointSnapshot.capture(world, serializer, simulation.tickNumber(), rngStates,
         nativeUnitRngStates, d2sCheckpoint, authoritativeSessions.snapshot()).withWorldIdentity(seed, diff)
-        .withAllocatorFrom(world);
+        .withAllocatorFrom(world).withTransactionRuntime(captureTransactionRuntime());
+  }
+
+  /** Captures portable transaction metadata and completed idempotency responses. */
+  private TransactionRuntimeCheckpoint captureTransactionRuntime() {
+    if (commandAdapter.pendingCount() != 0) {
+      throw new IllegalStateException("transaction checkpoint cannot capture pending command payloads");
+    }
+    java.util.List<RequestCacheSnapshot> cached = new java.util.ArrayList<>();
+    cached.addAll(npcRequestCache.snapshot());
+    cached.addAll(tradeRequestCache.snapshot());
+    cached.addAll(itemMoveRequestCache.snapshot());
+    cached.addAll(skillPointRequestCache.snapshot());
+    cached.addAll(statPointRequestCache.snapshot());
+    cached.addAll(partyRequestCache.snapshot());
+    cached.addAll(questRequestCache.snapshot());
+    cached.sort((a, b) -> {
+      int connection = Integer.compare(a.connectionId, b.connectionId);
+      return connection != 0 ? connection : Long.compare(a.requestId, b.requestId);
+    });
+    long tick = simulation.tickNumber();
+    java.util.List<TransactionRuntimeCheckpoint.Entry> entries = new java.util.ArrayList<>();
+    for (RequestCacheSnapshot cachedEntry : cached) {
+      AuthoritativeSessionRegistry.Session session =
+          authoritativeSessions.activeConnection(cachedEntry.connectionId);
+      if (session == null) {
+        throw new IllegalStateException("transaction cache has no active session: "
+            + cachedEntry.connectionId);
+      }
+      entries.add(TransactionRuntimeCheckpoint.Entry.of(cachedEntry.connectionId,
+          session.generation, session.actorId, cachedEntry.requestId, cachedEntry.kind, -1,
+          tick, tick, cachedEntry.intent, cachedEntry.response()));
+    }
+    return TransactionRuntimeCheckpoint.capture(nextIngressRequestId, entries);
+  }
+
+  private void restoreTransactionRuntime(TransactionRuntimeCheckpoint runtime) {
+    if (runtime == null) return;
+    npcRequestCache.clearAll();
+    tradeRequestCache.clearAll();
+    itemMoveRequestCache.clear();
+    skillPointRequestCache.clearAll();
+    statPointRequestCache.clearAll();
+    partyRequestCache.clearAll();
+    questRequestCache.clearAll();
+    for (TransactionRuntimeCheckpoint.Entry entry : runtime.entries()) {
+      RequestCacheSnapshot snapshot = new RequestCacheSnapshot(entry.connectionId,
+          entry.requestId, entry.kind, entry.intent, entry.response());
+      switch (entry.kind) {
+        case "npc": npcRequestCache.restore(snapshot); break;
+        case "trade": tradeRequestCache.restore(snapshot); break;
+        case "item": itemMoveRequestCache.restore(snapshot); break;
+        case "skill": skillPointRequestCache.restore(snapshot); break;
+        case "stat": statPointRequestCache.restore(snapshot); break;
+        case "party": partyRequestCache.restore(snapshot); break;
+        case "quest": questRequestCache.restore(snapshot); break;
+        default: throw new IllegalArgumentException("unknown transaction cache kind: " + entry.kind);
+      }
+    }
+    nextIngressRequestId = runtime.nextIngressRequestId();
   }
 
   public D2gsCheckpointSnapshot replayCheckpoint() { return replayCheckpoint; }
@@ -6361,6 +6422,7 @@ public class D2GS extends ApplicationAdapter {
       // Validate before touching ECS so a missing/duplicate RNG stream cannot
       // leave the world half-restored.
       replayRngRegistry.validate(rngStates);
+      if (worldCompatibility) worldReplayBindings.validateCompatibilityBindings(rngStates);
     }
     if (replayNativeUnitRngRegistry != null) {
       replayNativeUnitRngRegistry.validate(nativeUnitRngStates);
@@ -6373,6 +6435,9 @@ public class D2GS extends ApplicationAdapter {
       // Validate with a throw-away registry before touching ECS.  The live
       // registry is changed only after all other checkpoint payloads succeed.
       new AuthoritativeSessionRegistry().restore(sessionSnapshot);
+    }
+    if (checkpoint.transactionRuntime() != null) {
+      checkpoint.transactionRuntime().validateSessions(sessionSnapshot);
     }
     // Keep a complete owner-thread image so a later RNG/D2S/session failure
     // cannot leave ECS ahead of the other authoritative registries.
@@ -6389,7 +6454,7 @@ public class D2GS extends ApplicationAdapter {
     D2gsCheckpointSnapshot previousReplayCheckpoint = replayCheckpoint;
     D2gsCheckpointSnapshot before = D2gsCheckpointSnapshot.capture(world, serializer, liveTick,
         liveRngStates, liveNativeUnitRngStates, liveD2sCheckpoint, liveSessionSnapshot)
-        .withAllocatorFrom(world);
+        .withAllocatorFrom(world).withTransactionRuntime(captureTransactionRuntime());
     D2gsCheckpointSnapshot.RestoreResult result = lifecycle == null
         ? checkpoint.restoreExisting(world, serializer)
         : checkpoint.restoreExisting(world, serializer, lifecycle);
@@ -6425,6 +6490,7 @@ public class D2GS extends ApplicationAdapter {
             }
           }
         }
+        restoreTransactionRuntime(checkpoint.transactionRuntime());
         // Replaying an archived checkpoint is the one explicit operation allowed
         // to move the fixed clock backwards; ordinary callers retain the
         // monotonic restore guard.
@@ -6472,6 +6538,7 @@ public class D2GS extends ApplicationAdapter {
           authoritativeSessions.restore(liveSessionSnapshot);
           pendingSessionRebindKeys.clear();
           pendingSessionRebindKeys.addAll(livePendingRebindKeys);
+          restoreTransactionRuntime(before.transactionRuntime());
           simulation.restoreFromCheckpoint(liveTick, true);
           replayCheckpoint = previousReplayCheckpoint;
         } catch (Throwable rollbackFailure) {

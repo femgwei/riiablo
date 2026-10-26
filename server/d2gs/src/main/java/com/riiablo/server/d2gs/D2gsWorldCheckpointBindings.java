@@ -10,6 +10,7 @@ import com.riiablo.engine.replay.SimulationCheckpoint;
 import com.riiablo.engine.server.NativeUnitRandom;
 import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.MissileCollisionSystem;
+import com.riiablo.engine.server.AuraEcsSystem;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
@@ -25,9 +26,9 @@ import com.riiablo.save.CharData;
 import com.riiablo.save.D2SCheckpointRegistry;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
 
 /** Owner-thread bindings to live authoritative players and D2Common unit seeds. */
 final class D2gsWorldCheckpointBindings {
@@ -66,6 +67,36 @@ final class D2gsWorldCheckpointBindings {
     if (rng != null && compatibilityRng.get(rng.streamName(), rng.contextId()) == null) {
       compatibilityRng.register(rng);
     }
+    AuraEcsSystem aura = world.getSystem(AuraEcsSystem.class);
+    if (aura != null) for (NativeRng stream : aura.checkpointRngs()) {
+      if (compatibilityRng.get(stream.streamName(), stream.contextId()) == null) {
+        compatibilityRng.register(stream);
+      }
+    }
+  }
+
+  /**
+   * Validates that stateful Aura streams still have a live owner in this
+   * process.  CheckpointRngRegistry can reconstruct a NativeRng from raw state,
+   * but doing that for an Aura stream would leave the stream detached from
+   * AuraEcsSystem's per-caster/per-target maps.  Until Aura runtime state is
+   * serialized as a first-class checkpoint, reject that cross-process shape
+   * explicitly instead of silently accepting a divergent continuation.
+   */
+  void validateCompatibilityBindings(List<SimulationCheckpoint.RngState> states) {
+    refreshCompatibilityRng();
+    if (states == null) return;
+    for (SimulationCheckpoint.RngState state : states) {
+      if (!isAuraStream(state.stream)) continue;
+      if (compatibilityRng.get(state.stream, state.contextId) == null) {
+        throw new IllegalStateException("checkpoint Aura RNG has no live host binding: "
+            + state.stream + "#" + state.contextId);
+      }
+    }
+  }
+
+  private static boolean isAuraStream(String stream) {
+    return "aura.damage".equals(stream) || "aura.holy-freeze".equals(stream);
   }
 
   void refreshPlayers() {

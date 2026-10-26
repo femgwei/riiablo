@@ -3904,6 +3904,96 @@ git diff --check
 继续属于冻结批次 B。事务运行态、未绑定 RNG、战斗摘要最终校验和不可重建 native 对象图仍待
 在同一批次继续收口。
 
+### 冻结批次 B 继续：事务请求运行态 checkpoint（2026-10-27）
+
+本次继续在冻结批次 B 内处理事务运行态，没有新增批次或拆分提交：
+
+- 新增 `TransactionRuntimeCheckpoint`，只保存 connection/session generation、actor、request
+  identity、kind、target、观察/目标 Tick、canonical intent 和可选完成响应字节；socket、Packet、
+  handler 引用及任意 Java payload 均不会进入 checkpoint。记录按 request identity 排序并拒绝
+  重复、越界、乱序和超长字段。
+- D2GS 完整 envelope 升为 v9（保留 v1-v8 读取），canonical summary 纳入事务 digest；ingress
+  request 序号在捕获、恢复和失败回滚中保持一致。未 drain 的命令 payload 没有 portable codec 时
+  捕获会明确失败，禁止静默丢失命令。
+- 恢复前校验归档 session generation 与 actor identity；旧 generation 请求不能重新进入，新
+  generation 可在 rebind 后继续提交。事务元数据的跨 JVM bytes round-trip、篡改、重复请求和
+  generation mismatch 回归已加入。
+- 同批补齐一组实际未绑定随机源：Aura 的周期伤害与神圣冻结改用按技能/实体命名的
+  `NativeRng`，并由 `D2gsWorldCheckpointBindings` 纳入 compatibility registry；恢复时缺失
+  流会显式失败，避免恢复后从新 seed 静默重掷。其余仍未接入 registry 的地图/掉落/旧兼容
+  调用继续保留为本批的审计清单。
+- `CombatCheckpoint` 增加 continuation gate：恢复后的下一摘要必须承接 archived tick、
+  caster/target/skill identity 和 `lifeAfterFixed → lifeBeforeFixed` 边界，并返回字段级漂移；
+  该 gate 只验证摘要与完整 replay 的连接，不把摘要提升为 ECS/save 格式。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+.\\gradlew.bat :core:test --tests com.riiablo.engine.replay.TransactionRuntimeCheckpointTest --tests com.riiablo.engine.replay.MapRuntimeCheckpointTest --no-daemon --max-workers=1 --console=plain
+.\\gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest --tests com.riiablo.server.d2gs.D2gsCheckpointRecoveryTest --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：事务 codec、v9 envelope、既有地图/D2GS checkpoint、D2S 和独立恢复回归通过；Combat
+continuation gate 与 Aura 命名 RNG 的 core/D2GS 编译通过。七类 D2GS 已完成请求缓存（NPC、
+交易、物品、技能点、属性点、组队、任务）现在按 connection/generation/actor/request identity
+保存稳定 intent 与 response 字节，并在恢复后重建各自缓存；response 摘要进入 transaction
+canonical witness。未绑定 RNG、战斗摘要到可恢复 replay 的最终校验及不可重建
+Item/native path/MonSeq 对象图继续留在冻结批次 B。
+
+### 冻结批次 B 继续：战斗摘要、Replay 与 D2GS 组合验收（2026-10-27）
+
+- 新增 `D2gsCombatReplayCheckpointIntegrationTest`，把 `CombatCheckpoint` continuation gate、
+  `SimulationReplayLog` 和 D2GS v9 checkpoint 放入同一条跨进程验收链：归档摘要经过
+  `lifeAfterFixed → lifeBeforeFixed` 边界进入下一 Tick，caster/target/skill identity、兼容
+  RNG state/draw count、NativeUnit RNG、事务 connection/generation/actor/request identity、
+  canonical intent 和 response bytes 均参与恢复后的校验。
+- D2GS v9 envelope 与事务 runtime 先做 bytes round-trip，再将 D2GS digest 和战斗 digest
+  写入 replay checkpoint；RPLY v1 再做 bytes/canonical/digest round-trip，`SimulationReplayRunner`
+  从恢复 Tick 继续执行下一条命令并验证两个 checkpoint。战斗或事务 witness 任一变化都会
+  改变最终 replay digest。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+.\\gradlew.bat :server-domain:test --tests com.riiablo.engine.server.combat.CombatCheckpointTest --no-daemon --max-workers=1 --console=plain
+.\\gradlew.bat :core:test --tests com.riiablo.engine.SimulationReplayLogTest --no-daemon --max-workers=1 --console=plain
+.\\gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsCombatReplayCheckpointIntegrationTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：组合验收通过；战斗摘要、RNG、事务缓存和 D2GS/replay digest 在跨 bytes 恢复后保持一致，
+恢复后的下一 Tick 继续 gate 通过。随后重跑既有 `D2gsCheckpointSnapshotTest`/
+`D2gsCheckpointRecoveryTest` 暴露出缺失 Sequence 时的空组件访问；`ActionRuntimeCheckpoint`
+现已在 absent action component 分支跳过 MonSeq materialize，并补充回归测试，两个 D2GS 套件
+均恢复全通过。批次 B 仍保留地图/事务未绑定 RNG 的最终宿主审计
+和真实双客户端 replay/save/reconnect 作为批次 B/C 的剩余出口，未提前标记 M8 总体完成。
+
+### 冻结批次 B 继续：Item/native path/MonSeq 对象图边界（2026-10-27）
+
+本次仍在冻结批次 B 内收口对象图恢复边界：
+
+- `ItemRuntimeCheckpoint` 继续只保存可验证的 Item 树和属性字节；socket、表项和属性表在目标
+  进程通过显式 `Files` 重新 materialize，来源表身份、共享/循环引用和深度越界都会失败。
+- `PathfindRuntimeCheckpoint` 已保存 graph path cursor、动态目标身份和阻塞/重寻路计时；仍在
+  发现 live `NativePathRuntime` 时显式拒绝捕获，恢复只接受当前 `NativePathIdentity` 宿主，
+  不把不可移植的 native path 对象伪装成 A* 路径。
+- `Sequence` 为 MonSeq 保存稳定的 `seq_*` 名称；`ActionRuntimeCheckpoint` 恢复时按名称从
+  当前数据包重建 `NativeMonsterSequence`，缺少对应行会显式失败，避免继续运行错误的动作点。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+.\\gradlew.bat :core:test --tests com.riiablo.engine.replay.ActionRuntimeCheckpointTest --tests com.riiablo.engine.server.NativeMonsterSequenceIntegrationTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+本次继续属于冻结批次 B；战斗摘要到可恢复 replay 的组合验收和 D2GS allocator/lifecycle
+回归已完成，未绑定 RNG 的最终宿主审计仍待在本批收口。
+
 ## 剩余主线固定批次（2026-10-26 冻结）
 
 当前已完成 M0、M1 主行、M2、M6、M8-B；M4-B 内容/Mod 分层按计划暂停，不计入当前

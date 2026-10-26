@@ -683,7 +683,10 @@ public abstract class AI implements Interactable.Interactor {
     if (mode < 0) mode = Engine.Monster.MODE_S1;
 
     if (!startMonsterSkill(skill, mode, targetId, targetVec)) return false;
-    if (nativeSequence != null) mSequence.get(entityId).nativeMonster = nativeSequence;
+    if (nativeSequence != null) {
+      mSequence.get(entityId).nativeMonster = nativeSequence;
+      mSequence.get(entityId).nativeMonsterName = nativeSequence.name;
+    }
     log.info("[MONSTER_SKILL] phase=cast entity={} monster={} slot={} skillId={} skill={} "
             + "level={} mode={} configuredMode={} sequenceOverride={} target={}",
         entityId, monster.monstats.Id, skillIndex + 1, skill.Id, skill.skill,

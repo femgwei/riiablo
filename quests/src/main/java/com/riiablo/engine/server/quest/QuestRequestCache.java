@@ -4,6 +4,9 @@ package com.riiablo.engine.server.quest;
 import com.badlogic.gdx.utils.IntMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import com.riiablo.engine.server.RequestCacheSnapshot;
 
 /** Bounded per-connection idempotency cache for authoritative quest requests. */
 public final class QuestRequestCache {
@@ -78,8 +81,28 @@ public final class QuestRequestCache {
   }
 
   public synchronized void clear(int connectionId) { clients.remove(connectionId); }
+  public synchronized void clearAll() { clients.clear(); }
   public synchronized int size(int connectionId) {
     LinkedHashMap<Long, Entry> entries = clients.get(connectionId);
     return entries == null ? 0 : entries.size();
+  }
+  public synchronized List<RequestCacheSnapshot> snapshot() {
+    List<RequestCacheSnapshot> result = new ArrayList<>();
+    for (IntMap.Entry<LinkedHashMap<Long, Entry>> client : clients) {
+      for (Map.Entry<Long, Entry> entry : client.value.entrySet()) {
+        Intent i = entry.getValue().intent;
+        result.add(new RequestCacheSnapshot(client.key, entry.getKey(), "quest",
+            i.operation + "," + i.targetEntityId + "," + i.messageIndex,
+            entry.getValue().response()));
+      }
+    }
+    return result;
+  }
+  public synchronized void restore(RequestCacheSnapshot snapshot) {
+    String[] f = snapshot.intent.split(",", -1);
+    if (f.length != 3) throw new IllegalArgumentException("quest intent");
+    put(snapshot.connectionId, snapshot.requestId,
+        new Intent(Byte.parseByte(f[0]), Integer.parseInt(f[1]), Integer.parseInt(f[2])),
+        snapshot.response());
   }
 }

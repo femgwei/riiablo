@@ -118,8 +118,10 @@ public class SequenceHandler extends IteratingSystem {
     }
     if (casting != null && mWhirlwindRuntime.has(event.entityId)) {
       NativeMonsterSequence nativeMonster = sequence.nativeMonster;
+      String nativeMonsterName = sequence.nativeMonsterName;
       sequence.sequence(sequence.mode1, sequence.mode2);
       sequence.nativeMonster = nativeMonster;
+      sequence.nativeMonsterName = nativeMonsterName;
       mAnimData.get(event.entityId).override = -1;
       com.riiablo.logger.LogManager.getLogger(SequenceHandler.class).debug(
           "[WHIRLWIND] phase=repeat_animation entity={}", event.entityId);

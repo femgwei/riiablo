@@ -2,7 +2,10 @@ package com.riiablo.engine.server.party;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import com.badlogic.gdx.utils.IntMap;
+import com.riiablo.engine.server.RequestCacheSnapshot;
 
 /** Bounded per-connection cache for idempotent party request responses. */
 public final class PartyRequestCache {
@@ -55,4 +58,22 @@ public final class PartyRequestCache {
     entries.put(requestId, new Entry(intent, response));
   }
   public synchronized void clear(int clientId) { clients.remove(clientId); }
+  public synchronized void clearAll() { clients.clear(); }
+  public synchronized List<RequestCacheSnapshot> snapshot() {
+    List<RequestCacheSnapshot> result = new ArrayList<>();
+    for (IntMap.Entry<LinkedHashMap<Long, Entry>> client : clients) {
+      for (Map.Entry<Long, Entry> entry : client.value.entrySet()) {
+        Intent i = entry.getValue().intent;
+        result.add(new RequestCacheSnapshot(client.key, entry.getKey(), "party",
+            i.operation + "," + i.targetEntityId, entry.getValue().response()));
+      }
+    }
+    return result;
+  }
+  public synchronized void restore(RequestCacheSnapshot snapshot) {
+    String[] f = snapshot.intent.split(",", -1);
+    if (f.length != 2) throw new IllegalArgumentException("party intent");
+    put(snapshot.connectionId, snapshot.requestId,
+        new Intent(Byte.parseByte(f[0]), Integer.parseInt(f[1])), snapshot.response());
+  }
 }

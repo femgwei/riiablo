@@ -3,6 +3,9 @@ package com.riiablo.engine.server.combat;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Immutable, compact combat checkpoint for diagnostics and replay comparison.
@@ -66,5 +69,32 @@ public final class CombatCheckpoint {
     } catch (NoSuchAlgorithmException e) {
       throw new AssertionError("JRE must provide SHA-256", e);
     }
+  }
+
+  /**
+   * Checks that a post-restore combat summary really continues this hit
+   * boundary.  This is a field-level replay gate; it does not replace the
+   * complete ECS checkpoint or save image.
+   */
+  public Continuation verifyContinuation(CombatCheckpoint resumed) {
+    if (resumed == null) throw new NullPointerException("resumed");
+    ArrayList<String> mismatches = new ArrayList<>();
+    if (resumed.tick <= tick) mismatches.add("tick");
+    if (resumed.casterId != casterId) mismatches.add("casterId");
+    if (resumed.targetId != targetId) mismatches.add("targetId");
+    if (resumed.skillId != skillId) mismatches.add("skillId");
+    if (resumed.lifeBeforeFixed != lifeAfterFixed) mismatches.add("lifeBeforeFixed");
+    return new Continuation(mismatches);
+  }
+
+  public static final class Continuation {
+    private final List<String> mismatches;
+
+    private Continuation(List<String> mismatches) {
+      this.mismatches = Collections.unmodifiableList(new ArrayList<>(mismatches));
+    }
+
+    public boolean accepted() { return mismatches.isEmpty(); }
+    public List<String> mismatches() { return mismatches; }
   }
 }

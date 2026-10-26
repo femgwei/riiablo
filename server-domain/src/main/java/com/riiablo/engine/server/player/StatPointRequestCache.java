@@ -2,6 +2,9 @@ package com.riiablo.engine.server.player;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import com.riiablo.engine.server.RequestCacheSnapshot;
 
 /** Bounded replay cache so a retried attribute request cannot spend twice. */
 public final class StatPointRequestCache {
@@ -47,5 +50,18 @@ public final class StatPointRequestCache {
   public synchronized void clearConnection(int connectionId) {
     long id = connectionId & 0xFFFF_FFFFL;
     entries.entrySet().removeIf(entry -> (entry.getKey() & 0xFFFF_FFFFL) == id);
+  }
+  public synchronized void clearAll() { entries.clear(); }
+  public synchronized List<RequestCacheSnapshot> snapshot() {
+    List<RequestCacheSnapshot> result = new ArrayList<>();
+    for (Map.Entry<Long, Entry> entry : entries.entrySet()) {
+      result.add(new RequestCacheSnapshot((int) (entry.getKey() & 0xFFFF_FFFFL),
+          entry.getKey() >> 32, "stat", Integer.toString(entry.getValue().statType),
+          entry.getValue().response()));
+    }
+    return result;
+  }
+  public synchronized void restore(RequestCacheSnapshot snapshot) {
+    put(snapshot.connectionId, snapshot.requestId, Integer.parseInt(snapshot.intent), snapshot.response());
   }
 }

@@ -23,6 +23,7 @@ class NativeMonsterSequenceIntegrationTest extends RiiabloTest {
     try {
       int id = world.create();
       NativeMonsterSequence data = NativeMonsterSequence.load("seq_serpentcharge");
+      assertEquals("seq_serpentcharge", data.name);
       assertEquals(Engine.KEYFRAME_ATK, data.actions[0]);
       world.getMapper(com.riiablo.engine.server.component.CofReference.class).create(id)
           .set("SD", data.mode);

@@ -9,6 +9,8 @@ import com.riiablo.engine.server.NativeJabSequence;
 @PooledWeaver
 public class Sequence extends Component {
   public com.riiablo.engine.server.NativeMonsterSequence nativeMonster;
+  /** Stable MonSeq identity; nativeMonster is a derived table object. */
+  public String nativeMonsterName;
   public int nativeMonsterCursor;
   public int nativeMonsterWaitFrames;
 
@@ -45,6 +47,7 @@ public class Sequence extends Component {
 
   public Sequence sequence(byte mode1, byte mode2) {
     nativeMonster = null;
+    nativeMonsterName = null;
     nativeMonsterCursor = 0;
     nativeMonsterWaitFrames = 0;
     this.mode1 = mode1;

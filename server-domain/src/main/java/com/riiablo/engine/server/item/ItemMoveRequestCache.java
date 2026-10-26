@@ -2,6 +2,9 @@ package com.riiablo.engine.server.item;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import com.riiablo.engine.server.RequestCacheSnapshot;
 
 /** Bounded per-connection cache preventing duplicate item mutations on retries. */
 public final class ItemMoveRequestCache {
@@ -50,4 +53,25 @@ public final class ItemMoveRequestCache {
     entries.entrySet().removeIf(entry -> (entry.getKey() & 0xFFFFFFFFL) == mask);
   }
   public synchronized int size() { return entries.size(); }
+  public synchronized List<RequestCacheSnapshot> snapshot() {
+    List<RequestCacheSnapshot> result = new ArrayList<>();
+    for (Map.Entry<Long, Entry> entry : entries.entrySet()) {
+      ItemMoveIntent i = entry.getValue().intent;
+      result.add(new RequestCacheSnapshot((int) (entry.getKey() & 0xFFFF_FFFFL),
+          entry.getKey() >> 32, "item", i.revision + "," + i.operation + "," + i.itemId
+              + "," + i.groundEntityId + "," + i.storeLoc + "," + i.x + "," + i.y
+              + "," + i.bodyLoc + "," + i.merc + "," + i.pickupToCursor,
+          entry.getValue().response));
+    }
+    return result;
+  }
+  public synchronized void restore(RequestCacheSnapshot snapshot) {
+    String[] f = snapshot.intent.split(",", -1);
+    if (f.length != 10) throw new IllegalArgumentException("item intent");
+    put(snapshot.connectionId, new ItemMoveIntent(snapshot.requestId, Long.parseLong(f[0]),
+        Byte.parseByte(f[1]), Integer.parseInt(f[2]), Integer.parseInt(f[3]),
+        Integer.parseInt(f[4]), Integer.parseInt(f[5]), Integer.parseInt(f[6]),
+        Integer.parseInt(f[7]), Boolean.parseBoolean(f[8]), Boolean.parseBoolean(f[9])),
+        snapshot.response());
+  }
 }

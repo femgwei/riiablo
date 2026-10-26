@@ -46,6 +46,7 @@ public final class ActionRuntimeCheckpoint {
   private static final int MON_INFERNO = 11;
   private static final int DIAB_RUN = 12;
   private static final int COMBAT_RESULT = 13;
+  private static final int STRING = 14;
 
   private final byte[] bytes;
 
@@ -155,10 +156,10 @@ public final class ActionRuntimeCheckpoint {
   }
 
   /**
-   * The action components intentionally contain native object graphs (combat
-   * records, Items and native sequence/path state) which are not portable
-   * checkpoint values.  A live value must fail capture instead of being
-   * silently dropped and resuming a different action phase.
+   * Action components contain native object graphs (combat records, Items and
+   * path state). A live value must fail capture instead of being silently
+   * dropped; the one reconstructible exception is a named MonSeq table object,
+   * whose stable name is serialized separately and reloaded on restore.
    */
   private static void rejectUnsupportedActiveFields(Object component) {
     for (Field field : component.getClass().getDeclaredFields()) {
@@ -167,6 +168,15 @@ public final class ActionRuntimeCheckpoint {
       }
       field.setAccessible(true);
       try {
+        if (field.getType() == com.riiablo.engine.server.NativeMonsterSequence.class
+            && component instanceof Sequence) {
+          Sequence sequence = (Sequence) component;
+          if (field.get(component) != null && (sequence.nativeMonsterName == null
+              || sequence.nativeMonsterName.isEmpty())) {
+            throw new IllegalStateException("native sequence identity missing");
+          }
+          continue;
+        }
         if (field.get(component) != null) {
           throw new IllegalStateException("unsupported action runtime field: "
               + component.getClass().getSimpleName() + "." + field.getName());
@@ -210,6 +220,19 @@ public final class ActionRuntimeCheckpoint {
         readValue(in, tag, field, component);
       } catch (IllegalAccessException e) {
         throw new IllegalStateException("action field access: " + field, e);
+      }
+    }
+    if (kind == SEQUENCE && component != null) {
+      Sequence sequence = (Sequence) component;
+      if (sequence.nativeMonsterName != null) {
+        sequence.nativeMonster = com.riiablo.engine.server.NativeMonsterSequence.load(
+            sequence.nativeMonsterName);
+        if (sequence.nativeMonster == null) {
+          throw new IllegalStateException("native MonSeq source missing: "
+              + sequence.nativeMonsterName);
+        }
+      } else {
+        sequence.nativeMonster = null;
       }
     }
   }
@@ -285,6 +308,7 @@ public final class ActionRuntimeCheckpoint {
     if (type == NativeMonInferno.class) return MON_INFERNO;
     if (type == NativeDiabRun.class) return DIAB_RUN;
     if (type == CombatSystem.CombatResult.class) return COMBAT_RESULT;
+    if (type == String.class) return STRING;
     return 0;
   }
 
@@ -325,6 +349,7 @@ public final class ActionRuntimeCheckpoint {
         out.writeBoolean(value != null); if (value == null) break;
         writeCombatResult(out, (CombatSystem.CombatResult) value);
         break;
+      case STRING: CheckpointIO.writeString(out, (String) value); break;
       default: throw new IllegalArgumentException("action field tag");
     }
   }
@@ -355,6 +380,7 @@ public final class ActionRuntimeCheckpoint {
       case COMBAT_RESULT:
         if (!CheckpointIO.readBoolean(in)) field.set(target, null);
         else field.set(target, readCombatResult(in)); break;
+      case STRING: field.set(target, CheckpointIO.readString(in)); break;
       default: throw new IllegalArgumentException("action field tag");
     }
   }
@@ -471,6 +497,7 @@ public final class ActionRuntimeCheckpoint {
         in.readInt(); in.readInt(); in.readInt(); in.readInt(); in.readInt(); in.readInt();
         in.readInt(); in.readInt(); in.readInt(); in.readInt();
         CheckpointIO.readFloat(in); in.readInt(); in.readInt(); in.readInt(); break;
+      case STRING: CheckpointIO.readString(in); break;
       default: throw new IllegalArgumentException("action field tag");
     }
   }

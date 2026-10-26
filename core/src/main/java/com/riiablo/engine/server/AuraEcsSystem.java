@@ -18,6 +18,8 @@ import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.NamedRngStreams;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
@@ -120,6 +122,14 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
 
   public AuraManager manager() {
     return auras;
+  }
+
+  /** Exposes live aura streams to the owner-thread checkpoint registry. */
+  public java.util.List<NativeRng> checkpointRngs() {
+    java.util.ArrayList<NativeRng> result = new java.util.ArrayList<>();
+    for (com.badlogic.gdx.utils.IntMap.Entry<NativeRng> entry : damageRng) result.add(entry.value);
+    for (com.badlogic.gdx.utils.IntMap.Entry<NativeRng> entry : holyFreezeRng) result.add(entry.value);
+    return result;
   }
 
   /** Re-publish aura layers for an entity that just received a fresh snapshot. */
@@ -353,7 +363,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     if (target == null) return;
     NativeRng rng = damageRng.get(casterId);
     if (rng == null) {
-      rng = NativeRng.forUnit(Riiablo.gameSeed ^ skillId, casterId);
+      rng = NamedRngStreams.open(Riiablo.gameSeed ^ skillId, "aura.damage", casterId);
       damageRng.put(casterId, rng);
     }
     int raw = minimum + rng.nextInt(Math.max(1, maximum - minimum + 1));
@@ -385,7 +395,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     if (component.stateList == null) component.init(world, targetId);
     NativeRng rng = holyFreezeRng.get(targetId);
     if (rng == null) {
-      rng = NativeRng.forUnit(Riiablo.gameSeed ^ skillId, targetId);
+      rng = NamedRngStreams.open(Riiablo.gameSeed ^ skillId, "aura.holy-freeze", targetId);
       holyFreezeRng.put(targetId, rng);
     }
     boolean shatter = rng.roll(20, 100);

@@ -2280,6 +2280,43 @@ public class D2gsWorldCheckpointBindingsTest {
     } finally { world.dispose(); }
   }
 
+  @Test public void auraCheckpointRequiresAProcessLocalLiveStreamOwner() {
+    World world = new World();
+    try {
+      D2gsWorldCheckpointBindings bindings = new D2gsWorldCheckpointBindings(world, 123);
+      try {
+        bindings.validateCompatibilityBindings(java.util.Collections.singletonList(
+            new SimulationCheckpoint.RngState("aura.damage", 17, 42, 3)));
+        fail("detached Aura RNG must be rejected");
+      } catch (IllegalStateException expected) {
+        assertTrue(expected.getMessage().contains("aura.damage#17"));
+      }
+    } finally { world.dispose(); }
+  }
+
+  @Test public void completedRequestCacheRoundTripsWithSessionGeneration() throws Exception {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      source.populate();
+      source.server.partyRequestCache.put(0, 19L,
+          new com.riiablo.engine.server.party.PartyRequestCache.Intent((byte) 2, 7),
+          new byte[] {4, 5, 6});
+      java.lang.reflect.Field next = D2GS.class.getDeclaredField("nextIngressRequestId");
+      next.setAccessible(true);
+      next.setLong(source.server, 20L);
+      D2gsCheckpointSnapshot checkpoint = source.server.captureReplayCheckpoint();
+      assertEquals(1, checkpoint.transactionRuntime().entries().size());
+      assertTrue(target.server.restoreReplayCheckpoint(checkpoint).success());
+      com.riiablo.engine.server.party.PartyRequestCache.Entry restored =
+          target.server.partyRequestCache.lookup(0, 19L);
+      assertNotNull(restored);
+      assertTrue(restored.matches(new com.riiablo.engine.server.party.PartyRequestCache.Intent(
+          (byte) 2, 7)));
+      assertArrayEquals(new byte[] {4, 5, 6}, restored.response());
+      assertEquals(checkpoint.transactionRuntime().canonical(),
+          target.server.captureReplayCheckpoint().transactionRuntime().canonical());
+    }
+  }
+
   @Test public void activePotionsContinueLikeTheOriginalWorldAfterJvmRestart() throws Exception {
     Path path = temporary.getRoot().toPath().resolve("potions.chk");
     String expected;

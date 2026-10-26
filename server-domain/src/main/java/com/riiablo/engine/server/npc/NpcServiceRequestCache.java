@@ -2,8 +2,11 @@ package com.riiablo.engine.server.npc;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.badlogic.gdx.utils.IntMap;
+import com.riiablo.engine.server.RequestCacheSnapshot;
 
 /** Bounded per-connection cache of completed NPC service responses. */
 public final class NpcServiceRequestCache {
@@ -98,6 +101,25 @@ public final class NpcServiceRequestCache {
 
   public synchronized void clear(int clientId) { clients.remove(clientId); }
   public synchronized void clearAll() { clients.clear(); }
+  public synchronized List<RequestCacheSnapshot> snapshot() {
+    List<RequestCacheSnapshot> result = new ArrayList<>();
+    for (IntMap.Entry<LinkedHashMap<Long, Entry>> client : clients) {
+      for (Map.Entry<Long, Entry> entry : client.value.entrySet()) {
+        Intent i = entry.getValue().intent;
+        result.add(new RequestCacheSnapshot(client.key, entry.getKey(), "npc",
+            i.npcEntityId + "," + i.service + "," + i.operation + "," + i.itemId
+                + "," + i.itemIndex + "," + i.stockRevision, entry.getValue().response()));
+      }
+    }
+    return result;
+  }
+  public synchronized void restore(RequestCacheSnapshot snapshot) {
+    String[] f = snapshot.intent.split(",", -1);
+    if (f.length != 6) throw new IllegalArgumentException("npc intent");
+    put(snapshot.connectionId, snapshot.requestId, intent(Integer.parseInt(f[0]),
+        Byte.parseByte(f[1]), Byte.parseByte(f[2]), Integer.parseInt(f[3]),
+        Integer.parseInt(f[4]), Long.parseLong(f[5])), snapshot.response());
+  }
 
   public static Intent intent(int npcEntityId, byte service, byte operation,
                               int itemId, int itemIndex, long stockRevision) {

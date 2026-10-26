@@ -16,11 +16,17 @@ public final class NativeMonsterSequence {
   private static final ThreadLocal<CacheState> CURRENT =
       ThreadLocal.withInitial(CacheState::new);
   public final byte mode;
+  /** Stable MonSeq row identity used to rebuild this derived object after restore. */
+  public final String name;
   public final int[] frames;
   public final byte[] modes;
   public final byte[] actions;
+  NativeMonsterSequence(String name, byte mode, int[] frames, byte[] modes, byte[] actions) {
+    this.name = name; this.mode = mode; this.frames = frames; this.modes = modes; this.actions = actions;
+  }
+  /** Test/tool constructor for synthetic sequences that have no table identity. */
   NativeMonsterSequence(byte mode, int[] frames, byte[] modes, byte[] actions) {
-    this.mode = mode; this.frames = frames; this.modes = modes; this.actions = actions;
+    this(null, mode, frames, modes, actions);
   }
 
   /** Non-wrapping SequenceTbls.cpp event selection, with an exclusive end sentinel. */
@@ -65,7 +71,7 @@ public final class NativeMonsterSequence {
     if (frames.isEmpty() || mode < 0) return null;
     int[] f = new int[frames.size()]; byte[] a = new byte[f.length], m = new byte[f.length];
     for (int i = 0; i < f.length; i++) { f[i] = frames.get(i); a[i] = actions.get(i); m[i] = modes.get(i); }
-    NativeMonsterSequence result = new NativeMonsterSequence((byte) mode, f, m, a);
+    NativeMonsterSequence result = new NativeMonsterSequence(name, (byte) mode, f, m, a);
     state.cache.put(name, result);
     return result;
   }

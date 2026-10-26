@@ -95,6 +95,22 @@ class ActionRuntimeCheckpointTest {
     }
   }
 
+  @Test void restoresAbsentActionComponentsWithoutReconstructingNullSequence() {
+    try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
+      int sourceId = source.world.create();
+      int targetId = target.world.create();
+      ActionRuntimeCheckpoint image = ActionRuntimeCheckpoint.capture(source.world, sourceId);
+
+      ActionRuntimeCheckpoint.restore(target.world, targetId, image);
+
+      assertFalse(target.world.getMapper(Casting.class).has(targetId));
+      assertFalse(target.world.getMapper(Sequence.class).has(targetId));
+      assertFalse(target.world.getMapper(Leap.class).has(targetId));
+      assertArrayEquals(image.bytes(),
+          ActionRuntimeCheckpoint.capture(target.world, targetId).bytes());
+    }
+  }
+
   private static final class Fixture implements AutoCloseable {
     final World world = new World();
     @Override public void close() { world.dispose(); }

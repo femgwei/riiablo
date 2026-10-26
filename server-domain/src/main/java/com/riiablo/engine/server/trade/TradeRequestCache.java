@@ -2,8 +2,11 @@ package com.riiablo.engine.server.trade;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.badlogic.gdx.utils.IntMap;
+import com.riiablo.engine.server.RequestCacheSnapshot;
 
 /** Bounded per-connection cache for idempotent player trade responses. */
 public final class TradeRequestCache {
@@ -97,6 +100,25 @@ public final class TradeRequestCache {
 
   public synchronized void clear(int clientId) { clients.remove(clientId); }
   public synchronized void clearAll() { clients.clear(); }
+  public synchronized List<RequestCacheSnapshot> snapshot() {
+    List<RequestCacheSnapshot> result = new ArrayList<>();
+    for (IntMap.Entry<LinkedHashMap<Long, Entry>> client : clients) {
+      for (Map.Entry<Long, Entry> entry : client.value.entrySet()) {
+        Intent i = entry.getValue().intent;
+        result.add(new RequestCacheSnapshot(client.key, entry.getKey(), "trade",
+            i.operation + "," + i.targetEntityId + "," + i.sessionId + "," + i.itemId
+                + "," + i.x + "," + i.y + "," + i.gold, entry.getValue().response()));
+      }
+    }
+    return result;
+  }
+  public synchronized void restore(RequestCacheSnapshot snapshot) {
+    String[] f = snapshot.intent.split(",", -1);
+    if (f.length != 7) throw new IllegalArgumentException("trade intent");
+    put(snapshot.connectionId, snapshot.requestId, intent(Byte.parseByte(f[0]),
+        Integer.parseInt(f[1]), Integer.parseInt(f[2]), Integer.parseInt(f[3]),
+        Integer.parseInt(f[4]), Integer.parseInt(f[5]), Long.parseLong(f[6])), snapshot.response());
+  }
 
   public static Intent intent(byte operation, int targetEntityId, int sessionId,
                               int itemId, int x, int y, long gold) {
