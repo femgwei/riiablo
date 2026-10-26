@@ -45,11 +45,14 @@ public final class CombatPositionHistory {
     }
   }
 
-  private final int capacity;
-  private final long[] ticks;
-  private final IntMap<Snapshot>[] frames;
-  private final Map map;
-  private long latestTick;
+  // Package-owned checkpoint codec rewinds these existing containers without sampling a Tick.
+  final int capacity;
+  final long[] ticks;
+  final IntMap<Snapshot>[] frames;
+  final Map map;
+  long latestTick;
+
+  public Map checkpointMap() { return map; }
 
   @SuppressWarnings("unchecked")
   public CombatPositionHistory(Map map, int capacity) {

@@ -3322,6 +3322,76 @@ MovementModes/飞行碰撞/骑乘物理、任务、Map/RoomEx/NPC 服务/交易�
 Blade 控制字段恢复不等于完整路径/命中验收；Inferno 门禁不是全技能动作关键帧验收。
 M8-A、M8-D 和 M8 总体继续进行中。
 
+### M8-A 第 43 批：战斗位置历史、主人路径环与采样时钟恢复（2026-10-26）
+
+本批集中补齐 CombatPositionHistory 的完整历史环和独立采样系统时钟，
+不改历史近战距离/碰撞或佣兵跟随规则。companion-runtime 升至 v3，内嵌
+position-history v1；summon-runtime v1、TARGETS v3、unit-state v4、AI v1、
+wrapper v1、D2GC v7 不变。companion v1/v2 仍可读取，历史为“未覆盖”，
+不能清空目标 World 的历史或回退其采样时钟；v3 的显式 absence 与未覆盖分开。
+
+- 保存 capacity、latestTick 高水位、每个物理槽的 Tick 和排序后的历史实体记录，
+  包括整数 x/y、size、roomId 和可空 zone；保留未初始化槽、已采样空帧、稀疏/
+  非单调采样、已删除实体的旧记录。latestTick 的槽被更早 Tick 覆盖也不重新推算
+  高水位；不以当前活实体集合重建历史，不补齐空洞，不修改原有软 entity ID 语义。
+- Zone 以 level ID、seed、边界、synthetic/town 标记精确匹配目标 Map 中的唯一
+  实例；不导入源 World 的 Zone 引用，不以 level ID 单独弱匹配。Map presence、
+  环容量、named owner 绑定及采样系统拓扑必须一致，缺失/外来/歧义区域在写入前拒绝。
+  这是预建地图上的历史适配，不是 Map/RoomEx、动态碰撞或全世界拓扑恢复。
+- 恢复先完整解析和预检，再原地替换既有 ticks 数组/IntMap 槽内容；保留同一个
+  History 实例，Actioneer/MercenaryFollowSystem 继续使用其已有注入对象。
+  不采样当前坐标、不 Tick、不执行动作或重算距离。采样与恢复对重复 Zone 缓存
+  身份解析，避免历史实体数乘以地图区域数的重复扫描。
+- 同时覆盖 CombatPositionCaptureSystem 自有 Tick；D2GS 的外部采样沿用已恢复
+  AuthoritativeSimulation 时钟，两种装配不混为一个计数器。独立采样时钟耗尽时
+  在递增前明确拒绝，不能溢出污染计数器。时钟和历史跟随已有 TARGETS 事务回滚。
+- 新格式进入既有 canonical 摘要和文件见证；仅改变历史、网络 payload/D2S/RNG
+  不变时摘要仍会变化。严格拒绝截断、尾随数据、非法布尔/长度/容量/槽 Tick/
+  ID 顺序/重复 ID/负 size/负采样时钟；镜像持有字节防御性复制，历史上限 16MiB，
+  不放宽既有外层容量预算。
+
+原版依据：D2MOO `source/D2Game/src/AI/AiThink.cpp:9518` 的
+`D2GAME_PETAI_PetMove_6FCE3EE0`，尤其 :9585 起遍历主人 20 个路径坐标，
+并以距离 >5 筛选落点。本批仅恢复现有宿主的兼容历史表示，不将 64 槽
+CombatPositionHistory 宣称为原版玩家路径结构复刻，也不改变 PetMove 策略。
+
+验收覆盖：历史全环/空帧/稀疏与乱序/退休实体/整数舍入/roomId/零 size/
+World 隔离/容器身份/Zone 重绑；真实历史近战读取；真实 MercenaryFollowSystem
+轨迹选择消费旧帧并跳过距离过近的新帧；采样系统恢复后连续推进、旧格式未覆盖、
+拓扑不匹配零写入、字段策略守卫及畸形镜像拒绝。
+
+真实 1.10f ServerEntityFactory/D2GS 在预建 synthetic arena 中保存历史并写盘，
+新 World 和独立 JVM 各续跑 72 Tick，逐 Tick 比较 canonical（含 unit RNG）与
+D2S。真实 Actioneer 在恢复后从旧帧判定近战范围，而不是读取已移远的当前位置；
+历史环覆盖整圈后回到原有 missing-snapshot fallback。晚期 D2S 身份失败回滚
+已有和空 World 的历史、实体、TARGETS、RNG、分配器、D2S 和时钟，并保留 History
+对象身份。此门禁的佣兵跟随/施法系统为受控禁用，不能冒充完整佣兵动作续跑。
+
+定向复现（D2_HOME 指向本地 1.10f 资源）：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.server.combat.CombatPositionCheckpointTest --tests com.riiablo.engine.replay.CompanionRuntimeCheckpointTest --tests com.riiablo.engine.replay.SummonRuntimeCheckpointTest :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --no-daemon --max-workers=1 --console=plain
+```
+
+扩大回归复用第 42 批的 AI/checkpoint/目标/召唤/陷阱/佣兵/碰撞/生命周期/RNG/
+D2S/真实 factory 范围，并将历史测试过滤扩为 `CombatPosition*Test`：core 1226 项、
+server/d2gs 91 项，共 1317 项通过，0 失败、0 错误、0 跳过；其中新增历史单测
+12 项，真实 factory 新增 3 项。桌面编译、模块边界检查及 9 项架构工具自测通过。
+
+```text
+./gradlew.bat :server:d2gs:headlessSimulationTick :server:d2gs:headlessReconnectGroundLoot :server:d2gs:headlessStaleTransport :server:d2gs:headlessSummonReconnect --continue --no-daemon --max-workers=1 --console=plain
+```
+
+四个真实 TCP gate 全部通过：固定 Tick 8→39（31 步、40ms）、部分金币拾取重连、
+旧 transport/slot-generation 隔离、召唤物双客户端/观察端重连。它们仍是同进程
+TCP 门禁；独立 JVM 验收为上述 checkpoint 文件恢复，不是 socket 跨进程接管。
+最终 `git diff --check` 通过；生成 SoundP 的 EOF 空行噪声不提交。
+
+边界：本批不覆盖 sourceItem/装备 Item 图、MercenaryManager 服务/名单/刷新/
+奖励绑定、完整 Casting/Sequence/Leap/动态路径游标/冻结战斗记录、MovementModes/
+飞行碰撞/骑乘、任务、Map/RoomEx/NPC 交易、本地实体、全局/未绑定 RNG、完整内容
+digest、结构订阅副作用及真实 socket 跨进程接管。M8-A/M8-D 和 M8 总体继续进行中。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。

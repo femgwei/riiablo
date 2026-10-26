@@ -801,6 +801,108 @@ public class D2gsWorldCheckpointBindingsTest {
     return -1;
   }
 
+  @Test public void combatHistoryAndRealActioneerResumeAcrossWorldAndJvmRestart() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("combat-history.chk"); String expected;
+    try (Fixture source = new Fixture(false, false, false, true, true)) {
+      source.populate(); source.populateCombatHistory(); source.server.writeReplayCheckpoint(path);
+      expected = continueCombatHistory(source);
+    }
+    assertEquals(expected, resumeCombatHistory(path));
+    Path output = temporary.getRoot().toPath().resolve("combat-history-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "combat-history").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("Combat history child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  private static String resumeCombatHistory(Path path) throws Exception {
+    try (Fixture target = new Fixture(false, false, false, true, true)) {
+      target.prepareMonsterMap();
+      D2gsCheckpointSnapshot image = D2gsCheckpointStore.read(path);
+      Object history = target.server.combatPositionHistory;
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      assertSame(history, target.server.combatPositionHistory);
+      assertEquals(image.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      assertEquals(image.d2sCheckpoint().canonical(), target.server.captureReplayCheckpoint().d2sCheckpoint().canonical());
+      return continueCombatHistory(target);
+    }
+  }
+
+  private static String continueCombatHistory(Fixture f) {
+    World world = f.server.world;
+    com.riiablo.engine.server.combat.CombatPositionHistory history = f.server.combatPositionHistory;
+    com.riiablo.engine.server.Actioneer actions = world.getSystem(com.riiablo.engine.server.Actioneer.class);
+    assertEquals(77L, history.latestTick()); assertSame(f.map.getZones().first(), history.snapshot(1, 77).zone);
+    assertTrue(actions.isInMeleeRangeAtTick(1, 2, 0, 77)); // old coordinates, not current ECS position
+    assertFalse(actions.isInMeleeRangeAtTick(1, 2, 0, 0));
+    StringBuilder result = new StringBuilder("COMBAT_HISTORY_CONTINUED");
+    for (int frame = 0; frame < 72; frame++) {
+      final int step = frame;
+      f.server.simulation.tick(() -> {
+        world.getMapper(Position.class).get(0).position.set(10 + step % 7, 10);
+        history.capture(world, f.server.simulation.tickNumber());
+      }, null);
+      result.append('|').append(actions.isInMeleeRangeAtTick(1, 2, 0, 77));
+      NativeUnitRandom.monster(world.getMapper(Monster.class).get(2), 1, 2).nextUnsigned();
+      D2gsCheckpointSnapshot after = f.server.captureReplayCheckpoint();
+      result.append(':').append(after.summary().canonical()).append(':').append(after.d2sCheckpoint().canonical());
+      if (frame < 63) assertNotNull(history.snapshot(1, 77));
+      else assertNull(history.snapshot(1, 77));
+    }
+    return result.toString();
+  }
+
+  @Test public void historyOnlyChangesAffectCanonicalAndNestedWitnessRejectsTampering() throws Exception {
+    try (Fixture f = new Fixture(false, false, false, true, true)) {
+      f.populate(); f.populateCombatHistory(); D2gsCheckpointSnapshot original = f.server.captureReplayCheckpoint();
+      f.server.combatPositionHistory.capture(f.server.world, 76);
+      D2gsCheckpointSnapshot changed = f.server.captureReplayCheckpoint();
+      for (int id : original.payloads().keySet()) assertArrayEquals(original.payloads().get(id), changed.payloads().get(id));
+      assertNotEquals(original.summary().canonical(), changed.summary().canonical());
+      assertEquals(original.d2sCheckpoint().canonical(), changed.d2sCheckpoint().canonical());
+      byte[] archive = original.toBytes();
+      byte[] nested = original.targetRuntime().companionRuntime().positionHistory().bytes();
+      int offset = indexOf(archive, nested); assertTrue(offset >= 0);
+      ByteBuffer.wrap(archive).putLong(offset + 8, 78L); // valid high-water tick, invalid outer witness
+      try { D2gsCheckpointSnapshot.fromBytes(archive); fail("position history witness tamper accepted"); }
+      catch (IllegalArgumentException expected) {}
+    }
+  }
+
+  @Test public void combatHistoryRollsBackWithWorldAfterLateD2sFailure() throws Exception {
+    try (Fixture source = new Fixture(false, false, false, true, true);
+        Fixture target = new Fixture(false, false, false, true, true);
+        Fixture empty = new Fixture(false, false, false, true, true)) {
+      source.populate(); source.populateCombatHistory(); target.prepareMonsterMap(); empty.prepareMonsterMap();
+      D2gsCheckpointSnapshot image = source.server.captureReplayCheckpoint();
+      assertTrue(target.server.restoreReplayCheckpoint(image).success());
+      target.server.combatPositionHistory.capture(target.server.world, 100);
+      CharData impostor = CharData.loadFromBuffer(0, ByteBuffer.wrap(image.d2sCheckpoint().entry(0).bytes()));
+      impostor.name = "ImpostorHero";
+      D2SCheckpoint wrong = D2SCheckpoint.of(java.util.Collections.singletonMap(0,
+          D2SCheckpoint.entry(0, 0, new D2SWriter96().writeD2S(D2SWriter96.createD2S(impostor)))));
+      D2gsCheckpointSnapshot incoming = D2gsCheckpointSnapshot.fromPayloads(image.tick(), image.payloads(),
+          image.summary().rngStates(), image.summary().nativeUnitRngStates(), wrong, image.sessionSnapshot())
+          .withTargetRuntime(image.targetRuntime()).withUnitStateRuntime(image.unitStateRuntime())
+          .withAllocatorState(image.allocatorState());
+      for (Fixture f : new Fixture[] {target, empty}) {
+        D2gsCheckpointSnapshot before = f.server.captureReplayCheckpoint();
+        Object history = f.server.combatPositionHistory;
+        try { f.server.restoreReplayCheckpoint(incoming); fail("late D2S failure must roll back history"); }
+        catch (IllegalStateException expected) {}
+        assertSame(history, f.server.combatPositionHistory);
+        assertEquals(before.summary().canonical(), f.server.captureReplayCheckpoint().summary().canonical());
+        assertEquals(before.d2sCheckpoint().canonical(), f.server.captureReplayCheckpoint().d2sCheckpoint().canonical());
+      }
+      assertEquals(100L, target.server.combatPositionHistory.latestTick());
+      assertEquals(0L, empty.server.combatPositionHistory.latestTick());
+    }
+  }
+
   @Test public void hirelingRuntimeChangesAreCanonicalAndConflictingNetworkProjectionIsRejected() throws Exception {
     try (Fixture source = new Fixture(false, false, false, true)) {
       source.populate(); source.populateHirelingRuntime();
@@ -827,7 +929,7 @@ public class D2gsWorldCheckpointBindingsTest {
       // Last record is absent hostile 2; mutate the prior mercenary's soft target ID, preserving nested schema.
       byte[] nested = before.targetRuntime().companionRuntime().bytes();
       int nestedOffset = indexOf(archive, nested); assertTrue(nestedOffset >= 0);
-      int hirelingPrefixLength = nested.length - 4 - before.targetRuntime().companionRuntime().summonRuntime().bytes().length;
+      int hirelingPrefixLength = nested.length - 2 - 4 - before.targetRuntime().companionRuntime().summonRuntime().bytes().length;
       ByteBuffer.wrap(archive).putInt(nestedOffset + hirelingPrefixLength - 9, 0);
       try { D2gsCheckpointSnapshot.fromBytes(archive); fail("valid nested runtime tamper accepted"); }
       catch (IllegalArgumentException expected) {}
@@ -2113,7 +2215,8 @@ public class D2gsWorldCheckpointBindingsTest {
     public static void main(String[] args) throws Exception {
       System.setProperty("d2Home", args[2]);
       loadResources();
-      try { System.out.println(args.length > 3 && "summons".equals(args[3])
+      try { System.out.println(args.length > 3 && "combat-history".equals(args[3])
+          ? resumeCombatHistory(Path.of(args[0])) : args.length > 3 && "summons".equals(args[3])
           ? resumeSummons(Path.of(args[0])) : args.length > 3 && "companions".equals(args[3])
           ? resumeCompanions(Path.of(args[0])) : args.length > 3 && "navi".equals(args[3])
           ? resumeNavi(Path.of(args[0])) : args.length > 3 && "sand-leaper".equals(args[3])
@@ -2154,6 +2257,10 @@ public class D2gsWorldCheckpointBindingsTest {
     }
 
     Fixture(boolean potions, boolean projectiles, boolean states, boolean companions) {
+      this(potions, projectiles, states, companions, false);
+    }
+
+    Fixture(boolean potions, boolean projectiles, boolean states, boolean companions, boolean history) {
       WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
           .with(new net.mostlyoriginal.api.event.common.EventSystem(), new ItemManager(),
               new ObjectInteractor(), new WarpInteractor(), new ItemInteractor(), factory,
@@ -2165,9 +2272,19 @@ public class D2gsWorldCheckpointBindingsTest {
       if (companions) builder.with(new com.riiablo.engine.server.Actioneer(),
           new com.riiablo.engine.server.MercenaryFollowSystem(), new com.riiablo.engine.server.MercenarySkillSystem(),
           new com.riiablo.engine.server.SummonedPetSystem(), new com.riiablo.engine.server.AssassinTrapSystem());
-      server.world = new World(builder.build().register("factory", factory).register("map", map)
+      com.artemis.WorldConfiguration configuration = builder.build().register("factory", factory).register("map", map)
           .register("serverContext", new com.riiablo.engine.server.ServerGameplayContext(Riiablo.files, 1))
-          .register("townPortalRegistry", new TownPortalRegistry()));
+          .register("townPortalRegistry", new TownPortalRegistry());
+      if (history) {
+        server.combatPositionHistory = new com.riiablo.engine.server.combat.CombatPositionHistory(map);
+        configuration.register("combatPositionHistory", server.combatPositionHistory);
+      }
+      server.world = new World(configuration);
+      if (history && companions) {
+        // Controlled idle units: exercise the real combat history consumer, not unrelated action codecs.
+        server.world.getSystem(com.riiablo.engine.server.MercenaryFollowSystem.class).setEnabled(false);
+        server.world.getSystem(com.riiablo.engine.server.MercenarySkillSystem.class).setEnabled(false);
+      }
       server.factory = factory;
       server.simulation = new AuthoritativeSimulation(server.world);
       server.setReplayEntityLifecycle(new ServerEntityLifecycle(server.world, factory, Riiablo.files));
@@ -2234,6 +2351,14 @@ public class D2gsWorldCheckpointBindingsTest {
           .restoreSkillCooldowns(java.util.Collections.singletonMap(1, .13f));
       world.getSystem(com.riiablo.engine.server.MercenaryFollowSystem.class)
           .restoreRepathCooldowns(java.util.Collections.singletonMap(1, .29f));
+    }
+
+    void populateCombatHistory() {
+      prepareMonsterMap(); populateHirelingRuntime();
+      server.world.getMapper(Position.class).get(2).position.set(21, 10);
+      server.combatPositionHistory.capture(server.world, 75);
+      server.combatPositionHistory.capture(server.world, 77);
+      server.world.getMapper(Position.class).get(2).position.set(60, 10);
     }
 
     void populateSummonRuntime() {

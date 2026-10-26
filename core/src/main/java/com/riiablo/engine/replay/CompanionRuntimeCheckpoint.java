@@ -2,6 +2,10 @@ package com.riiablo.engine.replay;
 
 import com.artemis.EntityAllocatorCheckpoint;
 import com.artemis.World;
+import com.artemis.annotations.Wire;
+import com.riiablo.engine.server.combat.CombatPositionHistory;
+import com.riiablo.engine.server.combat.CombatPositionCheckpoint;
+import com.riiablo.engine.server.combat.CombatPositionCaptureSystem;
 import com.riiablo.engine.server.MercenaryFollowSystem;
 import com.riiablo.engine.server.MercenarySkillSystem;
 import com.riiablo.engine.server.SummonedPetSystem;
@@ -10,10 +14,10 @@ import java.io.*;
 import java.util.*;
 
 /** Hireling/summon components and world-owned companion retry clocks; nested in TARGETS v3.
- * Not equipment Item references, actions, or owner path history.
+ * Includes shared owner/combat position history, not equipment Item references or actions.
  */
 public final class CompanionRuntimeCheckpoint {
-  private static final int VERSION = 2;
+  private static final int VERSION = 3;
   public static final int MAX_BYTES = 48 * 1024 * 1024;
   private final byte[] bytes;
   private CompanionRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
@@ -21,6 +25,23 @@ public final class CompanionRuntimeCheckpoint {
   public Set<Integer> entityIds() { return Collections.unmodifiableSet(decode().mercenaries.keySet()); }
   /** Null for companion v1: old archives did not cover summon controllers or quota. */
   public SummonRuntimeCheckpoint summonRuntime() { return decode().summons; }
+  /** Null when absent or uncovered; hasPositionHistoryCoverage distinguishes old archives. */
+  public CombatPositionCheckpoint positionHistory() { return decode().history; }
+  public boolean hasPositionHistoryCoverage() { return decode().historyCovered; }
+
+  private static final class Binding {
+    @Wire(name = "combatPositionHistory", failOnNull = false) CombatPositionHistory history;
+    @Wire(name = "map", failOnNull = false) com.riiablo.map.Map map;
+  }
+  private static Binding binding(World world) {
+    Binding b = new Binding(); world.inject(b);
+    CombatPositionCaptureSystem capture = world.getSystem(CombatPositionCaptureSystem.class);
+    if (b.history != null && b.history.checkpointMap() != b.map
+        || capture != null && (b.history == null || capture.checkpointHistory() != b.history)) {
+      throw new IllegalStateException("position history owner binding mismatch");
+    }
+    return b;
+  }
 
   public static CompanionRuntimeCheckpoint fromBytes(byte[] bytes) {
     if (bytes == null || bytes.length == 0 || bytes.length > MAX_BYTES) {
@@ -66,6 +87,15 @@ public final class CompanionRuntimeCheckpoint {
       }
       byte[] summons = SummonRuntimeCheckpoint.capture(world, ids).bytes();
       out.writeInt(summons.length); out.write(summons);
+      Binding b = binding(world);
+      out.writeBoolean(b.history != null);
+      if (b.history != null) {
+        byte[] history = CombatPositionCheckpoint.capture(b.history).bytes();
+        out.writeInt(history.length); out.write(history);
+      }
+      CombatPositionCaptureSystem capture = world.getSystem(CombatPositionCaptureSystem.class);
+      out.writeBoolean(capture != null);
+      if (capture != null) out.writeLong(capture.checkpointTick());
       out.flush(); CompanionRuntimeCheckpoint result = fromBytes(bytes.toByteArray());
       result.validateRestore(world); return result;
     } catch (IOException impossible) { throw new IllegalStateException(impossible); }
@@ -102,6 +132,14 @@ public final class CompanionRuntimeCheckpoint {
       throw new IllegalStateException("companion host missing: " + id);
     }
     if (d.summons != null) d.summons.validateRestore(world);
+    if (d.historyCovered) {
+      Binding b = binding(world);
+      if ((b.history != null) != (d.history != null)
+          || (world.getSystem(CombatPositionCaptureSystem.class) != null) != (d.captureTick != null)) {
+        throw new IllegalStateException("position history system topology mismatch");
+      }
+      if (d.history != null) d.history.validateRestore(b.history);
+    }
     Map<Integer, SummonedPet> restoredPets = d.summons == null ? null : d.summons.entries();
     if (d.follow != null) for (int id : d.follow.keySet()) {
       SummonedPet pet = restoredPets != null ? restoredPets.get(id) : world.getMapper(SummonedPet.class).get(id);
@@ -136,6 +174,10 @@ public final class CompanionRuntimeCheckpoint {
     if (d.follow != null) world.getSystem(MercenaryFollowSystem.class).restoreRepathCooldowns(d.follow);
     if (d.skills != null) world.getSystem(MercenarySkillSystem.class).restoreSkillCooldowns(d.skills);
     if (d.pets != null) world.getSystem(SummonedPetSystem.class).restoreRegroupCooldowns(d.pets);
+    if (d.historyCovered) {
+      if (d.history != null) d.history.restore(binding(world).history);
+      if (d.captureTick != null) world.getSystem(CombatPositionCaptureSystem.class).restoreCheckpointTick(d.captureTick);
+    }
   }
 
   private static void writeTimers(DataOutputStream out, Map<Integer, Float> timers) throws IOException {
@@ -216,11 +258,26 @@ public final class CompanionRuntimeCheckpoint {
           throw new IllegalArgumentException("summon host coverage mismatch");
         }
       }
+      if (version >= 3) {
+        d.historyCovered = true;
+        if (CheckpointIO.readBoolean(in)) {
+          int length = CheckpointIO.count(in, CombatPositionCheckpoint.MAX_BYTES);
+          if (length == 0 || length > in.available()) throw new IllegalArgumentException("position history length");
+          byte[] image = new byte[length]; in.readFully(image); d.history = CombatPositionCheckpoint.fromBytes(image);
+        }
+        if (CheckpointIO.readBoolean(in)) {
+          d.captureTick = in.readLong();
+          if (d.captureTick < 0 || d.history == null) throw new IllegalArgumentException("position capture tick/history");
+        }
+      }
       if (in.read() != -1) throw new IllegalArgumentException("trailing companion runtime");
       return d;
     } catch (IOException e) { throw new IllegalArgumentException("truncated companion runtime", e); }
   }
   private static final class Decoded {
+    boolean historyCovered;
+    CombatPositionCheckpoint history;
+    Long captureTick;
     SummonRuntimeCheckpoint summons;
     Map<Integer, Float> follow, skills, pets;
     final Map<Integer, Mercenary> mercenaries = new TreeMap<>();

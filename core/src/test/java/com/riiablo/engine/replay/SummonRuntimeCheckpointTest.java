@@ -189,7 +189,7 @@ class SummonRuntimeCheckpointTest {
   @Test void oldCompanionV1LeavesSummonControllersAndQuotaExplicitlyUncovered() {
     try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
       CompanionRuntimeCheckpoint current = source.image().companionRuntime();
-      byte[] v1 = Arrays.copyOf(current.bytes(), current.bytes().length - 4 - current.summonRuntime().bytes().length);
+      byte[] v1 = Arrays.copyOf(current.bytes(), current.bytes().length - 2 - 4 - current.summonRuntime().bytes().length);
       ByteBuffer.wrap(v1).putInt(1); CompanionRuntimeCheckpoint legacy = CompanionRuntimeCheckpoint.fromBytes(v1);
       assertNull(legacy.summonRuntime()); target.pet(1).shotsFired = 11; target.slots.nextPetSpawnOrder();
       legacy.restore(target.world);
