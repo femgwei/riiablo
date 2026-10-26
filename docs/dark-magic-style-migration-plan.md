@@ -3392,6 +3392,91 @@ TCP 门禁；独立 JVM 验收为上述 checkpoint 文件恢复，不是 socket 
 飞行碰撞/骑乘、任务、Map/RoomEx/NPC 交易、本地实体、全局/未绑定 RNG、完整内容
 digest、结构订阅副作用及真实 socket 跨进程接管。M8-A/M8-D 和 M8 总体继续进行中。
 
+### M8-A 第 44 批：佣兵服务、NPC 名单与刷新续跑（2026-10-26）
+
+完成日期：2026-10-26；代码提交：`56bc9212e5ab4553e81b6d466fad3289661558e5`。
+
+本批集中覆盖 NativeMercenaryRewardSystem / MercenaryManager 的服务运行态，
+将 companion-runtime 升至 v4，内嵌 manager/service v1；TARGETS v3、unit-state v4、
+D2GC v7 不变。companion v1/v2/v3 仍可读取，佣兵服务为“未覆盖”，不清空既有服务；
+v4 的显式 absence 则要求目标 World 服务拓扑一致。M8 总体仍为进行中。
+
+- 保存管理器逻辑毫秒、难度、名单专用 RNG 的原始 state/drawCount、全局/逐玩家
+  NPC 名单和空域、候选顺序/seed/name/hired/level、lastRefreshTime，以及活跃记录的
+  owner/entity、定义、生命、等级/经验、雇佣时间；允许死亡记录 entity=-1 且没有尸体。
+  定义标量、可空字符串/数组与共享 definition 对象图显式编码，不重新生成候选。
+- 真实服务初始化时安装 World 独立的 `hireling-roster` 兼容 LCG，用仿真 delta
+  推进逻辑毫秒，保存后跨 600000ms 严格 `>` 刷新边界继续生成相同名单；standalone
+  管理器保留既有墙钟/随机入口，但不能当作受管 checkpoint。没有将兼容 LCG
+  宣称为原版双字 pSeed，也没有把宿主十分钟刷新策略宣称为原版 NpcRecord 复刻。
+- manager restore 复用目标 manager、回调、同 key 活跃记录/名单容器、同 index 候选、
+  可复用定义和同形数组；不调用雇佣/扣费/奖励/刷新。回调必须仍属于目标 World 的
+  服务，工厂/EventSystem/native table 不复制源对象。native Hireling 表逐字段 SHA256
+  和 legacy 经验阈值是恢复依赖身份，不是全游戏内容 digest。
+- 实体侧恢复补齐真实佣兵服务对怪物工厂的适配：移除敌对 AI/点击选择宿主，先绑定
+  目标 MercData 大型属性容器，再应用 unit-state。D2S 发布后再次重绑共享 stats，
+  然后重放属性镜像；不执行 createMercenaryEntity、onMercenaryHired 或免费奖励。
+  保存空装备容器的 equipmentRevision；无尸体记录额外保存完整 base/aggregate/
+  remaining、aggregateRevision、战斗上下文和 staminaMaximum，不能靠 D2S 头重算。
+  带实体的记录必须有 LARGE unit-state 属性镜像；完整捕获原子组装 TARGETS 与
+  unit-state，禁止混入未覆盖属性的旧镜像。
+- 晚期失败的外层事务直接使用已验证 before-image 恢复实体/分配器/TARGETS，再恢复
+  D2S、共享属性和时钟，不给“玩家已删除但服务尚未回滚”的中间态拍新快照。
+  不改变正常结构相位，也不触发 Tick、奖励、复活扣费或名单 RNG 消耗。
+- manager 上限 8MiB、service 上限 16MiB；字节防御性复制，完整解析、依赖/宿主/覆盖
+  预检后再写入。拒绝截断、尾随、非法版本/布尔/count/引用/顺序/时间/难度/修订号，
+  以及未覆盖玩家/实体、外来回调和服务拓扑差异。RNG/时钟耗尽不能溢出或重新播种。
+  ActiveMercenary.equipment 当前仅支持全零；MercData 的非空 Item 图（含被覆盖旧记录）
+  明确拒绝，不丢弃装备或把装备实体引用伪装成已恢复。
+
+原版依据：D2MOO `source/D2Game/src/UNIT/SUnitNpc.cpp:940–1008` 的雇佣流程，
+按 NPC record 与名字 slot 取候选、检查 name/bHired，并用原记录 dwSeed 调用
+MONSTERS_HirelingInit 后检查/扣除金币。本批保存这些既有候选身份和消耗状态，
+不凭经验修改雇佣等级、费用、技能或复活规则。
+
+验收覆盖：manager 全字段/共享定义图/容器身份、候选 seed/hired CAS、刷新边界、
+World RNG 隔离、无尸体死亡记录、数据依赖差异、畸形字节和字段策略守卫；服务侧
+覆盖只改变服务时钟时 canonical 变化而 payload/D2S 不变、嵌套文件见证篡改拒绝、
+旧 v3 未覆盖、Item/实体覆盖/回调归属拒绝及已有/空 World 的晚期失败回滚。
+
+真实 1.10f ServerEntityFactory/D2GS 在预建 synthetic arena 中真实雇佣并写盘，
+新 World 与独立 JVM 分别续跑 6 个 40ms Tick，逐 Tick 比较 canonical（含 RNG）
+和 D2S，打开既有及新 NPC 菜单跨刷新边界；无尸体分支随后真实付费复活，并验证
+共享属性、只扣一次费用、不能重复复活/免费再授予。跟随/施法系统受控禁用，
+不能冒充完整佣兵动作/路径续跑；文件跨 JVM 恢复也不是 socket 跨进程接管。
+
+验证（D2_HOME 指向 `G:\BaiduNetdiskDownload\Diablo II 1.10F`）：
+
+```text
+./gradlew.bat :core:test --tests com.riiablo.engine.server.pet.MercenaryManagerCheckpointTest --tests com.riiablo.engine.server.pet.MercenaryManagerTest --tests com.riiablo.engine.server.quest.NativeMercenaryRewardSystemTest --tests com.riiablo.engine.replay.CompanionRuntimeCheckpointTest --tests com.riiablo.engine.replay.SummonRuntimeCheckpointTest --tests com.riiablo.engine.server.combat.CombatPositionCheckpointTest --no-daemon --max-workers=1 --console=plain
+./gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsCheckpoint* --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest :desktop:compileJava --continue --no-daemon --max-workers=1 --console=plain
+```
+
+扩大回归复用第 43 批 AI/checkpoint/目标/召唤/陷阱/佣兵/历史/碰撞/生命周期/RNG/
+D2S/真实 factory 范围，并加入 `MercenaryManager*Test`、`NativeMercenaryRewardSystemTest`、
+`NativeHirelingOfferIntegrationTest`、`NativeHirelingExperienceTableTest`：core 1253 项、
+server/d2gs 96 项，共 1349 项通过，0 失败、0 错误、0 跳过；其中新增 manager 单测
+10 项、真实 factory 联合测试 5 项。最后的属性覆盖预检/原子捕获调整后，6 项 core
+unit-state 测试及完整 96 项 server 回归重新通过，桌面编译再次通过。模块边界检查、
+架构扫描及 9 项扫描工具自测通过，`git diff --check` 通过，SoundP EOF 生成噪声不提交。
+
+```text
+./gradlew.bat :server:d2gs:headlessSimulationTick :server:d2gs:headlessReconnectGroundLoot :server:d2gs:headlessStaleTransport :server:d2gs:headlessSummonReconnect --continue --no-daemon --max-workers=1 --console=plain
+```
+
+四个既有真实 TCP gate 在最终代码上复跑通过：固定 Tick 8→39（31 步、40ms）、部分金币拾取重连、
+旧 transport/slot-generation 隔离、召唤物双客户端/观察端重连。额外运行的
+`headlessMercenaryLifecycle` / `headlessMercenaryRestore` 暂不计为通过；前者报告
+Blood Moor Fallen/Shaman 测试房间不可用，后者等待死亡佣兵登录快照超时。
+已在上一提交 `5fac614609b9958c7dbe89bba0b7f8f29edf0279` 的隔离 worktree 中，
+使用同一 D2_HOME 重跑这两个任务，分别复现完全相同的错误；两项均属于本次发现的
+既有 gate/资源装配限制，不作为本批新增回归，也没有放宽断言或伪造通过。
+
+剩余依赖：sourceItem/装备 Item 图、完整 Casting/Sequence/Leap/动态路径游标/
+冻结战斗记录、MovementModes/飞行碰撞/骑乘、任务与 NPC pending 事务、Map/RoomEx、
+本地实体、全局/未绑定 RNG、完整内容 digest、结构订阅副作用及真实 socket 跨进程
+接管继续保留。下一批优先集中处理装备 Item/sourceItem 的所有权与恢复依赖。
+
 ### M5 第 1 批：Fire Bolt 战斗垂直切片（2026-10-24）
 
 完成日期：2026-10-24；本批完成 M5 的第一批受控技能族切片，不宣称 M5 整体完成。
