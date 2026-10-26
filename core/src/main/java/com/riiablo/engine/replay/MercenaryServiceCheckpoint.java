@@ -166,7 +166,7 @@ public final class MercenaryServiceCheckpoint {
       com.riiablo.save.CharData.MercData saved = world.getMapper(Player.class).get(active.ownerId).data.getMerc();
       Array<Item> equipment = new Array<>(Item.class);
       for (ItemRuntimeCheckpoint tree : d.equipment.get(active.ownerId)) equipment.add(tree.materialize(files(world)));
-      saved.getItems().replaceFromAuthoritativeSnapshot(equipment);
+      saved.getItems().replaceFromAuthoritativeSnapshot(equipment, false);
       saved.getItems().restoreEquipmentRevision(d.equipmentRevisions.get(active.ownerId));
       if (active.entityId >= 0) world.getMapper(AttributesWrapper.class).get(active.entityId).attrs = saved.getStats();
       else UnitStateRuntimeCheckpoint.restoreAttributesImage(saved.getStats(), d.attributes.get(active.ownerId));

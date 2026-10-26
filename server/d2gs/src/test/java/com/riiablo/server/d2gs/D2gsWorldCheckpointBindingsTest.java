@@ -45,6 +45,7 @@ import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.map.Map;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.BodyLoc;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SCheckpoint;
 import com.riiablo.save.D2SWriter96;
@@ -839,6 +840,11 @@ public class D2gsWorldCheckpointBindingsTest {
     boolean dead = active.state == com.riiablo.engine.server.pet.MercenaryManager.STATE_DEAD;
     assertNotNull(active); assertEquals(dead ? -1 : 1, active.entityId);
     assertFalse("Checkpoint restore must not regrant a free hireling", service.grantFreeRogue(0));
+    assertEquals(1, f.data().getMerc().getItems().getItems().size);
+    Item restoredEquipment = f.data().getMerc().getItems().getItems().first();
+    assertEquals("cap", restoredEquipment.code);
+    assertEquals(com.riiablo.item.Location.EQUIPPED, restoredEquipment.location);
+    assertEquals(BodyLoc.HEAD, restoredEquipment.bodyLoc);
     if (!dead) assertSame(f.data().getMerc().getStats(), f.server.world.getMapper(AttributesWrapper.class).get(active.entityId).attrs);
     else {
       assertEquals(37, f.data().getMerc().getItems().equipmentRevision());
@@ -2528,6 +2534,10 @@ public class D2gsWorldCheckpointBindingsTest {
       assertTrue(rewards().hireAct1Rogue(0));
       com.artemis.EntityAllocatorCheckpoint.flushStructure(server.world);
       assertEquals(1, rewards().mercenaryEntityId(0));
+      Item cap = new ItemGenerator().generateStartItem("cap", 0x6100, -1);
+      int capIndex = data().getMerc().getItems().add(cap);
+      data().getMerc().getItems().equipItem(BodyLoc.HEAD, capIndex);
+      data().getMerc().getItems().restoreEquipmentRevision(101);
       rewards().hirelingOffers(0, 198);
       if (dead) {
         rewards().checkpointManager().onMercenaryDeath(0);

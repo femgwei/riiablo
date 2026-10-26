@@ -117,6 +117,15 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
 
   /** Replaces this ownership set from a server-authoritative snapshot. */
   public void replaceFromAuthoritativeSnapshot(Array<Item> snapshot) {
+    replaceFromAuthoritativeSnapshot(snapshot, true);
+  }
+
+  /**
+   * Replaces ownership without rebuilding aggregates. Checkpoint restore uses
+   * this mode because the Item and owner Attributes images were already
+   * validated and must retain their exact revisions/dirty state.
+   */
+  public void replaceFromAuthoritativeSnapshot(Array<Item> snapshot, boolean rebuildStats) {
     for (Item item : itemData) {
       if (item != null) item.unload();
     }
@@ -148,12 +157,12 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
         if (item.quality == Quality.SET) setItemsOwned.getAndIncrement(item.qualityId, 0, 1);
       }
     }
-    updateStats();
+    if (rebuildStats) updateStats();
     for (BodyLoc bodyLoc : BodyLoc.values()) {
       int index = equipped.get(bodyLoc);
       if (index != INVALID_ITEM) notifyEquip(bodyLoc, itemData.get(index));
     }
-    notifyUpdated();
+    if (rebuildStats) notifyUpdated();
   }
 
   public int indexOf(Item item) {
