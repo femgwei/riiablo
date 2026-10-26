@@ -161,6 +161,37 @@ class SimulationReplayLogTest {
     assertTrue(mismatch.mismatches().stream().anyMatch(item -> "worldDigest".equals(item.field)));
   }
 
+  @Test
+  void binaryRoundTripPreservesCanonicalReplayAcrossJvmBoundary() {
+    SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
+        "net", "cast", "skill=36").tick(2).actor(7).request(19)
+        .target(11).authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT).build(4);
+    SimulationCheckpoint checkpoint = SimulationCheckpoint.of(2, "world-2",
+        Collections.singletonMap(11, "hp=888"),
+        Collections.singletonList(new SimulationCheckpoint.RngState("combat.hit", 11, 17, 3)),
+        Collections.singletonList(new SimulationCheckpoint.NativeUnitRngState("unit", 11, 4, 9)));
+    SimulationReplayLog original = SimulationReplayLog.builder(0x110F)
+        .command(command, "skill=36").checkpoint(checkpoint).build();
+
+    SimulationReplayLog decoded = SimulationReplayLog.fromBytes(original.toBytes());
+    assertEquals(original.canonical(), decoded.canonical());
+    assertEquals(original.digest(), decoded.digest());
+  }
+
+  @Test
+  void binaryDecoderRejectsUnknownVersionAndOversizedCount() {
+    byte[] version = originalHeader(99, 0);
+    assertThrows(IllegalArgumentException.class, () -> SimulationReplayLog.fromBytes(version));
+    byte[] count = originalHeader(1, 1_000_001);
+    assertThrows(IllegalArgumentException.class, () -> SimulationReplayLog.fromBytes(count));
+  }
+
+  private static byte[] originalHeader(int version, int commandCount) {
+    java.nio.ByteBuffer bytes = java.nio.ByteBuffer.allocate(16);
+    bytes.putInt(0x52504C59).putInt(version).putInt(1).putInt(commandCount);
+    return bytes.array();
+  }
+
   private static void advance(SimulationTickCoordinator coordinator, int[] total) {
     coordinator.advance(command -> total[0] += Integer.parseInt(String.valueOf(command.payload)),
         tick -> {}, event -> {});

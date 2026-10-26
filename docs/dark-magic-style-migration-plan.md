@@ -3884,6 +3884,17 @@ M8-C 的 `ClientGameplayContext` 表现兼容构造仍待最终联合收口；M8
   本批继续完成命名 stream 审计和缺失策略/data-pack digest/version 门禁后，才能标记批次 A
   完成。不得把这些遗留拆成新增批次。
 
+### 批次 B 实施记录（2026-10-26，进行中）
+
+- `SimulationReplayLog` 新增版本化、长度受限的跨 JVM 二进制编解码（RPLY v1），覆盖命令
+  authority/actor/request/target、world/entity digest、兼容 RNG 和 NativeUnit RNG；解码会拒绝
+  未知版本、异常计数和超长字段，避免把任意对象图带入 replay。
+- 新增 canonical/digest round-trip 与损坏头/超限记录回归，证明日志可以在独立进程边界保持
+  相同 canonical 和 SHA-256 摘要；未新增协议字段。
+- 剩余出口：D2GS checkpoint 仍需把 Casting/Sequence/Leap 和动态路径游标纳入同一恢复事务，
+  并完成真实 D2S round-trip、跨 JVM 继续仿真及地图/事务 RNG 绑定校验；这些继续留在批次 B，
+  不拆为新增批次。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
