@@ -22,6 +22,12 @@ public final class NativeDiabRun {
     destination = new Vector2((float) Math.floor(target.x), (float) Math.floor(target.y));
   }
 
+  /** Explicit state constructor used only by the versioned checkpoint codec. */
+  public NativeDiabRun(int targetId, Vector2 destination, boolean checkpoint) {
+    this.targetId = targetId;
+    this.destination = new Vector2(destination);
+  }
+
   public static boolean supports(Skills.Entry skill) {
     return skill != null && skill.Id == 198 && skill.srvstfunc == 54 && skill.srvdofunc == 103;
   }

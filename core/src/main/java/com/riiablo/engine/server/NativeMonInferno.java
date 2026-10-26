@@ -30,6 +30,19 @@ public final class NativeMonInferno {
     this.tailFrames = impInferno ? 13 : Math.max(1, tailFrames);
   }
 
+  /** Explicit state constructor used only by the versioned checkpoint codec. */
+  public NativeMonInferno(int deadline, int interval, int tailFrames,
+      boolean horrorSequence, boolean impInferno) {
+    if (deadline < 1 || interval < 1 || tailFrames < 1) {
+      throw new IllegalArgumentException("inferno runtime clock");
+    }
+    this.deadline = deadline;
+    this.interval = interval;
+    this.tailFrames = tailFrames;
+    this.horrorSequence = horrorSequence;
+    this.impInferno = impInferno;
+  }
+
   public void updated(boolean created, boolean infernoState) {
     started = true;
     if (created) missiles++;

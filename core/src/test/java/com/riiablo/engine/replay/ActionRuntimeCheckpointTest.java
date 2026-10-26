@@ -28,6 +28,12 @@ class ActionRuntimeCheckpointTest {
       casting.fendRemainingStrikes = 4;
       casting.fendInitialized = true;
       casting.strafeTargetIds.addAll(new int[] {7, 11, 19});
+      casting.monInferno = new com.riiablo.engine.server.NativeMonInferno(9, 3, 13, true, false);
+      casting.monInferno.frame = 4; casting.monInferno.nextUpdate = 7;
+      casting.monInferno.missiles = 2; casting.monInferno.sequenceCursor = 11;
+      casting.diabRun = new com.riiablo.engine.server.NativeDiabRun(77, new Vector2(21, 34), true);
+      casting.diabRun.cursor = 0x120; casting.diabRun.remaining = 0x800;
+      casting.diabRun.moving = true; casting.diabRun.pathStarted = true; casting.diabRun.loops = 2;
       Sequence sequence = source.world.getMapper(Sequence.class).create(sourceId)
           .sequence((byte) 8, (byte) 13);
       sequence.started = true;
@@ -53,6 +59,10 @@ class ActionRuntimeCheckpointTest {
 
       assertArrayEquals(image.bytes(), ActionRuntimeCheckpoint.capture(target.world, targetId).bytes());
       assertEquals(casting.actionId, target.world.getMapper(Casting.class).get(targetId).actionId);
+      assertEquals(casting.monInferno.frame,
+          target.world.getMapper(Casting.class).get(targetId).monInferno.frame);
+      assertEquals(casting.diabRun.cursor,
+          target.world.getMapper(Casting.class).get(targetId).diabRun.cursor);
       assertEquals(sequence.nativeJabFrame, target.world.getMapper(Sequence.class).get(targetId).nativeJabFrame);
       assertEquals(leap.elapsed, target.world.getMapper(Leap.class).get(targetId).elapsed);
     }

@@ -4,6 +4,8 @@ import com.artemis.World;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.IntArray;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.NativeDiabRun;
+import com.riiablo.engine.server.NativeMonInferno;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Leap;
 import com.riiablo.engine.server.component.Sequence;
@@ -39,6 +41,8 @@ public final class ActionRuntimeCheckpoint {
   private static final int DOUBLE = 8;
   private static final int VECTOR = 9;
   private static final int INT_ARRAY = 10;
+  private static final int MON_INFERNO = 11;
+  private static final int DIAB_RUN = 12;
 
   private final byte[] bytes;
 
@@ -275,6 +279,8 @@ public final class ActionRuntimeCheckpoint {
     if (type == double.class) return DOUBLE;
     if (type == Vector2.class) return VECTOR;
     if (type == IntArray.class) return INT_ARRAY;
+    if (type == NativeMonInferno.class) return MON_INFERNO;
+    if (type == NativeDiabRun.class) return DIAB_RUN;
     return 0;
   }
 
@@ -292,6 +298,21 @@ public final class ActionRuntimeCheckpoint {
       case VECTOR: Vector2 v = (Vector2) value; out.writeFloat(v.x); out.writeFloat(v.y); break;
       case INT_ARRAY:
         IntArray a = (IntArray) value; out.writeInt(a.size); for (int i = 0; i < a.size; i++) out.writeInt(a.get(i)); break;
+      case MON_INFERNO:
+        NativeMonInferno inferno = (NativeMonInferno) value;
+        out.writeInt(inferno.deadline); out.writeInt(inferno.interval); out.writeInt(inferno.tailFrames);
+        out.writeInt(inferno.frame); out.writeInt(inferno.nextUpdate); out.writeInt(inferno.endFrame);
+        out.writeInt(inferno.missiles); out.writeInt(inferno.lastMissileId);
+        out.writeBoolean(inferno.started); out.writeBoolean(inferno.horrorSequence);
+        out.writeBoolean(inferno.impInferno); out.writeInt(inferno.sequenceCursor);
+        break;
+      case DIAB_RUN:
+        NativeDiabRun run = (NativeDiabRun) value;
+        out.writeInt(run.targetId); out.writeFloat(run.destination.x); out.writeFloat(run.destination.y);
+        out.writeInt(run.cursor); out.writeInt(run.remaining); out.writeBoolean(run.moving);
+        out.writeBoolean(run.pathStarted); out.writeBoolean(run.tail); out.writeBoolean(run.hitProcessed);
+        out.writeBoolean(run.damageProcessed); out.writeInt(run.loops);
+        break;
       default: throw new IllegalArgumentException("action field tag");
     }
   }
@@ -312,8 +333,33 @@ public final class ActionRuntimeCheckpoint {
       case INT_ARRAY:
         IntArray a = (IntArray) field.get(target); a.clear(); int size = CheckpointIO.count(in, 256);
         for (int i = 0; i < size; i++) a.add(in.readInt()); break;
+      case MON_INFERNO:
+        field.set(target, readInferno(in)); break;
+      case DIAB_RUN:
+        field.set(target, readDiabRun(in)); break;
       default: throw new IllegalArgumentException("action field tag");
     }
+  }
+
+  private static NativeMonInferno readInferno(DataInputStream in) throws IOException {
+    int deadline = in.readInt(), interval = in.readInt(), tailFrames = in.readInt();
+    int frame = in.readInt(), nextUpdate = in.readInt(), endFrame = in.readInt();
+    int missiles = in.readInt(), lastMissileId = in.readInt();
+    boolean started = CheckpointIO.readBoolean(in), horror = CheckpointIO.readBoolean(in);
+    boolean imp = CheckpointIO.readBoolean(in); int cursor = in.readInt();
+    NativeMonInferno value = new NativeMonInferno(deadline, interval, tailFrames, horror, imp);
+    value.frame = frame; value.nextUpdate = nextUpdate; value.endFrame = endFrame;
+    value.missiles = missiles; value.lastMissileId = lastMissileId;
+    value.started = started; value.sequenceCursor = cursor; return value;
+  }
+
+  private static NativeDiabRun readDiabRun(DataInputStream in) throws IOException {
+    NativeDiabRun value = new NativeDiabRun(in.readInt(),
+        new Vector2(in.readFloat(), in.readFloat()), true);
+    value.cursor = in.readInt(); value.remaining = in.readInt(); value.moving = CheckpointIO.readBoolean(in);
+    value.pathStarted = CheckpointIO.readBoolean(in); value.tail = CheckpointIO.readBoolean(in);
+    value.hitProcessed = CheckpointIO.readBoolean(in); value.damageProcessed = CheckpointIO.readBoolean(in);
+    value.loops = in.readInt(); return value;
   }
 
   private static void skipValue(DataInputStream in, int tag) throws IOException {
@@ -324,6 +370,12 @@ public final class ActionRuntimeCheckpoint {
       case FLOAT: in.readFloat(); break; case DOUBLE: in.readDouble(); break;
       case VECTOR: in.readFloat(); in.readFloat(); break;
       case INT_ARRAY: int size = CheckpointIO.count(in, 256); for (int i = 0; i < size; i++) in.readInt(); break;
+      case MON_INFERNO:
+        for (int i = 0; i < 8; i++) in.readInt();
+        in.readBoolean(); in.readBoolean(); in.readBoolean(); in.readInt(); break;
+      case DIAB_RUN:
+        in.readInt(); in.readFloat(); in.readFloat(); in.readInt(); in.readInt();
+        in.readBoolean(); in.readBoolean(); in.readBoolean(); in.readBoolean(); in.readBoolean(); in.readInt(); break;
       default: throw new IllegalArgumentException("action field tag");
     }
   }
