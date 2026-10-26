@@ -66,6 +66,7 @@ import com.riiablo.engine.AuthoritativeSessionRegistry;
 import com.riiablo.engine.D2gsCommandAdapter;
 import com.riiablo.engine.replay.CheckpointRngRegistry;
 import com.riiablo.engine.replay.NativeUnitRandomRegistry;
+import com.riiablo.engine.replay.MapRuntimeCheckpoint;
 import com.riiablo.engine.replay.SimulationReplayRecorder;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.RoomActivationSystem;
@@ -6083,6 +6084,36 @@ public class D2GS extends ApplicationAdapter {
             .has(targetEntityId);
   }
   Map map;
+  private MapRuntimeCheckpoint.Resolver mapRuntimeResolver() {
+    return (mapSeed, difficulty, levelId, levelSeed) -> {
+      java.util.ArrayList<com.riiablo.map.Map> candidates = new java.util.ArrayList<>();
+      if (map != null) candidates.add(map);
+      if (world != null) {
+        Object registeredMap = world.getRegistered("map");
+        if (registeredMap instanceof com.riiablo.map.Map
+            && !candidates.contains((com.riiablo.map.Map) registeredMap)) {
+          candidates.add((com.riiablo.map.Map) registeredMap);
+        }
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        IntBag ids = world.getAspectSubscriptionManager()
+            .get(Aspect.all(com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        for (int i = 0; i < ids.size(); i++) {
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(ids.get(i));
+          if (wrapper != null && wrapper.map != null && !candidates.contains(wrapper.map)) candidates.add(wrapper.map);
+        }
+      }
+      for (com.riiablo.map.Map candidate : candidates) {
+        if (candidate.seed() != mapSeed || candidate.getDifficulty() != difficulty) continue;
+        for (com.riiablo.map.Map.Zone zone : candidate.getZones()) {
+          if (zone != null && zone.levelId() == levelId && zone.levelSeed() == levelSeed) {
+            return new MapRuntimeCheckpoint.Binding(candidate, zone);
+          }
+        }
+      }
+      return null;
+    };
+  }
   CombatPositionHistory combatPositionHistory;
   final com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
       new com.riiablo.engine.server.quest.Act5QuestGameState();
@@ -6364,6 +6395,7 @@ public class D2GS extends ApplicationAdapter {
         : checkpoint.restoreExisting(world, serializer, lifecycle);
     if (result.success()) {
       try {
+        checkpoint.restoreMapRuntime(world, mapRuntimeResolver());
         if (replayRngRegistry != null) {
           if (worldCompatibility) replayRngRegistry = worldReplayBindings.prepareCompatibilityRestore();
           replayRngRegistry.restore(rngStates);
@@ -6435,6 +6467,7 @@ public class D2GS extends ApplicationAdapter {
             if (worldD2s) worldReplayBindings.restorePlayerMetadata(before);
           }
           before.restoreCompanionBindingsAfterD2s(world);
+          before.restoreMapRuntime(world, mapRuntimeResolver());
           before.restoreUnitStateRuntime(world);
           authoritativeSessions.restore(liveSessionSnapshot);
           pendingSessionRebindKeys.clear();

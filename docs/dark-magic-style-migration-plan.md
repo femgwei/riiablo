@@ -3873,9 +3873,36 @@ git diff --check
 ```
 
 结果：核心 replay/checkpoint 回归和 D2GS checkpoint/D2S/独立恢复回归通过；本次仍属于冻结
-批次 B，未修改协议字段。批次 B 尚余地图/RoomEx 与事务运行态、未绑定 RNG、战斗摘要到可恢复
-replay 的最终校验，以及 Item/native path/MonSeq 对象图的原生重建策略；批次 C 尚余最终双客户端
-表现替换和旧 transport/直连 owner 全量审计。
+批次 B，未修改既有协议字段（带地图运行态的完整 checkpoint 使用 v8 envelope，并保留 v1-v7
+读取）。批次 B 尚余事务运行态、未绑定 RNG、战斗摘要到可恢复 replay 的最终校验，以及
+Item/native path/MonSeq 对象图的原生重建策略；批次 C 尚余最终双客户端表现替换和旧
+transport/直连 owner 全量审计。
+
+### 冻结批次 B 继续：地图/RoomEx 运行态 checkpoint（2026-10-27）
+
+本次仍在冻结批次 B 内集中处理地图运行态，没有新增批次或拆分提交：
+
+- 新增 `MapRuntimeCheckpoint`，为网络实体保存 map seed/difficulty、Zone level id/level seed、
+  RoomEx id 和 pinned 标志；捕获时拒绝半绑定的 Zone、越界 RoomEx 和 map/Zone 身份不一致。
+- Map/RoomEx 对象图继续由 host 持有，恢复只接受显式 resolver，并在任何 ECS 变更前校验全部
+  entity、地图和 RoomEx 身份；缺少地图、Zone、RoomEx 或 resolver 时明确失败，避免跨进程静默
+  绑定到错误地图。D2GS 恢复事务在实体恢复后应用地图绑定，失败时随完整回滚恢复旧绑定。
+- D2GS 完整 checkpoint 对带地图运行态的归档写入 v8 尾段；无地图运行态的旧 v7 布局保持不变，
+  v1-v7 归档继续可读。地图 digest 纳入 canonical summary，跨 JVM bytes/tamper/缺失 resolver
+  回归已覆盖。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+.\\gradlew.bat :core:test --tests com.riiablo.engine.replay.MapRuntimeCheckpointTest --no-daemon --max-workers=1 --console=plain
+.\\gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsCheckpointSnapshotTest --tests com.riiablo.server.d2gs.D2gsCheckpointRecoveryTest --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：地图 codec、旧 envelope 兼容、D2GS checkpoint recovery 与 World bindings 回归通过；本次
+继续属于冻结批次 B。事务运行态、未绑定 RNG、战斗摘要最终校验和不可重建 native 对象图仍待
+在同一批次继续收口。
 
 ## 剩余主线固定批次（2026-10-26 冻结）
 
