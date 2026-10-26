@@ -3849,6 +3849,26 @@ M8-C 的 `ClientGameplayContext` 表现兼容构造仍待最终联合收口；M8
 
 下一迁移：M8-A/M8-C/M8-D 最终 replay/save/reconnect 验收与全量旧入口审计。
 
+## 剩余主线固定批次（2026-10-26 冻结）
+
+当前已完成 M0、M1 主行、M2、M6、M8-B；M4-B 内容/Mod 分层按计划暂停，不计入当前
+主线批次。剩余工作固定合并为以下 **3 个批次**，执行期间不得因单类修补、测试补记或
+兼容适配另增批次：
+
+1. **批次 A：M3/M4/M7-A 确定性仿真基础收口**。一次完成独立 40ms accumulator、完整
+   command admission、phase contract 与 deferred structural barrier；把 AI、战斗、掉落、
+   地图和表现随机迁移到命名 RNG stream，并完成 data-pack digest/version、固定点和严格
+   缺失策略审计；同时把仍散落在 engine/server 的 D2 规则入口收敛为 policy/data 边界。
+2. **批次 B：M7-B/M8-A/M5 replay 依赖联合收口**。一次完成地图代际/过渡实现删除条件，
+   Casting/Sequence/Leap、动态路径游标、地图/事务/未绑定 RNG 的 checkpoint 覆盖，战斗
+   摘要到可恢复 replay 的转换，D2S 往返、跨 JVM 继续运行和失败校验定位；不新增协议字段。
+3. **批次 C：M1-A/M1-C/M8-C/M8-D 最终网络与表现收口**。一次完成 `ClientGameplayContext`
+   兼容构造和 engine/client 反向表现依赖清理，协议/transport/session 唯一 owner，全量
+   D2GS handler ingress 与旧 transport/Netty 实现清理，并通过最终双客户端 replay/save/
+   reconnect、客户端表现替换和旧直连入口审计。
+
+批次 C 完成后才重新评估 M1/M3/M4/M5/M7/M8 的总出口；在此之前不提前标记主行完成。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
