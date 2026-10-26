@@ -717,6 +717,11 @@ public class D2gsWorldCheckpointBindingsTest {
     assertNotNull(trap); assertTrue(trap.infernoChanneling); assertEquals(4, trap.infernoFrame);
     assertEquals(1, trap.shotsFired); assertEquals(2, trap.infernoTargetId);
     assertSame(world.getMapper(NativeTargetNode.class).get(1), trap.checkpointTargetNode());
+    com.riiablo.engine.server.component.SummonedPet sourcePet = world.getMapper(
+        com.riiablo.engine.server.component.SummonedPet.class).get(3);
+    assertNotNull(sourcePet.sourceItem);
+    assertEquals(1, sourcePet.sourceItem.socketsFilled);
+    assertEquals("r01", sourcePet.sourceItem.sockets.first().code);
     StringBuilder result = new StringBuilder("SUMMONS_CONTINUED");
     boolean pulse = false;
     for (int frame = 0; frame < 60; frame++) {
@@ -845,6 +850,10 @@ public class D2gsWorldCheckpointBindingsTest {
     assertEquals("cap", restoredEquipment.code);
     assertEquals(com.riiablo.item.Location.EQUIPPED, restoredEquipment.location);
     assertEquals(BodyLoc.HEAD, restoredEquipment.bodyLoc);
+    assertEquals(1, restoredEquipment.socketsFilled);
+    assertEquals(1, restoredEquipment.sockets.size);
+    assertEquals("r01", restoredEquipment.sockets.first().code);
+    assertEquals(com.riiablo.item.Location.SOCKET, restoredEquipment.sockets.first().location);
     if (!dead) assertSame(f.data().getMerc().getStats(), f.server.world.getMapper(AttributesWrapper.class).get(active.entityId).attrs);
     else {
       assertEquals(37, f.data().getMerc().getItems().equipmentRevision());
@@ -929,6 +938,20 @@ public class D2gsWorldCheckpointBindingsTest {
     }
   }
 
+  @Test public void dismissedHirelingDropsItsSocketedEquipmentTreeButLogoutKeepsIt() {
+    try (Fixture f = new Fixture(false, false, false, true, false, true)) {
+      f.populate(); f.populateHirelingService(false);
+      assertEquals(1, f.data().getMerc().getItems().getItems().size);
+      f.rewards().checkpointManager().dismissMercenary(0);
+      assertFalse(f.rewards().checkpointManager().hasMercenary(0));
+      assertEquals(0, f.data().getMerc().getItems().getItems().size);
+      assertEquals(0, f.data().getMerc().seed);
+      assertEquals(0, f.data().getMerc().name);
+      assertEquals(0, f.data().getMerc().type);
+      assertEquals(0, f.data().getMerc().getStats().base().size());
+    }
+  }
+
   @Test public void hirelingServiceRejectsUncoveredItemsOwnersAndForeignCallbacksBeforeWriting() {
     try (Fixture f = new Fixture(false, false, false, true, true, true)) {
       f.populate();
@@ -948,7 +971,7 @@ public class D2gsWorldCheckpointBindingsTest {
         }
         try { com.riiablo.engine.replay.MercenaryServiceCheckpoint.capture(f.server.world, new int[] {0, 1}); fail("Items captured"); }
         catch (IllegalStateException expected) {}
-        assertSame(item, f.data().getMerc().getItems().getItems().first());
+        assertTrue(f.data().getMerc().getItems().getItems().contains(item, true));
         assertArrayEquals(before, com.riiablo.engine.server.pet.MercenaryManagerCheckpoint.capture(f.rewards().checkpointManager()).bytes());
       } finally { f.data().getMerc().getItems().getItems().clear(); }
       try { com.riiablo.engine.replay.MercenaryServiceCheckpoint.capture(f.server.world, new int[] {0}); fail("missing entity coverage"); }
@@ -2360,6 +2383,22 @@ public class D2gsWorldCheckpointBindingsTest {
     assertTrue(character.useInventoryPotion(potion));
   }
 
+  /** Builds a valid one-socket native Item tree for D2S/checkpoint gates. */
+  private static Item socketedStartItem(String parentCode, int parentId, String socketCode,
+      int socketId) {
+    Item parent = new ItemGenerator().generateStartItem(parentCode, parentId, -1);
+    Item socket = new ItemGenerator().generateStartItem(socketCode, socketId, -1);
+    parent.flags |= Item.ITEMFLAG_SOCKETED;
+    parent.socketsFilled = 1;
+    parent.attrs.base().put(Stat.item_numsockets, 1);
+    socket.location = com.riiablo.item.Location.SOCKET;
+    socket.bodyLoc = BodyLoc.NONE;
+    socket.storeLoc = com.riiablo.item.StoreLoc.NONE;
+    parent.sockets = new com.badlogic.gdx.utils.Array<>(Item.class);
+    parent.sockets.add(socket);
+    return parent;
+  }
+
   private static String resumePotions(Path path) throws Exception {
     try (Fixture target = new Fixture(true)) {
       D2gsCheckpointSnapshot checkpoint = D2gsCheckpointStore.read(path);
@@ -2534,7 +2573,7 @@ public class D2gsWorldCheckpointBindingsTest {
       assertTrue(rewards().hireAct1Rogue(0));
       com.artemis.EntityAllocatorCheckpoint.flushStructure(server.world);
       assertEquals(1, rewards().mercenaryEntityId(0));
-      Item cap = new ItemGenerator().generateStartItem("cap", 0x6100, -1);
+      Item cap = socketedStartItem("cap", 0x6100, "r01", 0x6101);
       int capIndex = data().getMerc().getItems().add(cap);
       data().getMerc().getItems().equipItem(BodyLoc.HEAD, capIndex);
       data().getMerc().getItems().restoreEquipmentRevision(101);
@@ -2589,6 +2628,7 @@ public class D2gsWorldCheckpointBindingsTest {
       for (int id = 3; id <= 5; id++) {
         assertEquals(id, factory.createMonster(Riiablo.files.monstats.get("quillrat1"), 30f + id, 10f));
         com.riiablo.engine.server.component.SummonedPet p = attachSummon(id, id == 3 ? "revive" : "bonewall", id == 3 ? 95 : 78);
+        if (id == 3) p.sourceItem = socketedStartItem("cap", 0x6200, "r01", 0x6201);
         if (id == 3) { p.unsummonPending = true; p.unsummonReason = "quota"; p.deadFrames = 22.5f; }
         else {
           p.boneWall = true; p.controllerId = 4;

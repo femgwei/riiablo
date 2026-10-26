@@ -561,6 +561,15 @@ public class NativeMercenaryRewardSystem extends ContextualQuestSystem
   public void onMercenaryDismissed(int playerId, MercenaryManager.ActiveMercenary merc) {
     if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null) return;
     com.riiablo.save.CharData.MercData data = mPlayer.get(playerId).data.getMerc();
+    // Native dismissal destroys the hireling and its equipped inventory.  The
+    // logout-only path deliberately does not call this callback because D2S
+    // MercData must survive a relog.  Clear the complete Item ownership tree
+    // here, including socket children, before dropping the identity record so
+    // checkpoint capture cannot retain an unreachable/ownerless graph.
+    data.getItems().replaceFromAuthoritativeSnapshot(
+        new com.badlogic.gdx.utils.Array<com.riiablo.item.Item>());
+    data.getStats().clear();
+    data.flags = 0;
     data.seed = 0;
     data.name = 0;
     data.type = 0;

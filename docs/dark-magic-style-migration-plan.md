@@ -3728,6 +3728,42 @@ replay、完整网络事件统一出口和回放校验仍属于 M8，不能在 M
 下一迁移：继续 M6/M7 领域批次；M8 再接管可恢复 checkpoint/replay、统一网络表现事件和最终旧
 直连入口删除。
 
+### M8-A 第 48 批：佣兵/召唤物装备树生命周期与 socket checkpoint 验收（2026-10-26）
+
+完成日期：2026-10-26；代码提交：待本批提交后回填。
+
+- 统一主动解雇佣兵与登出卸载的所有权语义：主动解雇会清除 `MercData` 的完整装备树、socket
+  子树、属性镜像和身份字段；登出卸载仍只删除运行时实体并保留 D2S `MercData`，避免 socket
+  装备在重连时变成无主引用或被错误丢弃。
+- 扩展真实 D2GS checkpoint fixture，使用带 `r01` socket 的 `cap` 佣兵装备和带 socket 的
+  Iron Golem `sourceItem`，验证 native Item tree、`Location.SOCKET`、装备槽位和跨 World/
+  独立 JVM 恢复后的身份保持。
+- 复跑实体删除、佣兵装备覆盖预检和 D2S 晚失败事务回滚；失败路径要求保留原装备树引用、
+  equipmentRevision、共享 MercData 属性和运行时服务状态，不允许半恢复。
+
+原版依据：D2MOO `SUnitNpc.cpp` 的 MercData/雇佣实体生命周期、`SkillNec.cpp` 的
+`SKILLS_SrvDo057_IronGolem` 消耗 source Item 语义；D2S 物品段沿用 `D2SReader96`/
+`D2SWriter96` 的原生 `MERC`、`GOLEM` 和嵌套 socket 记录。本批不改变 D2S 二进制布局或装备
+资格公式。
+
+验证：
+
+```powershell
+$env:D2_HOME='G:\BaiduNetdiskDownload\Diablo II 1.10F'
+.\gradlew.bat :core:test --tests com.riiablo.engine.server.quest.NativeMercenaryRewardSystemTest --tests com.riiablo.engine.server.SummonedPetSystemTest --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.D2gsWorldCheckpointBindingsTest --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：核心定向回归通过；`D2gsWorldCheckpointBindingsTest` 62 项通过、0 失败、0 跳过，
+包含带 socket 佣兵/召唤 source Item 的跨 World 与独立 JVM 恢复、主动解雇树清理和晚失败
+回滚。生成的 `SoundP.java` EOF 空行噪声已清理。M8-A 仍不宣称整体完成，完整 Casting/
+Sequence/Leap/动态路径游标、地图/事务/未绑定 RNG、真实 socket transport 接管和最终 M8-D
+网络收口仍保留。
+
+下一迁移：M8-A 第 49 批，继续处理未覆盖的实体创建/删除恢复边界与真实 socket transport
+接管；若无新增生命周期缺口，再进入 M8-A/M8-D 联合收尾验收。
+
 ### M0 完成记录（2026-10-21）
 
 完成日期：2026-10-21
