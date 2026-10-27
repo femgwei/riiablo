@@ -24,4 +24,16 @@ final class MapRng {
     if (span > Integer.MAX_VALUE) return (int) (start + (rng.nextInt() % span));
     return start + rng.nextInt((int) span);
   }
+
+  static float nextFloat(NativeRng rng, float start, float end) {
+    if (rng == null) throw new NullPointerException("rng");
+    return start + (rng.nextInt() & 0x7fffffff) * (1f / 2147483648f) * (end - start);
+  }
+
+  static boolean roll(NativeRng rng, float probability) {
+    if (rng == null) throw new NullPointerException("rng");
+    if (probability <= 0f) return false;
+    if (probability >= 1f) return true;
+    return nextFloat(rng, 0f, 1f) < probability;
+  }
 }

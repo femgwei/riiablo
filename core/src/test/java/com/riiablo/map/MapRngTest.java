@@ -27,4 +27,14 @@ class MapRngTest {
       assertTrue(value >= 3 && value <= 8);
     }
   }
+
+  @Test
+  void floatAndProbabilityHelpersConsumeOnlyTheSuppliedStream() {
+    NativeRng first = MapRng.open(9, "act1", 0);
+    NativeRng second = MapRng.open(9, "act1", 0);
+    for (int i = 0; i < 128; i++) {
+      assertEquals(MapRng.nextFloat(first, -2f, 2f), MapRng.nextFloat(second, -2f, 2f));
+      assertEquals(MapRng.roll(first, .37f), MapRng.roll(second, .37f));
+    }
+  }
 }

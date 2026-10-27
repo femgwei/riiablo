@@ -4071,6 +4071,26 @@ git diff --check
 
 结果：MapRng 定向测试、core 编译和 RNG ownership 检查通过；批次 A/M4-A 仍未完成。
 
+### 批次 A 继续：Act1/Act4/Act5 基础地图 RNG 宿主化（2026-10-27）
+
+- Act1、Act4、Act5 legacy builder 的 town preset 选择改用 `MapRng`；Act1 基础区域的
+  怪物出现概率、怪物类型/组数和出生位置扰动也统一消费同一张 `map.act1` 流。
+- `MapRng` 增加显式 float 区间和概率抽样，所有边界仍保持原有 inclusive 语义；没有修改
+  preset 选择、出生数量或坐标计算公式。
+- 生产 RNG ownership 清单从 500 条降至 492 条，Act1/Act4/Act5 迁移后的删除项已更新进
+  基线，新增入口漂移检查继续接入 architecture regression。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:compileJava :core:test --tests com.riiablo.map.MapRngTest --no-daemon --max-workers=1 --console=plain
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-unbound-rng.ps1 -Output build/reports/unbound-rng.tsv -Baseline tools/architecture/rng-ownership-baseline.tsv -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、MapRng 回归和 492 条 RNG ownership 漂移检查通过；批次 A 仍需继续处理
+D2MOO builder、OutdoorFeatures、掉落和旧兼容入口。
+
 ### 批次 B 实施记录（2026-10-26，进行中）
 
 - `SimulationReplayLog` 新增版本化、长度受限的跨 JVM 二进制编解码（RPLY v1），覆盖命令

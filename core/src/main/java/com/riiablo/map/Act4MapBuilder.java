@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
@@ -19,6 +18,7 @@ public final class Act4MapBuilder extends MapBuilderResources implements MapBuil
 
   @Override
   public void generate(Map map, int seed, int diff) {
+    com.riiablo.engine.server.NativeRng rng = MapRng.open(seed, "act4", diff);
     int def = Map.ACT_DEF[3];
     LvlPrest.Entry preset = files().LvlPrest.get(def);
     Levels.Entry   level  = files().Levels.get(preset.LevelId);
@@ -26,7 +26,7 @@ public final class Act4MapBuilder extends MapBuilderResources implements MapBuil
 
     int fileId[] = new int[6];
     int numFiles = Preset.getPresets(preset, fileId);
-    int select = MathUtils.random(numFiles - 1);
+    int select = MapRng.nextInt(rng, 0, numFiles - 1);
     String fileName = preset.File[select];
     if (DEBUG_BUILD) Gdx.app.debug(TAG, "Select " + fileName);
 

@@ -352,12 +352,6 @@ core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtil
 core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	97	return MathUtils.random(minDamage, maxDamage);
 core/src/main/java\com\riiablo\file\Animation.java	MathUtils	551	private final Color DEBUG_COLOR = new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), 1);
 core/src/main/java\com\riiablo\item\VendorGenerator.java	MathUtils	26	return random != null ? random.nextInt(bound) : MathUtils.random(bound - 1);
-core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	109	if (MathUtils.randomBoolean(SPAWN_MULT
-core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	111	int i = MathUtils.random(monsters.length - 1);
-core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	115	: MathUtils.random(monster.MinGrp, monster.MaxGrp);
-core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	117	float px = zone.getGlobalX(tx * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	118	float py = zone.getGlobalY(ty * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	32	int select = MathUtils.random(numFiles - 1);
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1040	MathUtils.random.setSeed(roomSeed);
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1041	int idx = Math.abs(MathUtils.random.nextInt()) % candidates.size();
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1065	MathUtils.random.setSeed(roomSeed);
@@ -405,7 +399,6 @@ core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	792	MathUt
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	841	MathUtils.random.setSeed(seed + zone.level.Id * 1000 + gridX * 100 + gridY);
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	855	int roll = Math.abs(MathUtils.random.nextInt() % 100);
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	902	MathUtils.random.setSeed(roomSeed);
-core/src/main/java\com\riiablo\map\Act2MapBuilder.java	MathUtils	29	int select = 1 + MathUtils.random(numFiles - 1);
 core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	100	linkData.rand[1][iteration] = MathUtils.random.nextInt() & 3; // 0-3
 core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	121	linkData.rand[1][iteration] = MathUtils.random.nextInt() & 3; // 0-3
 core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	142	linkData.rand[1][iteration] = MathUtils.random.nextInt() & 3; // 0-3
@@ -420,18 +413,15 @@ core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	599	MathUt
 core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	602	int slot = MathUtils.random(zone.gridsX * zone.gridsY - 1);
 core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	606	LvlPrest.Entry p = zone.map.files().LvlPrest.get(defs[MathUtils.random(defs.length - 1)]);
 core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	609	if (count > 0) { zone.presets[gx][gy] = Preset.of(p, files[MathUtils.random(count - 1)]); break; }
-core/src/main/java\com\riiablo\map\Act3MapBuilder.java	MathUtils	29	int select = MathUtils.random(numFiles - 1);
 core/src/main/java\com\riiablo\map\Act3MapBuilderD2MOD.java	MathUtils	102	MathUtils.random.setSeed(seed);
 core/src/main/java\com\riiablo\map\Act3MapBuilderD2MOD.java	MathUtils	130	int selectIndex = MathUtils.random(numFiles - 1);
 core/src/main/java\com\riiablo\map\Act3MapBuilderD2MOD.java	MathUtils	178	int presetSelectIndex = MathUtils.random(presetNumFiles - 1);
 core/src/main/java\com\riiablo\map\Act3MapBuilderD2MOD.java	MathUtils	277	int travincalSelectIndex = MathUtils.random(travincalNumFiles - 1);
-core/src/main/java\com\riiablo\map\Act4MapBuilder.java	MathUtils	29	int select = MathUtils.random(numFiles - 1);
 core/src/main/java\com\riiablo\map\Act4MapBuilderD2MOD.java	MathUtils	116	linkData.rand[1][counter] = MathUtils.random.nextInt() & 3;
 core/src/main/java\com\riiablo\map\Act4MapBuilderD2MOD.java	MathUtils	199	int selectIndex = MathUtils.random(numFiles - 1);
 core/src/main/java\com\riiablo\map\Act4MapBuilderD2MOD.java	MathUtils	230	int selectIndex = MathUtils.random(numFiles - 1);
 core/src/main/java\com\riiablo\map\Act4MapBuilderD2MOD.java	MathUtils	52	if ((MathUtils.random.nextInt() & 1) == 0) {
 core/src/main/java\com\riiablo\map\Act4MapBuilderD2MOD.java	MathUtils	66	MathUtils.random.setSeed(seed);
-core/src/main/java\com\riiablo\map\Act5MapBuilder.java	MathUtils	29	int select = MathUtils.random(numFiles - 1);
 core/src/main/java\com\riiablo\map\Act5MapBuilderD2MOD.java	MathUtils	104	MathUtils.random.setSeed(seed);
 core/src/main/java\com\riiablo\map\Act5MapBuilderD2MOD.java	MathUtils	208	int selectIndex = MathUtils.random(numFiles - 1);
 core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	347	MathUtils.random(99999))) continue;

@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
@@ -22,6 +21,7 @@ public final class Act1MapBuilder extends MapBuilderResources implements MapBuil
 
   @Override
   public void generate(Map map, int seed, int diff) {
+    final com.riiablo.engine.server.NativeRng rng = MapRng.open(seed, "act1", diff);
     int def = Map.ACT_DEF[0];
     LvlPrest.Entry preset = files().LvlPrest.get(def);
     Levels.Entry   level  = files().Levels.get(preset.LevelId);
@@ -29,7 +29,7 @@ public final class Act1MapBuilder extends MapBuilderResources implements MapBuil
 
     int fileId[] = new int[6];
     int numFiles = Preset.getPresets(preset, fileId);
-    int select = MathUtils.random(numFiles - 1);
+    int select = MapRng.nextInt(rng, 0, numFiles - 1);
     String fileName = preset.File[select];
     if (DEBUG_BUILD) Gdx.app.debug(TAG, "Select " + fileName);
 
@@ -106,16 +106,16 @@ public final class Act1MapBuilder extends MapBuilderResources implements MapBuil
             // TODO: Zone.index() can be replaced with incrementer
             zone.getLayer(Map.FLOOR_OFFSET)[Zone.index(zone.tilesX, tx, ty)] = dt1s.get(0);
             if (zone.map.isRemoteClient()) continue;
-            if (MathUtils.randomBoolean(SPAWN_MULT
+            if (MapRng.roll(rng, SPAWN_MULT
                 * MapDataPort.value(zone.level.MonDen, zone.diff, 0) / 100000f)) {
-              int i = MathUtils.random(monsters.length - 1);
+              int i = MapRng.nextInt(rng, 0, monsters.length - 1);
               MonStats.Entry monster = monsters[i];
               int count = monster.MinGrp == monster.MaxGrp
                   ? monster.MaxGrp
-                  : MathUtils.random(monster.MinGrp, monster.MaxGrp);
+                  : MapRng.nextInt(rng, monster.MinGrp, monster.MaxGrp);
               for (i = 0; i < count; i++) {
-                float px = zone.getGlobalX(tx * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-                float py = zone.getGlobalY(ty * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
+                float px = zone.getGlobalX(tx * DT1.Tile.SUBTILE_SIZE) + MapRng.nextFloat(rng, -2f, 2f);
+                float py = zone.getGlobalY(ty * DT1.Tile.SUBTILE_SIZE) + MapRng.nextFloat(rng, -2f, 2f);
                 zone.queueMonster(monster.hcIdx, px, py);
               }
             }
