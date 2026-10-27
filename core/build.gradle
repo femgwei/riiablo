@@ -622,6 +622,16 @@ task rngOwnershipCheck(type: Exec) {
 
 architectureRegression.dependsOn rngOwnershipCheck
 
+task networkTransportOwnerCheck(type: Exec) {
+  group = 'verification'
+  description = 'Rejects legacy transport consumers outside the authoritative D2GS owner.'
+  workingDir rootProject.projectDir
+  commandLine 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+      rootProject.file('tools/architecture/check-network-transport-owners.ps1').absolutePath
+}
+
+architectureRegression.dependsOn networkTransportOwnerCheck
+
 task mapBoundaryRegression(type: Test) {
   group = 'verification'
   description = 'M1-B headless layout, data, population assembly and warp regressions.'
