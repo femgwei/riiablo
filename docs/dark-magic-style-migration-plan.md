@@ -4261,3 +4261,18 @@ git diff --check
 ```
 
 结果：core 编译、DT1s/地图回归和 420 条 RNG ownership 漂移检查通过；批次 A 继续处理 Act1 深层生成与剩余兼容入口。
+
+### 批次 A 继续：Map 入口全局 RNG 解耦（2026-10-28）
+
+- 移除 `Map.generate` 对全局 `MathUtils.random` 的种子重置；各地图 builder 和资源宿主已经自行持有命名 RNG 流。
+- 该入口不再改变其他地图/服务器会话的全局 RNG 状态，保留既有 act/difficulty 生成路径。
+- 生产 RNG ownership 清单从 420 条降至 419 条。
+
+验证：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-unbound-rng.ps1 -Output build/reports/unbound-rng.tsv -Baseline tools/architecture/rng-ownership-baseline.tsv -FailOnDrift
+git diff --check
+```
+
+结果：419 条 RNG ownership 漂移检查通过；批次 A 继续处理 Act1 深层生成与剩余兼容入口。

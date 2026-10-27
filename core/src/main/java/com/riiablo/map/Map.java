@@ -603,7 +603,6 @@ public class Map implements Disposable {
       if (cvar != null) useNative = cvar.get();
     }
     generationPolicy = MapGenerationPolicy.fromNativeToggle(useNative);
-    MathUtils.random.setSeed(seed);
     if (cofs() != null) cofs().active = updateCofs(act);
     switch (act) {
       case 0:
