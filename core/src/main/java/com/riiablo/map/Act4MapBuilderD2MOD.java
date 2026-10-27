@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
@@ -41,7 +40,8 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
   /**
    * D2MOD: sub_6FD81CA0 - 处理 OUTERSTEPPES 的放置
    */
-  private boolean placeOuterSteppes(BaseMapBuilderD2MOD.LevelLinkData linkData, int iteration) {
+  private boolean placeOuterSteppes(BaseMapBuilderD2MOD.LevelLinkData linkData, int iteration,
+      com.riiablo.engine.server.NativeRng rng) {
     linkData.rand[1][iteration] = 3; // DIR_EAST
     linkData.rand[0][iteration] = linkData.rand[1][iteration];
 
@@ -49,7 +49,7 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
     BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
     
     // 随机选择使用哪个函数计算偏移
-    if ((MathUtils.random.nextInt() & 1) == 0) {
+    if ((rng.nextInt() & 1) == 0) {
       base.calculateCoordOffset(linkData.coords[levelLink], linkData.coords[iteration], 
           linkData.rand[0][iteration], 3);
     } else {
@@ -62,8 +62,7 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
 
   @Override
   public void generate(Map map, int seed, int diff) {
-    // 重要：设置随机种子，确保多人游戏中所有客户端生成相同的地图
-    MathUtils.random.setSeed(seed);
+    final com.riiablo.engine.server.NativeRng rng = MapRng.open(seed, "act4.d2mod", diff);
 
     // D2MOD: gAct4OutdoorDrlgLink 数组
     BaseMapBuilderD2MOD.LevelLink[] act4Links = new BaseMapBuilderD2MOD.LevelLink[] {
@@ -108,12 +107,12 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
         success = base.placeFirstLevel(linkData, counter, level);
       } else if (act4Links[counter].level == LEVEL_OUTERSTEPPES) {
         // sub_6FD81CA0 - OUTERSTEPPES
-        success = placeOuterSteppes(linkData, counter);
+        success = placeOuterSteppes(linkData, counter, rng);
       } else if (act4Links[counter].level == LEVEL_PLAINSOFDESPAIR || 
                  act4Links[counter].level == LEVEL_CITYOFTHEDAMNED) {
         // sub_6FD81380 - PLAINSOFDESPAIR, CITYOFTHEDAMNED
         if (linkData.rand[1][counter] == -1) {
-          linkData.rand[1][counter] = MathUtils.random.nextInt() & 3;
+          linkData.rand[1][counter] = rng.nextInt() & 3;
           linkData.rand[0][counter] = linkData.rand[1][counter];
           // The native routine chooses the first direction and places the
           // level in the same pass. Leaving success=false here makes the
@@ -196,7 +195,7 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
         int fileId[] = new int[6];
         int numFiles = Preset.getPresets(preset, fileId);
         if (numFiles > 0) {
-          int selectIndex = MathUtils.random(numFiles - 1);
+          int selectIndex = MapRng.nextInt(rng, 0, numFiles - 1);
           int select = fileId[selectIndex];
           Zone zone = base.createZoneWithPreset(map, level, preset, select, finalX, finalY, 
               act4Links[i].level == LEVEL_THEPANDEMONIUMFORTRESS);
@@ -227,7 +226,7 @@ public final class Act4MapBuilderD2MOD extends MapBuilderResources implements Ma
         int fileId[] = new int[6];
         int numFiles = Preset.getPresets(chaosPreset, fileId);
         if (numFiles > 0) {
-          int selectIndex = MathUtils.random(numFiles - 1);
+          int selectIndex = MapRng.nextInt(rng, 0, numFiles - 1);
           int select = fileId[selectIndex];
           base.createZoneWithPreset(map, chaosLevel, chaosPreset, select, 
               chaosLevel.OffsetX, chaosLevel.OffsetY, false);

@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
@@ -95,9 +94,10 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
   /**
    * D2MOD: sub_6FD81B30 - 处理 ROCKYWASTE 的放置
    */
-  private boolean placeRockyWaste(BaseMapBuilderD2MOD.LevelLinkData linkData, int iteration) {
+  private boolean placeRockyWaste(BaseMapBuilderD2MOD.LevelLinkData linkData, int iteration,
+      com.riiablo.engine.server.NativeRng rng) {
     if (linkData.rand[1][iteration] == -1) {
-      linkData.rand[1][iteration] = MathUtils.random.nextInt() & 3; // 0-3
+      linkData.rand[1][iteration] = rng.nextInt() & 3; // 0-3
       linkData.rand[0][iteration] = linkData.rand[1][iteration];
     } else {
       int nextRand = (linkData.rand[0][iteration] + 1) % 4;
@@ -116,9 +116,10 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
   /**
    * D2MOD: sub_6FD81530 - 处理 DRYHILLS, FAROASIS, LOSTCITY 的放置
    */
-  private boolean placeDesertArea(BaseMapBuilderD2MOD.LevelLinkData linkData, int iteration) {
+  private boolean placeDesertArea(BaseMapBuilderD2MOD.LevelLinkData linkData, int iteration,
+      com.riiablo.engine.server.NativeRng rng) {
     if (linkData.rand[1][iteration] == -1) {
-      linkData.rand[1][iteration] = MathUtils.random.nextInt() & 3; // 0-3
+      linkData.rand[1][iteration] = rng.nextInt() & 3; // 0-3
       linkData.rand[0][iteration] = linkData.rand[1][iteration];
     } else {
       int nextRand = (linkData.rand[0][iteration] + 1) % 4;
@@ -137,9 +138,10 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
   /**
    * D2MOD: sub_6FD81BF0 - 处理 VALLEYOFSNAKES 的放置
    */
-  private boolean placeValleyOfSnakes(BaseMapBuilderD2MOD.LevelLinkData linkData, int iteration) {
+  private boolean placeValleyOfSnakes(BaseMapBuilderD2MOD.LevelLinkData linkData, int iteration,
+      com.riiablo.engine.server.NativeRng rng) {
     if (linkData.rand[1][iteration] == -1) {
-      linkData.rand[1][iteration] = MathUtils.random.nextInt() & 3; // 0-3
+      linkData.rand[1][iteration] = rng.nextInt() & 3; // 0-3
       linkData.rand[0][iteration] = linkData.rand[1][iteration];
     } else {
       int nextRand = (linkData.rand[0][iteration] + 1) % 4;
@@ -157,8 +159,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
 
   @Override
   public void generate(Map map, int seed, int diff) {
-    // 重要：设置随机种子，确保多人游戏中所有客户端生成相同的地图
-    MathUtils.random.setSeed(seed);
+    final com.riiablo.engine.server.NativeRng rng = MapRng.open(seed, "act2.d2mod", diff);
     Act2TombSelection tombSelection = Act2TombSelection.forGameSeed(seed);
     Gdx.app.log(TAG, String.format(
         "Act2 native tomb selection: seed=%d staff=%d boss=%d",
@@ -209,15 +210,15 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
         success = base.placeFirstLevel(linkData, counter, level);
       } else if (act2Links[counter].level == LEVEL_ROCKYWASTE) {
         // sub_6FD81B30 - ROCKYWASTE
-        success = placeRockyWaste(linkData, counter);
+        success = placeRockyWaste(linkData, counter, rng);
       } else if (act2Links[counter].level == LEVEL_DRYHILLS || 
                  act2Links[counter].level == LEVEL_FAROASIS ||
                  act2Links[counter].level == LEVEL_LOSTCITY) {
         // sub_6FD81530 - DRYHILLS, FAROASIS, LOSTCITY
-        success = placeDesertArea(linkData, counter);
+        success = placeDesertArea(linkData, counter, rng);
       } else if (act2Links[counter].level == LEVEL_VALLEYOFSNAKES) {
         // sub_6FD81BF0 - VALLEYOFSNAKES
-        success = placeValleyOfSnakes(linkData, counter);
+        success = placeValleyOfSnakes(linkData, counter, rng);
       } else {
         // 未知区域类型，使用默认逻辑
         if (act2Links[counter].levelLink >= 0) {
@@ -305,7 +306,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
             Gdx.app.error(TAG, "No valid presets found for level " + level.LevelName);
             break;
           }
-          int selectIndex = MathUtils.random(numFiles - 1);
+          int selectIndex = MapRng.nextInt(rng, 0, numFiles - 1);
           int select = fileId[selectIndex];
 
           if (select < 0 || select >= preset.File.length || 
@@ -360,7 +361,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
           Gdx.app.error(TAG, "No valid presets found for level " + level.LevelName);
           continue;
         }
-        int selectIndex = MathUtils.random(numFiles - 1);
+        int selectIndex = MapRng.nextInt(rng, 0, numFiles - 1);
         int select = fileId[selectIndex];
         
         if (select < 0 || select >= preset.File.length || 
@@ -398,7 +399,7 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
         int fileId[] = new int[6];
         int numFiles = Preset.getPresets(canyonPreset, fileId);
         if (numFiles > 0) {
-          int selectIndex = MathUtils.random(numFiles - 1);
+          int selectIndex = MapRng.nextInt(rng, 0, numFiles - 1);
           int select = fileId[selectIndex];
           BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
 
@@ -543,15 +544,16 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
     int[] fileIds = new int[6];
     int fileCount = Preset.getPresets(preset, fileIds);
     if (fileCount == 0) return;
-    MathUtils.random.setSeed(seed * 31 + zone.level.Id * 17);
-    int start = MathUtils.random(zone.gridsX * zone.gridsY - 1);
+    com.riiablo.engine.server.NativeRng rng = MapRng.open(seed * 31 + zone.level.Id * 17,
+        "act2.desert-exit", zone.level.Id);
+    int start = MapRng.nextInt(rng, 0, zone.gridsX * zone.gridsY - 1);
     for (int i = 0; i < zone.gridsX * zone.gridsY; i++) {
       int slot = (start + i) % (zone.gridsX * zone.gridsY);
       int gx = slot % zone.gridsX;
       int gy = slot / zone.gridsX;
       if (gx == 0 || gy == 0 || gx == zone.gridsX - 1 || gy == zone.gridsY - 1) continue;
       if (zone.presets[gx][gy] != null) continue;
-      zone.presets[gx][gy] = Preset.of(preset, fileIds[MathUtils.random(fileCount - 1)]);
+      zone.presets[gx][gy] = Preset.of(preset, fileIds[MapRng.nextInt(rng, 0, fileCount - 1)]);
       return;
     }
   }
@@ -596,17 +598,18 @@ public final class Act2MapBuilderD2MOD extends MapBuilderResources implements Ma
       default: return;
     }
     if (zone.presets == null || zone.gridsX < 3 || zone.gridsY < 3) return;
-    MathUtils.random.setSeed(seed * 131 + zone.level.Id * 17);
+    com.riiablo.engine.server.NativeRng rng = MapRng.open(seed * 131 + zone.level.Id * 17,
+        "act2.desert-fills", zone.level.Id);
     for (int pass = 0; pass < repeats; pass++) {
       for (int attempt = 0; attempt < zone.gridsX * zone.gridsY; attempt++) {
-        int slot = MathUtils.random(zone.gridsX * zone.gridsY - 1);
+      int slot = MapRng.nextInt(rng, 0, zone.gridsX * zone.gridsY - 1);
         int gx = slot % zone.gridsX, gy = slot / zone.gridsX;
         if (gx == 0 || gy == 0 || gx == zone.gridsX - 1 || gy == zone.gridsY - 1
             || zone.presets[gx][gy] != null) continue;
-        LvlPrest.Entry p = zone.map.files().LvlPrest.get(defs[MathUtils.random(defs.length - 1)]);
+      LvlPrest.Entry p = zone.map.files().LvlPrest.get(defs[MapRng.nextInt(rng, 0, defs.length - 1)]);
         if (p == null || p.File == null) continue;
         int[] files = new int[6]; int count = Preset.getPresets(p, files);
-        if (count > 0) { zone.presets[gx][gy] = Preset.of(p, files[MathUtils.random(count - 1)]); break; }
+        if (count > 0) { zone.presets[gx][gy] = Preset.of(p, files[MapRng.nextInt(rng, 0, count - 1)]); break; }
       }
     }
   }

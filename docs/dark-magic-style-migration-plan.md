@@ -4177,3 +4177,20 @@ D2MOO 依据：<源码文件/函数>
 
 
 
+
+### 批次 A 继续：Act2-Act5 D2MOD builder RNG 宿主化（2026-10-27）
+
+- Act2、Act3、Act4、Act5 的 D2MOD 地图 builder 改用带 seed、builder 和 difficulty 身份的 `MapRng` 流。
+- 覆盖区域链接回溯方向、preset 文件选择、沙漠出口/填充，以及 Act4 外域布局分支；保留原有 inclusive 范围和调用顺序。
+- 生产 RNG ownership 清单从 470 条降至 445 条，扫描器漂移检查通过。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:compileJava --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :core:test --tests com.riiablo.map.MapBuilderIsolationTest --tests com.riiablo.map.Act2MapBuilderD2MooWarpTest --tests com.riiablo.map.Act3MapBuilderD2MODTest --tests com.riiablo.map.Act4MapBuilderD2MODTest --tests com.riiablo.map.Act5MapBuilderD2MODTest --no-daemon --max-workers=1 --console=plain
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-unbound-rng.ps1 -Output build/reports/unbound-rng.tsv -Baseline tools/architecture/rng-ownership-baseline.tsv -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、Act2-Act5 地图回归和 445 条 RNG ownership 漂移检查通过；批次 A 继续处理 DT1s、掉落和旧兼容入口。

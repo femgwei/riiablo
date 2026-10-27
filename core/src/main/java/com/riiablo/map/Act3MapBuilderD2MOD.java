@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
@@ -98,8 +97,7 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
 
   @Override
   public void generate(Map map, int seed, int diff) {
-    // 重要：设置随机种子，确保多人游戏中所有客户端生成相同的地图
-    MathUtils.random.setSeed(seed);
+    final com.riiablo.engine.server.NativeRng rng = MapRng.open(seed, "act3.d2mod", diff);
 
     // D2MOD: Act3 的地图生成逻辑
     // 1. 首先创建城镇（KURASTDOCKTOWN）
@@ -127,7 +125,7 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
       Gdx.app.error(TAG, "No valid presets found for town");
       return;
     }
-    int selectIndex = MathUtils.random(numFiles - 1);
+    int selectIndex = MapRng.nextInt(rng, 0, numFiles - 1);
     int select = fileId[selectIndex];
 
     BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD(resources) {};
@@ -175,7 +173,7 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
         int presetFileId[] = new int[6];
         int presetNumFiles = Preset.getPresets(preset, presetFileId);
         if (presetNumFiles > 0) {
-          int presetSelectIndex = MathUtils.random(presetNumFiles - 1);
+          int presetSelectIndex = MapRng.nextInt(rng, 0, presetNumFiles - 1);
           int presetSelect = presetFileId[presetSelectIndex];
           base.createZoneWithPreset(map, level, preset, presetSelect, 
               level.OffsetX, level.OffsetY, false);
@@ -274,7 +272,7 @@ public final class Act3MapBuilderD2MOD extends MapBuilderResources implements Ma
         int travincalFileId[] = new int[6];
         int travincalNumFiles = Preset.getPresets(travincalPreset, travincalFileId);
         if (travincalNumFiles > 0) {
-          int travincalSelectIndex = MathUtils.random(travincalNumFiles - 1);
+          int travincalSelectIndex = MapRng.nextInt(rng, 0, travincalNumFiles - 1);
           int travincalSelect = travincalFileId[travincalSelectIndex];
           base.createZoneWithPreset(map, travincalLevel, travincalPreset, travincalSelect, 
               travincalLevel.OffsetX, travincalLevel.OffsetY, false);

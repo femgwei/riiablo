@@ -100,8 +100,7 @@ public final class Act5MapBuilderD2MOD extends MapBuilderResources implements Ma
 
   @Override
   public void generate(Map map, int seed, int diff) {
-    // 重要：设置随机种子，确保多人游戏中所有客户端生成相同的地图
-    MathUtils.random.setSeed(seed);
+    final com.riiablo.engine.server.NativeRng rng = MapRng.open(seed, "act5.d2mod", diff);
 
     // D2MOD: gAct5OutdoorDrlgLink 数组
     BaseMapBuilderD2MOD.LevelLink[] act5Links = new BaseMapBuilderD2MOD.LevelLink[ACT5_MAIN_CHAIN.length];
@@ -205,7 +204,7 @@ public final class Act5MapBuilderD2MOD extends MapBuilderResources implements Ma
         int fileId[] = new int[6];
         int numFiles = Preset.getPresets(preset, fileId);
         if (numFiles > 0) {
-          int selectIndex = MathUtils.random(numFiles - 1);
+          int selectIndex = MapRng.nextInt(rng, 0, numFiles - 1);
           int select = fileId[selectIndex];
           Zone zone = base.createZoneWithPreset(map, level, preset, select, finalX, finalY, 
               act5Links[i].level == LEVEL_HARROGATH);
