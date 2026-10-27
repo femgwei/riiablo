@@ -4244,3 +4244,20 @@ git diff --check
 ```
 
 结果：core 编译、地图回归和 422 条 RNG ownership 漂移检查通过；批次 A 继续处理 DT1s、Act1 深层生成和剩余兼容入口。
+
+### 批次 A 继续：DT1s 加权选择 RNG 宿主化（2026-10-28）
+
+- `DT1s` 的按稀有度加权 tile 选择改为实例级 `NativeRng`，地图加载时按 map seed 和 tile 类型建立命名流。
+- 保留无参构造供资源/单元测试使用；Map Zone 资源加载和空资源回退均注入地图身份，避免共享全局 RNG。
+- 生产 RNG ownership 清单从 422 条降至 420 条。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:compileJava --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :core:test --tests com.riiablo.map.DT1sTest --tests com.riiablo.map.DT1sAnimationTest --tests com.riiablo.map.MapBuilderIsolationTest --tests com.riiablo.map.Act2MapBuilderD2MooWarpTest --tests com.riiablo.map.Act3MapBuilderD2MODTest --tests com.riiablo.map.Act4MapBuilderD2MODTest --tests com.riiablo.map.Act5MapBuilderD2MODTest --no-daemon --max-workers=1 --console=plain
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-unbound-rng.ps1 -Output build/reports/unbound-rng.tsv -Baseline tools/architecture/rng-ownership-baseline.tsv -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、DT1s/地图回归和 420 条 RNG ownership 漂移检查通过；批次 A 继续处理 Act1 深层生成与剩余兼容入口。

@@ -388,8 +388,6 @@ core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	792	MathUt
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	841	MathUtils.random.setSeed(seed + zone.level.Id * 1000 + gridX * 100 + gridY);
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	855	int roll = Math.abs(MathUtils.random.nextInt() % 100);
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	902	MathUtils.random.setSeed(roomSeed);
-core/src/main/java\com\riiablo\map\DT1s.java	MathUtils	138	int random = sum == 0 ? 0 : MathUtils.random(sum - 1);
-core/src/main/java\com\riiablo\map\DT1s.java	MathUtils	153	int random = sum == 0 ? 0 : MathUtils.random(sum - 1);
 core/src/main/java\com\riiablo\map\Map.java	MathUtils	606	MathUtils.random.setSeed(seed);
 core/src/main/java\com\riiablo\map2\MapGenerator.java	JavaRandom	18	final Random random = new Random();
 core/src/main/java\com\riiablo\map2\random\Random.java	RandomXS128	3	import com.badlogic.gdx.math.RandomXS128;

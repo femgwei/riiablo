@@ -1,6 +1,5 @@
 package com.riiablo.map;
 
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntIntMap;
 import com.badlogic.gdx.utils.IntMap;
@@ -9,7 +8,18 @@ import com.badlogic.gdx.utils.ObjectSet;
 
 import java.util.Locale;
 
+import com.riiablo.engine.server.NativeRng;
+
 public class DT1s {
+  private final NativeRng rng;
+
+  public DT1s() {
+    this(0, 0);
+  }
+
+  DT1s(int seed, int context) {
+    rng = MapRng.open(seed, "dt1.tiles", context);
+  }
   // TODO: tiles and prob are both keyed with tile ID, can speed up if using one map to Pair<prob, tiles>
   ObjectSet<DT1>          dt1s  = new ObjectSet<>();
   IntMap<Array<DT1.Tile>> tiles = new IntMap<>();
@@ -135,7 +145,7 @@ public class DT1s {
   private DT1.Tile next(int id, Array<DT1.Tile> tiles) {
     if (tiles == null) return null;
     int sum = prob.get(id, 0);
-    int random = sum == 0 ? 0 : MathUtils.random(sum - 1);
+    int random = sum == 0 ? 0 : rng.nextInt(sum);
     for (DT1.Tile tile : tiles) {
       random -= tile.rarity;
       if (random <= 0) {
@@ -150,7 +160,7 @@ public class DT1s {
     if (tiles == null) return null;
     int sum = 0;
     for (DT1.Tile tile : tiles) sum += tile.rarity;
-    int random = sum == 0 ? 0 : MathUtils.random(sum - 1);
+    int random = sum == 0 ? 0 : rng.nextInt(sum);
     for (DT1.Tile tile : tiles) {
       random -= tile.rarity;
       if (random <= 0) return tile;

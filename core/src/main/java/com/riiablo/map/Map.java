@@ -2473,7 +2473,7 @@ public class Map implements Disposable {
       AssetManager assets = java.util.Objects.requireNonNull(dependencyAssets, "Zone.load must precede finishLoading");
       int type = this.type.Id;
       DT1s dt1s = map.dt1s.get(type);
-      if (dt1s == null) map.dt1s.put(type, dt1s = new DT1s());
+      if (dt1s == null) map.dt1s.put(type, dt1s = new DT1s(map.seed(), type));
       
       Array<AssetDescriptor> deps = getDependencies();
       int dt1Count = 0;
@@ -2521,7 +2521,7 @@ public class Map implements Disposable {
       
       // 确保 dt1s 不为 null（如果 finishLoading 没有加载任何 DT1 文件，dt1s 可能为 null）
       if (dt1s == null) {
-        dt1s = new DT1s();
+        dt1s = new DT1s(map.seed(), type.Id);
         map.dt1s.put(type.Id, dt1s);
         if (DEBUG_BUILD) {
           Gdx.app.error(TAG, String.format("Zone.generate: dt1s was null for type %d (%s), created empty DT1s", 
