@@ -216,10 +216,6 @@ public class StateOverlaySystem extends IteratingSystem {
     cofs.updateTransform(entityId, flags);
   }
 
-  static byte venomPackedTransform() {
-    return venomPackedTransform(ClientGameplayContext.fromGlobals());
-  }
-
   static byte venomPackedTransform(ClientGameplayContext context) {
     if (context == null || context.files() == null || context.files().colors == null) {
       return CofTransforms.TRANSFORM_NULL;

@@ -23,9 +23,10 @@ class StateOverlaySystemTest extends RiiabloTest {
   @Test
   void bladeShieldOverlayAndVenomHandTransformFollowStates() {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
+    ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
-        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
+        .build().register("clientContext", clientContext));
     try {
       int entity = world.create();
       CofTransforms transforms = world.getMapper(CofTransforms.class).create(entity);
@@ -40,7 +41,7 @@ class StateOverlaySystemTest extends RiiabloTest {
       world.process();
       assertTrue(overlays.bladeShieldActive);
       assertEquals("bladeshield", overlays.overlayId);
-      byte green = StateOverlaySystem.venomPackedTransform();
+      byte green = StateOverlaySystem.venomPackedTransform(clientContext);
       assertEquals(green, transforms.transform[COF.Component.RH]);
       assertEquals(green, transforms.transform[COF.Component.LH]);
 
