@@ -45,4 +45,30 @@ if ($leaks) {
   exit 1
 }
 
+# The current authoritative D2GS transport is nnet.  onet is retained only as
+# a legacy implementation and must not be imported by production code outside
+# its own package tree.  Keep this check textual and deterministic so it can
+# run before compilation in the architecture gate.
+$legacyLeaks = $rows | Where-Object {
+  $_.Owner -eq 'com.riiablo.onet' -and
+  $_.File -notmatch '^server/netty/src/main/java/com/riiablo/onet/' -and
+  $_.File -notmatch '^server/netty/src/test/'
+}
+if ($legacyLeaks) {
+  $legacyLeaks | Format-Table -AutoSize | Out-String | Write-Error
+  exit 1
+}
+
+# nnet may only be consumed by the authoritative D2GS server family.  This
+# prevents a second session/transport owner from appearing in another server.
+$nnetLeaks = $rows | Where-Object {
+  $_.Owner -eq 'com.riiablo.nnet' -and
+  $_.File -notmatch '^server/netty/src/main/java/com/riiablo/server/d2gs/' -and
+  $_.File -notmatch '^server/netty/src/main/java/com/riiablo/nnet/'
+}
+if ($nnetLeaks) {
+  $nnetLeaks | Format-Table -AutoSize | Out-String | Write-Error
+  exit 1
+}
+
 Write-Output ("network transport owner audit passed: {0} references" -f $rows.Count)
