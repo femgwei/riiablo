@@ -9,7 +9,6 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.riiablo.Palettes;
-import com.riiablo.Riiablo;
 import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.Palette;
@@ -48,10 +47,6 @@ public final class HackMapIconRenderer implements Disposable {
   private boolean requested;
   private boolean active;
   private final ClientGameplayContext clientContext;
-
-  public HackMapIconRenderer() {
-    this(ClientGameplayContext.fromGlobals());
-  }
 
   public HackMapIconRenderer(ClientGameplayContext clientContext) {
     this.clientContext = clientContext == null ? ClientGameplayContext.fromGlobals() : clientContext;
