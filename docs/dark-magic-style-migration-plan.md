@@ -4091,6 +4091,27 @@ git diff --check
 结果：core 编译、MapRng 回归和 492 条 RNG ownership 漂移检查通过；批次 A 仍需继续处理
 D2MOO builder、OutdoorFeatures、掉落和旧兼容入口。
 
+### 批次 A 继续：OutdoorFeatures RNG 宿主化（2026-10-27）
+
+- `OutdoorFeatures` 的 waypoint、shrine、border、Act1 wild detail 和 path 入口不再重置
+  全局 `MathUtils.random`，各自使用带 zone identity 的 `map.outdoor.*` 显式流。
+- 边界候选、细节块、路径起点/长度/方向以及 preset 选择均通过 `MapRng` 的整数、float 和
+  概率 API；原有 inclusive 范围和放置顺序保持不变。
+- 生产 RNG ownership 清单从 492 条降至 470 条；生成/测试源仍被扫描器排除，新增入口漂移
+  检查继续通过。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:compileJava --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :core:test --tests com.riiablo.map.MapBuilderIsolationTest --tests com.riiablo.map.Act3MapBuilderD2MODTest --tests com.riiablo.map.Act4MapBuilderD2MODTest --tests com.riiablo.map.Act5MapBuilderD2MODTest --tests com.riiablo.map.Act2MapBuilderD2MooWarpTest --no-daemon --max-workers=1 --console=plain
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-unbound-rng.ps1 -Output build/reports/unbound-rng.tsv -Baseline tools/architecture/rng-ownership-baseline.tsv -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、地图回归和 470 条 RNG ownership 漂移检查通过；批次 A 仍需继续处理
+D2MOO builder、掉落和旧兼容工具入口。
+
 ### 批次 B 实施记录（2026-10-26，进行中）
 
 - `SimulationReplayLog` 新增版本化、长度受限的跨 JVM 二进制编解码（RPLY v1），覆盖命令

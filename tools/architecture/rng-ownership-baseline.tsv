@@ -436,28 +436,6 @@ core/src/main/java\com\riiablo\map\DT1s.java	MathUtils	138	int random = sum == 0
 core/src/main/java\com\riiablo\map\DT1s.java	MathUtils	153	int random = sum == 0 ? 0 : MathUtils.random(sum - 1);
 core/src/main/java\com\riiablo\map\Map.java	MathUtils	606	MathUtils.random.setSeed(seed);
 core/src/main/java\com\riiablo\map\Material.java	MathUtils	23	this(new Color(MathUtils.random.nextInt() | 0xFF));
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	108	MathUtils.random.setSeed((int) zoneSeed);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	118	int shrineType = MathUtils.random.nextInt() & 3;
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	123	int gridX = 1 + MathUtils.random(gridWidth - 3);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	124	int gridY = 1 + MathUtils.random(gridHeight - 3);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	132	int selectIndex = MathUtils.random(numFiles - 1);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	195	MathUtils.random.setSeed((int) zoneSeed);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	284	MathUtils.random.setSeed((int) zoneSeed);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	298	if (MathUtils.random(0, 99) >= prob) continue;
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	300	int gx = MathUtils.random(0, gridsX - 1);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	301	int gy = MathUtils.random(0, gridsY - 1);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	336	int idx = MathUtils.random(borderSubs.size() - 1);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	435	MathUtils.random.setSeed((int) zoneSeed);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	441	int pathCount = MathUtils.random(2, 5); // 2-5 Êù°Ë∑ØÂæ?
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	444	int startX = MathUtils.random(gridWidth - 1);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	445	int startY = MathUtils.random(gridHeight - 1);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	446	int length = MathUtils.random(3, 8);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	447	int direction = MathUtils.random(3); // 0=Âè? 1=‰∏? 2=Â∑? 3=‰∏?
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	467	int selectIndex = MathUtils.random(numFiles - 1);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	48	MathUtils.random.setSeed((int) zoneSeed);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	64	int gridX = 1 + MathUtils.random(gridWidth - 3);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	65	int gridY = 1 + MathUtils.random(gridHeight - 3);
-core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	75	int selectIndex = MathUtils.random(numFiles - 1);
 core/src/main/java\com\riiablo\map2\Chunk.java	MathUtils	126	int color = MathUtils.random.nextInt() | 0xff;
 core/src/main/java\com\riiablo\map2\MapGenerator.java	JavaRandom	18	final Random random = new Random();
 core/src/main/java\com\riiablo\map2\Prefab.java	MathUtils	24	int color = MathUtils.random.nextInt() | 0xff;

@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.LvlSub;
@@ -45,7 +44,7 @@ public class OutdoorFeatures {
 
     // 使用区域特定的种子，确保相同区域总是生成相同位置
     long zoneSeed = (long) seed * 31 + zone.level.Id;
-    MathUtils.random.setSeed((int) zoneSeed);
+    com.riiablo.engine.server.NativeRng rng = MapRng.open((int) zoneSeed, "outdoor.waypoint", zone.level.Id);
 
     // 在区域网格中随机选择一个位置（避开边界）
     int gridWidth = zone.gridsX;
@@ -61,8 +60,8 @@ public class OutdoorFeatures {
     // 尝试多个随机位置，找到第一个有效位置
     int maxAttempts = (gridWidth - 2) * (gridHeight - 2);
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
-      int gridX = 1 + MathUtils.random(gridWidth - 3);
-      int gridY = 1 + MathUtils.random(gridHeight - 3);
+      int gridX = 1 + MapRng.nextInt(rng, 0, gridWidth - 3);
+      int gridY = 1 + MapRng.nextInt(rng, 0, gridHeight - 3);
 
       // 检查该位置是否有效（没有预设或可以覆盖）
       if (zone.presets[gridX][gridY] == null || canPlaceFeature(zone, gridX, gridY)) {
@@ -72,7 +71,7 @@ public class OutdoorFeatures {
           int fileId[] = new int[6];
           int numFiles = Preset.getPresets(waypointPreset, fileId);
           if (numFiles > 0) {
-            int selectIndex = MathUtils.random(numFiles - 1);
+            int selectIndex = MapRng.nextInt(rng, 0, numFiles - 1);
             int select = fileId[selectIndex];
             zone.presets[gridX][gridY] = Preset.of(waypointPreset, select);
             
@@ -105,7 +104,7 @@ public class OutdoorFeatures {
     }
 
     long zoneSeed = (long) seed * 31 + zone.level.Id;
-    MathUtils.random.setSeed((int) zoneSeed);
+    com.riiablo.engine.server.NativeRng rng = MapRng.open((int) zoneSeed, "outdoor.shrine", zone.level.Id);
 
     int gridWidth = zone.gridsX;
     int gridHeight = zone.gridsY;
@@ -115,13 +114,13 @@ public class OutdoorFeatures {
     }
 
     // 神殿类型（0-3）
-    int shrineType = MathUtils.random.nextInt() & 3;
+    int shrineType = rng.nextInt() & 3;
     int placed = 0;
     int maxAttempts = (gridWidth - 2) * (gridHeight - 2);
 
     for (int attempt = 0; attempt < maxAttempts && placed < count; attempt++) {
-      int gridX = 1 + MathUtils.random(gridWidth - 3);
-      int gridY = 1 + MathUtils.random(gridHeight - 3);
+      int gridX = 1 + MapRng.nextInt(rng, 0, gridWidth - 3);
+      int gridY = 1 + MapRng.nextInt(rng, 0, gridHeight - 3);
 
       if (zone.presets[gridX][gridY] == null || canPlaceFeature(zone, gridX, gridY)) {
         LvlPrest.Entry shrinePreset = findShrinePreset(zone.level.Id, shrineType);
@@ -129,7 +128,7 @@ public class OutdoorFeatures {
           int fileId[] = new int[6];
           int numFiles = Preset.getPresets(shrinePreset, fileId);
           if (numFiles > 0) {
-            int selectIndex = MathUtils.random(numFiles - 1);
+            int selectIndex = MapRng.nextInt(rng, 0, numFiles - 1);
             int select = fileId[selectIndex];
             zone.presets[gridX][gridY] = Preset.of(shrinePreset, select);
             placed++;
@@ -192,7 +191,7 @@ public class OutdoorFeatures {
     }
 
     long zoneSeed = (long) seed * 31 + zone.level.Id;
-    MathUtils.random.setSeed((int) zoneSeed);
+    com.riiablo.engine.server.NativeRng rng = MapRng.open((int) zoneSeed, "outdoor.border", zone.level.Id);
 
     final int subType = zone.level.SubType;
     if (subType < 0) {
@@ -219,19 +218,19 @@ public class OutdoorFeatures {
 
     for (int x = 0; x < gridWidth; x++) {
       if (zone.presets[x][0] == null) {
-        zone.presets[x][0] = pickBorderPresetFromLvlSub(borderSubs, zone);
+        zone.presets[x][0] = pickBorderPresetFromLvlSub(borderSubs, zone, rng);
       }
       if (zone.presets[x][gridHeight - 1] == null) {
-        zone.presets[x][gridHeight - 1] = pickBorderPresetFromLvlSub(borderSubs, zone);
+        zone.presets[x][gridHeight - 1] = pickBorderPresetFromLvlSub(borderSubs, zone, rng);
       }
     }
 
     for (int y = 0; y < gridHeight; y++) {
       if (zone.presets[0][y] == null) {
-        zone.presets[0][y] = pickBorderPresetFromLvlSub(borderSubs, zone);
+        zone.presets[0][y] = pickBorderPresetFromLvlSub(borderSubs, zone, rng);
       }
       if (zone.presets[gridWidth - 1][y] == null) {
-        zone.presets[gridWidth - 1][y] = pickBorderPresetFromLvlSub(borderSubs, zone);
+        zone.presets[gridWidth - 1][y] = pickBorderPresetFromLvlSub(borderSubs, zone, rng);
       }
     }
   }
@@ -281,7 +280,7 @@ public class OutdoorFeatures {
     }
 
     long zoneSeed = ((long) seed * 1315423911L) ^ (zone.level.Id * 0x9E3779B9L);
-    MathUtils.random.setSeed((int) zoneSeed);
+    com.riiablo.engine.server.NativeRng rng = MapRng.open((int) zoneSeed, "outdoor.details", zone.level.Id);
 
     int gridsX = zone.gridsX;
     int gridsY = zone.gridsY;
@@ -295,10 +294,10 @@ public class OutdoorFeatures {
       // 经验上 Prob0 往往是百分数，这里用 0-99 比例近似
       int attempts = max;
       for (int i = 0; i < attempts; i++) {
-        if (MathUtils.random(0, 99) >= prob) continue;
+        if (MapRng.nextInt(rng, 0, 99) >= prob) continue;
 
-        int gx = MathUtils.random(0, gridsX - 1);
-        int gy = MathUtils.random(0, gridsY - 1);
+        int gx = MapRng.nextInt(rng, 0, gridsX - 1);
+        int gy = MapRng.nextInt(rng, 0, gridsY - 1);
 
         // 尽量避免覆盖已经放置的重要 preset（如入口、路径等）
         if (zone.presets[gx][gy] != null && isImportantPreset(zone.presets[gx][gy])) {
@@ -327,13 +326,14 @@ public class OutdoorFeatures {
    * 注意：
    * - 如果找不到对应的 LvlPrest 或具体文件索引，则返回 null，不在当前位置放置边界。
    */
-  private static Preset pickBorderPresetFromLvlSub(java.util.List<LvlSub.Entry> borderSubs, Zone zone) {
+  private static Preset pickBorderPresetFromLvlSub(java.util.List<LvlSub.Entry> borderSubs, Zone zone,
+      com.riiablo.engine.server.NativeRng rng) {
     if (borderSubs.isEmpty()) {
       return null;
     }
 
     // 简单随机：从候选边界记录中挑一个
-    int idx = MathUtils.random(borderSubs.size() - 1);
+    int idx = MapRng.nextInt(rng, 0, borderSubs.size() - 1);
     LvlSub.Entry sub = borderSubs.get(idx);
     String targetFile = sub.File;
     if (targetFile == null || targetFile.isEmpty()) {
@@ -432,19 +432,19 @@ public class OutdoorFeatures {
     }
 
     long zoneSeed = (long) seed * 31 + zone.level.Id;
-    MathUtils.random.setSeed((int) zoneSeed);
+    com.riiablo.engine.server.NativeRng rng = MapRng.open((int) zoneSeed, "outdoor.paths", zone.level.Id);
 
     // 简化实现：在区域中随机放置一些路径预设
     // 实际 D2MOD 使用更复杂的路径生成算法
     int gridWidth = zone.gridsX;
     int gridHeight = zone.gridsY;
-    int pathCount = MathUtils.random(2, 5); // 2-5 条路径
+    int pathCount = MapRng.nextInt(rng, 2, 5); // 2-5 条路径
 
     for (int i = 0; i < pathCount; i++) {
-      int startX = MathUtils.random(gridWidth - 1);
-      int startY = MathUtils.random(gridHeight - 1);
-      int length = MathUtils.random(3, 8);
-      int direction = MathUtils.random(3); // 0=右, 1=下, 2=左, 3=上
+      int startX = MapRng.nextInt(rng, 0, gridWidth - 1);
+      int startY = MapRng.nextInt(rng, 0, gridHeight - 1);
+      int length = MapRng.nextInt(rng, 3, 8);
+      int direction = MapRng.nextInt(rng, 0, 3); // 0=右, 1=下, 2=左, 3=上
 
       for (int j = 0; j < length; j++) {
         int x = startX;
@@ -464,7 +464,7 @@ public class OutdoorFeatures {
               int fileId[] = new int[6];
               int numFiles = Preset.getPresets(pathPreset, fileId);
               if (numFiles > 0) {
-                int selectIndex = MathUtils.random(numFiles - 1);
+                int selectIndex = MapRng.nextInt(rng, 0, numFiles - 1);
                 int select = fileId[selectIndex];
                 zone.presets[x][y] = Preset.of(pathPreset, select);
               }
