@@ -98,6 +98,17 @@ class SimulationReplayLogTest {
   }
 
   @Test
+  void replayRejectsDuplicateActorRequestIdentity() {
+    SimulationCommandEnvelope first = SimulationCommandEnvelope.builder(
+        "net", "move", 1).tick(1).actor(4).request(9).build(1);
+    SimulationCommandEnvelope second = SimulationCommandEnvelope.builder(
+        "net", "move", 2).tick(2).actor(4).request(9).build(2);
+    SimulationReplayLog.Builder builder = SimulationReplayLog.builder(1)
+        .command(first, "1").command(second, "2");
+    assertThrows(IllegalArgumentException.class, builder::build);
+  }
+
+  @Test
   void admittedCommandsReplayToIdenticalCheckpoints() {
     SimulationReplayCapture capture = new SimulationReplayCapture(0x110F, String::valueOf);
     SimulationTickCoordinator recorded = new SimulationTickCoordinator();

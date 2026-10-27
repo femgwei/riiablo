@@ -112,10 +112,16 @@ public final class SimulationReplayLog {
     ArrayList<Command> orderedCommands = new ArrayList<>(commands);
     orderedCommands.sort(COMMAND_ORDER);
     long previousSequence = 0L;
+    java.util.HashSet<String> requestIdentities = new java.util.HashSet<>();
     for (Command command : orderedCommands) {
       validate(command);
       if (command.sequence == previousSequence) {
         throw new IllegalArgumentException("duplicate command sequence: " + command.sequence);
+      }
+      if (command.requestId > 0L
+          && !requestIdentities.add(command.actorId + ":" + command.requestId)) {
+        throw new IllegalArgumentException("duplicate command request identity: actor="
+            + command.actorId + " request=" + command.requestId);
       }
       previousSequence = command.sequence;
     }
