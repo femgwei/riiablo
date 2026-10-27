@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.IntMap;
@@ -34,6 +33,7 @@ import com.riiablo.codec.excel.SuperUniques;
 
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
 import com.riiablo.engine.server.NativeRng;
+import com.riiablo.engine.server.NamedRngStreams;
 import com.riiablo.drlg.DrlgContext;
 import com.riiablo.drlg.DrlgLevel;
 import com.riiablo.drlg.DrlgGrid;
@@ -227,6 +227,17 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
 
   // 实际运行时的 Burial Grounds 关卡 ID（从 Levels.txt 推导），用于避免与 D2MOO 的枚举常量不一致
   private int burialGroundsId = LEVEL_BURIALGROUNDS;
+  /** Builder-local stream; generation must not mutate LibGDX's process-global RNG. */
+  private NativeRng layoutRng;
+
+  private void reseedLayoutRng(int seed) {
+    layoutRng = NamedRngStreams.openLegacy(seed, "map.act1.layout", seed);
+  }
+
+  private int nextLayoutInt(int maxInclusive) {
+    if (maxInclusive <= 0) return 0;
+    return layoutRng.nextInt(maxInclusive + 1);
+  }
 
   @Override
   public void generate(Map map, int seed, int diff) {
@@ -245,7 +256,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     nextMonsterPackId = 1;
     questBossSpawned.clear();
     lvlSubDs1PlacedCounts.clear();
-    MathUtils.random.setSeed(seed);
+    reseedLayoutRng(seed);
 
     // Burial Grounds 的关卡 ID（从 Levels.txt 解析）
     for (Levels.Entry e : files().Levels) {
@@ -463,7 +474,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           Gdx.app.error(TAG, "No valid presets found for level " + level.LevelName);
           continue;
         }
-        int selectIndex = MathUtils.random(numFiles - 1);
+        int selectIndex = nextLayoutInt(numFiles - 1);
         int select = fileId[selectIndex]; // 使用实际的文件索引
         
         // 验证文件路径不为 "0" 或空
@@ -2630,10 +2641,10 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           coordX[i] = i % zoneGridWidth;
           coordY[i] = i / zoneGridWidth;
         }
-        MathUtils.random.setSeed(seed ^ (zone.level.Id * 10007) ^ (entryIndex * 1009));
+        reseedLayoutRng(seed ^ (zone.level.Id * 10007) ^ (entryIndex * 1009));
         for (int i = 0; i < nArea; i++) {
-          int a = Math.abs(MathUtils.random.nextInt()) % nArea;
-          int b = Math.abs(MathUtils.random.nextInt()) % nArea;
+          int a = layoutRng.nextInt(nArea);
+          int b = layoutRng.nextInt(nArea);
           int tx = coordX[a], ty = coordY[a];
           coordX[a] = coordX[b]; coordY[a] = coordY[b];
           coordX[b] = tx;        coordY[b] = ty;
@@ -2651,16 +2662,16 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
 
           if (prob > 0) {
             int rollSeed = (seed * 31 + zone.level.Id * 131 + attempts * 17) ^ (entryIndex * 997);
-            MathUtils.random.setSeed(rollSeed);
-            int roll = Math.abs(MathUtils.random.nextInt() % 100);
+            reseedLayoutRng(rollSeed);
+            int roll = layoutRng.nextInt(100);
             if (roll >= prob) {
               continue;
             }
           }
 
           // 选择 group（偏向更大，但随机）
-          MathUtils.random.setSeed(seed ^ (entryIndex * 19937) ^ (attempts * 37));
-          DS1.Group substGroup = ds1.groups[Math.abs(MathUtils.random.nextInt()) % ds1.groups.length];
+          reseedLayoutRng(seed ^ (entryIndex * 19937) ^ (attempts * 37));
+          DS1.Group substGroup = ds1.groups[layoutRng.nextInt(ds1.groups.length)];
           if (substGroup == null) continue;
 
           // 取下一个候选坐标（grid 单位）
@@ -2749,8 +2760,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
       int nRand = 0;
       if (lvlSubEntry.BordType == 0) {
         // 随机选择一个 group（使用 zone 的 level ID 作为随机种子的一部分）
-        MathUtils.random.setSeed(seed + zone.level.Id * 1000);
-        nRand = Math.abs(MathUtils.random.nextInt()) % lvlSubDs1.groups.length;
+        reseedLayoutRng(seed + zone.level.Id * 1000);
+        nRand = layoutRng.nextInt(lvlSubDs1.groups.length);
       } else {
         // BordType != 0 时使用第一个 group
         nRand = 0;
@@ -2791,10 +2802,10 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
         }
         
         // 随机打乱坐标（对应 D2MOO 的 Fisher-Yates shuffle）
-        MathUtils.random.setSeed(seed + zone.level.Id * 10000 + j * 100);
+        reseedLayoutRng(seed + zone.level.Id * 10000 + j * 100);
         for (int i = 0; i < nArea; i++) {
-          int nRand1 = Math.abs(MathUtils.random.nextInt()) % nArea;
-          int nRand2 = Math.abs(MathUtils.random.nextInt()) % nArea;
+          int nRand1 = layoutRng.nextInt(nArea);
+          int nRand2 = layoutRng.nextInt(nArea);
           // 交换
           int tempX = coordX[nRand1];
           int tempY = coordY[nRand1];
@@ -2839,7 +2850,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           // 测试是否可以替换（对应 DRLGTILESUB_TestReplaceSubPreset）
           if (testReplaceSubPreset(zone, drlgLevel, drlgGrid, nX, nY, substGroup, lvlSubDs1, lvlSubEntry, gridSize)) {
             // 执行替换（对应 DRLGTILESUB_ReplaceSubPreset）
-            int groupOffset = Math.abs(MathUtils.random.nextInt()) % (substGroup.width + 1);
+            int groupOffset = layoutRng.nextInt(substGroup.width + 1);
             replaceSubPreset(zone, drlgLevel, drlgGrid, nX, nY, substGroup, lvlSubDs1, lvlSubEntry, gridSize, groupOffset);
             successfulReplacements++;
             
@@ -4255,7 +4266,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     }
 
     // 使用区域特定的种子，确保相同地图总是生成相同路径
-    MathUtils.random.setSeed(seed);
+    reseedLayoutRng(seed);
 
     // D2MOD 风格：根据 zone 布局推断出口方向，在全局 subtile 坐标下 Bresenham 画线
     java.util.ArrayList<PathSegment> segments = createPathSegmentsD2MOD(map);
@@ -4590,7 +4601,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     }
 
     // 使用区域特定的种子
-    MathUtils.random.setSeed(seed);
+    reseedLayoutRng(seed);
 
     // 简化实现：连接相邻的关卡
     // 1. 城镇 -> Blood Moor
