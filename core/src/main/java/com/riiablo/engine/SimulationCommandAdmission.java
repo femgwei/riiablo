@@ -47,8 +47,16 @@ public final class SimulationCommandAdmission {
     if (command.authority != SimulationCommandEnvelope.Authority.NETWORK_INPUT
         || command.actorId < 0) return Rejection.MISSING_ACTOR;
     if (command.requestId <= 0L) return Rejection.MISSING_REQUEST;
-    if (command.targetEntityId >= 0 && !targetAuthorizer.test(command, command.targetEntityId)) {
-      return Rejection.UNAUTHORIZED_TARGET;
+    if (command.targetEntityId >= 0) {
+      try {
+        if (!targetAuthorizer.test(command, command.targetEntityId)) {
+          return Rejection.UNAUTHORIZED_TARGET;
+        }
+      } catch (RuntimeException ignored) {
+        // Authorization is an admission boundary: a faulty policy must fail closed
+        // instead of escaping into the fixed-tick owner and partially advancing it.
+        return Rejection.UNAUTHORIZED_TARGET;
+      }
     }
     return Rejection.NONE;
   }

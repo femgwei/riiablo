@@ -64,6 +64,18 @@ class SimulationTickCoordinatorTest {
     assertEquals(SimulationCommandAdmission.Rejection.UNAUTHORIZED_TARGET, queue.lastRejection());
   }
 
+  @Test void networkAuthorizationFailureRejectsWithoutEscapingTheAdmissionBoundary() {
+    SimulationCommandQueue queue = new SimulationCommandQueue(
+        SimulationCommandAdmission.network((command, target) -> {
+          throw new IllegalStateException("policy unavailable");
+        }));
+    assertNull(queue.submit(SimulationCommandEnvelope.builder("net", "cast", "x")
+        .tick(1).actor(7).request(1).target(42)
+        .authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT)));
+    assertEquals(SimulationCommandAdmission.Rejection.UNAUTHORIZED_TARGET, queue.lastRejection());
+    assertEquals(0, queue.pendingCount());
+  }
+
   @Test void phaseContractExposesReadWriteSetsAndStructuralBarrier() {
     SimulationPhaseContract contract = new SimulationPhaseContract();
     contract.markStructuralResource("entities");
