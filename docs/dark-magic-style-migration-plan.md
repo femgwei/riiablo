@@ -4210,3 +4210,20 @@ git diff --check
 ```
 
 结果：core 编译和 438 条 RNG ownership 漂移检查通过；批次 A 继续处理 DT1s 与其他旧兼容入口。
+
+### 批次 A 继续：ItemDurabilityManager RNG 宿主化（2026-10-27）
+
+- 武器耐久概率、护甲权重选择和损耗概率改用实例级 `NativeRng`。
+- 保留无参构造兼容调用，并新增 `NativeRng` 构造入口供服务器会话注入确定性物品流。
+- 生产 RNG ownership 清单从 438 条降至 434 条。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:compileJava --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :core:test --tests com.riiablo.item.NpcRepairServiceTest --tests com.riiablo.map.MapBuilderIsolationTest --no-daemon --max-workers=1 --console=plain
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-unbound-rng.ps1 -Output build/reports/unbound-rng.tsv -Baseline tools/architecture/rng-ownership-baseline.tsv -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、维修服务/地图回归和 434 条 RNG ownership 漂移检查通过；批次 A 继续处理剩余旧兼容入口。

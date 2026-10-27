@@ -1,9 +1,9 @@
 package com.riiablo.engine.server.item;
 
-import com.badlogic.gdx.math.MathUtils;
-
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.engine.server.NamedRngStreams;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
@@ -28,9 +28,17 @@ import com.riiablo.save.ItemData;
  */
 public class ItemDurabilityManager {
   private static final Logger log = LogManager.getLogger(ItemDurabilityManager.class);
+  private final NativeRng rng;
 
 
-  public ItemDurabilityManager() {}
+  public ItemDurabilityManager() {
+    this(NamedRngStreams.openLegacy(0, "item.durability", 0));
+  }
+
+  public ItemDurabilityManager(NativeRng rng) {
+    if (rng == null) throw new NullPointerException("rng");
+    this.rng = rng;
+  }
 
   //==========================================================================
   // 耐久度消耗权重（身体部位）
@@ -98,7 +106,7 @@ public class ItemDurabilityManager {
     // The legacy boolean identifies melee/ranged callers but does not change
     // the native weapon chance; throwable items have a separate native path.
     int chance = nativeDurabilityChance(false, false, true);
-    if (MathUtils.random(99) >= chance) {
+    if (rng.nextInt(100) >= chance) {
       return false;
     }
 
@@ -137,14 +145,14 @@ public class ItemDurabilityManager {
     }
 
     // 根据权重随机选择一件护甲消耗耐久度
-    int randomWeight = MathUtils.random(totalWeight - 1);
-    int index = MathUtils.random(ARMOR_DURABILITY_WEIGHTS.length - 1);
+    int randomWeight = rng.nextInt(totalWeight);
+    int index = rng.nextInt(ARMOR_DURABILITY_WEIGHTS.length);
     
     for (int i = 0; i < ARMOR_DURABILITY_WEIGHTS.length; i++) {
       int currentIndex = (index + i) % ARMOR_DURABILITY_WEIGHTS.length;
       if (armorItems[currentIndex] != null) {
         if (randomWeight < ARMOR_DURABILITY_WEIGHTS[currentIndex].weight) {
-          if (MathUtils.random(99) < ARMOR_DURABILITY_CHANCE
+          if (rng.nextInt(100) < ARMOR_DURABILITY_CHANCE
               && drainDurability(armorItems[currentIndex], 1)) {
             return armorItems[currentIndex]; // 物品损坏
           }

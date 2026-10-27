@@ -262,10 +262,6 @@ core/src/main/java\com\riiablo\engine\server\ai\Zombie.java	MathUtils	214	|| (ta
 core/src/main/java\com\riiablo\engine\server\ai\Zombie.java	MathUtils	224	time = MathUtils.random(1f, 2);
 core/src/main/java\com\riiablo\engine\server\ai\Zombie.java	MathUtils	230	time = MathUtils.random(1f, 2);
 core/src/main/java\com\riiablo\engine\server\combat\DamageCalculator.java	MathUtils	229	// MathUtils.random(int) is inclusive at the upper bound.
-core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	101	if (MathUtils.random(99) >= chance) {
-core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	140	int randomWeight = MathUtils.random(totalWeight - 1);
-core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	141	int index = MathUtils.random(ARMOR_DURABILITY_WEIGHTS.length - 1);
-core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	147	if (MathUtils.random(99) < ARMOR_DURABILITY_CHANCE
 core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	115	boolean isElite = MathUtils.random(99) < ELITE_SPAWN_CHANCE;
 core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	118	boolean isChampion = MathUtils.random(99) < CHAMPION_RATIO;
 core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	137	int packSize = MathUtils.random(MIN_PACK_SIZE, MAX_PACK_SIZE);
