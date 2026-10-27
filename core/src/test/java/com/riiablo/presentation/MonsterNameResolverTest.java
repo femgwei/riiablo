@@ -29,6 +29,6 @@ class MonsterNameResolverTest extends RiiabloTest {
         .setRank(MonsterRank.SUPER_UNIQUE, 0L, -1, corpsefire.hcIdx);
 
     assertEquals(Riiablo.string.lookup(corpsefire.Name),
-        MonsterNameResolver.displayName(monster));
+        MonsterNameResolver.displayName(ClientGameplayContext.fromGlobals(), monster));
   }
 }

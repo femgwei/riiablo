@@ -1,8 +1,5 @@
 package com.riiablo.presentation;
 
-import com.riiablo.presentation.ClientGameplayContext;
-
-import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.monster.MonsterRank;
@@ -10,10 +7,6 @@ import com.riiablo.engine.server.monster.MonsterRank;
 /** Resolves the authoritative monster quality identity into a client label. */
 final class MonsterNameResolver {
   private MonsterNameResolver() {}
-
-  static String displayName(Monster monster) {
-    return displayName(ClientGameplayContext.fromGlobals(), monster);
-  }
 
   static String displayName(ClientGameplayContext context, Monster monster) {
     if (monster == null || monster.monstats == null) return "";
