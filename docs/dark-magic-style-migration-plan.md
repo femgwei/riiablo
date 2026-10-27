@@ -4276,3 +4276,20 @@ git diff --check
 ```
 
 结果：419 条 RNG ownership 漂移检查通过；批次 A 继续处理 Act1 深层生成与剩余兼容入口。
+
+### 批次 A 继续：Act1 兼容怪物生成 RNG 宿主化（2026-10-28）
+
+- Act1 D2MOD generator 的怪物候选筛选、密度/稀疏概率、队伍规模、出生抖动和 PartyMin/PartyMax 抽样改用按关卡命名的 `NativeRng` 流。
+- 选择流与人口流分离，避免不同生成阶段相互消耗；保留原有 inclusive 范围和单成员怪物规则。
+- 生产 RNG ownership 清单从 419 条降至 408 条。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:compileJava --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :core:test --tests com.riiablo.map.Act1MonsterPartyTest --tests com.riiablo.map.Act1MapBuilderD2MooLayersTest --tests com.riiablo.map.Act1NativeOrthAnchorTest --tests com.riiablo.map.MapBuilderIsolationTest --no-daemon --max-workers=1 --console=plain
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-unbound-rng.ps1 -Output build/reports/unbound-rng.tsv -Baseline tools/architecture/rng-ownership-baseline.tsv -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、Act1 怪物/图层/锚点回归和 408 条 RNG ownership 漂移检查通过；批次 A 继续处理 Act1 深层主题/DS1 选择等剩余入口。

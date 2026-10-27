@@ -33,6 +33,7 @@ import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.SuperUniques;
 
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.drlg.DrlgContext;
 import com.riiablo.drlg.DrlgLevel;
 import com.riiablo.drlg.DrlgGrid;
@@ -525,9 +526,14 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
         // D2MOO compares each 0..99999 game-seed roll directly with MonDen.
         // The per-tile attempt budget below mirrors its 3x3-subtile population cells.
         MonStats.Entry[] monsters;
+        NativeRng selectionRng;
+        NativeRng populationRng;
 
         @Override
         public void init(Zone zone) {
+          selectionRng = MapRng.open(NativeLevelSeed.forLevel(zone.map.seed(), zone.level.Id),
+              "act1.monster-selection", zone.level.Id);
+          populationRng = MapRng.open(zone.map.seed(), "act1.monster-population", zone.level.Id);
           int prob = 0;
           int numMon = NativeMonsterRegion.selectedEntryCount(zone.level, zone.diff);
           String[] monsterColumns = NativeMonsterRegion.monsterColumns(zone.level, zone.diff);
@@ -552,13 +558,13 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           Array<MonStats.Entry> selected = new Array<>();
           int selectionCount = Math.min(numMon, available.size);
           for (int i = 0; i < selectionCount; i++) {
-            int index = MathUtils.random(available.size - 1);
+            int index = selectionRng.nextInt(available.size);
             if (i == 0 && zone.level.rangedspawn && available.size > 1) {
               for (int attempt = 0; attempt < 20; attempt++) {
                 String candidate = available.get(index);
                 MonStats.Entry entry = files().monstats.get(candidate);
                 if (entry != null && entry.rangedtype) break;
-                index = MathUtils.random(available.size - 1);
+                index = selectionRng.nextInt(available.size);
               }
             }
             String mon = available.removeIndex(index);
@@ -737,12 +743,12 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
                 for (int attempt = 0; attempt < populationAttempts; attempt++) {
                   if (!NativeMonsterRegion.densityRoll(
                       NativeMonsterRegion.density(zone.level, zone.diff),
-                      MathUtils.random(99999))) continue;
-                  int idx = MathUtils.random(monsters.length - 1);
+                      populationRng.nextInt(100000))) continue;
+                  int idx = populationRng.nextInt(monsters.length);
                   MonStats.Entry monster = monsters[idx];
                   if (monster == null) continue;
                   if (!NativeMonsterRegion.sparsePopulationRoll(
-                      monster.sparsePopulate, MathUtils.random(99))) continue;
+                      monster.sparsePopulate, populationRng.nextInt(100))) continue;
                   int minGroup = MapDataPort.minGroup(monster);
                   int maxGroup = MapDataPort.maxGroup(monster);
                   if (NativeMonsterRegion.isSingleMemberNormalGroup(
@@ -752,15 +758,15 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
                   }
                   int count = minGroup == maxGroup
                       ? maxGroup
-                      : MathUtils.random(minGroup, maxGroup);
+                      : minGroup + populationRng.nextInt(maxGroup - minGroup + 1);
                   int packId = nextMonsterPackId++;
                   for (int j = 0; j < count; j++) {
                     // currentTx/currentTy identify the top-left subtile of a 5x5
                     // floor tile. Jittering around that corner used to push half
                     // of edge-tile spawns into D2MOO's void footprint. Keep the
                     // whole spawn safely inside the selected exported floor tile.
-                    float px = monsterSpawnCoordinate(zone.x, currentTx, MathUtils.random(-1f, 1f));
-                    float py = monsterSpawnCoordinate(zone.y, currentTy, MathUtils.random(-1f, 1f));
+                    float px = monsterSpawnCoordinate(zone.x, currentTx, MapRng.nextFloat(populationRng, -1f, 1f));
+                    float py = monsterSpawnCoordinate(zone.y, currentTy, MapRng.nextFloat(populationRng, -1f, 1f));
                     if (renderD2MooExport) {
                       queueMonsterSpawn(zone.level.Id, monster, px, py, packId, false);
                     } else {
@@ -776,7 +782,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
                       // libGDX's random(int max) computes nextInt(max + 1);
                       // passing Integer.MAX_VALUE overflows that bound and
                       // crashes map generation before D2GS can bind 6114.
-                      MathUtils.random(Integer.MAX_VALUE - 1));
+                      populationRng.nextInt(Integer.MAX_VALUE));
                   for (int k = 0; k < partyCount; k++) {
                     String minionId = partyMinion(monster, k);
                     if (minionId == null) continue;
@@ -787,9 +793,9 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
                       continue;
                     }
                     float mx = monsterSpawnCoordinate(zone.x, currentTx,
-                        MathUtils.random(-1f, 1f)) + MathUtils.random(-2f, 2f);
+                        MapRng.nextFloat(populationRng, -1f, 1f)) + MapRng.nextFloat(populationRng, -2f, 2f);
                     float my = monsterSpawnCoordinate(zone.y, currentTy,
-                        MathUtils.random(-1f, 1f)) + MathUtils.random(-2f, 2f);
+                        MapRng.nextFloat(populationRng, -1f, 1f)) + MapRng.nextFloat(populationRng, -2f, 2f);
                     if (renderD2MooExport) {
                       queueMonsterSpawn(zone.level.Id, minion, mx, my, packId, true);
                     } else {
