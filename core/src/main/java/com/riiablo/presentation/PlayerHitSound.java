@@ -2,7 +2,6 @@ package com.riiablo.presentation;
 
 
 import com.riiablo.CharacterClass;
-import com.riiablo.Riiablo;
 import com.riiablo.engine.server.component.Player;
 
 /** Plays the character-specific pain sound used when a player loses hit points. */
@@ -27,10 +26,6 @@ public final class PlayerHitSound {
    * Plays one randomly selected member of the class's five-sound hit group.
    * Returns false when the player is not fully initialized or audio is unavailable.
    */
-  public static boolean play(Player player) {
-    return play(ClientGameplayContext.fromGlobals(), player);
-  }
-
   public static boolean play(ClientGameplayContext context, Player player) {
     if (player == null || player.data == null || context == null || context.audio() == null) return false;
     String sound = soundFor(player.data.classId);
