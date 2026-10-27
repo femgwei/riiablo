@@ -142,10 +142,6 @@ public class MissileLoader extends IteratingSystem {
     mBBoxWrapper.create(entityId).box = animation.getBox();
   }
 
-  static int nativeFrameDelta(Missile missile) {
-    return nativeFrameDelta(ClientGameplayContext.fromGlobals(), missile);
-  }
-
   static int nativeFrameDelta(ClientGameplayContext context, Missile missile) {
     if (missile.skillId == 308 && missile.missile.Id == 502) {
       if (context == null || context.files() == null || context.files().skills == null) return 256;
