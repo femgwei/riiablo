@@ -4310,3 +4310,20 @@ git diff --check
 ```
 
 结果：core 编译、Act1/DT1s 回归和 397 条 RNG ownership 漂移检查通过；批次 A 继续处理 Act1 地形候选与剩余兼容入口。
+
+### 批次 A 继续：Act1 地形候选 RNG 宿主化（2026-10-28）
+
+- Act1 LvlSub 主题、variant 集合、最终 tile 以及默认 floor 候选选择改用独立命名 `NativeRng` 流。
+- 保留房间级种子、variant 数量和 fallback 顺序，避免地形候选消耗全局 RNG。
+- 生产 RNG ownership 清单从 397 条降至 389 条。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:compileJava --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :core:test --tests com.riiablo.map.Act1MapBuilderD2MooLayersTest --tests com.riiablo.map.Act1MonsterPartyTest --tests com.riiablo.map.DT1sTest --tests com.riiablo.map.DT1sAnimationTest --no-daemon --max-workers=1 --console=plain
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-unbound-rng.ps1 -Output build/reports/unbound-rng.tsv -Baseline tools/architecture/rng-ownership-baseline.tsv -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、Act1/DT1s 回归和 389 条 RNG ownership 漂移检查通过；批次 A 继续处理 Act1 DS1/路径辅助和剩余兼容入口。

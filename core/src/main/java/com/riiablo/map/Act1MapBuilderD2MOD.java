@@ -1294,8 +1294,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           int themeSeed = (gridX * 31 + gridY) * 131
                         + (subThemeMask * 7)
                         + dt1Mask * 3;
-          MathUtils.random.setSeed(themeSeed);
-          LvlSub.Entry chosen = activeEntries.get(MathUtils.random(activeEntries.size - 1));
+          NativeRng themeRng = MapRng.open(themeSeed, "act1.terrain-theme", zone.level.Id);
+          LvlSub.Entry chosen = activeEntries.get(themeRng.nextInt(activeEntries.size));
 
           // 3. 从 dt1s 中收集 floor tiles，并用 chosen.Dt1Mask 粗略过滤
           //    同时为“同一主题下的小范围多样性”预留多个候选，而不是只用一块。
@@ -1323,20 +1323,22 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           // 4. 在房间级别上，选出一个“小集合”的候选 tile，供 8x8 内轻微随机使用
           //    - 保证同一房间内 tile 来自同一主题/掩码；
           //    - 但不会全部都是同一块，避免“纯色大砖块”的感觉。
-          MathUtils.random.setSeed(themeSeed * 1103515245 + 12345);
+          NativeRng variantRng = MapRng.open(themeSeed * 1103515245 + 12345,
+              "act1.terrain-variants", zone.level.Id);
           final int MAX_VARIANTS = 3; // 同一房间内最多使用 3 种基础 tile
           int variantsCount = Math.min(MAX_VARIANTS, floorTileIds.size);
           com.badlogic.gdx.utils.IntArray variants = new com.badlogic.gdx.utils.IntArray(false, variantsCount);
           for (int i = 0; i < variantsCount; i++) {
-            int idx = MathUtils.random(floorTileIds.size - 1);
+            int idx = variantRng.nextInt(floorTileIds.size);
             variants.add(floorTileIds.get(idx));
           }
 
           // 5. 不要在 tile 级别引入 (x,y) 抖动。
           // 这会把 8x8 内的地板变成“噪声拼贴”，邻接块很难看起来“相配”。
           // 先保证每个 8x8 房间只用 1 个基础 tile（更接近 D2 的“按簇替换”观感），后续再补齐真正的边界/替换规则。
-          MathUtils.random.setSeed(themeSeed ^ 0x5bd1e995);
-          int selectedId = variants.get(MathUtils.random(variants.size - 1));
+          NativeRng selectedRng = MapRng.open(themeSeed ^ 0x5bd1e995,
+              "act1.terrain-selected", zone.level.Id);
+          int selectedId = variants.get(selectedRng.nextInt(variants.size));
           DT1.Tile tile = dt1s.get(selectedId);
 
           return tile;
@@ -1357,7 +1359,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           // 使用网格坐标和局部坐标生成伪随机索引
           // 这样可以确保相同位置总是生成相同的地形
           int seed = (gridX * 31 + gridY) * 17 + (x * 7 + y);
-          MathUtils.random.setSeed(seed);
+          NativeRng terrainRng = MapRng.open(seed, "act1.terrain-fallback", zone.level.Id);
           
           // 收集所有可用的 floor tiles (orientation = 0)
           Array<Integer> floorTileIds = new Array<>();
@@ -1374,7 +1376,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           
           // 从所有可用的 floor tiles 中随机选择一个
           if (floorTileIds.size > 0) {
-            int randomIndex = MathUtils.random(floorTileIds.size - 1);
+            int randomIndex = terrainRng.nextInt(floorTileIds.size);
             int selectedId = floorTileIds.get(randomIndex);
             DT1.Tile tile = dt1s.get(selectedId);
             if (tile != null) {
