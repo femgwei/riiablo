@@ -1,6 +1,8 @@
 package com.riiablo.engine.server.item;
 
 import com.badlogic.gdx.math.MathUtils;
+import com.riiablo.engine.server.NamedRngStreams;
+import com.riiablo.engine.server.NativeRng;
 
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -22,6 +24,7 @@ import com.riiablo.logger.Logger;
  */
 public final class ItemUtil {
   private static final Logger log = LogManager.getLogger(ItemUtil.class);
+  private static final NativeRng LEGACY_RNG = NamedRngStreams.openLegacy(0, "item.util", 0);
 
   private ItemUtil() {} // 不可实例化
 
@@ -87,10 +90,14 @@ public final class ItemUtil {
    * @return 物品品质
    */
   public static int rollItemQuality(int magicFind, int itemLevel) {
+    return rollItemQuality(magicFind, itemLevel, LEGACY_RNG);
+  }
+
+  public static int rollItemQuality(int magicFind, int itemLevel, NativeRng rng) {
     // 有效 MF = MF * 250 / (MF + 250)（收益递减）
     int effectiveMF = magicFind * 250 / (magicFind + 250);
     
-    int roll = MathUtils.random(0, 999);
+    int roll = nextInt(rng, 0, 999);
     
     // 暗金判定（约 1/400 基础概率）
     int uniqueChance = 400 - effectiveMF / 10;
@@ -117,12 +124,12 @@ public final class ItemUtil {
     }
     
     // 超强判定（约 1/20 概率）
-    if (MathUtils.random(0, 19) == 0) {
+    if (nextInt(rng, 0, 19) == 0) {
       return ItemQuality.SUPERIOR;
     }
     
     // 劣质判定（约 1/50 概率）
-    if (MathUtils.random(0, 49) == 0) {
+    if (nextInt(rng, 0, 49) == 0) {
       return ItemQuality.INFERIOR;
     }
     
@@ -141,6 +148,10 @@ public final class ItemUtil {
    * @return 初始耐久度
    */
   public static int calculateInitialDurability(int baseMaxDurability, int quality) {
+    return calculateInitialDurability(baseMaxDurability, quality, LEGACY_RNG);
+  }
+
+  public static int calculateInitialDurability(int baseMaxDurability, int quality, NativeRng rng) {
     if (baseMaxDurability <= 0) {
       return 0;
     }
@@ -149,13 +160,13 @@ public final class ItemUtil {
     
     // 超强物品增加 10-15% 耐久度
     if (quality == ItemQuality.SUPERIOR) {
-      int bonus = MathUtils.random(10, 15);
+      int bonus = nextInt(rng, 10, 15);
       maxDur = maxDur * (100 + bonus) / 100;
     }
     
     // 劣质物品减少 20-30% 耐久度
     if (quality == ItemQuality.INFERIOR) {
-      int penalty = MathUtils.random(20, 30);
+      int penalty = nextInt(rng, 20, 30);
       maxDur = maxDur * (100 - penalty) / 100;
     }
     
@@ -172,13 +183,17 @@ public final class ItemUtil {
    * @return 新的耐久度
    */
   public static int degradeDurability(int currentDurability, boolean isEthereal) {
+    return degradeDurability(currentDurability, isEthereal, LEGACY_RNG);
+  }
+
+  public static int degradeDurability(int currentDurability, boolean isEthereal, NativeRng rng) {
     if (currentDurability <= 0) {
       return 0;
     }
     
     // 幻化物品无法修复
     // 普通物品有 1/10 概率损耗 1 点
-    if (MathUtils.random(0, 9) == 0) {
+    if (nextInt(rng, 0, 9) == 0) {
       return currentDurability - 1;
     }
     
@@ -275,10 +290,19 @@ public final class ItemUtil {
    * @return 随机插槽数
    */
   public static int rollSocketCount(int maxSockets) {
+    return rollSocketCount(maxSockets, LEGACY_RNG);
+  }
+
+  public static int rollSocketCount(int maxSockets, NativeRng rng) {
     if (maxSockets <= 0) {
       return 0;
     }
-    return MathUtils.random(1, maxSockets);
+    return nextInt(rng, 1, maxSockets);
+  }
+
+  private static int nextInt(NativeRng rng, int start, int end) {
+    if (rng == null) throw new NullPointerException("rng");
+    return start + rng.nextInt(end - start + 1);
   }
 
   //==========================================================================

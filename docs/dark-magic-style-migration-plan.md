@@ -4194,3 +4194,19 @@ git diff --check
 ```
 
 结果：core 编译、Act2-Act5 地图回归和 445 条 RNG ownership 漂移检查通过；批次 A 继续处理 DT1s、掉落和旧兼容入口。
+
+### 批次 A 继续：物品质量/耐久/插槽 RNG 宿主化（2026-10-27）
+
+- `ItemUtil` 的品质、耐久度和插槽随机计算改为 `NativeRng`，旧 API 使用命名兼容流，新 API 可由掉落宿主显式传入物品流。
+- 原有整数范围保持 inclusive；几何掉落偏移仍使用 `MathUtils` 的确定性三角函数，不属于随机入口。
+- 生产 RNG ownership 清单从 445 条降至 438 条。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:compileJava --no-daemon --max-workers=1 --console=plain
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-unbound-rng.ps1 -Output build/reports/unbound-rng.tsv -Baseline tools/architecture/rng-ownership-baseline.tsv -FailOnDrift
+git diff --check
+```
+
+结果：core 编译和 438 条 RNG ownership 漂移检查通过；批次 A 继续处理 DT1s 与其他旧兼容入口。

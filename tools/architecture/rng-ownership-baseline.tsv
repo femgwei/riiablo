@@ -266,13 +266,6 @@ core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	Mat
 core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	140	int randomWeight = MathUtils.random(totalWeight - 1);
 core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	141	int index = MathUtils.random(ARMOR_DURABILITY_WEIGHTS.length - 1);
 core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	147	if (MathUtils.random(99) < ARMOR_DURABILITY_CHANCE
-core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	120	if (MathUtils.random(0, 19) == 0) {
-core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	125	if (MathUtils.random(0, 49) == 0) {
-core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	152	int bonus = MathUtils.random(10, 15);
-core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	158	int penalty = MathUtils.random(20, 30);
-core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	181	if (MathUtils.random(0, 9) == 0) {
-core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	281	return MathUtils.random(1, maxSockets);
-core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	93	int roll = MathUtils.random(0, 999);
 core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	115	boolean isElite = MathUtils.random(99) < ELITE_SPAWN_CHANCE;
 core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	118	boolean isChampion = MathUtils.random(99) < CHAMPION_RATIO;
 core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	137	int packSize = MathUtils.random(MIN_PACK_SIZE, MAX_PACK_SIZE);
