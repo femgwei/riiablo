@@ -844,7 +844,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           }
           
           // 使用 seed 初始化随机数生成器（确保可重现）
-          MathUtils.random.setSeed(seed + zone.level.Id * 1000 + gridX * 100 + gridY);
+          NativeRng themeRng = MapRng.open(seed + zone.level.Id * 1000 + gridX * 100 + gridY,
+              "act1.subthemes", zone.level.Id);
           
           int mask = 0;
           int counter = 0;
@@ -858,7 +859,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
             // 检查 Prob[subTheme] 是否满足（对应 D2MOO 的 SEED_RollRandomNumber % 100 < Prob）
             if (subTheme >= 0 && subTheme < entry.Prob.length) {
               int prob = entry.Prob[subTheme];
-              int roll = Math.abs(MathUtils.random.nextInt() % 100);
+              int roll = themeRng.nextInt(100);
               if (prob > 0 && roll < prob) {
                 mask |= (1 << counter);
                 if (DEBUG_BUILD && counter < 5) { // 只打印前 5 个，避免日志过多
@@ -905,7 +906,6 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           
           // 使用网格坐标生成稳定的随机种子
           int roomSeed = (zone.level.Id * 10000 + gridX * 100 + gridY) ^ seed;
-          MathUtils.random.setSeed(roomSeed);
           
           // 遍历当前 8x8 网格内的所有 tile（注意：这里的坐标全部使用 Zone 内部的 tile 坐标 0..tilesX/tilesY，
           // 不要和 zone.tx/ty 的 subtile 世界坐标混用）
@@ -1043,8 +1043,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
             candidates.add(e);
           }
           if (!candidates.isEmpty()) {
-            MathUtils.random.setSeed(roomSeed);
-            int idx = Math.abs(MathUtils.random.nextInt()) % candidates.size();
+            NativeRng roomRng = MapRng.open(roomSeed, "act1.ds1-room", zone.level.Id);
+            int idx = roomRng.nextInt(candidates.size());
             chosenEntry = candidates.get(idx);
           }
 
@@ -1068,8 +1068,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
                   ? fallbackCandidate.Prob[subTheme]
                   : 0;
               if (prob > 0) {
-                MathUtils.random.setSeed(roomSeed);
-                int roll = Math.abs(MathUtils.random.nextInt() % 100);
+                NativeRng fallbackRng = MapRng.open(roomSeed, "act1.ds1-fallback", zone.level.Id);
+                int roll = fallbackRng.nextInt(100);
                 if (roll < prob) {
                   chosenEntry = fallbackCandidate;
                   if (DEBUG_BUILD) {
@@ -1102,8 +1102,8 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           }
           if (prob > 0) {
             int densitySeed = (zone.level.Id * 10000 + gridX * 100 + gridY) ^ seed;
-            MathUtils.random.setSeed(densitySeed);
-            int roll = Math.abs(MathUtils.random.nextInt() % 100);
+            NativeRng densityRng = MapRng.open(densitySeed, "act1.ds1-density", zone.level.Id);
+            int roll = densityRng.nextInt(100);
             if (roll >= prob) {
               return false;
             }
@@ -1130,8 +1130,10 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
             }
           }
           if (!groupCandidates.isEmpty()) {
-            MathUtils.random.setSeed(roomSeed ^ (chosenEntry.Name != null ? chosenEntry.Name.hashCode() : 0));
-            int r = Math.abs(MathUtils.random.nextInt()) % Math.max(1, totalWeight);
+            NativeRng groupRng = MapRng.open(
+                roomSeed ^ (chosenEntry.Name != null ? chosenEntry.Name.hashCode() : 0),
+                "act1.ds1-group", zone.level.Id);
+            int r = groupRng.nextInt(Math.max(1, totalWeight));
             int acc = 0;
             for (int i = 0; i < groupCandidates.size(); i++) {
               acc += weights.get(i);
