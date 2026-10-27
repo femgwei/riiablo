@@ -611,6 +611,17 @@ task mapEntityBoundaryCheck(type: Exec) {
 
 architectureRegression.dependsOn mapEntityBoundaryCheck
 
+task rngOwnershipCheck(type: Exec) {
+  group = 'verification'
+  description = 'Rejects new unbound production RNG call sites against the M4-A ownership baseline.'
+  workingDir rootProject.projectDir
+  commandLine 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+      rootProject.file('tools/architecture/check-unbound-rng.ps1').absolutePath,
+      '-FailOnDrift'
+}
+
+architectureRegression.dependsOn rngOwnershipCheck
+
 task mapBoundaryRegression(type: Test) {
   group = 'verification'
   description = 'M1-B headless layout, data, population assembly and warp regressions.'

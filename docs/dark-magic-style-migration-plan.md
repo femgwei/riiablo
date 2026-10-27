@@ -4029,6 +4029,48 @@ git diff --check
   本批继续完成命名 stream 审计和缺失策略/data-pack digest/version 门禁后，才能标记批次 A
   完成。不得把这些遗留拆成新增批次。
 
+### 批次 A 继续：生产 RNG 宿主基线与漂移门禁（2026-10-27）
+
+- 新增 `tools/architecture/check-unbound-rng.ps1`，扫描 `core`、`server-domain`、
+  `server-systems`、`quests`、`shared` 和 `server` 的生产 Java 源码，登记
+  `MathUtils.random`、`Math.random`、Java `Random`、`RandomXS128` 和
+  `ThreadLocalRandom` 的文件、类别、行号和源码文本。
+- 生成 `tools/architecture/rng-ownership-baseline.tsv`，当前记录 502 个既有入口；
+  `:core:rngOwnershipCheck` 已接入 `architectureRegression`，默认拒绝新增未登记入口，
+  并保持测试源、生成源和 build 输出不进入生产清单。
+- 本次只建立 M4-A 的可审计边界，不替换旧 AI/地图/掉落调用，避免在没有逐宿主 native
+  stream 和 checkpoint 绑定时改变既有随机消费顺序。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:rngOwnershipCheck --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：502 条既有入口基线与漂移检查通过；批次 A 仍需在同一批次内逐宿主迁移并补齐
+命名 stream、data-pack digest/version 和严格缺失策略，不能据此标记 M4 或批次 A 完成。
+
+### 批次 A 继续：Act2/Act3 地图选择 RNG 宿主化（2026-10-27）
+
+- 新增 `MapRng`，按 `map.<builder>` 与 difficulty 建立显式 `NativeRng`，并提供经过边界检查的
+  inclusive 整数抽样；Act2/Act3 的 preset 文件选择不再读取 `MathUtils.random`。
+- 新增 `MapRngTest` 覆盖同 seed/同 builder 的序列稳定性、builder 隔离和范围边界；生产 RNG
+  扫描从 502 条降至 500 条，漂移门禁仍通过。
+- 本次只迁移不依赖 live RoomEx 对象的 preset 选择，Act1/Act4/Act5 的 D2MOO layout、
+  OutdoorFeatures、掉落和动态地图 RNG 继续留在同一批次逐宿主审计；未把地图 stream
+  伪装成已纳入 D2GS checkpoint 的完整 registry。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:test --tests com.riiablo.map.MapRngTest --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :core:rngOwnershipCheck --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：MapRng 定向测试、core 编译和 RNG ownership 检查通过；批次 A/M4-A 仍未完成。
+
 ### 批次 B 实施记录（2026-10-26，进行中）
 
 - `SimulationReplayLog` 新增版本化、长度受限的跨 JVM 二进制编解码（RPLY v1），覆盖命令

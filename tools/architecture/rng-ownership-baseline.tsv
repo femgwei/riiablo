@@ -1,0 +1,503 @@
+file`tcategory`tline`ttext
+core/src/main/java\com\riiablo\audio\Audio.java	MathUtils	256	int randomId = sound.Index + MathUtils.random.nextInt(sound.Group_Size);
+core/src/main/java\com\riiablo\codec\Animation.java	MathUtils	664	private final Color DEBUG_COLOR = new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), 1);
+core/src/main/java\com\riiablo\engine\server\Actioneer.java	MathUtils	3001	if (MathUtils.random(99) < chance) {
+core/src/main/java\com\riiablo\engine\server\Actioneer.java	MathUtils	3187	MathUtils.random(poisonRange[0], poisonRange[1]), poisonDuration,
+core/src/main/java\com\riiablo\engine\server\Actioneer.java	MathUtils	3607	int rawFixed = MathUtils.random(elemental[0], elemental[1]);
+core/src/main/java\com\riiablo\engine\server\Actioneer.java	MathUtils	4673	boolean applied = chance > 0 && MathUtils.random(99) < chance;
+core/src/main/java\com\riiablo\engine\server\Actioneer.java	MathUtils	5461	return max > min ? MathUtils.random(min, max) : min;
+core/src/main/java\com\riiablo\engine\server\Actioneer.java	MathUtils	5662	? MathUtils.random(minPercent, maxPercent - 1) : minPercent;
+core/src/main/java\com\riiablo\engine\server\Actioneer.java	MathUtils	6007	int elementalBase = MathUtils.random(physicalMin, physicalMax);
+core/src/main/java\com\riiablo\engine\server\ai\Baboon.java	MathUtils	279	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Baboon.java	MathUtils	283	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	143	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	164	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	168	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	193	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	206	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	211	if (targetDistance < 15 && MathUtils.randomBoolean(params[PARAM_FIRE_WHILE_HEALTHY_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	217	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	224	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	234	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	239	if (MathUtils.randomBoolean(params[PARAM_FIRE_WHILE_HURT_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	245	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	250	if (MathUtils.randomBoolean(params[PARAM_CIRCLE_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	254	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Bighead.java	MathUtils	278	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	145	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	181	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	185	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	201	if (params.length > 2 && !MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	216	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	227	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	232	if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	237	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	256	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	261	if (params.length > 1 && !MathUtils.randomBoolean(params[1] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	266	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\BloodHawk.java	MathUtils	273	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Brute.java	MathUtils	157	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Brute.java	MathUtils	161	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Brute.java	MathUtils	178	if (MathUtils.randomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Brute.java	MathUtils	183	byte attackMode = MathUtils.randomBoolean(params[PARAM_ATTACK1_OR_2_CHANCE] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+core/src/main/java\com\riiablo\engine\server\ai\Brute.java	MathUtils	187	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Brute.java	MathUtils	191	if (MathUtils.randomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Brute.java	MathUtils	199	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Brute.java	MathUtils	221	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\ClawViper.java	MathUtils	156	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\ClawViper.java	MathUtils	160	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\ClawViper.java	MathUtils	176	if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\ClawViper.java	MathUtils	180	byte attackMode = params.length > 3 && MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+core/src/main/java\com\riiablo\engine\server\ai\ClawViper.java	MathUtils	184	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\ClawViper.java	MathUtils	196	&& params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\ClawViper.java	MathUtils	212	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\ClawViper.java	MathUtils	217	if (MathUtils.randomBoolean(0.5f)) {
+core/src/main/java\com\riiablo\engine\server\ai\ClawViper.java	MathUtils	220	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	112	&& MathUtils.randomBoolean(params[PARAM_RUN_CHANCE] / 100f);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	150	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	171	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	175	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	197	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	204	&& MathUtils.randomBoolean(params[PARAM_APPROACH_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	209	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	220	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	225	if (MathUtils.randomBoolean(params[PARAM_SHOOT_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	228	&& MathUtils.randomBoolean(params[PARAM_USE_SKILL_2_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	231	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	236	&& MathUtils.randomBoolean(params[PARAM_USE_SKILL_3_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	239	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	246	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptArcher.java	MathUtils	257	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	103	|| !MathUtils.randomBoolean(params[paramIndex] / 100f)) continue;
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	106	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	157	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	161	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	180	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	186	if (ranToTarget || (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f))) {
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	195	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	205	if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	206	if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	211	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptLancer.java	MathUtils	217	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptRogue.java	MathUtils	139	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptRogue.java	MathUtils	143	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\CorruptRogue.java	MathUtils	164	if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\CorruptRogue.java	MathUtils	171	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptRogue.java	MathUtils	182	if (!MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\CorruptRogue.java	MathUtils	188	} else if (params.length > 4 && !MathUtils.randomBoolean(params[4] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\CorruptRogue.java	MathUtils	192	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\CorruptRogue.java	MathUtils	204	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	220	if (!MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	229	byte mode = MathUtils.randomBoolean(params[3] / 100f)
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	234	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	365	if (MathUtils.random(20) < 1) {
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	367	int fleeSoundIndex = MathUtils.random(1, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	370	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	410	nextAction = MathUtils.random(0f, 1);
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	414	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	464	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	469	if (targetDistance < 15f && isLeader() && MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	483	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	502	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	511	if (MathUtils.randomBoolean(0.3f) && targetDistance > meleeRng) {
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	535	if (!MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	537	if (MathUtils.randomBoolean(0.3f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	552	byte attackMode = MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+core/src/main/java\com\riiablo\engine\server\ai\Fallen.java	MathUtils	556	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\FallenShaman.java	MathUtils	273	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\FallenShaman.java	MathUtils	295	tmpVec2.setLength(3f).rotate90(MathUtils.randomBoolean() ? 1 : -1).add(targetPos);
+core/src/main/java\com\riiablo\engine\server\ai\FallenShaman.java	MathUtils	330	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\FallenShaman.java	MathUtils	334	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\FallenShaman.java	MathUtils	350	if (bCombat && MathUtils.randomBoolean(params[PARAM_MELEE_AND_CIRCLE_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\FallenShaman.java	MathUtils	357	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\FallenShaman.java	MathUtils	368	&& MathUtils.randomBoolean(params[PARAM_RESURRECT_AND_COMMAND_CHANCE] / 100f);
+core/src/main/java\com\riiablo\engine\server\ai\FallenShaman.java	MathUtils	385	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\FallenShaman.java	MathUtils	400	&& MathUtils.randomBoolean(params[PARAM_SHOOT_CHANCE] / 100f)
+core/src/main/java\com\riiablo\engine\server\ai\FallenShaman.java	MathUtils	405	if (MathUtils.randomBoolean(params[PARAM_MELEE_AND_CIRCLE_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Fetish.java	MathUtils	158	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Fetish.java	MathUtils	162	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Fetish.java	MathUtils	184	if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Fetish.java	MathUtils	191	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fetish.java	MathUtils	204	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fetish.java	MathUtils	222	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fetish.java	MathUtils	227	if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Fetish.java	MathUtils	234	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fetish.java	MathUtils	247	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Fetish.java	MathUtils	262	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\FetishShaman.java	MathUtils	200	&& MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\FetishShaman.java	MathUtils	208	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\FetishShaman.java	MathUtils	217	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\FetishShaman.java	MathUtils	248	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\FetishShaman.java	MathUtils	255	if (params.length > 3 && !MathUtils.randomBoolean(params[3] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\FetishShaman.java	MathUtils	265	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Goatman.java	MathUtils	138	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Goatman.java	MathUtils	142	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Goatman.java	MathUtils	158	if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Goatman.java	MathUtils	165	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Goatman.java	MathUtils	175	if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Goatman.java	MathUtils	178	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\MaggotLarva.java	MathUtils	142	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\MaggotLarva.java	MathUtils	146	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\MaggotLarva.java	MathUtils	162	if (aiParam0 != 0 || (params.length > 0 && !MathUtils.randomBoolean(params[0] / 100f))) {
+core/src/main/java\com\riiablo\engine\server\ai\MaggotLarva.java	MathUtils	175	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\MaggotLarva.java	MathUtils	183	if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\MaggotLarva.java	MathUtils	187	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Mummy.java	MathUtils	145	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Mummy.java	MathUtils	149	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Mummy.java	MathUtils	166	if (MathUtils.randomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Mummy.java	MathUtils	171	byte attackMode = MathUtils.randomBoolean(params[PARAM_ATTACK1_OR_2_CHANCE] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+core/src/main/java\com\riiablo\engine\server\ai\Mummy.java	MathUtils	175	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Mummy.java	MathUtils	188	if (MathUtils.randomBoolean(params[PARAM_APPROACH_CHANCE] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Mummy.java	MathUtils	191	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\PantherWoman.java	MathUtils	177	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\PantherWoman.java	MathUtils	181	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\PantherWoman.java	MathUtils	197	if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\PantherWoman.java	MathUtils	204	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\PantherWoman.java	MathUtils	214	if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\PantherWoman.java	MathUtils	219	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\PantherWoman.java	MathUtils	235	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\PantherWoman.java	MathUtils	241	if (MathUtils.randomBoolean(0.75f)) {
+core/src/main/java\com\riiablo\engine\server\ai\PantherWoman.java	MathUtils	249	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\PinHead.java	MathUtils	143	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\PinHead.java	MathUtils	147	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\PinHead.java	MathUtils	163	if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\PinHead.java	MathUtils	168	&& MathUtils.randomBoolean(params[PARAM_SMITE_CHANCE] / 100f)
+core/src/main/java\com\riiablo\engine\server\ai\PinHead.java	MathUtils	178	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\PinHead.java	MathUtils	188	if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\PinHead.java	MathUtils	192	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	102	if (MathUtils.randomBoolean()) {
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	104	offsetY = MathUtils.random(0f, walkDist);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	106	offsetX = MathUtils.random(0f, walkDist);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	111	if (MathUtils.randomBoolean()) {
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	114	if (MathUtils.randomBoolean()) {
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	177	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	196	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	208	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	223	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	227	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	246	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	252	if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	259	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	274	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	280	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\QuillRat.java	MathUtils	285	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandLeaper.java	MathUtils	126	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\SandLeaper.java	MathUtils	130	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\SandLeaper.java	MathUtils	165	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandLeaper.java	MathUtils	172	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandLeaper.java	MathUtils	181	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	136	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	210	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	214	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	231	&& MathUtils.randomBoolean(0.2f)) {
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	244	if (bCombat && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	251	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	256	if (targetDistance < 15 && params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	263	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	268	if (MathUtils.randomBoolean(0.2f)) {
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	272	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	278	if (aiParam2 >= maxEggs || (params.length > 0 && !MathUtils.randomBoolean(params[0] / 100f))) {
+core/src/main/java\com\riiablo\engine\server\ai\SandMaggot.java	MathUtils	303	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	197	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	201	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	224	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	232	if (targetDistance > 4 && aiParam1 == 0 && params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	237	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	254	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	259	if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	263	byte attackMode = params.length > 6 && MathUtils.randomBoolean(params[6] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	267	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	272	if (aiParam1 == 1 || (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f))) {
+core/src/main/java\com\riiablo\engine\server\ai\SandRaider.java	MathUtils	275	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Scarab.java	MathUtils	147	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Scarab.java	MathUtils	151	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Skeleton.java	MathUtils	132	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Skeleton.java	MathUtils	136	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonBow.java	MathUtils	125	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonBow.java	MathUtils	146	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonBow.java	MathUtils	150	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonBow.java	MathUtils	171	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonBow.java	MathUtils	179	if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonBow.java	MathUtils	186	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonBow.java	MathUtils	191	if (MathUtils.randomBoolean(0.2f)) {
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonBow.java	MathUtils	195	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonBow.java	MathUtils	206	if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonBow.java	MathUtils	209	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonMage.java	MathUtils	135	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonMage.java	MathUtils	139	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonMage.java	MathUtils	162	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonMage.java	MathUtils	182	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonMage.java	MathUtils	194	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonMage.java	MathUtils	210	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\SkeletonMage.java	MathUtils	219	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	129	time = MathUtils.random(1f, 2f);
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	189	if (bCombat && (spellFlags & 1) != 0 && MathUtils.randomBoolean(0.3f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	191	if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty() && MathUtils.randomBoolean(0.5f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	208	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	223	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	246	if (params.length > 1 && !MathUtils.randomBoolean(params[1] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	253	if ((spellFlags & (1 << 1)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	259	if ((spellFlags & (1 << 2)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	267	if (MathUtils.randomBoolean(0.5f) && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	274	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	291	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	295	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	318	if (params.length > 1 && !MathUtils.randomBoolean(params[1] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	325	if ((spellFlags & (1 << 1)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	331	if ((spellFlags & (1 << 2)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	339	if (MathUtils.randomBoolean(0.5f) && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	354	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Vampire.java	MathUtils	361	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Wraith.java	MathUtils	137	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Wraith.java	MathUtils	141	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Wraith.java	MathUtils	158	if (MathUtils.randomBoolean(params[2] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Wraith.java	MathUtils	166	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Wraith.java	MathUtils	179	if (MathUtils.randomBoolean(params[0] / 100f)) {
+core/src/main/java\com\riiablo\engine\server\ai\Wraith.java	MathUtils	183	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Zombie.java	MathUtils	155	nextAction = MathUtils.random(3f, 5);
+core/src/main/java\com\riiablo\engine\server\ai\Zombie.java	MathUtils	159	dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+core/src/main/java\com\riiablo\engine\server\ai\Zombie.java	MathUtils	200	byte attackMode = MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+core/src/main/java\com\riiablo\engine\server\ai\Zombie.java	MathUtils	204	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Zombie.java	MathUtils	214	|| (targetDistance < params[1] && MathUtils.randomBoolean(params[0] / 100f))
+core/src/main/java\com\riiablo\engine\server\ai\Zombie.java	MathUtils	224	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\ai\Zombie.java	MathUtils	230	time = MathUtils.random(1f, 2);
+core/src/main/java\com\riiablo\engine\server\combat\DamageCalculator.java	MathUtils	229	// MathUtils.random(int) is inclusive at the upper bound.
+core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	101	if (MathUtils.random(99) >= chance) {
+core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	140	int randomWeight = MathUtils.random(totalWeight - 1);
+core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	141	int index = MathUtils.random(ARMOR_DURABILITY_WEIGHTS.length - 1);
+core/src/main/java\com\riiablo\engine\server\item\ItemDurabilityManager.java	MathUtils	147	if (MathUtils.random(99) < ARMOR_DURABILITY_CHANCE
+core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	120	if (MathUtils.random(0, 19) == 0) {
+core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	125	if (MathUtils.random(0, 49) == 0) {
+core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	152	int bonus = MathUtils.random(10, 15);
+core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	158	int penalty = MathUtils.random(20, 30);
+core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	181	if (MathUtils.random(0, 9) == 0) {
+core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	281	return MathUtils.random(1, maxSockets);
+core/src/main/java\com\riiablo\engine\server\item\ItemUtil.java	MathUtils	93	int roll = MathUtils.random(0, 999);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	115	boolean isElite = MathUtils.random(99) < ELITE_SPAWN_CHANCE;
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	118	boolean isChampion = MathUtils.random(99) < CHAMPION_RATIO;
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	137	int packSize = MathUtils.random(MIN_PACK_SIZE, MAX_PACK_SIZE);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	140	float offsetX = MathUtils.random(-3f, 3f);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	141	float offsetY = MathUtils.random(-3f, 3f);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	161	int packSize = MathUtils.random(MIN_CHAMPION_PACK, MAX_CHAMPION_PACK);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	162	int championType = MathUtils.random(0, 4); // 随机冠军类型
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	165	float offsetX = MathUtils.random(-2f, 2f);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	166	float offsetY = MathUtils.random(-2f, 2f);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	200	int minionCount = MathUtils.random(MIN_UNIQUE_MINIONS, MAX_UNIQUE_MINIONS);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	203	float offsetX = MathUtils.random(-3f, 3f);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	204	float offsetY = MathUtils.random(-3f, 3f);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterSpawner.java	MathUtils	282	int index = MathUtils.random(availableAffixes.length - 1);
+core/src/main/java\com\riiablo\engine\server\monster\MonsterUtil.java	MathUtils	253	return MathUtils.random(adjustedMin, adjustedMax);
+core/src/main/java\com\riiablo\engine\server\object\NativeTrapSystem.java	RandomXS128	164	return new RandomXS128(seed).nextInt(2) + 1;
+core/src/main/java\com\riiablo\engine\server\object\NativeTrapSystem.java	RandomXS128	6	import com.badlogic.gdx.math.RandomXS128;
+core/src/main/java\com\riiablo\engine\server\object\ObjectManager.java	MathUtils	421	obj.trapped = MathUtils.random(99) < 10; // 10%几率有陷�?
+core/src/main/java\com\riiablo\engine\server\object\ObjectManager.java	MathUtils	423	obj.trapDamage = MathUtils.random(10, 30);
+core/src/main/java\com\riiablo\engine\server\object\ObjectManager.java	MathUtils	448	return MathUtils.random(1, 4);
+core/src/main/java\com\riiablo\engine\server\object\ObjectManager.java	MathUtils	451	return MathUtils.random(99) < 30 ? 1 : 0;
+core/src/main/java\com\riiablo\engine\server\object\ObjectManager.java	MathUtils	453	return MathUtils.random(2, 5);
+core/src/main/java\com\riiablo\engine\server\ObjectInitializer.java	MathUtils	72	//animation.setFrame(MathUtils.random(0, framesPerDir - 1));
+core/src/main/java\com\riiablo\engine\server\pet\MercenaryManager.java	MathRandom	323	return rosterRng == null ? Math.random() : rosterRng.nextInt() / 2147483648.0;
+core/src/main/java\com\riiablo\engine\server\ServerSkillSystem.java	MathUtils	2605	int offset = MathUtils.random((int) Math.min(Integer.MAX_VALUE, span - 1));
+core/src/main/java\com\riiablo\engine\server\skill\AmazonSkills.java	MathUtils	195	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AmazonSkills.java	MathUtils	219	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AmazonSkills.java	MathUtils	232	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AmazonSkills.java	MathUtils	267	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AmazonSkills.java	MathUtils	483	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AmazonSkills.java	MathUtils	496	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AmazonSkills.java	MathUtils	520	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AmazonSkills.java	MathUtils	533	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AmazonSkills.java	MathUtils	579	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AmazonSkills.java	MathUtils	592	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	345	return MathUtils.random(Math.max(0, release.fireMinDamage), release.fireMaxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	350	return MathUtils.random(
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	356	return MathUtils.random(Math.max(0, release.coldMinDamage), release.coldMaxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	472	return MathUtils.random(minDamage, maxDamage) * chargeLevel;
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	741	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	754	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	767	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	780	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	793	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	817	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	830	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\AssassinSkills.java	MathUtils	924	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\BarbarianSkills.java	MathUtils	790	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\NecromancerSkills.java	MathUtils	176	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\NecromancerSkills.java	MathUtils	207	return Math.round(MathUtils.random(rate[0], rate[1]) / 256f * duration);
+core/src/main/java\com\riiablo\engine\server\skill\NecromancerSkills.java	MathUtils	355	return Math.round(Math.max(0, corpseMaxHp) * MathUtils.random(0.7f, 1.2f));
+core/src/main/java\com\riiablo\engine\server\skill\NecromancerSkills.java	MathUtils	528	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\NecromancerSkills.java	MathUtils	549	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\NecromancerSkills.java	MathUtils	562	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\NecromancerSkills.java	MathUtils	730	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\PaladinSkills.java	MathUtils	104	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\PaladinSkills.java	MathUtils	375	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\PaladinSkills.java	MathUtils	423	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\PaladinSkills.java	MathUtils	625	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\PaladinSkills.java	MathUtils	653	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\PaladinSkills.java	MathUtils	699	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\PaladinSkills.java	MathUtils	723	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	391	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	47	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	503	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	516	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	529	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	542	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	578	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	617	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	641	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	654	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	667	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	680	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	693	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	71	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	84	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\engine\server\skill\SorceressSkills.java	MathUtils	97	return MathUtils.random(minDamage, maxDamage);
+core/src/main/java\com\riiablo\file\Animation.java	MathUtils	551	private final Color DEBUG_COLOR = new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), 1);
+core/src/main/java\com\riiablo\item\VendorGenerator.java	MathUtils	26	return random != null ? random.nextInt(bound) : MathUtils.random(bound - 1);
+core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	109	if (MathUtils.randomBoolean(SPAWN_MULT
+core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	111	int i = MathUtils.random(monsters.length - 1);
+core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	115	: MathUtils.random(monster.MinGrp, monster.MaxGrp);
+core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	117	float px = zone.getGlobalX(tx * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
+core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	118	float py = zone.getGlobalY(ty * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
+core/src/main/java\com\riiablo\map\Act1MapBuilder.java	MathUtils	32	int select = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1040	MathUtils.random.setSeed(roomSeed);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1041	int idx = Math.abs(MathUtils.random.nextInt()) % candidates.size();
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1065	MathUtils.random.setSeed(roomSeed);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1066	int roll = Math.abs(MathUtils.random.nextInt() % 100);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1099	MathUtils.random.setSeed(densitySeed);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1100	int roll = Math.abs(MathUtils.random.nextInt() % 100);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1127	MathUtils.random.setSeed(roomSeed ^ (chosenEntry.Name != null ? chosenEntry.Name.hashCode() : 0));
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1128	int r = Math.abs(MathUtils.random.nextInt()) % Math.max(1, totalWeight);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1289	MathUtils.random.setSeed(themeSeed);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1290	LvlSub.Entry chosen = activeEntries.get(MathUtils.random(activeEntries.size - 1));
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1318	MathUtils.random.setSeed(themeSeed * 1103515245 + 12345);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1323	int idx = MathUtils.random(floorTileIds.size - 1);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1330	MathUtils.random.setSeed(themeSeed ^ 0x5bd1e995);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1331	int selectedId = variants.get(MathUtils.random(variants.size - 1));
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1352	MathUtils.random.setSeed(seed);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	1369	int randomIndex = MathUtils.random(floorTileIds.size - 1);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	247	MathUtils.random.setSeed(seed);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2623	MathUtils.random.setSeed(seed ^ (zone.level.Id * 10007) ^ (entryIndex * 1009));
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2625	int a = Math.abs(MathUtils.random.nextInt()) % nArea;
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2626	int b = Math.abs(MathUtils.random.nextInt()) % nArea;
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2644	MathUtils.random.setSeed(rollSeed);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2645	int roll = Math.abs(MathUtils.random.nextInt() % 100);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2652	MathUtils.random.setSeed(seed ^ (entryIndex * 19937) ^ (attempts * 37));
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2653	DS1.Group substGroup = ds1.groups[Math.abs(MathUtils.random.nextInt()) % ds1.groups.length];
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2742	MathUtils.random.setSeed(seed + zone.level.Id * 1000);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2743	nRand = Math.abs(MathUtils.random.nextInt()) % lvlSubDs1.groups.length;
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2784	MathUtils.random.setSeed(seed + zone.level.Id * 10000 + j * 100);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2786	int nRand1 = Math.abs(MathUtils.random.nextInt()) % nArea;
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2787	int nRand2 = Math.abs(MathUtils.random.nextInt()) % nArea;
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	2832	int groupOffset = Math.abs(MathUtils.random.nextInt()) % (substGroup.width + 1);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	4248	MathUtils.random.setSeed(seed);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	4583	MathUtils.random.setSeed(seed);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	465	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	555	int index = MathUtils.random(available.size - 1);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	561	index = MathUtils.random(available.size - 1);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	740	MathUtils.random(99999))) continue;
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	741	int idx = MathUtils.random(monsters.length - 1);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	745	monster.sparsePopulate, MathUtils.random(99))) continue;
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	755	: MathUtils.random(minGroup, maxGroup);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	762	float px = monsterSpawnCoordinate(zone.x, currentTx, MathUtils.random(-1f, 1f));
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	763	float py = monsterSpawnCoordinate(zone.y, currentTy, MathUtils.random(-1f, 1f));
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	779	MathUtils.random(Integer.MAX_VALUE - 1));
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	790	MathUtils.random(-1f, 1f)) + MathUtils.random(-2f, 2f);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	792	MathUtils.random(-1f, 1f)) + MathUtils.random(-2f, 2f);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	841	MathUtils.random.setSeed(seed + zone.level.Id * 1000 + gridX * 100 + gridY);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	855	int roll = Math.abs(MathUtils.random.nextInt() % 100);
+core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	902	MathUtils.random.setSeed(roomSeed);
+core/src/main/java\com\riiablo\map\Act2MapBuilder.java	MathUtils	29	int select = 1 + MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	100	linkData.rand[1][iteration] = MathUtils.random.nextInt() & 3; // 0-3
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	121	linkData.rand[1][iteration] = MathUtils.random.nextInt() & 3; // 0-3
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	142	linkData.rand[1][iteration] = MathUtils.random.nextInt() & 3; // 0-3
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	161	MathUtils.random.setSeed(seed);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	308	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	363	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	401	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	546	MathUtils.random.setSeed(seed * 31 + zone.level.Id * 17);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	547	int start = MathUtils.random(zone.gridsX * zone.gridsY - 1);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	554	zone.presets[gx][gy] = Preset.of(preset, fileIds[MathUtils.random(fileCount - 1)]);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	599	MathUtils.random.setSeed(seed * 131 + zone.level.Id * 17);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	602	int slot = MathUtils.random(zone.gridsX * zone.gridsY - 1);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	606	LvlPrest.Entry p = zone.map.files().LvlPrest.get(defs[MathUtils.random(defs.length - 1)]);
+core/src/main/java\com\riiablo\map\Act2MapBuilderD2MOD.java	MathUtils	609	if (count > 0) { zone.presets[gx][gy] = Preset.of(p, files[MathUtils.random(count - 1)]); break; }
+core/src/main/java\com\riiablo\map\Act3MapBuilder.java	MathUtils	29	int select = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act3MapBuilderD2MOD.java	MathUtils	102	MathUtils.random.setSeed(seed);
+core/src/main/java\com\riiablo\map\Act3MapBuilderD2MOD.java	MathUtils	130	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act3MapBuilderD2MOD.java	MathUtils	178	int presetSelectIndex = MathUtils.random(presetNumFiles - 1);
+core/src/main/java\com\riiablo\map\Act3MapBuilderD2MOD.java	MathUtils	277	int travincalSelectIndex = MathUtils.random(travincalNumFiles - 1);
+core/src/main/java\com\riiablo\map\Act4MapBuilder.java	MathUtils	29	int select = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act4MapBuilderD2MOD.java	MathUtils	116	linkData.rand[1][counter] = MathUtils.random.nextInt() & 3;
+core/src/main/java\com\riiablo\map\Act4MapBuilderD2MOD.java	MathUtils	199	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act4MapBuilderD2MOD.java	MathUtils	230	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act4MapBuilderD2MOD.java	MathUtils	52	if ((MathUtils.random.nextInt() & 1) == 0) {
+core/src/main/java\com\riiablo\map\Act4MapBuilderD2MOD.java	MathUtils	66	MathUtils.random.setSeed(seed);
+core/src/main/java\com\riiablo\map\Act5MapBuilder.java	MathUtils	29	int select = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\Act5MapBuilderD2MOD.java	MathUtils	104	MathUtils.random.setSeed(seed);
+core/src/main/java\com\riiablo\map\Act5MapBuilderD2MOD.java	MathUtils	208	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	347	MathUtils.random(99999))) continue;
+core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	348	MonStats.Entry selectedMonster = monsters[MathUtils.random(monsters.length - 1)];
+core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	351	selectedMonster.sparsePopulate, MathUtils.random(99))) continue;
+core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	360	? maxGroup : MathUtils.random(minGroup, maxGroup);
+core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	362	float px = zone.getGlobalX((currentTx - zone.tx) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
+core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	363	float py = zone.getGlobalY((currentTy - zone.ty) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
+core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	470	MathUtils.random.setSeed(seed);
+core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	487	int randomIndex = MathUtils.random(floorTileIds.size - 1);
+core/src/main/java\com\riiablo\map\DT1s.java	MathUtils	138	int random = sum == 0 ? 0 : MathUtils.random(sum - 1);
+core/src/main/java\com\riiablo\map\DT1s.java	MathUtils	153	int random = sum == 0 ? 0 : MathUtils.random(sum - 1);
+core/src/main/java\com\riiablo\map\Map.java	MathUtils	606	MathUtils.random.setSeed(seed);
+core/src/main/java\com\riiablo\map\Material.java	MathUtils	23	this(new Color(MathUtils.random.nextInt() | 0xFF));
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	108	MathUtils.random.setSeed((int) zoneSeed);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	118	int shrineType = MathUtils.random.nextInt() & 3;
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	123	int gridX = 1 + MathUtils.random(gridWidth - 3);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	124	int gridY = 1 + MathUtils.random(gridHeight - 3);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	132	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	195	MathUtils.random.setSeed((int) zoneSeed);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	284	MathUtils.random.setSeed((int) zoneSeed);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	298	if (MathUtils.random(0, 99) >= prob) continue;
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	300	int gx = MathUtils.random(0, gridsX - 1);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	301	int gy = MathUtils.random(0, gridsY - 1);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	336	int idx = MathUtils.random(borderSubs.size() - 1);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	435	MathUtils.random.setSeed((int) zoneSeed);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	441	int pathCount = MathUtils.random(2, 5); // 2-5 条路�?
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	444	int startX = MathUtils.random(gridWidth - 1);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	445	int startY = MathUtils.random(gridHeight - 1);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	446	int length = MathUtils.random(3, 8);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	447	int direction = MathUtils.random(3); // 0=�? 1=�? 2=�? 3=�?
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	467	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	48	MathUtils.random.setSeed((int) zoneSeed);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	64	int gridX = 1 + MathUtils.random(gridWidth - 3);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	65	int gridY = 1 + MathUtils.random(gridHeight - 3);
+core/src/main/java\com\riiablo\map\OutdoorFeatures.java	MathUtils	75	int selectIndex = MathUtils.random(numFiles - 1);
+core/src/main/java\com\riiablo\map2\Chunk.java	MathUtils	126	int color = MathUtils.random.nextInt() | 0xff;
+core/src/main/java\com\riiablo\map2\MapGenerator.java	JavaRandom	18	final Random random = new Random();
+core/src/main/java\com\riiablo\map2\Prefab.java	MathUtils	24	int color = MathUtils.random.nextInt() | 0xff;
+core/src/main/java\com\riiablo\map2\random\Random.java	RandomXS128	3	import com.badlogic.gdx.math.RandomXS128;
+core/src/main/java\com\riiablo\map2\random\Random.java	RandomXS128	5	public class Random extends RandomXS128 {
+core/src/main/java\com\riiablo\map2\random\Seed.java	MathUtils	13	MathUtils.random.nextLong(),
+core/src/main/java\com\riiablo\map2\random\Seed.java	MathUtils	14	MathUtils.random.nextLong());
+core/src/main/java\com\riiablo\map2\TileGenerator.java	JavaRandom	14	final Random random = new Random();
+core/src/main/java\com\riiablo\map2\Zone.java	MathUtils	95	int color = MathUtils.random.nextInt() | 0xff;
+core/src/main/java\com\riiablo\presentation\BlockSoundEmitter.java	MathUtils	39	int variant = MathUtils.random(1, 3);
+core/src/main/java\com\riiablo\presentation\MonsterSoundEmitter.java	MathUtils	124	if (com.badlogic.gdx.math.MathUtils.random(99) >= probability) return;
+core/src/main/java\com\riiablo\presentation\MonsterSoundEmitter.java	MathUtils	165	return delay * (0.5f + com.badlogic.gdx.math.MathUtils.random(0.5f));
+core/src/main/java\com\riiablo\presentation\SkillCastHandler.java	MathUtils	700	Vector2 missileAngle = new Vector2(baseAngle).rotateRad(MathUtils.random(-0.1f, 0.1f));
+core/src/main/java\com\riiablo\presentation\SkillCastHandler.java	MathUtils	715	float randomOffset = MathUtils.random(-spreadAngle / 2, spreadAngle / 2);
+core/src/main/java\com\riiablo\presentation\SoundEnvironmentSystem.java	MathUtils	148	sound = session.sounds().get(sound.Index + MathUtils.random.nextInt(sound.Group_Size));
+core/src/main/java\com\riiablo\presentation\WeatherRenderSystem.java	JavaRandom	345	random = new Random(seed);
+core/src/main/java\com\riiablo\presentation\WeatherRenderSystem.java	JavaRandom	464	random = new Random(seed);
+core/src/main/java\com\riiablo\presentation\WeatherRenderSystem.java	JavaRandom	723	random = new Random(seed ^ (mode.ordinal() * 0x9E3779B97F4A7C15L));
+quests/src/main/java\com\riiablo\engine\server\quest\Act1CainRuntime.java	JavaRandom	30	Random random = new Random(gameSeed ^ 0xA1C41F055L);
+server\bncs\src\main\java\com\riiablo\server\bncs\Main.java	MathUtils	197	return String.format("Client-%08X", MathUtils.random(1, Integer.MAX_VALUE - 1));
+server\bnls\src\main\java\com\riiablo\server\bnls\BNLS.java	MathUtils	247	return String.format("Client-%08X", MathUtils.random(1, Integer.MAX_VALUE - 1));
+server\d2gs\src\main\java\com\riiablo\server\d2gs\D2GS.java	MathUtils	3276	// the next MathUtils.random(99) roll to satisfy the MPQ chance.
+server\d2gs\src\main\java\com\riiablo\server\d2gs\D2GS.java	MathUtils	3348	com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+server\d2gs\src\main\java\com\riiablo\server\d2gs\D2GS.java	MathUtils	3354	if (com.badlogic.gdx.math.MathUtils.random(99) >= chance) {
+server\d2gs\src\main\java\com\riiablo\server\d2gs\D2GS.java	MathUtils	3360	com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+server\d2gs\src\main\java\com\riiablo\server\d2gs\D2GS.java	MathUtils	3375	com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+server\d2gs\src\main\java\com\riiablo\server\d2gs\D2GS.java	MathUtils	3378	if (com.badlogic.gdx.math.MathUtils.random(99) >= 95) {
+server\d2gs\src\main\java\com\riiablo\server\d2gs\D2GS.java	MathUtils	3384	com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+server\d2gs\src\main\java\com\riiablo\server\d2gs\D2GS.java	MathUtils	9758	return String.format("Client-%08X", MathUtils.random(1, Integer.MAX_VALUE - 1));
+server\d2gs\src\main\java\com\riiablo\server\d2gs\MonsterAiArena.java	MathUtils	246	MathUtils.random.setSeed(config.seed);
+server\mcp\src\main\java\com\riiablo\server\mcp\MCP.java	MathUtils	370	return String.format("Client-%08X", MathUtils.random(1, Integer.MAX_VALUE - 1));
+server\netty\src\main\java\com\riiablo\server\d2gs\Main.java	MathUtils	190	seed = MathUtils.random.nextInt();
+server\netty\src\main\java\com\riiablo\server\d2gs_netty\Main.java	MathUtils	190	seed = MathUtils.random.nextInt();
