@@ -111,7 +111,14 @@ public final class SimulationReplayLog {
     this.gameSeed = gameSeed;
     ArrayList<Command> orderedCommands = new ArrayList<>(commands);
     orderedCommands.sort(COMMAND_ORDER);
-    for (Command command : orderedCommands) validate(command);
+    long previousSequence = 0L;
+    for (Command command : orderedCommands) {
+      validate(command);
+      if (command.sequence == previousSequence) {
+        throw new IllegalArgumentException("duplicate command sequence: " + command.sequence);
+      }
+      previousSequence = command.sequence;
+    }
     this.commands = Collections.unmodifiableList(orderedCommands);
     ArrayList<SimulationCheckpoint> orderedCheckpoints = new ArrayList<>(checkpoints);
     orderedCheckpoints.sort(CHECKPOINT_ORDER);

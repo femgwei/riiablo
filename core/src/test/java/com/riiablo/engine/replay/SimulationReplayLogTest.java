@@ -87,6 +87,17 @@ class SimulationReplayLogTest {
   }
 
   @Test
+  void replayRejectsDuplicateCommandSequences() {
+    SimulationCommandEnvelope first = SimulationCommandEnvelope.builder(
+        "ui", "delta", 1).tick(1).build(7);
+    SimulationCommandEnvelope second = SimulationCommandEnvelope.builder(
+        "ui", "delta", 2).tick(2).build(7);
+    SimulationReplayLog.Builder builder = SimulationReplayLog.builder(1)
+        .command(first, "1").command(second, "2");
+    assertThrows(IllegalArgumentException.class, builder::build);
+  }
+
+  @Test
   void admittedCommandsReplayToIdenticalCheckpoints() {
     SimulationReplayCapture capture = new SimulationReplayCapture(0x110F, String::valueOf);
     SimulationTickCoordinator recorded = new SimulationTickCoordinator();
