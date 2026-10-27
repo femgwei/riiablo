@@ -388,27 +388,15 @@ core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	792	MathUt
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	841	MathUtils.random.setSeed(seed + zone.level.Id * 1000 + gridX * 100 + gridY);
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	855	int roll = Math.abs(MathUtils.random.nextInt() % 100);
 core/src/main/java\com\riiablo\map\Act1MapBuilderD2MOD.java	MathUtils	902	MathUtils.random.setSeed(roomSeed);
-core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	347	MathUtils.random(99999))) continue;
-core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	348	MonStats.Entry selectedMonster = monsters[MathUtils.random(monsters.length - 1)];
-core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	351	selectedMonster.sparsePopulate, MathUtils.random(99))) continue;
-core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	360	? maxGroup : MathUtils.random(minGroup, maxGroup);
-core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	362	float px = zone.getGlobalX((currentTx - zone.tx) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	363	float py = zone.getGlobalY((currentTy - zone.ty) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	470	MathUtils.random.setSeed(seed);
-core/src/main/java\com\riiablo\map\BaseMapBuilderD2MOD.java	MathUtils	487	int randomIndex = MathUtils.random(floorTileIds.size - 1);
 core/src/main/java\com\riiablo\map\DT1s.java	MathUtils	138	int random = sum == 0 ? 0 : MathUtils.random(sum - 1);
 core/src/main/java\com\riiablo\map\DT1s.java	MathUtils	153	int random = sum == 0 ? 0 : MathUtils.random(sum - 1);
 core/src/main/java\com\riiablo\map\Map.java	MathUtils	606	MathUtils.random.setSeed(seed);
-core/src/main/java\com\riiablo\map\Material.java	MathUtils	23	this(new Color(MathUtils.random.nextInt() | 0xFF));
-core/src/main/java\com\riiablo\map2\Chunk.java	MathUtils	126	int color = MathUtils.random.nextInt() | 0xff;
 core/src/main/java\com\riiablo\map2\MapGenerator.java	JavaRandom	18	final Random random = new Random();
-core/src/main/java\com\riiablo\map2\Prefab.java	MathUtils	24	int color = MathUtils.random.nextInt() | 0xff;
 core/src/main/java\com\riiablo\map2\random\Random.java	RandomXS128	3	import com.badlogic.gdx.math.RandomXS128;
 core/src/main/java\com\riiablo\map2\random\Random.java	RandomXS128	5	public class Random extends RandomXS128 {
 core/src/main/java\com\riiablo\map2\random\Seed.java	MathUtils	13	MathUtils.random.nextLong(),
 core/src/main/java\com\riiablo\map2\random\Seed.java	MathUtils	14	MathUtils.random.nextLong());
 core/src/main/java\com\riiablo\map2\TileGenerator.java	JavaRandom	14	final Random random = new Random();
-core/src/main/java\com\riiablo\map2\Zone.java	MathUtils	95	int color = MathUtils.random.nextInt() | 0xff;
 core/src/main/java\com\riiablo\presentation\BlockSoundEmitter.java	MathUtils	39	int variant = MathUtils.random(1, 3);
 core/src/main/java\com\riiablo\presentation\MonsterSoundEmitter.java	MathUtils	124	if (com.badlogic.gdx.math.MathUtils.random(99) >= probability) return;
 core/src/main/java\com\riiablo\presentation\MonsterSoundEmitter.java	MathUtils	165	return delay * (0.5f + com.badlogic.gdx.math.MathUtils.random(0.5f));

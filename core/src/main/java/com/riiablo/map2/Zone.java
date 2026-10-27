@@ -1,7 +1,6 @@
 package com.riiablo.map2;
 
 import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.Pool;
@@ -92,7 +91,7 @@ public final class Zone extends BBox implements Poolable, Disposable {
     return get(x, y).init(layers);
   }
 
-  int color = MathUtils.random.nextInt() | 0xff;
+  int color = 0x6FAE6FFF;
 
   public Prefab prefab(String name, int group, int x, int y, int width, int height) {
     Prefab prefab = prefabPool.obtain();

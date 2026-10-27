@@ -3,7 +3,6 @@ package com.riiablo.map2;
 import java.util.Arrays;
 
 import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.Pool.Poolable;
@@ -123,7 +122,7 @@ public class Chunk extends BBox implements Poolable, Disposable {
     return tiles;
   }
 
-  int color = MathUtils.random.nextInt() | 0xff;
+  int color = 0x5F8FBFFF;
 
   void drawDebug(DebugMode mode, Pixmap pixmap, int x, int y) {
     switch (mode) {

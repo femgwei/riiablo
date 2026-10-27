@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
@@ -10,6 +9,7 @@ import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
 
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 
@@ -234,10 +234,14 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
     return new Zone.Generator() {
       MonStats.Entry[] monsters;
       boolean nativePopulationQueued;
+      NativeRng selectionRng;
+      NativeRng populationRng;
 
       @Override
       public void init(Zone zone) {
-        java.util.Random selection = new java.util.Random(NativeLevelSeed.forLevel(zone.map.seed(), zone.level.Id));
+        selectionRng = MapRng.open(NativeLevelSeed.forLevel(zone.map.seed(), zone.level.Id),
+            "base.monster-selection", zone.level.Id);
+        populationRng = MapRng.open(zone.map.seed(), "base.monster-population", zone.level.Id);
         int prob = 0;
         int numMon = NativeMonsterRegion.selectedEntryCount(zone.level, zone.diff);
         String[] columns = NativeMonsterRegion.monsterColumns(zone.level, zone.diff);
@@ -252,12 +256,12 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
         Array<MonStats.Entry> selected = new Array<>();
         int selectionCount = Math.min(numMon, available.size);
         for (int i = 0; i < selectionCount; i++) {
-          int index = selection.nextInt(available.size);
+          int index = selectionRng.nextInt(available.size);
           if (i == 0 && zone.level.rangedspawn && available.size > 1) {
             for (int attempt = 0; attempt < 20; attempt++) {
               MonStats.Entry candidate = zone.map.files().monstats.get(available.get(index));
               if (candidate != null && candidate.rangedtype) break;
-              index = selection.nextInt(available.size);
+              index = selectionRng.nextInt(available.size);
             }
           }
           MonStats.Entry entry = zone.map.files().monstats.get(available.removeIndex(index));
@@ -344,11 +348,11 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
               for (int attempt = 0; attempt < populationAttempts; attempt++) {
                 if (!NativeMonsterRegion.densityRoll(
                     NativeMonsterRegion.density(zone.level, zone.diff),
-                    MathUtils.random(99999))) continue;
-                MonStats.Entry selectedMonster = monsters[MathUtils.random(monsters.length - 1)];
+                    populationRng.nextInt(100000))) continue;
+                MonStats.Entry selectedMonster = monsters[populationRng.nextInt(monsters.length)];
                 if (selectedMonster == null) continue;
                 if (!NativeMonsterRegion.sparsePopulationRoll(
-                    selectedMonster.sparsePopulate, MathUtils.random(99))) continue;
+                    selectedMonster.sparsePopulate, populationRng.nextInt(100))) continue;
                 int minGroup = MapDataPort.minGroup(selectedMonster);
                 int maxGroup = MapDataPort.maxGroup(selectedMonster);
                 if (NativeMonsterRegion.isSingleMemberNormalGroup(
@@ -357,10 +361,10 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
                   maxGroup = 1;
                 }
                 int count = minGroup == maxGroup
-                    ? maxGroup : MathUtils.random(minGroup, maxGroup);
+                    ? maxGroup : minGroup + populationRng.nextInt(maxGroup - minGroup + 1);
                 for (int j = 0; j < count; j++) {
-                  float px = zone.getGlobalX((currentTx - zone.tx) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-                  float py = zone.getGlobalY((currentTy - zone.ty) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
+                  float px = zone.getGlobalX((currentTx - zone.tx) * DT1.Tile.SUBTILE_SIZE) + MapRng.nextFloat(populationRng, -2f, 2f);
+                  float py = zone.getGlobalY((currentTy - zone.ty) * DT1.Tile.SUBTILE_SIZE) + MapRng.nextFloat(populationRng, -2f, 2f);
                   zone.queueMonster(selectedMonster.hcIdx, px, py);
                 }
               }
@@ -467,7 +471,7 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
         // 使用网格坐标和局部坐标生成伪随机索引
         // 这样可以确保相同位置总是生成相同的地形（多人游戏一致性）
         int seed = (gridX * 31 + gridY) * 17 + (x * 7 + y);
-        MathUtils.random.setSeed(seed);
+        NativeRng terrainRng = MapRng.open(seed, "base.terrain", ((gridX & 0xffff) << 16) ^ (gridY & 0xffff));
         
         // 收集所有可用的 floor tiles (orientation = 0)
         Array<Integer> floorTileIds = new Array<>();
@@ -484,7 +488,7 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
         
         // 从所有可用的 floor tiles 中随机选择一个
         if (floorTileIds.size > 0) {
-          int randomIndex = MathUtils.random(floorTileIds.size - 1);
+          int randomIndex = terrainRng.nextInt(floorTileIds.size);
           int selectedId = floorTileIds.get(randomIndex);
           DT1.Tile tile = dt1s.get(selectedId);
           if (tile != null) {

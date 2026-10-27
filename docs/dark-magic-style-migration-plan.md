@@ -4227,3 +4227,20 @@ git diff --check
 ```
 
 结果：core 编译、维修服务/地图回归和 434 条 RNG ownership 漂移检查通过；批次 A 继续处理剩余旧兼容入口。
+
+### 批次 A 继续：BaseMapBuilder 与 map2 调试 RNG 清理（2026-10-28）
+
+- `BaseMapBuilderD2MOD` 的怪物筛选、兼容人口生成和地形候选选择改为按关卡命名的 `NativeRng` 流，移除对全局 `MathUtils.random` 的依赖。
+- map2 的 Chunk/Prefab/Zone 和 Material 的调试颜色改为稳定常量，避免对象创建时消耗全局 RNG；这些颜色不参与地图语义。
+- 生产 RNG ownership 清单从 434 条降至 422 条。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:compileJava --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :core:test --tests com.riiablo.map.MapBuilderIsolationTest --tests com.riiablo.map.Act2MapBuilderD2MooWarpTest --tests com.riiablo.map.Act3MapBuilderD2MODTest --tests com.riiablo.map.Act4MapBuilderD2MODTest --tests com.riiablo.map.Act5MapBuilderD2MODTest --no-daemon --max-workers=1 --console=plain
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/architecture/check-unbound-rng.ps1 -Output build/reports/unbound-rng.tsv -Baseline tools/architecture/rng-ownership-baseline.tsv -FailOnDrift
+git diff --check
+```
+
+结果：core 编译、地图回归和 422 条 RNG ownership 漂移检查通过；批次 A 继续处理 DT1s、Act1 深层生成和剩余兼容入口。

@@ -1,7 +1,6 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.math.MathUtils;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
@@ -20,7 +19,7 @@ public enum Material {
   final Color color;
 
   Material() {
-    this(new Color(MathUtils.random.nextInt() | 0xFF));
+    this(new Color(0x13579BFF));
   }
 
   Material(Color color) {
