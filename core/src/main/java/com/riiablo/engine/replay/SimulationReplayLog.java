@@ -111,6 +111,7 @@ public final class SimulationReplayLog {
     this.gameSeed = gameSeed;
     ArrayList<Command> orderedCommands = new ArrayList<>(commands);
     orderedCommands.sort(COMMAND_ORDER);
+    for (Command command : orderedCommands) validate(command);
     this.commands = Collections.unmodifiableList(orderedCommands);
     ArrayList<SimulationCheckpoint> orderedCheckpoints = new ArrayList<>(checkpoints);
     orderedCheckpoints.sort(CHECKPOINT_ORDER);
@@ -138,6 +139,16 @@ public final class SimulationReplayLog {
   }
 
   public String digest() { return SimulationCheckpoint.sha256(canonical()); }
+
+  /** Rejects command identities that could not have crossed the admission boundary. */
+  private static void validate(Command command) {
+    if (command.tick < 1L) throw new IllegalArgumentException("command tick must be positive");
+    if (command.sequence < 1L) throw new IllegalArgumentException("command sequence must be positive");
+    if (command.actorId < -1) throw new IllegalArgumentException("command actorId");
+    if (command.requestId < 0L) throw new IllegalArgumentException("command requestId");
+    if (command.targetEntityId < -1) throw new IllegalArgumentException("command targetEntityId");
+    Objects.requireNonNull(command.authority, "command authority");
+  }
 
   /** Encodes this replay in a process-independent, versioned binary format. */
   public byte[] toBytes() {

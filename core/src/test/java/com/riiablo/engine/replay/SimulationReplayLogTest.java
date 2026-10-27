@@ -79,6 +79,14 @@ class SimulationReplayLogTest {
   }
 
   @Test
+  void replayRejectsCommandsThatBypassAdmissionIdentityChecks() {
+    SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
+        "ui", "delta", 1).tick(1).build(0);
+    assertThrows(IllegalArgumentException.class,
+        () -> SimulationReplayLog.builder(1).command(command, "1").build());
+  }
+
+  @Test
   void admittedCommandsReplayToIdenticalCheckpoints() {
     SimulationReplayCapture capture = new SimulationReplayCapture(0x110F, String::valueOf);
     SimulationTickCoordinator recorded = new SimulationTickCoordinator();
