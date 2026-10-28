@@ -7,7 +7,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -142,7 +142,7 @@ public class BloodHawk extends AI {
         stateMachine.changeState(State.ATTACK);
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       }
     }
@@ -178,11 +178,11 @@ public class BloodHawk extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             pathfinder.findPath(entityId, dst);
           }
           break;
@@ -198,7 +198,7 @@ public class BloodHawk extends AI {
 
     // D2MOD: If in combat
     if (bCombat) {
-      if (params.length > 2 && !MathUtils.randomBoolean(params[2] / 100f)) {
+      if (params.length > 2 && !aiRandomBoolean(params[2] / 100f)) {
         // D2MOD: Try to escape
         // D2MOD: AITACTICS_SetVelocity(pUnit, 0, AI_GetParamValue(pGame, pAiTickParam, BLOODHAWK_AI_PARAM_RUN_VELOCITY), 0)
         stateMachine.changeState(State.ESCAPE);
@@ -213,7 +213,7 @@ public class BloodHawk extends AI {
           mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
           mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         }
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       }
 
@@ -224,17 +224,17 @@ public class BloodHawk extends AI {
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       playSound(monsound + "_attack_1");
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: Check charge chance
-    if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+    if (params.length > 0 && aiRandomBoolean(params[0] / 100f)) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, AI_GetParamValue(pGame, pAiTickParam, BLOODHAWK_AI_PARAM_CHARGE_VELOCITY), pAiTickParam->nTargetDistance)
       aiParam0 = 1;
       stateMachine.changeState(State.CHARGE);
       walkTo(targetPos, params.length > 4 ? params[4] : 0, targetId);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
@@ -253,24 +253,24 @@ public class BloodHawk extends AI {
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       }
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: Wander or walk close
-    if (params.length > 1 && !MathUtils.randomBoolean(params[1] / 100f)) {
+    if (params.length > 1 && !aiRandomBoolean(params[1] / 100f)) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 0, 0)
       // D2MOD: AITACTICS_WalkCloseToUnit(pGame, pUnit, 3u)
       walkTo(targetPos, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     } else {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, -50, 0)
       // D2MOD: AITACTICS_WalkCloseToUnit(pGame, pUnit, 4u)
       walkTo(targetPos, -50, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
   }

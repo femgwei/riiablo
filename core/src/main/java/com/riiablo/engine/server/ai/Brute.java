@@ -1,5 +1,6 @@
 package com.riiablo.engine.server.ai;
 
+import com.badlogic.gdx.math.MathUtils;
 import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
@@ -7,7 +8,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -154,11 +155,11 @@ public class Brute extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             pathfinder.findPath(entityId, dst);
           }
           break;
@@ -175,20 +176,20 @@ public class Brute extends AI {
     // D2MOD: If in combat
     if (bCombat) {
       // D2MOD: BRUTE_AI_PARAM_ATTACK_CHANCE_PCT
-      if (MathUtils.randomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
+      if (aiRandomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         // D2MOD: BRUTE_AI_PARAM_ATTACK1_OR_2_CHANCE_PCT
-        byte attackMode = MathUtils.randomBoolean(params[PARAM_ATTACK1_OR_2_CHANCE] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+        byte attackMode = aiRandomBoolean(params[PARAM_ATTACK1_OR_2_CHANCE] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
         mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         playSound(monsound + "_attack_1");
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       } else {
         // D2MOD: Second chance to attack (same param)
-        if (MathUtils.randomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
+        if (aiRandomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
           // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
           // This appears to be a special attack or skill, but we'll use normal attack for now
           pathfinder.findPath(entityId, null);
@@ -196,7 +197,7 @@ public class Brute extends AI {
           stateMachine.changeState(State.ATTACK);
           mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
           mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-          time = MathUtils.random(1f, 2);
+          time = aiRandom(1f, 2);
           return;
         } else {
           // Idle
@@ -218,7 +219,7 @@ public class Brute extends AI {
     // This appears to be a walk-to-target function with flags=7
     walkTo(targetPos, MathUtils.round(speedModifier), targetId);
     stateMachine.changeState(State.APPROACH);
-    time = MathUtils.random(1f, 2);
+    time = aiRandom(1f, 2);
   }
 
   @Override
