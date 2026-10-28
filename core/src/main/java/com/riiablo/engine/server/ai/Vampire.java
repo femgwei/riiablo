@@ -7,7 +7,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -126,7 +126,7 @@ public class Vampire extends AI {
   private boolean castConfiguredSkill(int skillIndex, int targetId, Vector2 targetPos) {
     if (!useMonsterSkill(skillIndex, targetId, targetPos)) return false;
     stateMachine.changeState(State.CAST);
-    time = MathUtils.random(1f, 2f);
+    time = aiRandom(1f, 2f);
     return true;
   }
 
@@ -186,9 +186,9 @@ public class Vampire extends AI {
         boolean bCombat = isInCombat(targetId);
 
         // D2MOD: If in combat, 30% chance to use spell
-        if (bCombat && (spellFlags & 1) != 0 && MathUtils.randomBoolean(0.3f)) {
+        if (bCombat && (spellFlags & 1) != 0 && aiRandomBoolean(0.3f)) {
           // D2MOD: 50% chance skill0, 50% chance skill3
-          if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty() && MathUtils.randomBoolean(0.5f)) {
+          if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty() && aiRandomBoolean(0.5f)) {
             // D2MOD: Use skill0
             if (castConfiguredSkill(0, targetId, targetPos)) return;
           } else if (monster.monstats.Skill4 != null && !monster.monstats.Skill4.isEmpty()) {
@@ -205,7 +205,7 @@ public class Vampire extends AI {
           mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
           mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
           playSound(monsound + "_attack_1");
-          time = MathUtils.random(1f, 2);
+          time = aiRandom(1f, 2);
           return;
         }
       }
@@ -220,7 +220,7 @@ public class Vampire extends AI {
           Vector2 targetPos = mPosition.get(targetId).position;
           pathfinder.findPath(entityId, targetPos, false, targetId);
           stateMachine.changeState(State.APPROACH);
-          time = MathUtils.random(1f, 2);
+          time = aiRandom(1f, 2);
           return;
         }
       }
@@ -243,20 +243,20 @@ public class Vampire extends AI {
               return;
             }
 
-            if (params.length > 1 && !MathUtils.randomBoolean(params[1] / 100f)) {
+            if (params.length > 1 && !aiRandomBoolean(params[1] / 100f)) {
               stateMachine.changeState(State.IDLE);
               time = 15f * com.riiablo.codec.Animation.FRAME_DURATION;
               return;
             }
 
             // D2MOD: Check upgrade cast
-            if ((spellFlags & (1 << 1)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+            if ((spellFlags & (1 << 1)) != 0 && aiParam2 <= 0 && params.length > 3 && aiRandomBoolean(params[3] / 100f)) {
               // D2MOD: Use skill1
               aiParam2 = 11;
               if (castConfiguredSkill(1, targetId, targetPos)) return;
             }
 
-            if ((spellFlags & (1 << 2)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+            if ((spellFlags & (1 << 2)) != 0 && aiParam2 <= 0 && params.length > 3 && aiRandomBoolean(params[3] / 100f)) {
               // D2MOD: Use skill2
               aiParam2 = 11;
               if (castConfiguredSkill(2, targetId, targetPos)) return;
@@ -264,14 +264,14 @@ public class Vampire extends AI {
 
             if ((spellFlags & 1) != 0 && targetDistance <= 20) {
               // D2MOD: Use skill0 or skill3
-              if (MathUtils.randomBoolean(0.5f) && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
+              if (aiRandomBoolean(0.5f) && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
                 if (castConfiguredSkill(0, targetId, targetPos)) return;
               } else if (monster.monstats.Skill4 != null && !monster.monstats.Skill4.isEmpty()) {
                 if (castConfiguredSkill(3, targetId, targetPos)) return;
               }
             }
           }
-          time = MathUtils.random(1f, 2);
+          time = aiRandom(1f, 2);
           return;
         }
       }
@@ -288,11 +288,11 @@ public class Vampire extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             pathfinder.findPath(entityId, dst);
           }
           break;
@@ -315,20 +315,20 @@ public class Vampire extends AI {
     }
 
     // D2MOD: Check cast chance
-    if (params.length > 1 && !MathUtils.randomBoolean(params[1] / 100f)) {
+    if (params.length > 1 && !aiRandomBoolean(params[1] / 100f)) {
       stateMachine.changeState(State.IDLE);
       time = 15f * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     }
 
     // D2MOD: Check upgrade cast
-    if ((spellFlags & (1 << 1)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+    if ((spellFlags & (1 << 1)) != 0 && aiParam2 <= 0 && params.length > 3 && aiRandomBoolean(params[3] / 100f)) {
       // D2MOD: Use skill1
       aiParam2 = 11;
       if (castConfiguredSkill(1, targetId, targetPos)) return;
     }
 
-    if ((spellFlags & (1 << 2)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+    if ((spellFlags & (1 << 2)) != 0 && aiParam2 <= 0 && params.length > 3 && aiRandomBoolean(params[3] / 100f)) {
       // D2MOD: Use skill2
       aiParam2 = 11;
       if (castConfiguredSkill(2, targetId, targetPos)) return;
@@ -336,7 +336,7 @@ public class Vampire extends AI {
 
     // D2MOD: Use basic spell
     if ((spellFlags & 1) != 0 && targetDistance <= 20) {
-      if (MathUtils.randomBoolean(0.5f) && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
+      if (aiRandomBoolean(0.5f) && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
         if (castConfiguredSkill(0, targetId, targetPos)) return;
       } else if (monster.monstats.Skill4 != null && !monster.monstats.Skill4.isEmpty()) {
         if (castConfiguredSkill(3, targetId, targetPos)) return;
@@ -351,14 +351,14 @@ public class Vampire extends AI {
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       playSound(monsound + "_attack_1");
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: Approach
     pathfinder.findPath(entityId, targetPos, false, targetId);
     stateMachine.changeState(State.APPROACH);
-    time = MathUtils.random(1f, 2);
+    time = aiRandom(1f, 2);
   }
 
   @Override
