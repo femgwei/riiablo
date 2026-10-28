@@ -40,12 +40,21 @@ public class D2GSPacketProcessor implements PacketProcessor {
   protected ItemManager itemManager;
   protected NetworkSynchronizer sync;
 
+  private static boolean validClient(D2GSPacket packet, IntIntMap players) {
+    return packet != null && packet.id >= 0 && packet.id < com.riiablo.Riiablo.MAX_PLAYERS
+        && players != null && players.get(packet.id, Engine.INVALID_ENTITY) != Engine.INVALID_ENTITY;
+  }
+
   @Override
   public void processPacket(ChannelHandlerContext ctx, SocketAddress from, ByteBuf bb) {
     throw new UnsupportedOperationException();
   }
 
   public void processPacket(D2GSPacket packet) {
+    if (!validClient(packet, player) || packet.data == null) {
+      if (packet != null) Gdx.app.error(TAG, "dropping packet from invalid client " + packet.id);
+      return;
+    }
     if (!Server.ignoredPackets.get(packet.data.dataType())) Gdx.app.debug(TAG, "  " + "dataType=" + D2GSData.name(packet.data.dataType()));
     switch (packet.data.dataType()) {
       case D2GSData.EntitySync:
@@ -99,17 +108,20 @@ public class D2GSPacketProcessor implements PacketProcessor {
 
   private int getPlayerEntityId(D2GSPacket packet) {
     int entityId = player.get(packet.id, Engine.INVALID_ENTITY);
-    assert entityId != Engine.INVALID_ENTITY;
+    if (entityId == Engine.INVALID_ENTITY) {
+      throw new IllegalStateException("no entity for client " + packet.id);
+    }
     return entityId;
   }
 
   private static ByteBuffer duplicate(ByteBuffer buffer) {
-    final int size = buffer.rewind().remaining();
+    ByteBuffer source = buffer.duplicate();
+    final int size = source.remaining();
     byte[] bytes = new byte[size + 4];
     return (ByteBuffer) ByteBuffer.wrap(bytes)
         .order(ByteOrder.LITTLE_ENDIAN)
         .putInt(size)
-        .put(buffer)
+        .put(source)
         .rewind();
   }
 
