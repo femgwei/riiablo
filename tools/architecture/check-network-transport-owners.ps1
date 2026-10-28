@@ -19,6 +19,7 @@ foreach ($file in $files) {
       $rows.Add([pscustomobject]@{
         Owner = $owner
         File = $relative.Replace('\','/')
+        SourceSet = if ($relative -match '[\\/]src[\\/]test[\\/]') { 'test' } else { 'main' }
         References = $count
       })
     }
@@ -29,9 +30,9 @@ $parent = Split-Path -Parent $Output
 if ($parent -and -not (Test-Path -LiteralPath $parent)) {
   New-Item -ItemType Directory -Path $parent -Force | Out-Null
 }
-"owner`tfile`treferences" | Set-Content -LiteralPath $Output -Encoding UTF8
+"owner`tfile`tsourceSet`treferences" | Set-Content -LiteralPath $Output -Encoding UTF8
 $rows | Sort-Object Owner,File | ForEach-Object {
-  "$($_.Owner)`t$($_.File)`t$($_.References)" | Add-Content -LiteralPath $Output -Encoding UTF8
+  "$($_.Owner)`t$($_.File)`t$($_.SourceSet)`t$($_.References)" | Add-Content -LiteralPath $Output -Encoding UTF8
 }
 
 # d2gs_netty is a retired server implementation. It may reference itself, but
