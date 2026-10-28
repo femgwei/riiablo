@@ -3273,7 +3273,7 @@ public class D2GS extends ApplicationAdapter {
         if (player == null || casting == null || casting.skillId != skillId) return;
         // Impale's native Calc2 resource drain is probabilistic.  The
         // headless fallback is a deterministic test boundary, so arrange for
-        // the next MathUtils.random(99) roll to satisfy the MPQ chance.
+        // the next compatibility roll to satisfy the MPQ chance.
         if (skillId == com.riiablo.engine.server.skill.SkillId.IMPALE) {
           seedHeadlessImpaleResourceRoll();
         }

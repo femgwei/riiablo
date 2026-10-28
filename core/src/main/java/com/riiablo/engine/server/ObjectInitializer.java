@@ -69,7 +69,7 @@ public class ObjectInitializer extends BaseEntitySystem {
 
         // FIXME: Set random start frame?
         //int framesPerDir = animation.getNumFramesPerDir();
-        //animation.setFrame(MathUtils.random(0, framesPerDir - 1));
+        // Frame selection is intentionally disabled for this initializer.
         break;
       case 9 : case 10: case 11: case 12: case 13: case 14: case 15: case 16:
         break;

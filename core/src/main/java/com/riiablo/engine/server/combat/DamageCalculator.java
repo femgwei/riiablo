@@ -226,7 +226,7 @@ public class DamageCalculator {
     int damage = finalMin;
     if (finalMax > finalMin) {
       // ITEMS_RollLimitedRandomNumber uses [0, bound), while LibGDX's
-      // MathUtils.random(int) is inclusive at the upper bound.
+      // The legacy range uses an inclusive upper bound.
       damage += random.applyAsInt(finalMax - finalMin);
     }
     
