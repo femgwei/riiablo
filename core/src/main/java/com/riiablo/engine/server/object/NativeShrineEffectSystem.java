@@ -13,6 +13,7 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.NativeRng;
+import com.riiablo.engine.server.NamedRngStreams;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Mercenary;
@@ -328,8 +329,9 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
       itemLevel = Math.max(1, data.getStats().aggregate().getValue(
           Stat.level, data.level & 0xFF));
     }
-    NativeRng random = new NativeRng(Riiablo.gameSeed ^ (event.playerId * 0x45D9F3B)
-        ^ (event.entityId * 0x9E3779B9) ^ event.shrineId ^ code.hashCode());
+    long context = (((long) event.playerId) << 32) ^ (event.entityId & 0xFFFFFFFFL)
+        ^ event.shrineId ^ code.hashCode();
+    NativeRng random = NamedRngStreams.open(Riiablo.gameSeed, "shrine.drop", context);
     for (int i = 0; i < count; i++) {
       try {
         Item item = itemGenerator.generateLootItem(code, itemLevel, com.riiablo.item.Quality.NORMAL,

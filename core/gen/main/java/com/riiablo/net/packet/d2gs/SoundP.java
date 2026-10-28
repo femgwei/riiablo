@@ -60,3 +60,4 @@ public final class SoundP extends Table {
     public SoundP get(SoundP obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+

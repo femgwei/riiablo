@@ -4025,6 +4025,20 @@ checkpoint registry 的生产调用方，随后补 data-pack digest/version 与�
 下一迁移：继续集中处理服务端 AI 或地图生成的命名 RNG 注入，并把已迁移 stream 接入真实
 D2GS checkpoint registry，随后补 data-pack digest/version 与严格缺失策略门禁。
 
+### 冻结批次 A 继续：神殿掉落命名 RNG 收口（2026-10-28）
+
+- `NativeShrineEffectSystem` 的神殿消耗品掉落改用 `shrine.drop` 命名 stream，context
+  绑定玩家、神殿实体、神殿类型和物品 code；不再用临时裸 `NativeRng` 依赖手工异或 seed。
+- 保持掉落数量、物品等级、难度和生成回调语义不变，仅收敛随机源身份，便于后续把该 stream
+  接入 D2GS checkpoint registry；未修改 D2S、FlatBuffer 或暗黑规则公式。
+- `:core:compileJava`、`:server:d2gs:compileJava` 和模块边界验证通过。
+
+剩余问题：AI 具体类、地图生成、掉落主流程和少数旧兼容工具仍有直接全局随机调用；本批
+继续属于冻结批次 A，不宣称 M3/M4/M7-A 或 M8 总体完成。
+
+下一迁移：继续处理服务端 AI/地图生成中可注入命名 stream 的生产入口，并补齐已迁移 stream
+的 D2GS registry 注册和 data-pack digest/version 门禁。
+
 ## 剩余主线固定批次（2026-10-26 冻结）
 
 当前已完成 M0、M1 主行、M2、M6、M8-B；M4-B 内容/Mod 分层按计划暂停，不计入当前
