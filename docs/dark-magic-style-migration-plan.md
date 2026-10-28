@@ -4497,6 +4497,11 @@ git diff --check
 - 两个 Netty D2GS 启动入口在未显式指定 seed 时改用独立 `SecureRandom`，不再消耗 libGDX 全局 RNG。
 - 显式 seed、地图生成和后续游戏逻辑保持不变。
 
+### RNG ownership 审计收口记录（2026-10-29）
+
+- 当前 ownership 报告保留 14 条基线项，`Unbound RNG drift: none`。
+- 剩余项集中在 map2 兼容随机实现、WeatherRenderSystem 的显式天气 seed，以及 D2GS MPQ/headless fixture 的全局 seed 预置；均已确认不是可机械替换的生产权威随机入口。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）
