@@ -3,7 +3,7 @@ package com.riiablo.engine.server.ai;
 import com.artemis.ComponentMapper;
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -109,7 +109,7 @@ public class CorruptArcher extends AI {
   private boolean checkSpecialCondition(int targetId, float distance) {
     return targetId != Engine.INVALID_ENTITY
         && distance < 6f
-        && MathUtils.randomBoolean(params[PARAM_RUN_CHANCE] / 100f);
+        && aiRandomBoolean(params[PARAM_RUN_CHANCE] / 100f);
   }
 
   private void castConfiguredSkill(int skillIndex, int targetId, Vector2 targetPos) {
@@ -147,7 +147,7 @@ public class CorruptArcher extends AI {
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       playSound(monsound + "_attack_1");
-      time = MathUtils.random(1f, 2f);
+      time = aiRandom(1f, 2f);
       return;
     }
 
@@ -168,11 +168,11 @@ public class CorruptArcher extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             walkTo(dst, Engine.INVALID_ENTITY);
           }
           break;
@@ -194,19 +194,19 @@ public class CorruptArcher extends AI {
       Vector2 escapePos = tmpVec2.set(entityPos).sub(targetPos).nor().scl(12f).add(entityPos);
       runTo(escapePos, 100, Engine.INVALID_ENTITY);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: If far, walk toward target
     float walkTowDistance = params[PARAM_WALK_TOW_DISTANCE];
     if (walkTowDistance > 0 && targetDistance > walkTowDistance
-        && MathUtils.randomBoolean(params[PARAM_APPROACH_CHANCE] / 100f)) {
+        && aiRandomBoolean(params[PARAM_APPROACH_CHANCE] / 100f)) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
       // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, CORRUPTARCHER_AI_PARAM_WALK_TOW_DISTANCE))
       walkTo(targetPos, 10, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
@@ -217,33 +217,33 @@ public class CorruptArcher extends AI {
       // D2MOD: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, CORRUPTARCHER_AI_PARAM_ALWAYS_RUN_DISTANCE))
       runTo(targetPos, 100, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: Check shoot chance
-    if (MathUtils.randomBoolean(params[PARAM_SHOOT_CHANCE] / 100f)) {
+    if (aiRandomBoolean(params[PARAM_SHOOT_CHANCE] / 100f)) {
       // D2MOD: Check skill usage
       if (monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()
-          && MathUtils.randomBoolean(params[PARAM_USE_SKILL_2_CHANCE] / 100f)) {
+          && aiRandomBoolean(params[PARAM_USE_SKILL_2_CHANCE] / 100f)) {
         stateMachine.changeState(State.CAST);
         castConfiguredSkill(1, targetId, targetPos);
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       }
 
       if (monster.monstats.Skill3 != null && !monster.monstats.Skill3.isEmpty()
-          && MathUtils.randomBoolean(params[PARAM_USE_SKILL_3_CHANCE] / 100f)) {
+          && aiRandomBoolean(params[PARAM_USE_SKILL_3_CHANCE] / 100f)) {
         stateMachine.changeState(State.CAST);
         castConfiguredSkill(2, targetId, targetPos);
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       }
 
       if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
         stateMachine.changeState(State.CAST);
         castConfiguredSkill(0, targetId, targetPos);
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       }
 
@@ -254,7 +254,7 @@ public class CorruptArcher extends AI {
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       playSound(monsound + "_attack_1");
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 

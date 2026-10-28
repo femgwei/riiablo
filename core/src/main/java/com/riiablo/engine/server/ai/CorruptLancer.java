@@ -7,7 +7,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -100,10 +100,10 @@ public class CorruptLancer extends AI {
     for (int skillIndex = 0; skillIndex < 3; skillIndex++) {
       int paramIndex = skillIndex + 5;
       if (params.length <= paramIndex
-          || !MathUtils.randomBoolean(params[paramIndex] / 100f)) continue;
+          || !aiRandomBoolean(params[paramIndex] / 100f)) continue;
       if (useMonsterSkill(skillIndex, targetId, targetPos)) {
         stateMachine.changeState(State.CAST);
-        time = MathUtils.random(1f, 2f);
+        time = aiRandom(1f, 2f);
         return true;
       }
     }
@@ -154,11 +154,11 @@ public class CorruptLancer extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             walkTo(dst, Engine.INVALID_ENTITY);
           }
           break;
@@ -177,13 +177,13 @@ public class CorruptLancer extends AI {
       runTo(targetPos, 100, targetId);
       ranToTarget = true;
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2f);
+      time = aiRandom(1f, 2f);
       return;
     }
 
     // D2MOD: If in combat
     if (bCombat) {
-      if (ranToTarget || (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f))) {
+      if (ranToTarget || (params.length > 1 && aiRandomBoolean(params[1] / 100f))) {
         ranToTarget = false;
         if (tryCombatSkill(targetId, targetPos)) return;
         stopMovement();
@@ -192,7 +192,7 @@ public class CorruptLancer extends AI {
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         playSound(monsound + "_attack_1");
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       } else {
         stateMachine.changeState(State.IDLE);
@@ -202,19 +202,19 @@ public class CorruptLancer extends AI {
     }
 
     // D2MOD: Not in combat, approach
-    if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-      if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+    if (params.length > 0 && aiRandomBoolean(params[0] / 100f)) {
+      if (params.length > 3 && aiRandomBoolean(params[3] / 100f)) {
         // D2MOD: AITACTICS_SetVelocity(pUnit, 13, 100, 0)
         // D2MOD: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, pAiTickParam->pMonstats2Txt->nMeleeRng)
         runTo(targetPos, 100, targetId);
         stateMachine.changeState(State.APPROACH);
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       } else {
         // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 3u)
         walkTo(targetPos, targetId);
         stateMachine.changeState(State.APPROACH);
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       }
     }

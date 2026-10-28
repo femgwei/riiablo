@@ -7,7 +7,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -153,11 +153,11 @@ public class ClawViper extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             pathfinder.findPath(entityId, dst);
           }
           break;
@@ -173,15 +173,15 @@ public class ClawViper extends AI {
 
     // D2MOD: If in combat
     if (bCombat) {
-      if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+      if (params.length > 2 && aiRandomBoolean(params[2] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
-        byte attackMode = params.length > 3 && MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+        byte attackMode = params.length > 3 && aiRandomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
         mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         playSound(monsound + "_attack_1");
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       } else {
         stateMachine.changeState(State.IDLE);
@@ -193,7 +193,7 @@ public class ClawViper extends AI {
     // D2MOD: Check if should use charge skill
     float chargeDistance = params.length > 1 ? params[1] : 10f;
     if (targetDistance < chargeDistance && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()
-        && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+        && params.length > 0 && aiRandomBoolean(params[0] / 100f)) {
       // D2MOD: Use charge skill (nSkill[0])
       lookAt(targetId);
       if (!useMonsterSkill(0, targetId, targetPos, Engine.Monster.MODE_S1)) {
@@ -209,15 +209,15 @@ public class ClawViper extends AI {
       }
       
       aiParam0 = 1;
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: Random walk or idle
-    if (MathUtils.randomBoolean(0.5f)) {
+    if (aiRandomBoolean(0.5f)) {
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     } else {
       stateMachine.changeState(State.IDLE);
