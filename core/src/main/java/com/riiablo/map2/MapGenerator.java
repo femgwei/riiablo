@@ -17,6 +17,11 @@ public class MapGenerator {
   public TileGenerator tileGenerator = new TileGenerator();
   final Random random = new Random();
 
+  public MapGenerator() {
+    random.seed(Seed.fixed());
+    tileGenerator.seed(Seed.fixed());
+  }
+
   public Map generate(DS1 ds1) {
     Map map = new Map();
     ZoneGraph zones = map.zones;
@@ -36,6 +41,7 @@ public class MapGenerator {
 
   public void generate(Seed seed, int diff) {
     random.seed(seed);
+    tileGenerator.seed(seed);
   }
 
   void copyPrefab(Chunk chunk, DS1 ds1) {

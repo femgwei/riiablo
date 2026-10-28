@@ -6,12 +6,15 @@ import com.badlogic.gdx.utils.ObjectSet;
 
 import com.riiablo.map2.DT1.Tile;
 import com.riiablo.map2.random.Random;
+import com.riiablo.map2.random.Seed;
 
 public class TileGenerator {
   final ObjectSet<DT1> dt1s = new ObjectSet<>();
   final IntMap<Entry> entries = new IntMap<>();
 
   final Random random = new Random();
+
+  public void seed(Seed seed) { random.seed(seed); }
 
   public void add(DT1 dt1) {
     dt1s.add(dt1);

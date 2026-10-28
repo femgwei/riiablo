@@ -4467,6 +4467,11 @@ git diff --check
 - 陷阱怪物数量分支移除 `RandomXS128` 直连，改用 `native-trap-monster-count` 命名兼容流并保留原有 1～2 数量范围。
 - 陷阱类型映射、种子组合和生成规则未改变；继续审计 map2 旧随机与 D2GS MPQ 兼容分支。
 
+### 批次 A 继续：map2 生成器默认种子与 Tile RNG 宿主化（2026-10-29）
+
+- `MapGenerator`/`TileGenerator` 不再以未初始化的 `new Random()` 作为隐式状态；默认构造使用稳定兼容种子，显式 `generate(seed, diff)` 同时绑定地图与 tile 选择流。
+- 保留 tile 稀有度选择和地图生成顺序；`Seed.random()` 仍作为显式随机种子工厂，不混入生成器隐式状态。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）
