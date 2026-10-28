@@ -202,6 +202,14 @@ class SimulationReplayLogTest {
   }
 
   @Test
+  void replayRunnerRejectsMissingCheckpointCapture() {
+    SimulationReplayLog log = SimulationReplayLog.builder(1)
+        .checkpoint(SimulationCheckpoint.of(1, "world", null, null)).build();
+    assertThrows(IllegalStateException.class, () -> SimulationReplayRunner.play(log,
+        new SimulationTickCoordinator(), ignored -> {}, tick -> {}, event -> {}, tick -> null));
+  }
+
+  @Test
   void replayRunnerContinuesAfterAResumeTickAndReportsMismatch() {
     SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
         "ui", "delta", 2).tick(2).build(2);

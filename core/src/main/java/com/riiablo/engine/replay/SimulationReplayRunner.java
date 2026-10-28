@@ -88,17 +88,25 @@ public final class SimulationReplayRunner {
     int verified = 0;
     for (SimulationCheckpoint checkpoint : log.checkpoints()) {
       if (checkpoint.tick() != startTick) continue;
-      mismatches.addAll(checkpoint.diff(checkpoints.capture(startTick)));
+      mismatches.addAll(checkpoint.diff(captureRequired(checkpoints, startTick)));
       verified++;
     }
     for (long tick = startTick + 1L; tick <= endTick; tick++) {
       coordinator.advance(commandHandler, simulation, eventHandler);
       SimulationCheckpoint expected = log.checkpointAt(tick);
       if (expected == null) continue;
-      mismatches.addAll(expected.diff(checkpoints.capture(tick)));
+      mismatches.addAll(expected.diff(captureRequired(checkpoints, tick)));
       verified++;
     }
     return new Result(startTick, endTick, submitted, verified, mismatches);
+  }
+
+  private static SimulationCheckpoint captureRequired(CheckpointSource source, long tick) {
+    SimulationCheckpoint actual = source.capture(tick);
+    if (actual == null) {
+      throw new IllegalStateException("checkpoint source returned null at tick " + tick);
+    }
+    return actual;
   }
 
   private static void validateReplayIdentity(SimulationReplayLog.Command command) {
