@@ -172,6 +172,8 @@ public final class ClientGameplayContext implements ClientPresentationServices, 
   public String languageCode() { return languageCode; }
   public MPQFileHandleResolver mpqs() { return mpqs; }
   public Palettes palettes() { return palettes; }
+  public com.riiablo.COFs cofs() { return Riiablo.cofs; }
+  public com.riiablo.GdxCvarManager cvars() { return Riiablo.cvars; }
 
   /** Delivers an accepted server act transition to the owning screen. */
   public boolean transitionAct(int act) {

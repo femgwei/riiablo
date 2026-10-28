@@ -768,7 +768,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     // 同一角色每次进入游戏地图相同；不同角色/新游戏地图不同
     int mapSeed = resolveMapSeed(charData);
     config = new EngineConfig(mapSeed, charData.diff);
-    map = new Map(config.seed(), config.diff(), com.riiablo.map.MapResources.fromGlobals());
+    map = new Map(config.seed(), config.diff(), com.riiablo.map.MapResources.fromContext(clientGameplayContext));
     mapManager = new MapManager();
     partyManager = new com.riiablo.engine.server.party.PartyManager();
     renderer = new RenderSystem(Riiablo.batch, map);
