@@ -70,8 +70,8 @@ public final class SimulationReplayRunner {
     long endTick = startTick;
     int submitted = 0;
     for (SimulationReplayLog.Command command : log.commands()) {
-      if (command.tick <= startTick) continue;
       validateReplayIdentity(command);
+      if (command.tick <= startTick) continue;
       SimulationCommandEnvelope.Builder builder = command.toBuilder();
       if (coordinator.commands().submit(builder) == null) {
         throw new IllegalArgumentException("replay command rejected at tick " + command.tick

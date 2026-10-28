@@ -188,6 +188,20 @@ class SimulationReplayLogTest {
   }
 
   @Test
+  void replayRunnerValidatesCommandsAlreadyCoveredByResumeCheckpoint() {
+    SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
+        "net", "cast", "skill=36").tick(1).actor(7)
+        .authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT).build(1);
+    SimulationReplayLog log = SimulationReplayLog.builder(1)
+        .command(command, "skill=36")
+        .checkpoint(SimulationCheckpoint.of(2, "world", null, null)).build();
+    SimulationTickCoordinator coordinator = new SimulationTickCoordinator();
+    coordinator.restore(2);
+    assertThrows(IllegalArgumentException.class, () -> SimulationReplayRunner.play(log,
+        coordinator, ignored -> {}, tick -> {}, event -> {}, tick -> null));
+  }
+
+  @Test
   void replayRunnerContinuesAfterAResumeTickAndReportsMismatch() {
     SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
         "ui", "delta", 2).tick(2).build(2);
