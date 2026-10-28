@@ -243,7 +243,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     try (CaseLog capture = new CaseLog(config.output.resolve(result.log), result);
          ArenaScope scope = new ArenaScope()) {
       Riiablo.gameSeed = config.seed;
-      MathUtils.random.setSeed(config.seed);
+      seedArenaCompatibilityRandom(config.seed);
       scope.map = map = new Map(config.seed, config.difficulty);
       Map.Zone zone = map.createSyntheticArena(result.arenaLevel, 4, 4);
       ServerEntityFactory factory = new ServerEntityFactory();
@@ -585,6 +585,11 @@ public final class MonsterAiArena extends ApplicationAdapter {
         }
       }
     }
+  }
+
+  /** Explicit compatibility boundary for the native arena seed sequence. */
+  private static void seedArenaCompatibilityRandom(long seed) {
+    MathUtils.random.setSeed(seed);
   }
 
   static String classify(Result result) {
