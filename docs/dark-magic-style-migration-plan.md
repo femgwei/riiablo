@@ -4447,6 +4447,11 @@ git diff --check
 - AI 目录中原有 `MathUtils.random` 权威行为入口已全部迁移；保留既有状态机、技能触发和范围语义。
 - 本批仍不宣称 M4/M7-A/M8 完成，后续转入 AI checkpoint/跨实体 RNG 审计及非权威表现层随机。
 
+### 批次 A 继续：ServerSkillSystem 兼容伤害随机入口（2026-10-29）
+
+- `ServerSkillSystem` 的旧静态伤害范围入口改用稳定的 `server-skill-damage` 命名兼容流，不再访问 libGDX 全局 RNG。
+- 保留原有 exclusive 上界和边界保护；单位级生产路径继续使用已有 `NativeRng` 状态。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）

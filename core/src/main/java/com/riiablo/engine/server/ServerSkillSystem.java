@@ -2602,7 +2602,8 @@ public class ServerSkillSystem extends PassiveSystem {
     int max = Math.max(min, maximum);
     long span = (long) max - min;
     if (span <= 1) return min;
-    int offset = MathUtils.random((int) Math.min(Integer.MAX_VALUE, span - 1));
+    NativeRng rng = NamedRngStreams.open(0, "server-skill-damage", ((long) min << 32) ^ max);
+    int offset = rng.nextInt((int) Math.min(Integer.MAX_VALUE, span - 1));
     return (int) Math.min(Integer.MAX_VALUE, (long) min + offset);
   }
 
