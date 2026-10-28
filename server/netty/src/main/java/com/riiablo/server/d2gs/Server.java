@@ -55,6 +55,8 @@ import com.riiablo.util.DebugUtils;
 
 public class Server implements PacketProcessor {
   private static final String TAG = "D2GS";
+  /** Maximum size of one size-prefixed D2GS frame accepted at the TCP ingress. */
+  static final int MAX_FRAME_LENGTH = 1 << 20;
 
   private static final boolean DEBUG = true;
   private static final boolean DEBUG_RECEIVED_CACHE = DEBUG && !true;
@@ -184,10 +186,13 @@ public class Server implements PacketProcessor {
   }
 
   public void dispose() {
+    if (bootstrap == null && bossGroup == null && workerGroup == null) return;
     try {
       Gdx.app.debug(TAG, "shutting down channel...");
-      future.channel().close();
-      future.channel().closeFuture().syncUninterruptibly();
+      if (future != null) {
+        future.channel().close();
+        future.channel().closeFuture().syncUninterruptibly();
+      }
     } catch (Throwable t) {
       Gdx.app.error(TAG, t.getMessage(), t);
     }
@@ -534,6 +539,10 @@ public class Server implements PacketProcessor {
       if (in.readableBytes() < 4) return;
       in.markReaderIndex();
       final int length = in.readIntLE();
+      if (length < 0 || length > MAX_FRAME_LENGTH) {
+        ctx.close();
+        return;
+      }
       if (in.readableBytes() < length) {
         in.resetReaderIndex();
         return;
