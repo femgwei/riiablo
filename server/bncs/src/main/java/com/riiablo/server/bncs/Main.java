@@ -1,7 +1,5 @@
 package com.riiablo.server.bncs;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
@@ -196,7 +194,7 @@ public class Main extends ApplicationAdapter {
   }
 
   static String generateClientName() {
-    return String.format("Client-%08X", ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE));
+    return String.format("Client-%08X", (int) ((System.nanoTime() & 0x7FFFFFFEL) + 1));
   }
 
   private class Client extends Thread {
@@ -257,3 +255,4 @@ public class Main extends ApplicationAdapter {
     }
   }
 }
+
