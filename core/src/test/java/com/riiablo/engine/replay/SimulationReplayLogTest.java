@@ -233,6 +233,16 @@ class SimulationReplayLogTest {
     assertThrows(IllegalArgumentException.class, () -> SimulationReplayLog.fromBytes(count));
   }
 
+  @Test
+  void binaryDecoderRejectsTrailingDataAfterReplay() {
+    SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
+        "ui", "delta", 1).tick(1).build(1);
+    byte[] encoded = SimulationReplayLog.builder(1).command(command, "1").build().toBytes();
+    byte[] trailing = Arrays.copyOf(encoded, encoded.length + 1);
+    trailing[trailing.length - 1] = 0x5A;
+    assertThrows(IllegalArgumentException.class, () -> SimulationReplayLog.fromBytes(trailing));
+  }
+
   private static byte[] originalHeader(int version, int commandCount) {
     java.nio.ByteBuffer bytes = java.nio.ByteBuffer.allocate(16);
     bytes.putInt(0x52504C59).putInt(version).putInt(1).putInt(commandCount);

@@ -244,7 +244,9 @@ public final class SimulationReplayLog {
     }
     int checkpointCount = readCount(in, "checkpoints");
     for (int i = 0; i < checkpointCount; i++) builder.checkpoint(readCheckpoint(in));
-    return builder.build();
+    SimulationReplayLog result = builder.build();
+    if (in.read() != -1) throw new IOException("trailing replay data");
+    return result;
   }
 
   private static void writeCheckpoint(DataOutputStream out, SimulationCheckpoint checkpoint)
