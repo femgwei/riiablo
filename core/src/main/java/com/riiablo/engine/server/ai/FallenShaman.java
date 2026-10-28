@@ -6,7 +6,7 @@ import com.artemis.EntitySubscription;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -270,7 +270,7 @@ public class FallenShaman extends AI {
     // names seq_shamanresurrect there; every native MonSeq frame is A2. Until
     // MonSeq.txt has a generic runtime stepper, this is its exact backing COF.
     if (useMonsterSkill(1, targetId, targetPos, SHAMAN_SEQUENCE_MODE)) {
-      time = MathUtils.random(1f, 2f);
+      time = aiRandom(1f, 2f);
       return true;
     }
 
@@ -292,7 +292,7 @@ public class FallenShaman extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     tmpVec2.set(entityPos).sub(targetPos);
     if (tmpVec2.isZero(0.0001f)) tmpVec2.set(1f, 0f);
-    tmpVec2.setLength(3f).rotate90(MathUtils.randomBoolean() ? 1 : -1).add(targetPos);
+    tmpVec2.setLength(3f).rotate90(aiRandomBoolean() ? 1 : -1).add(targetPos);
     walkTo(tmpVec2, Engine.INVALID_ENTITY);
     stateMachine.changeState(State.APPROACH);
     time = 10f * com.riiablo.codec.Animation.FRAME_DURATION;
@@ -327,11 +327,11 @@ public class FallenShaman extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             pathfinder.findPath(entityId, dst);
           }
           break;
@@ -347,14 +347,14 @@ public class FallenShaman extends AI {
 
     // Native checks melee first, but a failed melee roll continues into
     // resurrection and shooting instead of forcing an idle action.
-    if (bCombat && MathUtils.randomBoolean(params[PARAM_MELEE_AND_CIRCLE_CHANCE] / 100f)) {
+    if (bCombat && aiRandomBoolean(params[PARAM_MELEE_AND_CIRCLE_CHANCE] / 100f)) {
       stopMovement();
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       playSound(monsound + "_attack_1");
-      time = MathUtils.random(1f, 2f);
+      time = aiRandom(1f, 2f);
       return;
     }
 
@@ -365,7 +365,7 @@ public class FallenShaman extends AI {
     int resurrectSkill = (monster.monstats.Skill1 == null
         || monster.monstats.Skill1.isEmpty()) ? -1 : 0;
     boolean resurrectionRoll = corpseId != Engine.INVALID_ENTITY
-        && MathUtils.randomBoolean(params[PARAM_RESURRECT_AND_COMMAND_CHANCE] / 100f);
+        && aiRandomBoolean(params[PARAM_RESURRECT_AND_COMMAND_CHANCE] / 100f);
     if (corpseId != Engine.INVALID_ENTITY && resurrectSkill < 0) {
       log.warn("[MONSTER_RAISE] phase=skill_missing source={} target={} monster={} "
               + "skills=[{}, {}, {}, {}, {}, {}, {}, {}]",
@@ -382,7 +382,7 @@ public class FallenShaman extends AI {
       if (useMonsterSkill(
           resurrectSkill, corpseId, mPosition.get(corpseId).position, SHAMAN_SEQUENCE_MODE)) {
         stateMachine.changeState(State.CAST);
-        time = MathUtils.random(1f, 2f);
+        time = aiRandom(1f, 2f);
         // Restoration is deliberately deferred to Actioneer.srvdofunc=97 on
         // the animation keyframe, exactly as D2MOO's sequence skill does.
         log.info("[MONSTER_RAISE] phase=cast source={} target={} monster={} distance={} skill={} mode={} deferred=keyframe",
@@ -397,12 +397,12 @@ public class FallenShaman extends AI {
     }
 
     if (withinShootDistance(targetDistance[0], params[PARAM_SHOOT_DISTANCE])
-        && MathUtils.randomBoolean(params[PARAM_SHOOT_CHANCE] / 100f)
+        && aiRandomBoolean(params[PARAM_SHOOT_CHANCE] / 100f)
         && castFireball(targetId, targetPos)) {
       return;
     }
 
-    if (MathUtils.randomBoolean(params[PARAM_MELEE_AND_CIRCLE_CHANCE] / 100f)) {
+    if (aiRandomBoolean(params[PARAM_MELEE_AND_CIRCLE_CHANCE] / 100f)) {
       circleTarget(targetId);
       return;
     }

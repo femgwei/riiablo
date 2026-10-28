@@ -4441,6 +4441,12 @@ git diff --check
 - 保留原有状态机顺序、技能触发和范围语义；未改变暗黑规则参数。
 - 本批仍不宣称 M4/M7-A/M8 完成。
 
+### 批次 A 继续：剩余八类 AI 随机入口集中收口（2026-10-29）
+
+- `Baboon`、`FallenShaman`、`FetishShaman`、`MaggotLarva`、`PantherWoman`、`PinHead`、`SandMaggot`、`SandRaider` 的行动延迟、移动抖动、攻击选择及概率判定统一使用单位级 RNG。
+- AI 目录中原有 `MathUtils.random` 权威行为入口已全部迁移；保留既有状态机、技能触发和范围语义。
+- 本批仍不宣称 M4/M7-A/M8 完成，后续转入 AI checkpoint/跨实体 RNG 审计及非权威表现层随机。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）

@@ -3,7 +3,7 @@ package com.riiablo.engine.server.ai;
 import com.artemis.ComponentMapper;
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -133,7 +133,7 @@ public class SandMaggot extends AI {
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       playSound(monsound + "_attack_1");
-      time = MathUtils.random(1f, 2f);
+      time = aiRandom(1f, 2f);
       return;
     }
 
@@ -207,11 +207,11 @@ public class SandMaggot extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             pathfinder.findPath(entityId, dst);
           }
           break;
@@ -228,7 +228,7 @@ public class SandMaggot extends AI {
 
     // D2MOD: If hurt (< 25%) and close (< 7), try to burrow
     if (lifePercent < 25 && targetDistance < 7 && monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()
-        && MathUtils.randomBoolean(0.2f)) {
+        && aiRandomBoolean(0.2f)) {
       // D2MOD: Use burrow skill (nSkill[1]).
       if (useMonsterSkill(1, targetId, targetPos, Engine.Monster.MODE_S1)) {
         stateMachine.changeState(State.BURROW);
@@ -241,41 +241,41 @@ public class SandMaggot extends AI {
     }
 
     // D2MOD: If in combat, melee attack
-    if (bCombat && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+    if (bCombat && params.length > 3 && aiRandomBoolean(params[3] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       playSound(monsound + "_attack_1");
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: If close (< 15), spit attack
-    if (targetDistance < 15 && params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
+    if (targetDistance < 15 && params.length > 1 && aiRandomBoolean(params[1] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       playSound(monsound + "_attack_1");
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: 20% chance to circle
-    if (MathUtils.randomBoolean(0.2f)) {
+    if (aiRandomBoolean(0.2f)) {
       // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 6u, 0)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: Check if should lay egg
     int maxEggs = params.length > 2 ? params[2] : 3;
-    if (aiParam2 >= maxEggs || (params.length > 0 && !MathUtils.randomBoolean(params[0] / 100f))) {
+    if (aiParam2 >= maxEggs || (params.length > 0 && !aiRandomBoolean(params[0] / 100f))) {
       // Can't lay more eggs or no lay chance
       stateMachine.changeState(State.IDLE);
       time = 12f * com.riiablo.codec.Animation.FRAME_DURATION;
@@ -300,7 +300,7 @@ public class SandMaggot extends AI {
     pathfinder.findPath(entityId, targetPos, false, targetId);
     aiParam0 = 2;
     stateMachine.changeState(State.APPROACH);
-    time = MathUtils.random(1f, 2);
+    time = aiRandom(1f, 2);
   }
 
   @Override

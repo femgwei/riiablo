@@ -7,7 +7,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -140,11 +140,11 @@ public class PinHead extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             pathfinder.findPath(entityId, dst);
           }
           break;
@@ -160,12 +160,12 @@ public class PinHead extends AI {
 
     // D2MOD: If in combat
     if (bCombat) {
-      if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+      if (params.length > 0 && aiRandomBoolean(params[0] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         boolean smite = params.length > PARAM_SMITE_CHANCE
-            && MathUtils.randomBoolean(params[PARAM_SMITE_CHANCE] / 100f)
+            && aiRandomBoolean(params[PARAM_SMITE_CHANCE] / 100f)
             && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty();
         if (smite && useMonsterSkill(0, targetId, targetPos, Engine.Monster.MODE_A2)) {
           log.info("[MONSTER_SMITE] phase=cast source={} target={} monster={} skill={}",
@@ -175,7 +175,7 @@ public class PinHead extends AI {
           mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
           playSound(monsound + "_attack_1");
         }
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       } else {
         stateMachine.changeState(State.IDLE);
@@ -185,11 +185,11 @@ public class PinHead extends AI {
     }
 
     // D2MOD: Not in combat
-    if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+    if (params.length > 2 && aiRandomBoolean(params[2] / 100f)) {
       // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 

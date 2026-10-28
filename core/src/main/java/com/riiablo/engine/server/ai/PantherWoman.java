@@ -7,7 +7,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -174,11 +174,11 @@ public class PantherWoman extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             walkTo(dst, Engine.INVALID_ENTITY);
           }
           break;
@@ -194,14 +194,14 @@ public class PantherWoman extends AI {
 
     // D2MOD: If in combat
     if (bCombat) {
-      if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
+      if (params.length > 1 && aiRandomBoolean(params[1] / 100f)) {
         stopMovement();
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         playSound(monsound + "_attack_1");
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       } else {
         stateMachine.changeState(State.IDLE);
@@ -211,12 +211,12 @@ public class PantherWoman extends AI {
     }
 
     // D2MOD: Not in combat
-    if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+    if (params.length > 0 && aiRandomBoolean(params[0] / 100f)) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 75, 0)
       // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
       walkTo(targetPos, 75, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
@@ -232,13 +232,13 @@ public class PantherWoman extends AI {
         // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, arg.pTarget, 7)
         walkTo(packPos, 75, packMemberId);
         stateMachine.changeState(State.GROUP);
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       }
     }
 
     // D2MOD: Random idle or circle
-    if (MathUtils.randomBoolean(0.75f)) {
+    if (aiRandomBoolean(0.75f)) {
       stateMachine.changeState(State.IDLE);
       time = params.length > 3 ? params[3] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
@@ -246,7 +246,7 @@ public class PantherWoman extends AI {
       // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
       walkTo(targetPos, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
   }

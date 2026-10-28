@@ -7,7 +7,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -197,7 +197,7 @@ public class FetishShaman extends AI {
     int deadAllyId = findNearbyDeadAlly(raiseSearchRange);
     if (deadAllyId != Engine.INVALID_ENTITY && monster.monstats.Skill3 != null
         && !monster.monstats.Skill3.isEmpty() && params.length > 0
-        && MathUtils.randomBoolean(params[0] / 100f)) {
+        && aiRandomBoolean(params[0] / 100f)) {
       Vector2 deadPos = mPosition.get(deadAllyId).position;
       float deadDistance = entityPos.dst(deadPos);
       float healRange = params.length > 2 ? params[2] : 5f;
@@ -205,7 +205,7 @@ public class FetishShaman extends AI {
         lookAt(deadAllyId);
         stateMachine.changeState(State.HEAL);
         if (useMonsterSkill(2, deadAllyId, deadPos)) {
-          time = MathUtils.random(1f, 2f);
+          time = aiRandom(1f, 2f);
           log.info("[MONSTER_RAISE] phase=cast source={} target={} monster={} skill={}",
               entityId, deadAllyId, monster.monstats.Id, monster.monstats.Skill3);
           return;
@@ -214,7 +214,7 @@ public class FetishShaman extends AI {
       } else {
         pathfinder.findPath(entityId, deadPos, false, deadAllyId);
         stateMachine.changeState(State.APPROACH);
-        time = MathUtils.random(1f, 2f);
+        time = aiRandom(1f, 2f);
         return;
       }
     }
@@ -245,14 +245,14 @@ public class FetishShaman extends AI {
       lookAt(targetId);
       stateMachine.changeState(State.CAST);
       if (useMonsterSkill(0, targetId, targetPos)) {
-        time = MathUtils.random(1f, 2f);
+        time = aiRandom(1f, 2f);
         return;
       }
       stateMachine.changeState(State.IDLE);
     }
 
     // D2MOD: Circle or idle
-    if (params.length > 3 && !MathUtils.randomBoolean(params[3] / 100f)) {
+    if (params.length > 3 && !aiRandomBoolean(params[3] / 100f)) {
       stateMachine.changeState(State.IDLE);
       time = 10f * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
@@ -262,7 +262,7 @@ public class FetishShaman extends AI {
         Vector2 targetPos = mPosition.get(targetId).position;
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       }
     }
