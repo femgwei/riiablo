@@ -319,8 +319,14 @@ public class MercenaryManager {
   }
   private long now() { return rosterRng == null ? System.currentTimeMillis() : runtimeMillis; }
   private double random() {
-    if (rosterRng != null && rosterRng.drawCount() == Long.MAX_VALUE) throw new IllegalStateException("hireling RNG exhausted");
-    return rosterRng == null ? Math.random() : rosterRng.nextInt() / 2147483648.0;
+    // Standalone/offline fixtures historically did not install checkpoint runtime.
+    // Keep that construction path usable, but give it a stable compatibility
+    // stream instead of falling back to process-global Math.random().
+    if (rosterRng == null) {
+      rosterRng = com.riiablo.engine.server.NamedRngStreams.open(0, "hireling-roster", 0);
+    }
+    if (rosterRng.drawCount() == Long.MAX_VALUE) throw new IllegalStateException("hireling RNG exhausted");
+    return rosterRng.nextInt() / 2147483648.0;
   }
   public MercenaryCallback checkpointCallback() { return callback; }
   public java.util.Map<Integer, ActiveMercenary> checkpointActiveMercenaries() {

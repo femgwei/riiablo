@@ -4372,3 +4372,19 @@ git diff --check
 ```
 
 结果：core 编译、Act1/DT1s 回归和 389 条 RNG ownership 漂移检查通过；批次 A 继续处理 Act1 DS1/路径辅助和剩余兼容入口。
+
+### 批次 A 继续：MercenaryManager 名册 RNG 兼容入口收口（2026-10-28）
+
+- 雇佣兵名册刷新不再调用进程级 `Math.random`；未启用 checkpoint runtime 的离线/旧工具路径改用稳定的 `hireling-roster` 兼容命名流，生产路径继续使用游戏 seed 注入的同一命名流。
+- 保留既有名册候选、等级、姓名和刷新语义；checkpoint 前仍要求 RNG 已实际建立，避免把未初始化管理器误当成可恢复状态。
+- 本批只收口随机 ownership，不宣称 M4/M7-A/M8 已完成；AI、地图、掉落主流程和其余兼容入口仍在后续批次处理。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:test --tests com.riiablo.engine.server.pet.MercenaryManagerTest --tests com.riiablo.engine.server.pet.MercenaryManagerCheckpointTest --tests com.riiablo.engine.server.quest.NativeHirelingOfferIntegrationTest --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :core:compileJava :server:d2gs:compileJava --no-daemon --max-workers=1 --console=plain
+git diff --check
+```
+
+结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
