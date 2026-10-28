@@ -1,7 +1,7 @@
 package com.riiablo.presentation;
 
 
-import com.badlogic.gdx.math.MathUtils;
+
 
 import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
@@ -36,7 +36,7 @@ public class BlockSoundEmitter extends PassiveSystem {
       return;
     }
     if (clientContext.audio() == null) return;
-    int variant = MathUtils.random(1, 3);
+    int variant = PresentationRandom.range(1, 3);
     // Mode changes are replicated for every visible unit.  Route the one-shot
     // through the shared spatial gate so a distant monster/player block is not
     // audible as a global sound; the local player's own block remains full
@@ -48,5 +48,3 @@ public class BlockSoundEmitter extends PassiveSystem {
     if (instance != null) instance.setVolume(gain);
   }
 }
-
-

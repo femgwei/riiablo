@@ -4452,6 +4452,11 @@ git diff --check
 - `ServerSkillSystem` 的旧静态伤害范围入口改用稳定的 `server-skill-damage` 命名兼容流，不再访问 libGDX 全局 RNG。
 - 保留原有 exclusive 上界和边界保护；单位级生产路径继续使用已有 `NativeRng` 状态。
 
+### 批次 C 继续：表现层音效与投射物随机解耦（2026-10-29）
+
+- `MonsterSoundEmitter`、`BlockSoundEmitter`、`SkillCastHandler` 的音效变体、延迟和投射物视觉散布改用 `presentation-cosmetic` 兼容流。
+- 这些随机仅影响客户端表现，不进入战斗结果、存档或 checkpoint；服务器权威 RNG 未受改变。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）

@@ -121,7 +121,7 @@ public class MonsterSoundEmitter extends IteratingSystem {
     int offset = Math.max(0, bank.FsOff) % frameCount;
     if (!crossed(state.previousFrame, frame, offset, frameCount, interval)) return;
     int probability = bank.FsPrb <= 0 ? 100 : Math.min(100, bank.FsPrb);
-    if (com.badlogic.gdx.math.MathUtils.random(99) >= probability) return;
+    if (PresentationRandom.range(0, 99) >= probability) return;
     play(entityId, bank.Footstep);
     if (hasSound(bank.FootstepLayer)) play(entityId, bank.FootstepLayer);
   }
@@ -162,7 +162,7 @@ public class MonsterSoundEmitter extends IteratingSystem {
     float delay = neutralDelay(bank);
     // A small deterministic phase spread prevents a full pack from vocalizing
     // on the same tick while keeping tests and replays reproducible.
-    return delay * (0.5f + com.badlogic.gdx.math.MathUtils.random(0.5f));
+    return delay * (0.5f + PresentationRandom.range(0f, 0.5f));
   }
 
   private static boolean hasSound(String sound) {
@@ -184,5 +184,3 @@ public class MonsterSoundEmitter extends IteratingSystem {
     private boolean tauntPlayed;
   }
 }
-
-

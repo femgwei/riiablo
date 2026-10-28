@@ -1,5 +1,6 @@
 package com.riiablo.presentation;
 
+import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.engine.client.ClientNetworkReceiver;
 
 import com.artemis.ComponentMapper;
@@ -7,7 +8,7 @@ import com.artemis.annotations.Wire;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ObjectMap;
 
@@ -697,7 +698,7 @@ public class SkillCastHandler extends PassiveSystem {
     int numArrows = skill.Param != null && skill.Param.length > 0 ? skill.Param[0] : 5;
 
     for (int i = 0; i < numArrows; i++) {
-      Vector2 missileAngle = new Vector2(baseAngle).rotateRad(MathUtils.random(-0.1f, 0.1f));
+      Vector2 missileAngle = new Vector2(baseAngle).rotateRad(PresentationRandom.range(-0.1f, 0.1f));
       factory.createMissile(missile, missileAngle, position);
     }
   }
@@ -712,7 +713,7 @@ public class SkillCastHandler extends PassiveSystem {
     float spreadAngle = MathUtils.PI / 3;
 
     for (int i = 0; i < numBolts; i++) {
-      float randomOffset = MathUtils.random(-spreadAngle / 2, spreadAngle / 2);
+      float randomOffset = PresentationRandom.range(-spreadAngle / 2, spreadAngle / 2);
       Vector2 missileAngle = new Vector2(baseAngle).rotateRad(randomOffset);
       factory.createMissile(missile, missileAngle, position);
     }
@@ -932,4 +933,3 @@ public class SkillCastHandler extends PassiveSystem {
     return value != null && !value.isEmpty();
   }
 }
-
