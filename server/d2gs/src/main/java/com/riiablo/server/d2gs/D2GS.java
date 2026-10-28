@@ -3338,6 +3338,15 @@ public class D2GS extends ApplicationAdapter {
     seedHeadlessImpaleResourceRoll();
   }
 
+  /** Explicit compatibility boundary for fixtures that mirror native MPQ timing. */
+  private static void seedHeadlessCompatibilityRandom(long seed) {
+    com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+  }
+
+  private static int rollHeadlessCompatibilityPercent() {
+    return com.badlogic.gdx.math.MathUtils.random(99);
+  }
+
   private static void seedHeadlessImpaleResourceRoll() {
     com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(
         com.riiablo.engine.server.skill.SkillId.IMPALE);
@@ -3345,19 +3354,19 @@ public class D2GS extends ApplicationAdapter {
     int chance = Math.max(0, Math.min(100,
         com.riiablo.engine.server.skill.SkillFormula.evaluate(skill.calc2, skill, 20)));
     for (long seed = 1L; seed < 1_000_000L; seed++) {
-      com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+      seedHeadlessCompatibilityRandom(seed);
       boolean passes = true;
       // The animation/keyframe path can consume a few unrelated native RNG
       // values before Calc2.  Pick a short passing streak so the fallback is
       // deterministic without changing production combat code.
       for (int i = 0; i < 8; i++) {
-        if (com.badlogic.gdx.math.MathUtils.random(99) >= chance) {
+        if (rollHeadlessCompatibilityPercent() >= chance) {
           passes = false;
           break;
         }
       }
       if (passes) {
-        com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+        seedHeadlessCompatibilityRandom(seed);
         return;
       }
     }
@@ -3372,16 +3381,16 @@ public class D2GS extends ApplicationAdapter {
   static void headlessSeedAmazonBowHitRolls() {
     final int passingRolls = 64;
     for (long seed = 1L; seed < 1_000_000L; seed++) {
-      com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+      seedHeadlessCompatibilityRandom(seed);
       boolean passes = true;
       for (int i = 0; i < passingRolls; i++) {
-        if (com.badlogic.gdx.math.MathUtils.random(99) >= 95) {
+        if (rollHeadlessCompatibilityPercent() >= 95) {
           passes = false;
           break;
         }
       }
       if (passes) {
-        com.badlogic.gdx.math.MathUtils.random.setSeed(seed);
+        seedHeadlessCompatibilityRandom(seed);
         return;
       }
     }
