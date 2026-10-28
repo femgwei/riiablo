@@ -174,6 +174,7 @@ public final class ClientGameplayContext implements ClientPresentationServices, 
   public Palettes palettes() { return palettes; }
   public com.riiablo.COFs cofs() { return Riiablo.cofs; }
   public com.riiablo.GdxCvarManager cvars() { return Riiablo.cvars; }
+  public com.riiablo.Colormaps colormaps() { return Riiablo.colormaps; }
 
   /** Delivers an accepted server act transition to the owning screen. */
   public boolean transitionAct(int act) {

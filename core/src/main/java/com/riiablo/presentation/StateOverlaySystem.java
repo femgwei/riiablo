@@ -6,7 +6,6 @@ import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.IntSet;
-import com.riiablo.Riiablo;
 import com.riiablo.codec.COF;
 import com.riiablo.codec.Index;
 import com.riiablo.codec.Animation;
@@ -145,8 +144,8 @@ public class StateOverlaySystem extends IteratingSystem {
   /** Applies the native PL2 hue row directly to loaded animation layers. */
   private void applyAnimationTransform(int entityId, int colorShift) {
     if (mAnimationWrapper == null || !mAnimationWrapper.has(entityId)
-        || Riiablo.colormaps == null) return;
-    Index transform = Riiablo.colormaps.getStateTransform(colorShift);
+        || clientContext.colormaps() == null) return;
+    Index transform = clientContext.colormaps().getStateTransform(colorShift);
     if (transform == null) return;
     Animation animation = mAnimationWrapper.get(entityId).animation;
     COF cof = animation.getCOF();

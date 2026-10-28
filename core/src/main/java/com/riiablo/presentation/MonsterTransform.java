@@ -1,6 +1,5 @@
 package com.riiablo.presentation;
 
-import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.Index;
 import com.riiablo.engine.server.component.CofTransforms;
@@ -11,7 +10,11 @@ public final class MonsterTransform {
   private MonsterTransform() {}
 
   public static void apply(Animation.Layer layer, Monster monster, byte packedTransform) {
-    if (layer == null || Riiablo.colormaps == null) return;
+    apply(layer, monster, packedTransform, com.riiablo.Riiablo.colormaps);
+  }
+
+  public static void apply(Animation.Layer layer, Monster monster, byte packedTransform, com.riiablo.Colormaps colormaps) {
+    if (layer == null || colormaps == null) return;
 
     int packed = packedTransform & 0xFF;
     byte monsterPaletteRow = monster != null && monster.monstats != null
@@ -20,7 +23,7 @@ public final class MonsterTransform {
     if (monsterPaletteRow != CofTransforms.TRANSFORM_NULL
         && packed == (monsterPaletteRow & 0xFF)
         && (packed >>> 5) == 0) {
-      Index palshift = Riiablo.colormaps.getMonsterTransform(monster.monstats.Code);
+      Index palshift = colormaps.getMonsterTransform(monster.monstats.Code);
       if (palshift != null) {
         layer.setTransform(palshift, packed & 0x1F);
         return;
