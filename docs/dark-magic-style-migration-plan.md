@@ -4405,6 +4405,12 @@ git diff --check
 - 保留整数 inclusive 范围及浮点区间语义；该兼容流用于旧静态工具，真实单位级 RNG 注入和 checkpoint 绑定留待技能运行时批次。
 - 本批仍不宣称 M4/M7-A/M8 完成。
 
+### 批次 A 继续：Amazon/Assassin/Barbarian 技能随机收口（2026-10-28）
+
+- Amazon、Assassin、Barbarian 技能公式中的范围伤害随机统一复用 `skill-formula` 命名兼容流。
+- 保留原有伤害边界、充能倍率和元素范围；真实单位级 RNG 注入仍留待技能运行时批次。
+- 本批仍不宣称 M4/M7-A/M8 完成。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）

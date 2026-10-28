@@ -1,6 +1,6 @@
 package com.riiablo.engine.server.skill;
 
-import com.badlogic.gdx.math.MathUtils;
+
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
@@ -192,7 +192,7 @@ public final class AmazonSkills {
     // 基础 1-40，每级 +1-8
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 40 + (skillLevel - 1) * 8;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -216,7 +216,7 @@ public final class AmazonSkills {
     // 基础 1-40，每级 +1-10
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 40 + (skillLevel - 1) * 10;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -229,7 +229,7 @@ public final class AmazonSkills {
     // 基础 1-40，每级 +1-10
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 40 + (skillLevel - 1) * 10;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -264,7 +264,7 @@ public final class AmazonSkills {
     // 基础 1-60，每级 +1-15
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 60 + (skillLevel - 1) * 15;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   //==========================================================================
@@ -480,7 +480,7 @@ public final class AmazonSkills {
     // 基础 3-7，每级 +2-3
     int minDamage = 3 + (skillLevel - 1) * 2;
     int maxDamage = 7 + (skillLevel - 1) * 3;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -493,7 +493,7 @@ public final class AmazonSkills {
     // 基础 6-10，每级 +3-4
     int minDamage = 6 + (skillLevel - 1) * 3;
     int maxDamage = 10 + (skillLevel - 1) * 4;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -517,7 +517,7 @@ public final class AmazonSkills {
     // 基础 10-18，每级 +5-6
     int minDamage = 10 + (skillLevel - 1) * 5;
     int maxDamage = 18 + (skillLevel - 1) * 6;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -530,7 +530,7 @@ public final class AmazonSkills {
     // 基础 18-26，每级 +8-10
     int minDamage = 18 + (skillLevel - 1) * 8;
     int maxDamage = 26 + (skillLevel - 1) * 10;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -576,7 +576,7 @@ public final class AmazonSkills {
     // 基础 50-70，每级 +12-15
     int minDamage = 50 + (skillLevel - 1) * 12;
     int maxDamage = 70 + (skillLevel - 1) * 15;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -589,6 +589,6 @@ public final class AmazonSkills {
     // 基础 40-60，每级 +12-15
     int minDamage = 40 + (skillLevel - 1) * 12;
     int maxDamage = 60 + (skillLevel - 1) * 15;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 }

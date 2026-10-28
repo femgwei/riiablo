@@ -1,6 +1,6 @@
 package com.riiablo.engine.server.skill;
 
-import com.badlogic.gdx.math.MathUtils;
+
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
@@ -787,7 +787,7 @@ public final class BarbarianSkills {
     // 基础 10-15，每级 +4-5
     int minDamage = 10 + (skillLevel - 1) * 4;
     int maxDamage = 15 + (skillLevel - 1) * 5;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**

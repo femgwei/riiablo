@@ -1,6 +1,6 @@
 package com.riiablo.engine.server.skill;
 
-import com.badlogic.gdx.math.MathUtils;
+
 import java.util.function.IntFunction;
 import java.util.function.IntUnaryOperator;
 
@@ -342,18 +342,18 @@ public final class AssassinSkills {
 
   public static int rollFireDamage(ProgressiveRelease release) {
     if (release == null || release.fireMaxDamage <= 0) return 0;
-    return MathUtils.random(Math.max(0, release.fireMinDamage), release.fireMaxDamage);
+    return SkillRandom.random(Math.max(0, release.fireMinDamage), release.fireMaxDamage);
   }
 
   public static int rollLightningDamage(ProgressiveRelease release) {
     if (release == null || release.lightningMaxDamage <= 0) return 0;
-    return MathUtils.random(
+    return SkillRandom.random(
         Math.max(0, release.lightningMinDamage), release.lightningMaxDamage);
   }
 
   public static int rollColdDamage(ProgressiveRelease release) {
     if (release == null || release.coldMaxDamage <= 0) return 0;
-    return MathUtils.random(Math.max(0, release.coldMinDamage), release.coldMaxDamage);
+    return SkillRandom.random(Math.max(0, release.coldMinDamage), release.coldMaxDamage);
   }
 
   static int shiftedSkillDamage(int base, int[] perLevel, int level, int hitShift) {
@@ -469,7 +469,7 @@ public final class AssassinSkills {
   public static int calculateClawsOfThunderDamage(int skillLevel, int chargeLevel) {
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 40 + (skillLevel - 1) * 10;
-    return MathUtils.random(minDamage, maxDamage) * chargeLevel;
+    return SkillRandom.random(minDamage, maxDamage) * chargeLevel;
   }
 
   /**
@@ -738,7 +738,7 @@ public final class AssassinSkills {
     // 基础 3-6，每级 +3-4
     int minDamage = 3 + (skillLevel - 1) * 3;
     int maxDamage = 6 + (skillLevel - 1) * 4;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -751,7 +751,7 @@ public final class AssassinSkills {
     // 基础 6-10，每级 +4-5
     int minDamage = 6 + (skillLevel - 1) * 4;
     int maxDamage = 10 + (skillLevel - 1) * 5;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -764,7 +764,7 @@ public final class AssassinSkills {
     // 基础 6-10，每级 +3-4
     int minDamage = 6 + (skillLevel - 1) * 3;
     int maxDamage = 10 + (skillLevel - 1) * 4;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -777,7 +777,7 @@ public final class AssassinSkills {
     // 基础 10-20，每级 +5-8
     int minDamage = 10 + (skillLevel - 1) * 5;
     int maxDamage = 20 + (skillLevel - 1) * 8;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -790,7 +790,7 @@ public final class AssassinSkills {
     // 基础 12-22，每级 +8-10
     int minDamage = 12 + (skillLevel - 1) * 8;
     int maxDamage = 22 + (skillLevel - 1) * 10;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -814,7 +814,7 @@ public final class AssassinSkills {
     // 基础 10-30，每级 +5-12
     int minDamage = 10 + (skillLevel - 1) * 5;
     int maxDamage = 30 + (skillLevel - 1) * 12;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -827,7 +827,7 @@ public final class AssassinSkills {
     // 基础 40-70，每级 +15-20
     int minDamage = 40 + (skillLevel - 1) * 15;
     int maxDamage = 70 + (skillLevel - 1) * 20;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -921,7 +921,7 @@ public final class AssassinSkills {
     // 基础 1-4，每级 +1-2
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 4 + (skillLevel - 1) * 2;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
