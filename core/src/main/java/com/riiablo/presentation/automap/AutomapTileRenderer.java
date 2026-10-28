@@ -129,10 +129,6 @@ public class AutomapTileRenderer implements Disposable {
   /**
    * 初始化渲染器，加载必要资源
    */
-  public AutomapTileRenderer() {
-    this(ClientGameplayContext.fromGlobals());
-  }
-
   public AutomapTileRenderer(ClientGameplayContext clientContext) {
     this.clientContext = clientContext == null ? ClientGameplayContext.fromGlobals() : clientContext;
   }
