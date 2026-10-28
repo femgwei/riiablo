@@ -4457,6 +4457,11 @@ git diff --check
 - `MonsterSoundEmitter`、`BlockSoundEmitter`、`SkillCastHandler` 的音效变体、延迟和投射物视觉散布改用 `presentation-cosmetic` 兼容流。
 - 这些随机仅影响客户端表现，不进入战斗结果、存档或 checkpoint；服务器权威 RNG 未受改变。
 
+### 批次 C 继续：动画调试颜色去除全局随机（2026-10-29）
+
+- 文件动画和 codec 动画层的调试颜色改为固定诊断色，移除静态初始化阶段对全局 RNG 的访问。
+- 仅影响调试可视化，不改变动画计时、帧选择或游戏逻辑。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）

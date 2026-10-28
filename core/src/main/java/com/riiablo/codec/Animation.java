@@ -661,7 +661,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
   public static class Layer implements Pool.Poolable {
     private static final Pool<Layer> pool = Pools.get(Layer.class, 1024);
 
-    private final Color DEBUG_COLOR = new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), 1);
+    private final Color DEBUG_COLOR = new Color(0.2f, 0.6f, 0.9f, 1f);
 
     static final int DEFAULT_BLENDMODE = BlendMode.ID;
 
