@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import com.riiablo.presentation.ClientGameplayContext;
 
 class AutomapVisibilityTest {
   @Test
@@ -23,7 +24,7 @@ class AutomapVisibilityTest {
 
   @Test
   void duplicateEntityRefreshKeepsOneMarkerAndNativeCell() {
-    AutomapManager manager = new AutomapManager();
+    AutomapManager manager = new AutomapManager(ClientGameplayContext.fromGlobals());
     manager.addEntityMarker(17, AutomapIconType.MONSTER, 1, 2, "Fallen",
         AutomapManager.COLOR_MONSTER, 4);
     manager.addNativeEntityMarker(17, AutomapIconType.MONSTER, 3, 4, "Fallen",

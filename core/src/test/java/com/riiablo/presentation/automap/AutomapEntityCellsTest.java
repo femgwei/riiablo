@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.Objects;
 import org.junit.jupiter.api.Test;
+import com.riiablo.presentation.ClientGameplayContext;
 
 class AutomapEntityCellsTest {
   @Test void objectAutoMapCellUsesNativeFrame() {
@@ -40,7 +41,7 @@ class AutomapEntityCellsTest {
   }
 
   @Test void markerCanCarryNativeCellWithoutChangingFallbackType() {
-    AutomapManager manager = new AutomapManager();
+    AutomapManager manager = new AutomapManager(ClientGameplayContext.fromGlobals());
     manager.addNativeEntityMarker(7, AutomapIconType.MONSTER, 12, 18,
         "fallen", AutomapManager.COLOR_MONSTER, 4, 405);
     // The marker remains a monster marker while retaining its native frame;
@@ -50,7 +51,7 @@ class AutomapEntityCellsTest {
   }
 
   @Test void terrainBackedObjectMarkerIsDetectedWithinNativeCellExtent() {
-    AutomapManager manager = new AutomapManager();
+    AutomapManager manager = new AutomapManager(ClientGameplayContext.fromGlobals());
     manager.getOrCreateLayer(1).addFloor(307, 82, 67);
     assertTrue(manager.hasNearbyTerrainCell(1, 307, 84, 69, 16f));
     assertFalse(manager.hasNearbyTerrainCell(1, 319, 84, 69, 16f));

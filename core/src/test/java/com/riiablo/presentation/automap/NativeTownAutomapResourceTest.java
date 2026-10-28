@@ -4,6 +4,7 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
+import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.codec.DC6;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -38,8 +39,9 @@ class NativeTownAutomapResourceTest extends RiiabloTest {
   }
 
   @Test void townTreesRoundTripWithoutWorldTileRoundingOrMaxiMapConversion() throws Exception {
-    AutomapManager manager = new AutomapManager();
-    AutomapManager restored = new AutomapManager();
+    ClientGameplayContext context = ClientGameplayContext.fromGlobals();
+    AutomapManager manager = new AutomapManager(context);
+    AutomapManager restored = new AutomapManager(context);
     try {
       for (int levelId : new int[] {40, 103, 109}) {
         manager.getOrCreateLayer(levelId).townCells.addAll(

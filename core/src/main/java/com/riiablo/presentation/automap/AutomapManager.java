@@ -209,10 +209,6 @@ public class AutomapManager implements Disposable {
   
   // ==================== 构造与初始化 ====================
   
-  public AutomapManager() {
-    this(ClientGameplayContext.fromGlobals());
-  }
-
   public AutomapManager(ClientGameplayContext clientContext) {
     this.clientContext = clientContext == null ? ClientGameplayContext.fromGlobals() : clientContext;
     hackMapIcons = new HackMapIconRenderer(this.clientContext);
