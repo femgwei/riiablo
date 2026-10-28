@@ -1,5 +1,7 @@
 package com.riiablo.server.d2gs;
 
+import java.security.SecureRandom;
+
 import io.netty.channel.ChannelFuture;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -187,7 +189,7 @@ public class Main extends ApplicationAdapter {
 
     if (seed == 0) {
       Gdx.app.log(TAG, "Generating seed...");
-      seed = MathUtils.random.nextInt();
+      seed = new SecureRandom().nextInt();
       Gdx.app.log(TAG, "seed=" + seed);
     }
 
@@ -359,3 +361,4 @@ public class Main extends ApplicationAdapter {
     return t;
   }
 }
+

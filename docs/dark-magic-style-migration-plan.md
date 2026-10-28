@@ -4492,6 +4492,11 @@ git diff --check
 - D2GS、BNCS、BNLS、MCP 的 `Client-XXXXXXXX` 临时名称改用线程隔离随机源，不再消耗 libGDX 全局 RNG。
 - 这些 ID 不进入游戏状态、存档或 replay；仅保持非权威连接标识的随机性。
 
+### 批次 A 继续：Netty 启动种子生成隔离（2026-10-29）
+
+- 两个 Netty D2GS 启动入口在未显式指定 seed 时改用独立 `SecureRandom`，不再消耗 libGDX 全局 RNG。
+- 显式 seed、地图生成和后续游戏逻辑保持不变。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）
