@@ -71,4 +71,7 @@ if ($nnetLeaks) {
   exit 1
 }
 
-Write-Output ("network transport owner audit passed: {0} references" -f $rows.Count)
+$summary = $rows | Group-Object Owner | Sort-Object Name |
+  ForEach-Object { "{0}={1}" -f $_.Name, $_.Count }
+Write-Output ("network transport owner audit passed: {0} references ({1})" -f
+  $rows.Count, ($summary -join ', '))
