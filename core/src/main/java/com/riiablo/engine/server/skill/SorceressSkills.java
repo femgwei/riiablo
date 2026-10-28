@@ -1,6 +1,6 @@
 package com.riiablo.engine.server.skill;
 
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.attributes.NativeStatResolver;
@@ -44,7 +44,7 @@ public final class SorceressSkills {
     // 基础伤害 3-6，每级 +1-2
     int minDamage = 3 + (skillLevel - 1);
     int maxDamage = 6 + (skillLevel - 1) * 2;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -68,7 +68,7 @@ public final class SorceressSkills {
     // 基础伤害 6-14，每级 +2-3
     int minDamage = 6 + (skillLevel - 1) * 2;
     int maxDamage = 14 + (skillLevel - 1) * 3;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -81,7 +81,7 @@ public final class SorceressSkills {
     // 基础 40-80/秒，每级 +17-18
     int minDamage = 40 + (skillLevel - 1) * 17;
     int maxDamage = 80 + (skillLevel - 1) * 18;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -94,7 +94,7 @@ public final class SorceressSkills {
     // 基础伤害 60-100，每级 +20-25
     int minDamage = 60 + (skillLevel - 1) * 20;
     int maxDamage = 100 + (skillLevel - 1) * 25;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -388,7 +388,7 @@ public final class SorceressSkills {
     // 基础 2-4，每级 +1
     int minDamage = 2 + (skillLevel - 1);
     int maxDamage = 4 + (skillLevel - 1);
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -500,7 +500,7 @@ public final class SorceressSkills {
     // 基础 1-2，每级 +1
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 2 + (skillLevel - 1);
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -513,7 +513,7 @@ public final class SorceressSkills {
     // 基础 1-20，每级 +2-3
     int minDamage = 1 + (skillLevel - 1) * 2;
     int maxDamage = 20 + (skillLevel - 1) * 3;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -526,7 +526,7 @@ public final class SorceressSkills {
     // 基础 1-40，每级 +1-8
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 40 + (skillLevel - 1) * 8;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -539,7 +539,7 @@ public final class SorceressSkills {
     // 基础 1-40，每级 +1-6
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 40 + (skillLevel - 1) * 6;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -575,7 +575,7 @@ public final class SorceressSkills {
     // 基础 1-100，每级 +1-10
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 100 + (skillLevel - 1) * 10;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -614,7 +614,7 @@ public final class SorceressSkills {
     // 基础 3-5，每级 +2
     int minDamage = 3 + (skillLevel - 1) * 2;
     int maxDamage = 5 + (skillLevel - 1) * 2;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -638,7 +638,7 @@ public final class SorceressSkills {
     // 基础 6-9，每级 +4
     int minDamage = 6 + (skillLevel - 1) * 4;
     int maxDamage = 9 + (skillLevel - 1) * 4;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -651,7 +651,7 @@ public final class SorceressSkills {
     // 基础 8-12，每级 +5
     int minDamage = 8 + (skillLevel - 1) * 5;
     int maxDamage = 12 + (skillLevel - 1) * 5;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -664,7 +664,7 @@ public final class SorceressSkills {
     // 基础 16-24，每级 +5-6
     int minDamage = 16 + (skillLevel - 1) * 5;
     int maxDamage = 24 + (skillLevel - 1) * 6;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -677,7 +677,7 @@ public final class SorceressSkills {
     // 基础 20-40，每级 +8-10
     int minDamage = 20 + (skillLevel - 1) * 8;
     int maxDamage = 40 + (skillLevel - 1) * 10;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -690,7 +690,7 @@ public final class SorceressSkills {
     // 基础 10-15，每级 +3
     int minDamage = 10 + (skillLevel - 1) * 3;
     int maxDamage = 15 + (skillLevel - 1) * 3;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**

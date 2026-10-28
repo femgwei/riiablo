@@ -1,6 +1,6 @@
 package com.riiablo.engine.server.skill;
 
-import com.badlogic.gdx.math.MathUtils;
+
 
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.NativeStatResolver;
@@ -173,7 +173,7 @@ public final class NecromancerSkills {
     // 基础 2-3，每级 +1
     int minDamage = 2 + (skillLevel - 1);
     int maxDamage = 3 + (skillLevel - 1);
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -204,7 +204,7 @@ public final class NecromancerSkills {
         ? com.riiablo.Riiablo.files.skills.get(SkillId.POISON_DAGGER) : null;
     int[] rate = getPoisonDaggerDamage(skill, skillLevel, name -> 0);
     int duration = getPoisonDaggerDurationFrames(skill, skillLevel, name -> 0);
-    return Math.round(MathUtils.random(rate[0], rate[1]) / 256f * duration);
+    return Math.round(SkillRandom.random(rate[0], rate[1]) / 256f * duration);
   }
 
   /** Legacy UI duration in seconds, derived from D2's 25 Hz frame count. */
@@ -352,7 +352,7 @@ public final class NecromancerSkills {
 
   /** Compatibility estimate retained for UI callers. */
   public static int calculateCorpseExplosionDamage(int corpseMaxHp) {
-    return Math.round(Math.max(0, corpseMaxHp) * MathUtils.random(0.7f, 1.2f));
+    return Math.round(Math.max(0, corpseMaxHp) * SkillRandom.random(0.7f, 1.2f));
   }
 
   /**
@@ -525,7 +525,7 @@ public final class NecromancerSkills {
     // 基础 16-24，每级 +10-12
     int minDamage = 16 + (skillLevel - 1) * 10;
     int maxDamage = 24 + (skillLevel - 1) * 12;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /** Compatibility estimate retained for UI callers. */
@@ -546,7 +546,7 @@ public final class NecromancerSkills {
     // 基础 125-150，每级 +20-25
     int minDamage = 125 + (skillLevel - 1) * 20;
     int maxDamage = 150 + (skillLevel - 1) * 25;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -559,7 +559,7 @@ public final class NecromancerSkills {
     // 基础 20-30，每级 +10-12
     int minDamage = 20 + (skillLevel - 1) * 10;
     int maxDamage = 30 + (skillLevel - 1) * 12;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   //==========================================================================
@@ -727,7 +727,7 @@ public final class NecromancerSkills {
   public static int calculateFireGolemDamage(int skillLevel) {
     int minDamage = 6 + (skillLevel - 1) * 5;
     int maxDamage = 22 + (skillLevel - 1) * 8;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**

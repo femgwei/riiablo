@@ -4399,6 +4399,12 @@ git diff --check
 - 保留原有 inclusive 与 half-open 范围语义；AI、技能独立随机源和 checkpoint 注册仍待后续批次处理。
 - 本批仍不宣称 M4/M7-A/M8 完成。
 
+### 批次 A 继续：三系技能公式随机兼容入口集中收口（2026-10-28）
+
+- Sorceress/Paladin/Necromancer 技能公式中的静态随机调用统一改为 `skill-formula` 命名兼容流，移除对 libGDX 全局 RNG 的依赖。
+- 保留整数 inclusive 范围及浮点区间语义；该兼容流用于旧静态工具，真实单位级 RNG 注入和 checkpoint 绑定留待技能运行时批次。
+- 本批仍不宣称 M4/M7-A/M8 完成。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）

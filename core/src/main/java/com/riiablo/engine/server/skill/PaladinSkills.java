@@ -1,6 +1,6 @@
 package com.riiablo.engine.server.skill;
 
-import com.badlogic.gdx.math.MathUtils;
+
 
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
@@ -101,7 +101,7 @@ public final class PaladinSkills {
     // 基础 8-16，每级 +4
     int minDamage = 8 + (skillLevel - 1) * 4;
     int maxDamage = 16 + (skillLevel - 1) * 4;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -372,7 +372,7 @@ public final class PaladinSkills {
     // 每种元素各加 40-60 基础，每级 +20
     int minDamage = 40 + (skillLevel - 1) * 20;
     int maxDamage = 60 + (skillLevel - 1) * 20;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /** Native Vengeance SrvSt35 elemental percentage (calc1/calc2/calc3). */
@@ -420,7 +420,7 @@ public final class PaladinSkills {
     // 基础 12-16，每级 +6-8
     int minDamage = 12 + (skillLevel - 1) * 6;
     int maxDamage = 16 + (skillLevel - 1) * 8;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -622,7 +622,7 @@ public final class PaladinSkills {
     // 基础 30-50，每级 +15-20
     int minDamage = 30 + (skillLevel - 1) * 15;
     int maxDamage = 50 + (skillLevel - 1) * 20;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   //==========================================================================
@@ -650,7 +650,7 @@ public final class PaladinSkills {
     // 基础 6-8，每级 +4-5
     int minDamage = 6 + (skillLevel - 1) * 4;
     int maxDamage = 8 + (skillLevel - 1) * 5;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -696,7 +696,7 @@ public final class PaladinSkills {
     // 基础 6-8，每级 +3-4
     int minDamage = 6 + (skillLevel - 1) * 3;
     int maxDamage = 8 + (skillLevel - 1) * 4;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
@@ -720,7 +720,7 @@ public final class PaladinSkills {
     // 基础 1-10，每级 +1-8
     int minDamage = 1 + (skillLevel - 1);
     int maxDamage = 10 + (skillLevel - 1) * 8;
-    return MathUtils.random(minDamage, maxDamage);
+    return SkillRandom.random(minDamage, maxDamage);
   }
 
   /**
