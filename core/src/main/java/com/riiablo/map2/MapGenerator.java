@@ -15,7 +15,7 @@ public class MapGenerator {
   private static final Logger log = LogManager.getLogger(MapGenerator.class);
 
   public TileGenerator tileGenerator = new TileGenerator();
-  final Random random = new Random();
+  final Random random = new Random(Seed.fixed());
 
   public MapGenerator() {
     random.seed(Seed.fixed());
