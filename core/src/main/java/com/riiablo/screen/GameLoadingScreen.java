@@ -38,8 +38,8 @@ public class GameLoadingScreen extends ScreenAdapter {
 
   GameLoadingScreen(Map map, Array<AssetDescriptor> dependencies, ScreenAssetScope sessionAssets,
       ClientGameplayContext clientContext) {
-    this(map, dependencies, sessionAssets, LoadingScreenHost.fromGlobals(
-        clientContext == null ? ClientGameplayContext.fromGlobals() : clientContext));
+    this(map, dependencies, sessionAssets, LoadingScreenHost.fromContext(
+        java.util.Objects.requireNonNull(clientContext, "clientContext")));
   }
 
   GameLoadingScreen(Map map, Array<AssetDescriptor> dependencies, ScreenAssetScope sessionAssets,

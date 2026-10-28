@@ -34,10 +34,10 @@ final class LoadingScreenHost {
   void enter(Screen screen) { enterGame.accept(screen); }
 
   static LoadingScreenHost fromGlobals() {
-    return fromGlobals(ClientGameplayContext.fromGlobals());
+    return fromContext(ClientGameplayContext.fromGlobals());
   }
 
-  static LoadingScreenHost fromGlobals(ClientGameplayContext context) {
+  static LoadingScreenHost fromContext(ClientGameplayContext context) {
     final Viewport viewport = Riiablo.defaultViewport;
     final Client client = Riiablo.client;
     return new LoadingScreenHost(viewport, context.batch(), context.palettes(),
