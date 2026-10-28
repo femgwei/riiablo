@@ -35,6 +35,8 @@ public class Act1QuestDialogController extends PassiveSystem {
   protected ComponentMapper<Monster> mMonster;
   protected DialogManager dialogManager;
   protected ClientQuestIntentSystem questIntents;
+  @Wire(name = "clientContext")
+  protected ClientGameplayContext clientContext;
 
   // D2MOO has no persisted A1Q1 message-71 acknowledgement. Keep the marker
   // in an unused high bit of the native 01 77 NPC-return data so it survives
@@ -145,7 +147,7 @@ public class Act1QuestDialogController extends PassiveSystem {
         playerId, npc.monstats.Id, messageIndex, speech);
     if (!submitMessage(playerId, npcId, messageIndex)) return false;
     String fallback = npc.monstats.hcIdx == MonsterType.NAVI
-        ? Riiablo.bundle.get(
+        ? clientContext.bundle().get(
             messageIndex < Act1NaviQuest.MESSAGE_AFTER_0
                 ? "flavie_a1q1_warning" : "flavie_a1q1_after") : null;
     dialogManager.setDialog(new NpcDialogBox(speech, fallback, dialog -> {

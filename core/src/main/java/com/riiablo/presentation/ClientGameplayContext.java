@@ -175,6 +175,7 @@ public final class ClientGameplayContext implements ClientPresentationServices, 
   public com.riiablo.COFs cofs() { return Riiablo.cofs; }
   public com.riiablo.GdxCvarManager cvars() { return Riiablo.cvars; }
   public com.riiablo.Colormaps colormaps() { return Riiablo.colormaps; }
+  public com.badlogic.gdx.utils.I18NBundle bundle() { return Riiablo.bundle; }
 
   /** Delivers an accepted server act transition to the owning screen. */
   public boolean transitionAct(int act) {

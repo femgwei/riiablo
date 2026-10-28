@@ -222,11 +222,11 @@ public final class ClientNpc extends Npc {
     }
     String name = com.riiablo.screen.panel.MercenaryHud.resolveMercenaryName(mercType, nameId);
     int cost = MercenaryManager.nativeResurrectionCost(level);
-    String template = Riiablo.bundle == null ? null : Riiablo.bundle.get("mercenary_resurrect");
+    String template = clientContext == null || clientContext.bundle() == null ? null : clientContext.bundle().get("mercenary_resurrect");
     if (template == null || template.isEmpty() || template.startsWith("ERROR:")) {
       return "复活 " + name + ": " + cost;
     }
-    return Riiablo.bundle.format("mercenary_resurrect", name, cost);
+    return clientContext.bundle().format("mercenary_resurrect", name, cost);
   }
 
   private void hireMercenary(int npcType) {
