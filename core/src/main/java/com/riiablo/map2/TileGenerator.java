@@ -12,7 +12,7 @@ public class TileGenerator {
   final ObjectSet<DT1> dt1s = new ObjectSet<>();
   final IntMap<Entry> entries = new IntMap<>();
 
-  final Random random = new Random(Seed.fixed());
+  final Random random = new Random();
 
   public void seed(Seed seed) { random.seed(seed); }
 
