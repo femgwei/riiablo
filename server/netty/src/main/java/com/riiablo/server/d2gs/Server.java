@@ -320,7 +320,6 @@ public class Server implements PacketProcessor {
         Gdx.app.debug(TAG, "  " + "creating connection record for " + from);
 
         for (id = 0; id < MAX_CLIENTS && clients[id].connected; id++);
-        assert id != MAX_CLIENTS : "no available client slots. connection limiter should have caught this";
         if (id == MAX_CLIENTS) {
           Gdx.app.error(TAG, "  " + "client connected, but no slot is available");
           Gdx.app.debug(TAG, "  " + "closing " + ctx);
@@ -407,7 +406,7 @@ public class Server implements PacketProcessor {
 
     D2GSPacket broadcast = D2GSPacket.obtain(~(1 << id), D2GSData.Connection, builder.dataBuffer());
     boolean success = outPackets.offer(broadcast);
-    assert success;
+    if (!success) Gdx.app.error(TAG, "dropping connect broadcast for client " + id);
   }
 
   private void Disconnect(ChannelHandlerContext ctx, SocketAddress from, D2GSPacket packet) {
@@ -439,7 +438,10 @@ public class Server implements PacketProcessor {
 
   private void Disconnect(int id) {
     int entityId = player.get(id, Engine.INVALID_ENTITY);
-    assert entityId != Engine.INVALID_ENTITY;
+    if (entityId == Engine.INVALID_ENTITY) {
+      Gdx.app.debug(TAG, "no entity for disconnected client " + id);
+      return;
+    }
     FlatBufferBuilder builder = new FlatBufferBuilder();
     int disconnectOffset = Disconnect.createDisconnect(builder, entityId);
     int offset = D2GS.createD2GS(builder, D2GSData.Disconnect, disconnectOffset);
@@ -509,7 +511,7 @@ public class Server implements PacketProcessor {
     boolean connected;
 
     ClientData connect(Channel channel, SocketAddress address, long clientSalt) {
-      assert !connected;
+      if (connected) throw new IllegalStateException("client slot already connected");
       this.channel = channel;
       this.address = address;
       this.clientSalt = clientSalt;
@@ -518,7 +520,7 @@ public class Server implements PacketProcessor {
     }
 
     ClientData disconnect() {
-      assert connected;
+      if (!connected) return this;
       connected = false;
       channel = null;
       address = null;

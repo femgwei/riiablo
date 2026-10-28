@@ -102,7 +102,10 @@ public class D2GSPacketProcessor implements PacketProcessor {
 
   private void Synchronize(D2GSPacket packet) {
     int entityId = player.get(packet.id, Engine.INVALID_ENTITY);
-    assert entityId != Engine.INVALID_ENTITY;
+    if (entityId == Engine.INVALID_ENTITY) {
+      Gdx.app.error(TAG, "dropping sync from client without entity " + packet.id);
+      return;
+    }
     sync.sync(entityId, packet.data);
   }
 

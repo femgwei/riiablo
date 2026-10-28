@@ -185,6 +185,10 @@ public class EndpointedChannelHandler<T> implements ChannelHandler, ChannelInbou
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
     if (DEBUG_CALLS) Gdx.app.debug(TAG, "write");
+    if (!(msg instanceof ByteBuf)) {
+      ctx.write(msg, promise);
+      return;
+    }
     msg = writeMessage(ctx, (ByteBuf) msg);
     ctx.write(msg, promise);
   }

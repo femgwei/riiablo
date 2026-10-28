@@ -84,8 +84,10 @@ public class NetworkSynchronizer extends BaseEntitySystem {
     if (recipients == 0) return;
     FlatBufferBuilder builder = sync(new FlatBufferBuilder(0), entityId);
     D2GSPacket packet = D2GSPacket.obtain(recipients, D2GSData.EntitySync, builder.dataBuffer());
-    boolean success = outPackets.offer(packet);
-    assert success;
+    if (!outPackets.offer(packet)) {
+      Gdx.app.error(TAG, "[ROOM_NET_SYNC] phase=sync_drop entity=" + entityId
+          + " recipients=0x" + Integer.toHexString(recipients));
+    }
   }
 
   /** Sends a recipient-scoped deletion when a client leaves the entity's room scope. */
