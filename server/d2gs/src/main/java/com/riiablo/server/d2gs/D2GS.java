@@ -1,5 +1,7 @@
 package com.riiablo.server.d2gs;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import com.google.flatbuffers.FlatBufferBuilder;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -9755,7 +9757,7 @@ public class D2GS extends ApplicationAdapter {
   }
 
   static String generateClientName() {
-    return String.format("Client-%08X", MathUtils.random(1, Integer.MAX_VALUE - 1));
+    return String.format("Client-%08X", ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE));
   }
 
   private class Client extends Thread {

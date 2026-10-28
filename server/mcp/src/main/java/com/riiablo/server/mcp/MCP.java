@@ -1,5 +1,7 @@
 package com.riiablo.server.mcp;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import com.google.flatbuffers.FlatBufferBuilder;
 
 import com.badlogic.gdx.Application;
@@ -367,7 +369,7 @@ public class MCP extends ApplicationAdapter {
   }
 
   static String generateClientName() {
-    return String.format("Client-%08X", MathUtils.random(1, Integer.MAX_VALUE - 1));
+    return String.format("Client-%08X", ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE));
   }
 
   private class Client extends Thread {

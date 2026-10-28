@@ -4487,6 +4487,11 @@ git diff --check
 - `map2.random.Seed.random()` 改用独立 `SecureRandom` 生成显式新种子，不再消耗 libGDX 全局 RNG。
 - 该 API 是非确定性的种子工厂；确定性地图路径仍通过 `Seed.fixed()` 或调用方传入的显式种子运行。
 
+### 批次 C 继续：服务器连接临时 ID 随机隔离（2026-10-29）
+
+- D2GS、BNCS、BNLS、MCP 的 `Client-XXXXXXXX` 临时名称改用线程隔离随机源，不再消耗 libGDX 全局 RNG。
+- 这些 ID 不进入游戏状态、存档或 replay；仅保持非权威连接标识的随机性。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）
