@@ -321,7 +321,7 @@ public class MercenaryManager {
   private double random() {
     // Standalone/offline fixtures historically did not install checkpoint runtime.
     // Keep that construction path usable, but give it a stable compatibility
-    // stream instead of falling back to process-global Math.random().
+    // stream instead of falling back to an unowned process-global source.
     if (rosterRng == null) {
       rosterRng = com.riiablo.engine.server.NamedRngStreams.open(0, "hireling-roster", 0);
     }
