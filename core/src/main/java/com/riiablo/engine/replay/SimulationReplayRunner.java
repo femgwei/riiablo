@@ -71,6 +71,7 @@ public final class SimulationReplayRunner {
     int submitted = 0;
     for (SimulationReplayLog.Command command : log.commands()) {
       if (command.tick <= startTick) continue;
+      validateReplayIdentity(command);
       SimulationCommandEnvelope.Builder builder = command.toBuilder();
       if (coordinator.commands().submit(builder) == null) {
         throw new IllegalArgumentException("replay command rejected at tick " + command.tick
@@ -98,5 +99,19 @@ public final class SimulationReplayRunner {
       verified++;
     }
     return new Result(startTick, endTick, submitted, verified, mismatches);
+  }
+
+  private static void validateReplayIdentity(SimulationReplayLog.Command command) {
+    if (command.authority == SimulationCommandEnvelope.Authority.NETWORK_INPUT) {
+      if (command.actorId < 0) throw new IllegalArgumentException(
+          "replay network command missing actor identity at tick " + command.tick);
+      if (command.requestId <= 0L) throw new IllegalArgumentException(
+          "replay network command missing request identity at tick " + command.tick);
+      if (command.targetEntityId < -1) throw new IllegalArgumentException(
+          "replay network command has malformed target at tick " + command.tick);
+    }
+    if (command.payload == null || command.kind == null || command.kind.trim().isEmpty()) {
+      throw new IllegalArgumentException("replay command is malformed at tick " + command.tick);
+    }
   }
 }

@@ -32,6 +32,13 @@ public final class CombatIntentScheduler {
 
   public Result submit(CombatIntent input, long currentTick) {
     if (input == null) return Result.INVALID_SEQUENCE;
+    // Reject malformed wire values before they can enter the ordered queue or
+    // become part of the replay fingerprint.  NaN ordering is undefined and
+    // would otherwise make replay admission JVM dependent.
+    if (input.skillId < 0 || input.targetEntityId < -1
+        || !Float.isFinite(input.targetX) || !Float.isFinite(input.targetY)) {
+      return Result.INVALID_SEQUENCE;
+    }
     // Pre-clock clients and legacy headless probes use an all-zero envelope.
     if (input.sequence == 0L) {
       if (input.observedServerTick != 0L || input.targetTick != 0L) {
