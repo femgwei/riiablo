@@ -117,6 +117,15 @@ class SimulationReplayLogTest {
   }
 
   @Test
+  void replayRejectsNetworkTargetWithoutActorIdentity() {
+    SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
+        "net", "hit", 1).tick(1).target(42)
+        .authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT).build(1);
+    assertThrows(IllegalArgumentException.class,
+        () -> SimulationReplayLog.builder(1).command(command, "1").build());
+  }
+
+  @Test
   void admittedCommandsReplayToIdenticalCheckpoints() {
     SimulationReplayCapture capture = new SimulationReplayCapture(0x110F, String::valueOf);
     SimulationTickCoordinator recorded = new SimulationTickCoordinator();

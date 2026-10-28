@@ -163,6 +163,11 @@ public final class SimulationReplayLog {
       throw new IllegalArgumentException("requestId requires actorId");
     }
     if (command.targetEntityId < -1) throw new IllegalArgumentException("command targetEntityId");
+    if (command.targetEntityId >= 0
+        && command.authority == SimulationCommandEnvelope.Authority.NETWORK_INPUT
+        && command.actorId < 0) {
+      throw new IllegalArgumentException("network target requires actorId");
+    }
     Objects.requireNonNull(command.authority, "command authority");
   }
 
