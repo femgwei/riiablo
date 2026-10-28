@@ -1,7 +1,8 @@
 package com.riiablo.engine.server.quest;
 
 
-import java.util.Random;
+import com.riiablo.engine.server.NamedRngStreams;
+import com.riiablo.engine.server.NativeRng;
 
 /** Game-scoped A1Q4 state which must never be written into one player's D2S. */
 public final class Act1CainRuntime {
@@ -27,7 +28,8 @@ public final class Act1CainRuntime {
     // D2MOO assigns the five native class ids to random sequence slots. Its
     // recovered loop does not retry collisions and can leave zero slots, so
     // use the equivalent unbiased permutation while guaranteeing all stones.
-    Random random = new Random(gameSeed ^ 0xA1C41F055L);
+    NativeRng random = NamedRngStreams.openLegacy(
+        (int) (gameSeed ^ 0xA1C41F055L), "act1-cain-stones", gameSeed);
     for (int i = stoneOrder.length - 1; i > 0; i--) {
       int j = random.nextInt(i + 1);
       int swap = stoneOrder[i];

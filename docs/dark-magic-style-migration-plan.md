@@ -4477,6 +4477,11 @@ git diff --check
 - `Audio` 与 `SoundEnvironmentSystem` 的音频组变体选择统一使用 `presentation-cosmetic` 流，移除对 libGDX 全局随机对象的依赖。
 - 仅影响音频文件变体选择，不影响音频事件、服务器状态或游戏规则。
 
+### 批次 A 继续：Act1 Cain 石阵顺序 RNG 宿主化（2026-10-29）
+
+- `Act1CainRuntime` 的石阵洗牌从裸 `java.util.Random` 改为 `act1-cain-stones` 命名兼容流，并保留 Fisher-Yates 顺序和所有石阵对象范围。
+- 任务状态仍由 game-scoped runtime 持有，不写入玩家 D2S；后续继续处理 D2GS MPQ 兼容随机分支。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）
