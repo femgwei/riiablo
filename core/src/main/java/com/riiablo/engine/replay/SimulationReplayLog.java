@@ -159,6 +159,9 @@ public final class SimulationReplayLog {
     if (command.sequence < 1L) throw new IllegalArgumentException("command sequence must be positive");
     if (command.actorId < -1) throw new IllegalArgumentException("command actorId");
     if (command.requestId < 0L) throw new IllegalArgumentException("command requestId");
+    if (command.requestId > 0L && command.actorId < 0) {
+      throw new IllegalArgumentException("requestId requires actorId");
+    }
     if (command.targetEntityId < -1) throw new IllegalArgumentException("command targetEntityId");
     Objects.requireNonNull(command.authority, "command authority");
   }
