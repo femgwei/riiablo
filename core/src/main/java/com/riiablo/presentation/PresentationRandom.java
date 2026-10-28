@@ -4,11 +4,11 @@ import com.riiablo.engine.server.NamedRngStreams;
 import com.riiablo.engine.server.NativeRng;
 
 /** Stable client-only randomness for cosmetic variation; never affects gameplay state. */
-final class PresentationRandom {
+public final class PresentationRandom {
   private static final ThreadLocal<NativeRng> RNG = ThreadLocal.withInitial(
       () -> NamedRngStreams.open(0, "presentation-cosmetic", 0));
   private PresentationRandom() {}
-  static int range(int min, int max) {
+  public static int range(int min, int max) {
     if (max <= min) return min;
     return min + RNG.get().nextInt(max - min + 1);
   }

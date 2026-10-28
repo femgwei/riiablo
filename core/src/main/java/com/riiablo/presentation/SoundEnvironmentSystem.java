@@ -145,7 +145,8 @@ public final class SoundEnvironmentSystem extends BaseSystem {
     Sounds.Entry sound = session.sounds().get(id);
     if (sound == null) return null;
     if (randomizeGroup && sound.Group_Size > 0) {
-      sound = session.sounds().get(sound.Index + MathUtils.random.nextInt(sound.Group_Size));
+      sound = session.sounds().get(sound.Index
+          + PresentationRandom.range(0, sound.Group_Size - 1));
     }
     return sound == null || sound.FileName == null || sound.FileName.isEmpty() ? null : sound;
   }

@@ -253,7 +253,7 @@ public class Audio {
     Sounds.Entry sound = Riiablo.files.Sounds.get(id);
     if (sound == null) return null;
     if (sound.Group_Size > 0) {
-      int randomId = sound.Index + MathUtils.random.nextInt(sound.Group_Size);
+      int randomId = sound.Index + com.riiablo.presentation.PresentationRandom.range(0, sound.Group_Size - 1);
       sound = Riiablo.files.Sounds.get(randomId);
     }
 

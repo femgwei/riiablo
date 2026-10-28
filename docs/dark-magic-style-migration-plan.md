@@ -4472,6 +4472,11 @@ git diff --check
 - `MapGenerator`/`TileGenerator` 不再以未初始化的 `new Random()` 作为隐式状态；默认构造使用稳定兼容种子，显式 `generate(seed, diff)` 同时绑定地图与 tile 选择流。
 - 保留 tile 稀有度选择和地图生成顺序；`Seed.random()` 仍作为显式随机种子工厂，不混入生成器隐式状态。
 
+### 批次 C 继续：音频组变体随机解耦（2026-10-29）
+
+- `Audio` 与 `SoundEnvironmentSystem` 的音频组变体选择统一使用 `presentation-cosmetic` 流，移除对 libGDX 全局随机对象的依赖。
+- 仅影响音频文件变体选择，不影响音频事件、服务器状态或游戏规则。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）
