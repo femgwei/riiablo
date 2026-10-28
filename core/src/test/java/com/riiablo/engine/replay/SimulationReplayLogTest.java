@@ -177,6 +177,17 @@ class SimulationReplayLogTest {
   }
 
   @Test
+  void replayRunnerRejectsNetworkCommandWithoutRequestIdentity() {
+    SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
+        "net", "cast", "skill=36").tick(1).actor(7)
+        .authority(SimulationCommandEnvelope.Authority.NETWORK_INPUT).build(1);
+    SimulationReplayLog log = SimulationReplayLog.builder(1)
+        .command(command, "skill=36").build();
+    assertThrows(IllegalArgumentException.class, () -> SimulationReplayRunner.play(log,
+        new SimulationTickCoordinator(), ignored -> {}, tick -> {}, event -> {}, tick -> null));
+  }
+
+  @Test
   void replayRunnerContinuesAfterAResumeTickAndReportsMismatch() {
     SimulationCommandEnvelope command = SimulationCommandEnvelope.builder(
         "ui", "delta", 2).tick(2).build(2);

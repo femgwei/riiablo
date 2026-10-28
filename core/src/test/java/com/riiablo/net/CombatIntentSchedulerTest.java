@@ -63,6 +63,20 @@ class CombatIntentSchedulerTest {
         scheduler.submit(intent(0, 30, 30, 0, 1, 0, 0), 30));
   }
 
+  @Test
+  void rejectsMalformedNumericAndIdentityFieldsBeforeQueueing() {
+    CombatIntentScheduler scheduler = new CombatIntentScheduler();
+    assertEquals(CombatIntentScheduler.Result.INVALID_SEQUENCE,
+        scheduler.submit(intent(1, 1, 1, -1, 1, 0, 0), 1));
+    assertEquals(CombatIntentScheduler.Result.INVALID_SEQUENCE,
+        scheduler.submit(intent(2, 1, 1, 0, -2, 0, 0), 1));
+    assertEquals(CombatIntentScheduler.Result.INVALID_SEQUENCE,
+        scheduler.submit(intent(3, 1, 1, 0, 1, Float.NaN, 0), 1));
+    assertEquals(CombatIntentScheduler.Result.INVALID_SEQUENCE,
+        scheduler.submit(intent(4, 1, 1, 0, 1, 0, Float.POSITIVE_INFINITY), 1));
+    assertEquals(0, scheduler.pendingCount());
+  }
+
   private static CombatIntent intent(long sequence, long observed, long targetTick,
       int skill, int target, float x, float y) {
     return new CombatIntent(sequence, observed, targetTick, skill, target, x, y);
