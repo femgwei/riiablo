@@ -4388,3 +4388,17 @@ git diff --check
 ```
 
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
+
+### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）
+
+- VendorGenerator 的无 server context 路径不再访问 libGDX 全局 RNG，改用稳定的 `vendor-stock` 命名流；服务器路径继续由游戏 seed 驱动。
+- 保留库存数量、赌博候选和品质概率的原有范围与顺序，仅改变随机 ownership，避免离线工具结果受其他系统扰动。
+- 本批仍不宣称 M4/M7-A/M8 完成。
+
+验证：
+
+```powershell
+.\gradlew.bat :core:test --tests com.riiablo.item.VendorPricingTest --tests com.riiablo.engine.server.LootDropProbeTest --no-daemon --max-workers=1 --console=plain
+.\gradlew.bat :core:compileJava :server:d2gs:compileJava --no-daemon --max-workers=1 --console=plain
+git diff --check
+```

@@ -4,7 +4,6 @@ import java.lang.reflect.Field;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 
 import com.riiablo.Riiablo;
@@ -22,8 +21,15 @@ public class VendorGenerator extends PassiveSystem {
 
   private com.riiablo.Files files() { return serverContext != null ? serverContext.files() : Riiablo.files; }
   private int roll(int bound) {
-    if (random == null && serverContext != null) random = new NativeRng(serverContext.gameSeed());
-    return random != null ? random.nextInt(bound) : MathUtils.random(bound - 1);
+    if (random == null) {
+      // Keep legacy/offline construction usable without coupling vendor stock
+      // to libGDX's process-global RNG. Production contexts still derive the
+      // stream from the authoritative game seed.
+      random = serverContext != null
+          ? new NativeRng(serverContext.gameSeed())
+          : com.riiablo.engine.server.NamedRngStreams.open(0, "vendor-stock", 0);
+    }
+    return random.nextInt(bound);
   }
   private int between(int min, int max) { return min + roll(max - min + 1); }
 
