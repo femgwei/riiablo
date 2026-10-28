@@ -4010,6 +4010,21 @@ git diff --check
 下一迁移：继续集中处理服务端 AI/掉落/地图随机入口，优先选能注入命名 stream 且可纳入
 checkpoint registry 的生产调用方，随后补 data-pack digest/version 与缺失策略门禁。
 
+### 冻结批次 A 继续：ObjectManager 容器 RNG stream 收口（2026-10-28）
+
+- `ObjectManager` 的箱子陷阱、陷阱伤害、容器掉落数量统一使用 `object.container` 命名
+  `NativeRng`，移除 `MathUtils.random` 的全局状态依赖；保留无参构造供离线 fixture 使用，
+  生产可通过 game seed 构造并注册 `checkpointRng()`。
+- 保持原有随机范围语义：10% 陷阱、10..30 陷阱伤害、箱子 1..4、桶/骨灰盒 30% 掉落、
+  石棺 2..5；未修改对象交互、掉落回调或 D2GS 协议。
+- 新增相同 seed/不同 seed 容器序列回归；core 定向测试 2 项通过，模块边界和编译通过。
+
+剩余问题：AI 具体类、地图生成、掉落和少数旧兼容工具仍有直接全局随机调用，继续留在
+冻结批次 A；本批不宣称 M3/M4/M7-A 或 M8 总体完成。
+
+下一迁移：继续集中处理服务端 AI 或地图生成的命名 RNG 注入，并把已迁移 stream 接入真实
+D2GS checkpoint registry，随后补 data-pack digest/version 与严格缺失策略门禁。
+
 ## 剩余主线固定批次（2026-10-26 冻结）
 
 当前已完成 M0、M1 主行、M2、M6、M8-B；M4-B 内容/Mod 分层按计划暂停，不计入当前

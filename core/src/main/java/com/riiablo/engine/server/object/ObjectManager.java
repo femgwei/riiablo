@@ -1,12 +1,13 @@
 package com.riiablo.engine.server.object;
 
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.Pool;
 
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.engine.server.NamedRngStreams;
+import com.riiablo.engine.server.NativeRng;
 
 /**
  * 场景对象管理器 - 基于 D2MOD Objects.cpp 移植
@@ -59,6 +60,9 @@ public class ObjectManager {
 
   /** 对象交互回调 */
   private ObjectInteractCallback interactCallback;
+
+  /** Named stream for deterministic object traps and container drops. */
+  private final NativeRng rng;
 
   /** 神殿效果回调 */
   private ShrineEffectCallback shrineCallback;
@@ -115,7 +119,15 @@ public class ObjectManager {
   // 构造函数
   //==========================================================================
 
-  public ObjectManager() {}
+  /** Compatibility fixture stream; production should use the seeded constructor. */
+  public ObjectManager() { this(0); }
+
+  public ObjectManager(int gameSeed) {
+    rng = NamedRngStreams.open(gameSeed, "object.container", 0L);
+  }
+
+  /** Stream state to register with the authoritative checkpoint registry. */
+  public NativeRng checkpointRng() { return rng; }
 
   //==========================================================================
   // 核心方法
@@ -418,9 +430,9 @@ public class ObjectManager {
     switch (obj.objectType) {
       case ObjectType.CHEST:
         // 箱子可能有陷阱
-        obj.trapped = MathUtils.random(99) < 10; // 10%几率有陷阱
+        obj.trapped = rng.nextInt(100) < 10; // 10%几率有陷阱
         if (obj.trapped) {
-          obj.trapDamage = MathUtils.random(10, 30);
+          obj.trapDamage = 10 + rng.nextInt(21);
         }
         break;
 
@@ -445,12 +457,12 @@ public class ObjectManager {
   private int calculateDropCount(ObjectData obj) {
     switch (obj.objectType) {
       case ObjectType.CHEST:
-        return MathUtils.random(1, 4);
+        return 1 + rng.nextInt(4);
       case ObjectType.BARREL:
       case ObjectType.URN:
-        return MathUtils.random(99) < 30 ? 1 : 0;
+        return rng.nextInt(100) < 30 ? 1 : 0;
       case ObjectType.SARCOPHAGUS:
-        return MathUtils.random(2, 5);
+        return 2 + rng.nextInt(4);
       default:
         return 1;
     }
