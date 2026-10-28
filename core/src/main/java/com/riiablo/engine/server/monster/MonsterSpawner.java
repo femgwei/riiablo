@@ -1,11 +1,12 @@
 package com.riiablo.engine.server.monster;
 
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.engine.server.NamedRngStreams;
+import com.riiablo.engine.server.NativeRng;
 
 /**
  * 怪物生成器 - 基于 D2MOD MonsterSpawn.cpp 移植
@@ -62,6 +63,7 @@ public class MonsterSpawner {
 
   /** 当前难度 */
   private int difficulty = 0; // 0=普通, 1=噩梦, 2=地狱
+  private final NativeRng rng;
 
   //==========================================================================
   // 回调接口
@@ -91,7 +93,16 @@ public class MonsterSpawner {
   // 构造函数
   //==========================================================================
 
-  public MonsterSpawner() {}
+  /** Compatibility fixture stream; production should use {@link #MonsterSpawner(int)}. */
+  public MonsterSpawner() { this(0); }
+
+  /** Opens the authoritative named stream used by monster pack generation. */
+  public MonsterSpawner(int gameSeed) {
+    rng = NamedRngStreams.open(gameSeed, "monster.spawn", 0L);
+  }
+
+  /** Exposes the stream for the checkpoint registry owned by the D2GS host. */
+  public NativeRng checkpointRng() { return rng; }
 
   //==========================================================================
   // 核心方法
@@ -112,10 +123,10 @@ public class MonsterSpawner {
     Array<Integer> spawned = new Array<>();
 
     // 决定生成什么类型的怪物群
-    boolean isElite = MathUtils.random(99) < ELITE_SPAWN_CHANCE;
+    boolean isElite = rng.nextInt(100) < ELITE_SPAWN_CHANCE;
 
     if (isElite) {
-      boolean isChampion = MathUtils.random(99) < CHAMPION_RATIO;
+      boolean isChampion = rng.nextInt(100) < CHAMPION_RATIO;
       if (isChampion) {
         spawned.addAll(spawnChampionPack(monsterId, centerX, centerY, areaLevel));
       } else {
@@ -134,11 +145,11 @@ public class MonsterSpawner {
   public Array<Integer> spawnNormalPack(int monsterId, float centerX, float centerY, int areaLevel) {
     Array<Integer> spawned = new Array<>();
 
-    int packSize = MathUtils.random(MIN_PACK_SIZE, MAX_PACK_SIZE);
+    int packSize = inclusive(MIN_PACK_SIZE, MAX_PACK_SIZE);
 
     for (int i = 0; i < packSize; i++) {
-      float offsetX = MathUtils.random(-3f, 3f);
-      float offsetY = MathUtils.random(-3f, 3f);
+      float offsetX = fixed(-3f, 3f);
+      float offsetY = fixed(-3f, 3f);
 
       int entityId = createMonster(monsterId, centerX + offsetX, centerY + offsetY,
           MonsterRank.NORMAL, MonsterAffix.NONE, -1, -1);
@@ -158,12 +169,12 @@ public class MonsterSpawner {
   public Array<Integer> spawnChampionPack(int monsterId, float centerX, float centerY, int areaLevel) {
     Array<Integer> spawned = new Array<>();
 
-    int packSize = MathUtils.random(MIN_CHAMPION_PACK, MAX_CHAMPION_PACK);
-    int championType = MathUtils.random(0, 4); // 随机冠军类型
+    int packSize = inclusive(MIN_CHAMPION_PACK, MAX_CHAMPION_PACK);
+    int championType = inclusive(0, 4); // 随机冠军类型
 
     for (int i = 0; i < packSize; i++) {
-      float offsetX = MathUtils.random(-2f, 2f);
-      float offsetY = MathUtils.random(-2f, 2f);
+      float offsetX = fixed(-2f, 2f);
+      float offsetY = fixed(-2f, 2f);
 
       int entityId = createMonster(monsterId, centerX + offsetX, centerY + offsetY,
           MonsterRank.CHAMPION, MonsterAffix.NONE, championType, -1);
@@ -197,11 +208,11 @@ public class MonsterSpawner {
     spawned.add(uniqueEntityId);
 
     // 生成随从
-    int minionCount = MathUtils.random(MIN_UNIQUE_MINIONS, MAX_UNIQUE_MINIONS);
+    int minionCount = inclusive(MIN_UNIQUE_MINIONS, MAX_UNIQUE_MINIONS);
 
     for (int i = 0; i < minionCount; i++) {
-      float offsetX = MathUtils.random(-3f, 3f);
-      float offsetY = MathUtils.random(-3f, 3f);
+      float offsetX = fixed(-3f, 3f);
+      float offsetY = fixed(-3f, 3f);
 
       int entityId = createMonster(monsterId, centerX + offsetX, centerY + offsetY,
           MonsterRank.MINION, MonsterAffix.NONE, -1, uniqueEntityId);
@@ -279,7 +290,7 @@ public class MonsterSpawner {
       attempts++;
 
       // 随机选择一个词缀
-      int index = MathUtils.random(availableAffixes.length - 1);
+      int index = rng.nextInt(availableAffixes.length);
       long affix = availableAffixes[index];
 
       // 检查是否已有该词缀
@@ -309,6 +320,17 @@ public class MonsterSpawner {
       temp >>>= 1;
     }
     return count;
+  }
+
+  private int inclusive(int min, int max) {
+    return min + rng.nextInt(max - min + 1);
+  }
+
+  /** Uses the same millipoint resolution as the old float helper, but from the named stream. */
+  private float fixed(float min, float max) {
+    int low = Math.round(min * 1000f);
+    int high = Math.round(max * 1000f);
+    return (low + rng.nextInt(high - low + 1)) / 1000f;
   }
 
   /**

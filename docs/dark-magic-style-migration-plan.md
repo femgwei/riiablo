@@ -3994,6 +3994,22 @@ git diff --check
 本次继续属于冻结批次 B；战斗摘要到可恢复 replay 的组合验收和 D2GS allocator/lifecycle
 回归已完成，未绑定 RNG 的最终宿主审计仍待在本批收口。
 
+### 冻结批次 A 继续：MonsterSpawner 命名 RNG stream 收口（2026-10-28）
+
+- `MonsterSpawner` 的精英/冠军/暗金选择、pack 数量、位置偏移和词缀选择统一使用
+  `monster.spawn` 命名 `NativeRng`，不再读取全局 `MathUtils.random`；相同 game seed
+  在跨实例下生成相同 pack 序列，不同 seed 保持独立 stream。
+- 保留无参构造供离线 fixture 使用，但生产可通过 game seed 构造并将 `checkpointRng()` 注册到
+  `CheckpointRngRegistry`；没有改变 MonsterAffix 兼容规则或 D2GS 协议字段。
+- 新增确定性回归，覆盖 pack/位置/词缀输出和 stream 状态推进；core 定向测试 2 项通过，
+  `:server:d2gs:compileJava` 与模块边界验证通过。
+
+剩余问题：AI 具体类、地图生成、掉落和少数旧兼容工具仍有直接全局随机调用，继续留在
+冻结批次 A；本批不宣称 M3/M4/M7-A 或 M8 总体完成。
+
+下一迁移：继续集中处理服务端 AI/掉落/地图随机入口，优先选能注入命名 stream 且可纳入
+checkpoint registry 的生产调用方，随后补 data-pack digest/version 与缺失策略门禁。
+
 ## 剩余主线固定批次（2026-10-26 冻结）
 
 当前已完成 M0、M1 主行、M2、M6、M8-B；M4-B 内容/Mod 分层按计划暂停，不计入当前
