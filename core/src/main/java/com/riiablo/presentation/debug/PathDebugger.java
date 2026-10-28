@@ -11,6 +11,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 
 import com.riiablo.Riiablo;
+import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Position;
@@ -38,6 +39,9 @@ public class PathDebugger extends IteratingSystem {
 
   @Wire(name = "shapes")
   protected ShapeRenderer shapes;
+
+  @Wire(name = "clientContext", failOnNull = false)
+  protected ClientGameplayContext clientContext;
 
   private final Vector2 tmpVec2a = new Vector2();
   private final Vector2 tmpVec2b = new Vector2();
@@ -100,7 +104,7 @@ public class PathDebugger extends IteratingSystem {
     for (int i = 0; i < path.numPoints; i++) {
       point = path.points[i];
       iso.toScreen(point.x, point.y, tmpVec2a).sub(0, BOX_SIZE);
-      Riiablo.fonts.consolas12.draw(batch, Integer.toString(point.action), tmpVec2a.x, tmpVec2a.y, 0, Align.center, false);
+      (clientContext != null && clientContext.fonts() != null ? clientContext.fonts() : Riiablo.fonts).consolas12.draw(batch, Integer.toString(point.action), tmpVec2a.x, tmpVec2a.y, 0, Align.center, false);
     }
   }
 }
