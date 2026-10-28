@@ -580,7 +580,9 @@ public final class MonsterAiArena extends ApplicationAdapter {
         if (world != null) world.dispose();
       } finally {
         try { if (map != null) map.dispose(); }
-        finally { Riiablo.engine = null; }
+        finally {
+          Riiablo.engine = null;
+        }
       }
     }
   }
