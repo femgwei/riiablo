@@ -4393,6 +4393,12 @@ git diff --check
 - 保留普通/噩梦/地狱倍率和 inclusive 伤害范围；服务器系统可逐步接入自身游戏 RNG，而无需改变规则公式。
 - 本批仍不宣称 M4/M7-A/M8 完成。
 
+### 批次 A 继续：Actioneer 战斗随机入口集中收口（2026-10-28）
+
+- 概率判定、毒素/元素/物理范围伤害和 Bestow 百分比恢复统一使用 `actioneer-combat` 命名 `NativeRng`，移除该类对 libGDX 全局 RNG 的依赖。
+- 保留原有 inclusive 与 half-open 范围语义；AI、技能独立随机源和 checkpoint 注册仍待后续批次处理。
+- 本批仍不宣称 M4/M7-A/M8 完成。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）

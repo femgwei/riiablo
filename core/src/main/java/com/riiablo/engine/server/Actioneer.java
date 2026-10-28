@@ -107,6 +107,13 @@ public class Actioneer extends PassiveSystem {
     return serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed;
   }
 
+  private NativeRng combatRng;
+  private NativeRng combatRng() {
+    if (combatRng == null) combatRng = NamedRngStreams.open(gameSeed(), "actioneer-combat", 0);
+    return combatRng;
+  }
+  private int roll(int bound) { return combatRng().nextInt(bound); }
+
   private static final Logger log = LogManager.getLogger(Actioneer.class);
   private boolean lastCastAccepted;
 
@@ -2998,7 +3005,7 @@ public class Actioneer extends PassiveSystem {
       int chance = Math.max(0, Math.min(100,
           SkillFormula.evaluate(skill.calc2, skill, level)));
       int amount = Math.max(1, SkillFormula.evaluate(skill.calc3, skill, level));
-      if (MathUtils.random(99) < chance) {
+      if (roll(100) < chance) {
         if (weapon.base.stackable) {
           StatRef quantity = weapon.attrs.base().get(Stat.quantity);
           if (quantity != null && quantity.asInt() > 0) {
@@ -3184,7 +3191,7 @@ public class Actioneer extends PassiveSystem {
     if (combat.hit && !combat.blocked) {
       CombatSystem.CombatResult poison = combatSystemResolver.calculateFixedPoisonDamage(
           attacker, defender, isPlayerEntity(targetId), isPlayerEntity(entityId),
-          MathUtils.random(poisonRange[0], poisonRange[1]), poisonDuration,
+          rollRange(poisonRange[0], poisonRange[1]), poisonDuration,
           stateList(targetId), nativeDifficultyContext());
       int itemPoisonDuration = statInt(attacker, Stat.poisonlength);
       float itemPoisonPerFrame = CombatSystem.totalPoisonToPerFrame(
@@ -3604,7 +3611,7 @@ public class Actioneer extends PassiveSystem {
             elementalMin, elementalMax, 0, duration,
             unitStates.stateList, stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
     if (rabies && combat.hit && !combat.blocked) {
-      int rawFixed = MathUtils.random(elemental[0], elemental[1]);
+      int rawFixed = rollRange(elemental[0], elemental[1]);
       CombatSystem.CombatResult poison = combatSystemResolver.calculateFixedPoisonDamage(
           attacker, defender, isPlayerEntity(targetId), isPlayerEntity(entityId),
           rawFixed, duration, stateList(targetId), nativeDifficultyContext());
@@ -4670,7 +4677,7 @@ public class Actioneer extends PassiveSystem {
     boolean unique = monster != null && MonsterRank.isUnique(monster.rank);
     int chance = AssassinSkills.dragonTalonKnockbackChance(
         skill, skillLevel, playerOrHireling, boss, unique);
-    boolean applied = chance > 0 && MathUtils.random(99) < chance;
+    boolean applied = chance > 0 && roll(100) < chance;
     log.info("[ASSASSIN_DRAGON_TALON] phase=knockback_roll target={} class={} chance={} applied={}",
         targetId, playerOrHireling ? "player_or_hireling" : boss ? "boss" : unique ? "unique" : "normal",
         chance, applied);
@@ -5455,10 +5462,10 @@ public class Actioneer extends PassiveSystem {
         sourcePlayerAligned, targetPlayerAligned);
   }
 
-  private static int rollRange(int min, int max) {
+  private int rollRange(int min, int max) {
     min = Math.max(0, min);
     max = Math.max(min, max);
-    return max > min ? MathUtils.random(min, max) : min;
+    return max > min ? min + roll(max - min + 1) : min;
   }
 
   private static int lightningDamageType(String eType) {
@@ -5659,7 +5666,7 @@ public class Actioneer extends PassiveSystem {
     // preserve the native half-open upper bound rather than using LibGDX's
     // inclusive random(min,max) overload.
     int percent = maxPercent > minPercent
-        ? MathUtils.random(minPercent, maxPercent - 1) : minPercent;
+        ? (minPercent + roll(maxPercent - minPercent)) : minPercent;
     float before = current;
     float restored = max * percent / 100f;
     float after = Math.min(max, current + restored);
@@ -6004,7 +6011,7 @@ public class Actioneer extends PassiveSystem {
         mPlayer.get(entityId).vengeanceHitClass));
     // Native Vengeance rolls one weapon base value and derives all three
     // elemental packets from it. Param1 only rotates the visual hit class.
-    int elementalBase = MathUtils.random(physicalMin, physicalMax);
+    int elementalBase = rollRange(physicalMin, physicalMax);
     int[] elementalMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
     int[] elementalMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
     int[] damageTypes = {CombatSystem.DAMAGE_FIRE, CombatSystem.DAMAGE_COLD,
