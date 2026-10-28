@@ -3,7 +3,6 @@ package com.riiablo.map;
 import com.badlogic.gdx.assets.AssetManager;
 import com.riiablo.Files;
 import com.riiablo.Riiablo;
-import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.mpq.MPQFileHandleResolver;
 import java.util.Objects;
 
@@ -34,9 +33,9 @@ public final class MapResources {
   public com.riiablo.COFs cofs() { return cofs; }
   public com.riiablo.GdxCvarManager cvars() { return cvars; }
 
-  public static MapResources fromContext(ClientGameplayContext context) {
-    Objects.requireNonNull(context, "context");
-    return new MapResources(context.files(), context.assets(), context.mpqs(), context.cofs(), context.cvars());
+  public static MapResources fromContext(Files files, AssetManager assets,
+      MPQFileHandleResolver mpqs, com.riiablo.COFs cofs, com.riiablo.GdxCvarManager cvars) {
+    return new MapResources(files, assets, mpqs, cofs, cvars);
   }
 
   public static MapResources fromGlobals() {
