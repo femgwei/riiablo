@@ -49,7 +49,7 @@ public final class HackMapIconRenderer implements Disposable {
   private final ClientGameplayContext clientContext;
 
   public HackMapIconRenderer(ClientGameplayContext clientContext) {
-    this.clientContext = clientContext == null ? ClientGameplayContext.fromGlobals() : clientContext;
+    this.clientContext = java.util.Objects.requireNonNull(clientContext, "clientContext");
     resetDefaultFileNames();
   }
 
