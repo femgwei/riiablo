@@ -33,7 +33,7 @@ class SimulationSystemGroupsTest {
         group(SimulationSystemGroups::unitLifecycle,
             "ServerMonsterCorpseSystem UnitLifecycleSystem NativePlayerTargetSlots"),
         group(SimulationSystemGroups::quests,
-            "Act1QuestSystem Act2QuestSystem Act3QuestSystem Act3MephistoQuestSystem "
+            "NativeQuestRandomState Act1QuestSystem Act2QuestSystem Act3QuestSystem Act3MephistoQuestSystem "
                 + "Act4QuestSystem Act5QuestSystem Act2TaintedSunQuestSystem "
                 + "Act2DurielQuestSystem NativeMercenaryRewardSystem"),
         group(SimulationSystemGroups::ownedUnits,
@@ -90,7 +90,7 @@ class SimulationSystemGroupsTest {
       Supplier<BaseSystem[]> factory = (Supplier<BaseSystem[]>) arguments.get()[0];
       for (BaseSystem system : factory.get()) classes.add(system.getClass());
     });
-    assertEquals(38, classes.size());
+    assertEquals(39, classes.size());
     assertEquals(classes.size(), new HashSet<>(classes).size());
   }
 
