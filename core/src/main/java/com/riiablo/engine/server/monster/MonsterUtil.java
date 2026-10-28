@@ -1,9 +1,10 @@
 package com.riiablo.engine.server.monster;
 
 import com.badlogic.gdx.math.MathUtils;
-
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.engine.server.NativeRng;
+import com.riiablo.engine.server.NamedRngStreams;
 import com.riiablo.engine.server.combat.NativeDifficultyRules;
 
 /**
@@ -236,6 +237,14 @@ public final class MonsterUtil {
    * @return 随机伤害值
    */
   public static int calculateDamage(int minDamage, int maxDamage, int difficulty) {
+    long context = (((long) minDamage) << 32) ^ (maxDamage & 0xFFFFFFFFL) ^ difficulty;
+    return calculateDamage(minDamage, maxDamage, difficulty,
+        NamedRngStreams.open(0, "monster-damage", context));
+  }
+
+  /** Calculates damage using an authoritative caller-owned RNG stream. */
+  public static int calculateDamage(int minDamage, int maxDamage, int difficulty, NativeRng rng) {
+    if (rng == null) throw new NullPointerException("rng");
     // 难度调整
     float diffMultiplier = 1.0f;
     switch (difficulty) {
@@ -250,7 +259,8 @@ public final class MonsterUtil {
     int adjustedMin = (int)(minDamage * diffMultiplier);
     int adjustedMax = (int)(maxDamage * diffMultiplier);
     
-    return MathUtils.random(adjustedMin, adjustedMax);
+    if (adjustedMax <= adjustedMin) return adjustedMin;
+    return adjustedMin + rng.nextInt(adjustedMax - adjustedMin + 1);
   }
 
   //==========================================================================

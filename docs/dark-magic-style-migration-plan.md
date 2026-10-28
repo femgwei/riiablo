@@ -4387,6 +4387,12 @@ git diff --check
 git diff --check
 ```
 
+### 批次 A 继续：MonsterUtil 伤害随机入口可注入化（2026-10-28）
+
+- `MonsterUtil.calculateDamage` 新增 caller-owned `NativeRng` 重载；旧静态入口改用稳定 `monster-damage` 兼容命名流，不再访问 libGDX 全局 RNG。
+- 保留普通/噩梦/地狱倍率和 inclusive 伤害范围；服务器系统可逐步接入自身游戏 RNG，而无需改变规则公式。
+- 本批仍不宣称 M4/M7-A/M8 完成。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）
