@@ -72,6 +72,24 @@ if ($nnetLeaks) {
   exit 1
 }
 
+# A production source file must have one transport owner.  Mixing owner
+# namespaces in one file makes it possible for handler/session code to cross
+# the migration boundary accidentally, even when each individual reference is
+# inside an otherwise allowed package tree.
+$mixedOwners = $rows |
+  Where-Object { $_.SourceSet -eq 'main' } |
+  Group-Object File |
+  Where-Object { ($_.Group | Select-Object -ExpandProperty Owner -Unique).Count -gt 1 }
+if ($mixedOwners) {
+  $mixedOwners |
+    ForEach-Object {
+      $owners = ($_.Group | Select-Object -ExpandProperty Owner -Unique) -join ', '
+      "{0}: {1}" -f $_.Name, $owners
+    } |
+    Write-Error
+  exit 1
+}
+
 $summary = $rows | Group-Object Owner | Sort-Object Name |
   ForEach-Object { "{0}={1}" -f $_.Name, $_.Count }
 Write-Output ("network transport owner audit passed: {0} references ({1})" -f
