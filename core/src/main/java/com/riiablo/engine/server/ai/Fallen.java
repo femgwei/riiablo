@@ -7,7 +7,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -217,7 +217,7 @@ public class Fallen extends AI {
       stateMachine.changeState(State.APPROACH);
       return true;
     }
-    if (!MathUtils.randomBoolean(params[2] / 100f)) {
+    if (!aiRandomBoolean(params[2] / 100f)) {
       time = 5f * com.riiablo.codec.Animation.FRAME_DURATION;
       return true;
     }
@@ -226,12 +226,12 @@ public class Fallen extends AI {
     pathfinder.findPath(entityId, null);
     lookAt(targetId);
     stateMachine.changeState(State.ATTACK);
-    byte mode = MathUtils.randomBoolean(params[3] / 100f)
+    byte mode = aiRandomBoolean(params[3] / 100f)
         ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
     mSequence.create(entityId).sequence(mode, Engine.Monster.MODE_NU);
     mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
     playSound(monsound + "_attack_1");
-    time = MathUtils.random(1f, 2);
+    time = aiRandom(1f, 2);
     return true;
   }
 
@@ -362,12 +362,12 @@ public class Fallen extends AI {
         }
         stateMachine.changeState(State.ESCAPE);
         // 5% chance to play sound (1/20)
-        if (MathUtils.random(20) < 1) {
+        if (aiRandom(20) < 1) {
           // Use flee sounds (fallen_flee_1 to fallen_flee_5) instead of attack sound
-          int fleeSoundIndex = MathUtils.random(1, 5);
+          int fleeSoundIndex = aiRandom(1, 5);
           playSound(monsound + "_flee_" + fleeSoundIndex);
         }
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         // Debug log disabled
         // log.info("Fallen {} escape state activated", entityId);
         return;
@@ -407,11 +407,11 @@ public class Fallen extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(0f, 1);
+            nextAction = aiRandom(0f, 1);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             pathfinder.findPath(entityId, dst);
           }
           break;
@@ -461,12 +461,12 @@ public class Fallen extends AI {
       }
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: If distance < 15 and is leader, command minions to attack (30% chance)
-    if (targetDistance < 15f && isLeader() && MathUtils.randomBoolean(params[0] / 100f)) {
+    if (targetDistance < 15f && isLeader() && aiRandomBoolean(params[0] / 100f)) {
       commandMinions(targetId);
       aiParam0 = true;
       // The native command also tells the leader's pack to approach.  It must
@@ -480,7 +480,7 @@ public class Fallen extends AI {
         lookAt(targetId);
         mSequence.create(entityId).sequence(Engine.Monster.MODE_S2, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       }
     }
@@ -499,7 +499,7 @@ public class Fallen extends AI {
         }
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       } else if (targetDistance <= meleeRng) {
         // Already in melee range, stop movement
@@ -508,7 +508,7 @@ public class Fallen extends AI {
       }
       
       // 30% chance to walk close, otherwise idle
-      if (MathUtils.randomBoolean(0.3f) && targetDistance > meleeRng) {
+      if (aiRandomBoolean(0.3f) && targetDistance > meleeRng) {
         // Remove Sequence component if exists to allow VelocityModeChanger to set walk/run mode
         if (mSequence.has(entityId)) {
           Sequence seq = mSequence.get(entityId);
@@ -532,9 +532,9 @@ public class Fallen extends AI {
     // If aiParam0 is false, check attack chance
     if (!aiParam0) {
       // Check attack chance (params[2])
-      if (!MathUtils.randomBoolean(params[2] / 100f)) {
+      if (!aiRandomBoolean(params[2] / 100f)) {
         // 30% chance to use skill2, otherwise idle
-        if (MathUtils.randomBoolean(0.3f)) {
+        if (aiRandomBoolean(0.3f)) {
           mSequence.create(entityId).sequence(Engine.Monster.MODE_S2, Engine.Monster.MODE_NU);
           mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         } else {
@@ -549,11 +549,11 @@ public class Fallen extends AI {
     pathfinder.findPath(entityId, null);
     lookAt(targetId);
     stateMachine.changeState(State.ATTACK);
-    byte attackMode = MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+    byte attackMode = aiRandomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
     mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
     mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
     playSound(monsound + "_attack_1");
-    time = MathUtils.random(1f, 2);
+    time = aiRandom(1f, 2);
   }
 
   @Override

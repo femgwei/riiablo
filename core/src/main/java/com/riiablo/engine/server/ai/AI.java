@@ -216,6 +216,23 @@ public abstract class AI implements Interactable.Interactor {
     return Seed.rollPercentage(aiSeed());
   }
 
+  protected final int aiRandom(int min, int max) {
+    if (max <= min) return min;
+    return min + (int) (rollAiRandomNumber() % (max - min + 1L));
+  }
+  protected final int aiRandom(int bound) { return bound <= 1 ? 0 : aiRandom(0, bound - 1); }
+
+  protected final float aiRandom(float min, float max) {
+    if (max <= min) return min;
+    return min + (max - min) * ((rollAiRandomNumber() & 0xFFFFFFL) / 16777216f);
+  }
+
+  protected final boolean aiRandomBoolean() { return (rollAiRandomNumber() & 1L) != 0; }
+  protected final boolean aiRandomBoolean(float probability) {
+    return probability > 0 && (probability >= 1 || aiRandom(0, 999999) < probability * 1000000f);
+  }
+  protected final boolean aiRandomBoolean(int percent) { return rollAiPercentage() < percent; }
+
   /** D2Game ITEMS_RollRandomNumber truncates the shared seed draw to uint32. */
   protected final long rollAiRandomNumber() {
     if (monster != null) return com.riiablo.engine.server.NativeUnitRandom

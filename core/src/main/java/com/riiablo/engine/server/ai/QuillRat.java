@@ -2,7 +2,7 @@ package com.riiablo.engine.server.ai;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -99,19 +99,19 @@ public class QuillRat extends AI {
     // D2MOD: Calculate random offset from monster's own position
     // nOffsetX and nOffsetY are randomly chosen, one is nMaxDistance, the other is random(0, nMaxDistance)
     float offsetX, offsetY;
-    if (MathUtils.randomBoolean()) {
+    if (aiRandomBoolean()) {
       offsetX = walkDist;
-      offsetY = MathUtils.random(0f, walkDist);
+      offsetY = aiRandom(0f, walkDist);
     } else {
-      offsetX = MathUtils.random(0f, walkDist);
+      offsetX = aiRandom(0f, walkDist);
       offsetY = walkDist;
     }
     
     // Randomly negate offsets
-    if (MathUtils.randomBoolean()) {
+    if (aiRandomBoolean()) {
       offsetX = -offsetX;
     }
-    if (MathUtils.randomBoolean()) {
+    if (aiRandomBoolean()) {
       offsetY = -offsetY;
     }
     
@@ -174,7 +174,7 @@ public class QuillRat extends AI {
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, mPosition.get(targetId).position);
         playSound(monsound + "_shoot_1");
       }
-      time = MathUtils.random(1f, 2f);
+      time = aiRandom(1f, 2f);
       return;
     }
 
@@ -193,7 +193,7 @@ public class QuillRat extends AI {
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, mPosition.get(targetId).position);
       playSound(monsound + "_attack_1");
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
@@ -205,7 +205,7 @@ public class QuillRat extends AI {
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, mPosition.get(targetId).position);
       playSound(monsound + "_shoot_1");
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
@@ -220,11 +220,11 @@ public class QuillRat extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             pathfinder.findPath(entityId, dst);
           }
           break;
@@ -243,20 +243,20 @@ public class QuillRat extends AI {
     // D2MOD: If target distance >= ACTIVATE_DISTANCE, walk close to unit (random walk)
     if (targetDistance >= activateDistance) {
       walkCloseToUnit(targetId, walkDistance);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // D2MOD: Target distance < ACTIVATE_DISTANCE
     // Check shoot chance
-    if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
+    if (params.length > 1 && aiRandomBoolean(params[1] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       playSound(monsound + "_shoot_1");
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
@@ -271,18 +271,18 @@ public class QuillRat extends AI {
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         playSound(monsound + "_shoot_1");
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       }
 
       // D2MOD: Walk close to unit (random walk)
       walkCloseToUnit(targetId, walkDistance);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     }
 
     // Escaping
-    time = MathUtils.random(1f, 2);
+    time = aiRandom(1f, 2);
   }
 
   @Override

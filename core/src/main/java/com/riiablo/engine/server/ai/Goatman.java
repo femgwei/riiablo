@@ -7,7 +7,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.math.MathUtils;
+
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
@@ -135,11 +135,11 @@ public class Goatman extends AI {
           break;
         case WANDER:
           if (!mPathfind.has(entityId)) {
-            nextAction = MathUtils.random(3f, 5);
+            nextAction = aiRandom(3f, 5);
             stateMachine.changeState(State.IDLE);
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
-            dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
+            dst.add(aiRandom(-5, 5), aiRandom(-5, 5));
             pathfinder.findPath(entityId, dst);
           }
           break;
@@ -155,14 +155,14 @@ public class Goatman extends AI {
 
     // D2MOD: If in combat
     if (bCombat) {
-      if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+      if (params.length > 2 && aiRandomBoolean(params[2] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         playSound(monsound + "_attack_1");
-        time = MathUtils.random(1f, 2);
+        time = aiRandom(1f, 2);
         return;
       } else {
         stateMachine.changeState(State.IDLE);
@@ -172,10 +172,10 @@ public class Goatman extends AI {
     }
 
     // D2MOD: Not in combat, approach
-    if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+    if (params.length > 0 && aiRandomBoolean(params[0] / 100f)) {
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
-      time = MathUtils.random(1f, 2);
+      time = aiRandom(1f, 2);
       return;
     } else {
       stateMachine.changeState(State.IDLE);
