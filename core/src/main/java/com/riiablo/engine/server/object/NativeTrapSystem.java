@@ -3,12 +3,12 @@ package com.riiablo.engine.server.object;
 import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
-import com.badlogic.gdx.math.RandomXS128;
 import com.badlogic.gdx.math.Vector2;
 import com.d2moo.common.drlg.D2ObjectIds;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.NamedRngStreams;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.NativeTrapFire;
@@ -161,7 +161,7 @@ public class NativeTrapSystem extends BaseSystem {
 
   static int monsterCount(int handlerType, long seed) {
     if (handlerType == 8 || handlerType == 9) {
-      return new RandomXS128(seed).nextInt(2) + 1;
+      return NamedRngStreams.openLegacy((int) seed, "native-trap-monster-count", seed).nextInt(2) + 1;
     }
     return monsterForTrapType(handlerType) < 0 ? 0 : 1;
   }
