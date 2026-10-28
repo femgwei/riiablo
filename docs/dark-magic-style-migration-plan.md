@@ -4482,6 +4482,11 @@ git diff --check
 - `Act1CainRuntime` 的石阵洗牌从裸 `java.util.Random` 改为 `act1-cain-stones` 命名兼容流，并保留 Fisher-Yates 顺序和所有石阵对象范围。
 - 任务状态仍由 game-scoped runtime 持有，不写入玩家 D2S；后续继续处理 D2GS MPQ 兼容随机分支。
 
+### 批次 A 继续：map2 Seed 随机工厂隔离全局 RNG（2026-10-29）
+
+- `map2.random.Seed.random()` 改用独立 `SecureRandom` 生成显式新种子，不再消耗 libGDX 全局 RNG。
+- 该 API 是非确定性的种子工厂；确定性地图路径仍通过 `Seed.fixed()` 或调用方传入的显式种子运行。
+
 结果：雇佣兵管理器定向回归通过；继续处理剩余全局随机和 checkpoint 边界。
 
 ### 批次 A 继续：VendorGenerator 离线随机兼容入口收口（2026-10-28）

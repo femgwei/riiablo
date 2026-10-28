@@ -4,14 +4,15 @@ import org.apache.commons.lang3.Conversion;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Base64Coder;
+import java.security.SecureRandom;
 
 public final class Seed {
   public static Seed random() {
+    SecureRandom random = new SecureRandom();
     return from(
-        MathUtils.random.nextLong(),
-        MathUtils.random.nextLong());
+        random.nextLong(),
+        random.nextLong());
   }
 
   public static Seed fixed() {
