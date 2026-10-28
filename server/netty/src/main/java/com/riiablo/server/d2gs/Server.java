@@ -274,9 +274,7 @@ public class Server implements PacketProcessor {
   }
 
   private void sendMessage(int id, ClientData client, D2GSPacket packet) {
-    packet.buffer.mark();
     endpoint.sendMessage(id, packet.buffer, -1);
-    packet.buffer.reset();
     if ((connected & (1 << id)) == 0 && packet.dataType == D2GSData.Connection) {
       connected |= (1 << id);
     }

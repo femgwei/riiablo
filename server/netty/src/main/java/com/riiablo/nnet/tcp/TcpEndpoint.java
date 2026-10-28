@@ -36,7 +36,12 @@ public class TcpEndpoint implements Endpoint<ByteBuf> {
   public void sendMessage(int id, ByteBuffer bb, int qos) {
     if (DEBUG_SEND) Gdx.app.debug(TAG, "sendMessage to " + id);
     Channel ch = resolver.get(id);
-    ch.writeAndFlush(Unpooled.wrappedBuffer(bb));
+    if (ch == null || !ch.isActive()) {
+      if (DEBUG_SEND) Gdx.app.debug(TAG, "dropping packet for inactive client " + id);
+      return;
+    }
+    ByteBuffer copy = bb.duplicate();
+    ch.writeAndFlush(Unpooled.wrappedBuffer(copy));
   }
 
   @Override
