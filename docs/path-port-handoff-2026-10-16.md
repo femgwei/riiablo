@@ -466,3 +466,13 @@ owner 字段和完整运行时已经接入。
 的 cast 阻挡结果与邻区 footprint 断言；与 `NativePathRuntime` 的技能 owner 拒绝分流无关，
 需要后续单独核对碰撞掩码/测试夹具基线。NativePathRuntime、PathfinderRecoveryTarget 和
 DiabRunIntegration 定向测试仍全部通过。
+
+## 完整路径回归：原生碰撞与 owner 隔离（2026-10-30）
+
+基于提交 `2aa254652` 及其之前的 owner 分流修复，使用独立输出目录
+`.gradle/path-port/round23-native-collision` 运行 `pathPortTest`。共 66 个 XML 测试文件、
+720 项测试，`failures=0`、`errors=0`、`skipped=0`，Gradle 构建成功。
+
+本轮覆盖 NativePathRuntime、技能拥有移动拒绝/DiabRun 分流、Whirlwind 原生碰撞掩码、
+Native seam footprint 及既有路径/碰撞回归。该结果确认代码回归全绿，但不等同于完整原版
+动态对照、跨电脑运行或人工视觉/听感验收。
