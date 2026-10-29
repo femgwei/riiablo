@@ -10,6 +10,7 @@ import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
+import com.riiablo.engine.server.event.SoundEvent;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -70,6 +71,26 @@ class NativeMonsterSequenceIntegrationTest extends RiiabloTest {
       assertEquals(1, probe.actions, "initial skill event must not be skipped");
       world.process();
       assertEquals(1, probe.actions, "initial event must fire only once");
+    } finally { world.dispose(); }
+  }
+
+  @Test void sequenceSoundAtSourcePointPublishesMonsterSoundIntent() {
+    Probe probe = new Probe();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, new CofManager(), new SequenceHandler()).build());
+    try {
+      int id = world.create();
+      world.getMapper(com.riiablo.engine.server.component.Monster.class).create(id).monstats =
+          new com.riiablo.codec.excel.MonStats.Entry();
+      world.getMapper(com.riiablo.engine.server.component.Monster.class).get(id).monstats.MonSound = "fallen";
+      byte mode = Engine.Monster.MODE_A1;
+      world.getMapper(com.riiablo.engine.server.component.CofReference.class).create(id).set("DI", mode);
+      world.getMapper(AnimData.class).create(id);
+      world.getMapper(Sequence.class).create(id).sequence(mode, mode).nativeMonster =
+          new NativeMonsterSequence(mode, new int[] {5, 6}, new byte[] {mode, mode},
+              new byte[] {Engine.KEYFRAME_SND, 0});
+      world.process();
+      assertEquals("fallen_attack_1", probe.sound);
     } finally { world.dispose(); }
   }
 
@@ -149,8 +170,9 @@ class NativeMonsterSequenceIntegrationTest extends RiiabloTest {
   }
 
   static class Probe extends PassiveSystem {
-    int actions, finished;
+    int actions, finished; String sound;
     @Subscribe public void action(AnimDataKeyframeEvent event) { actions++; }
     @Subscribe public void finish(AnimDataFinishedEvent event) { finished++; }
+    @Subscribe public void sound(SoundEvent event) { sound = event.sound; }
   }
 }
