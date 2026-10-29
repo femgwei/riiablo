@@ -2,6 +2,9 @@
 
 ## 已移植
 
+- D2MOO `6728113f`：环境周期在 Act IV eclipse 模式下切换时，边界快照继续使用
+  Act IV 周期表；riiablo `EnvironmentCycle` 已修正并加入确定性回归。
+
 - D2MOO `5c2b7095` / `4f032990`：`DRLGLOGIC_SetTileGridFlags` 对 tile class `-1`
   的有定义处理。`D2MOO_JAVA` 现在在初始调用时只标记无方向墙自身，方向洪泛不穿墙；
   同时保留越界索引保护。

@@ -9,6 +9,8 @@
 
 ## 最近已推送提交
 
+- `f5f955d07`：移植 D2MOO 环境周期 Act IV eclipse 边界修复并加入回归。
+
 - `6409267e8`：D2SWriter96 测试初始化 `Riiablo.files`。
 - `0858ac56c`：MapTourProbe 纯 flags 夹具显式使用 legacy collision policy。
 - `12d48d153`：移植 D2MOO tile class `-1` 的 `DRLGLOGIC_SetTileGridFlags` 修复。
@@ -34,7 +36,7 @@
 
 ## 下一任务
 
-对照 D2MOO `eea008b8` 的 Quill Rat spread seed 修复，检查 riiablo Quill Rat AI 的单位级 RNG、扩散方向和 seed 消耗顺序；先补确定性回归，再决定是否改生产代码。暗黑规则不确定时优先查 D2MOO，再查 The Phrozen Keep。
+继续按 D2MOO 10 月 13 日增量提交审计尚未覆盖的 1.10f 行为；优先选择有明确 1.10f 反编译依据、且 riiablo 尚无等价回归的项目。暗黑规则不确定时优先查 D2MOO，再查 The Phrozen Keep。
 
 ## 资源与约束
 
