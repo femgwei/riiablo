@@ -5822,6 +5822,10 @@ public final class D2GSHeadlessClient {
             + " pathTarget=" + state.pathTarget + " destination=" + state.destination);
       }
     }
+    if (state != null && state.blockedByDynamic) {
+      throw new TourMovementBlock("timeout sequence=" + sequence + " final=" + state.position
+          + " target=" + target + " blockedByDynamic=true stalled=" + state.stalledTime);
+    }
     throw new IOException("Walk timeout sequence=" + sequence + " final=" + state.position
         + " target=" + target + " walking=" + state.walking + " ack=" + lastMovementAcknowledgement
         + " level=" + state.level + " snapshotLevel=" + currentLevelId
