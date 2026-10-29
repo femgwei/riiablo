@@ -485,7 +485,11 @@ public final class Act1D2MOOLayoutBridge {
 
     /** Releases the static D2MOO table caches populated by this bridge. */
     public static void releaseDataTables() {
-        DataTbls.setLevelDefBinCache(null);
+        // Keep LevelDef available through the final Drlg teardown callbacks.
+        // D2MOO may query level coordinates while releasing rooms; clearing it
+        // first produced false missing-record warnings. The next layout
+        // installation replaces this snapshot, and the surrounding context
+        // scope clears the thread-local state after generation completes.
         DataTbls.setLevelTypesTxtCache(null);
         DataTbls.unloadLvlPrestTxt();
         DataTbls.unloadLvlSubTxt();
