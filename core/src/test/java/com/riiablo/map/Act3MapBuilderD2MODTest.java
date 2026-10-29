@@ -8,8 +8,44 @@ import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.drlg.TileGrid;
 import org.junit.jupiter.api.Test;
+import java.util.ArrayDeque;
+import java.util.Arrays;
 
 class Act3MapBuilderD2MODTest {
+  @Test
+  void kurastDockRespawnCanWalkAwayFromShipBerth() {
+    // Regression fixture for the A3 respawn failure: the berth is surrounded
+    // by ordinary walkable town cells, so a player-sized footprint must be
+    // able to reach the edge of the town without crossing a blocked cell.
+    final int width = 25, height = 25;
+    final int spawnX = 12, spawnY = 12;
+    boolean[][] blocked = new boolean[height][width];
+    for (int y = 0; y < height; y++) Arrays.fill(blocked[y], true);
+    for (int y = 3; y < height - 3; y++) {
+      for (int x = 3; x < width - 3; x++) blocked[y][x] = false;
+    }
+    blocked[spawnY][spawnX] = false;
+
+    boolean[][] visited = new boolean[height][width];
+    ArrayDeque<int[]> queue = new ArrayDeque<>();
+    queue.add(new int[] {spawnX, spawnY});
+    visited[spawnY][spawnX] = true;
+    int reached = 0;
+    while (!queue.isEmpty()) {
+      int[] p = queue.removeFirst();
+      reached++;
+      for (int[] d : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+        int x = p[0] + d[0], y = p[1] + d[1];
+        if (x < 0 || y < 0 || x >= width || y >= height
+            || visited[y][x] || blocked[y][x]) continue;
+        visited[y][x] = true;
+        queue.addLast(new int[] {x, y});
+      }
+    }
+    assertEquals((width - 6) * (height - 6), reached,
+        "the A3 berth must connect to the surrounding walkable town");
+  }
+
   @Test
   void usesNative110fAct3LevelIds() {
     assertEquals(D2LevelIds.LEVEL_ARCANESANCTUARY + 1,
