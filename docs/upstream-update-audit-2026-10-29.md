@@ -11,7 +11,9 @@
 - D2MOO `8075cae5`：`MonStats` spawn 坐标/索引改为有符号字段，佣兵生命与边界计算使用
   有符号整数；适合继续审计 `NativeHirelingStatsUpdater` 与 spawn 坐标解码。
 - D2MOO `55f1f494`：Charged 类技能最高等级查找；需要按当前 1.10f `Skills.txt` 行和
-  `SkillCalc` 语义核对后再移植。
+  `SkillCalc` 语义核对后再移植。该提交的行为开关明确是 1.11+；riiablo 当前目标为
+  1.10f，且没有对应的 1.11+ 最高等级查找路径，因此本批不改生产代码，避免错误跳过
+  1.10f Charged 技能。
 - D2MOO `eea008b8`：Quill Rat spread seed；可作为 AI 单位 RNG 顺序回归依据。
 - D2MOO `e440a0a5`：Unholy Bolt missile range；只在确认 1.10f missile 行一致后采用。
 
