@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
+import com.riiablo.engine.server.event.SoundEvent;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -205,8 +206,11 @@ public class AnimStepper extends IntervalIteratingSystem {
         boolean movement = data.modes[actionPoint] == Engine.Monster.MODE_WL
             || data.modes[actionPoint] == Engine.Monster.MODE_RN;
         byte action = data.actions[actionPoint];
-        if (action != Engine.KEYFRAME_SND && !(charge && movement))
+        if (action == Engine.KEYFRAME_SND) {
+          dispatchSequenceSound(entityId);
+        } else if (!(charge && movement)) {
           events.dispatch(AnimDataKeyframeEvent.obtain(entityId, action));
+        }
       }
       if (next == data.frames.length << 8) events.dispatch(AnimDataFinishedEvent.obtain(entityId));
       return;
@@ -255,6 +259,13 @@ public class AnimStepper extends IntervalIteratingSystem {
       return;
     }
     dispatchKeyframes(entityId, animData, false);
+  }
+
+  private void dispatchSequenceSound(int entityId) {
+    Monster monster = mMonster.get(entityId);
+    if (monster == null || monster.monstats == null || monster.monstats.MonSound == null
+        || monster.monstats.MonSound.isEmpty()) return;
+    events.dispatch(SoundEvent.obtain(entityId, monster.monstats.MonSound + "_attack_1", true));
   }
 
   static int scaleStateAnimationSpeed(int baseSpeed, int modifierPercent) {

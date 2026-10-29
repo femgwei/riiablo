@@ -30,7 +30,11 @@ public class StatusEffectApplier {
   public static StatusEffectApplier forWorld(com.artemis.World world) {
     com.riiablo.engine.server.StateUpdater updater =
         world.getSystem(com.riiablo.engine.server.StateUpdater.class);
-    return updater == null ? new StatusEffectApplier() : updater.statusEffects();
+    StatusEffectApplier applier = updater == null ? new StatusEffectApplier() : updater.statusEffects();
+    com.riiablo.engine.server.DynamicUnitCollisionSystem collision =
+        world.getSystem(com.riiablo.engine.server.DynamicUnitCollisionSystem.class);
+    applier.setMovementSink(collision == null ? null : collision::tryMove);
+    return applier;
   }
 
   /** Runtime sink supplied by the ECS StateUpdater. */
@@ -46,6 +50,18 @@ public class StatusEffectApplier {
       applyState(targetEntityId, stateId, duration, level, sourceEntityId,
           Math.max(0, Math.round(damagePerFrame)), damageType);
     }
+  }
+
+  /** Authoritative movement boundary used by displacement effects. */
+  @FunctionalInterface
+  public interface MovementSink {
+    boolean tryMove(int entityId, float x, float y);
+  }
+
+  private MovementSink movementSink;
+
+  public void setMovementSink(MovementSink movementSink) {
+    this.movementSink = movementSink;
   }
 
   private StateSink stateSink;
@@ -236,11 +252,10 @@ public class StatusEffectApplier {
     float knockbackX = targetX + dx * KNOCKBACK_DISTANCE;
     float knockbackY = targetY + dy * KNOCKBACK_DISTANCE;
 
-    // TODO: 通过移动系统应用击退
-    // 需要检查碰撞和边界
-    
-    log.debug("Applied knockback: target={}, to=({}, {})", 
-        targetEntityId, knockbackX, knockbackY);
+    boolean moved = movementSink != null
+        && movementSink.tryMove(targetEntityId, knockbackX, knockbackY);
+    log.debug("Applied knockback: target={}, to=({}, {}), moved={}",
+        targetEntityId, knockbackX, knockbackY, moved);
   }
 
   //==========================================================================

@@ -11,6 +11,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.WhirlwindRuntime;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
+import com.riiablo.engine.server.event.SoundEvent;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.attributes.Stat;
@@ -210,8 +211,11 @@ public class SequenceHandler extends IteratingSystem {
             && files().skills.get(casting.skillId).srvdofunc == 67
             && (sequence.mode1 == com.riiablo.engine.Engine.Monster.MODE_WL
                 || sequence.mode1 == com.riiablo.engine.Engine.Monster.MODE_RN);
-        if (action != 0 && action != com.riiablo.engine.Engine.KEYFRAME_SND && !chargeMovement)
+        if (action == com.riiablo.engine.Engine.KEYFRAME_SND) {
+          dispatchSequenceSound(entityId);
+        } else if (action != 0 && !chargeMovement) {
           events.dispatch(com.riiablo.engine.server.event.AnimDataKeyframeEvent.obtain(entityId, action));
+        }
       }
     } else if (!sequence.nativeJab && mCofReference.get(entityId).mode != sequence.mode1) {
       // Log sequence start for debugging
@@ -289,6 +293,13 @@ public class SequenceHandler extends IteratingSystem {
         }
       }
     }
+  }
+
+  private void dispatchSequenceSound(int entityId) {
+    Monster monster = mMonster.get(entityId);
+    if (monster == null || monster.monstats == null || monster.monstats.MonSound == null
+        || monster.monstats.MonSound.isEmpty()) return;
+    events.dispatch(SoundEvent.obtain(entityId, monster.monstats.MonSound + "_attack_1", true));
   }
 
   /**

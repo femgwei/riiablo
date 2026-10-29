@@ -61,4 +61,37 @@ public class StatusEffectApplierTest {
     }
     assertEquals(0.1875f, exact[0]);
   }
+
+  @Test
+  public void knockbackDelegatesToAuthoritativeMovementBoundary() {
+    float[] destination = {Float.NaN, Float.NaN};
+    applier.setMovementSink((target, x, y) -> {
+      assertEquals(12, target);
+      destination[0] = x;
+      destination[1] = y;
+      return true;
+    });
+    try {
+      applier.applyKnockback(12, 10f, 20f, 12f, 20f);
+    } finally {
+      applier.setMovementSink(null);
+    }
+    assertEquals(16f, destination[0]);
+    assertEquals(20f, destination[1]);
+  }
+
+  @Test
+  public void blockedKnockbackIsReportedToMovementBoundaryWithoutTeleporting() {
+    int[] calls = {0};
+    applier.setMovementSink((target, x, y) -> {
+      calls[0]++;
+      return false;
+    });
+    try {
+      applier.applyKnockback(12, 10f, 20f, 12f, 20f);
+    } finally {
+      applier.setMovementSink(null);
+    }
+    assertEquals(1, calls[0]);
+  }
 }
