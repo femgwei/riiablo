@@ -277,3 +277,18 @@ SequenceHandler/AnimStepper 仍排除 MonSeq KEYFRAME_SND，音效生产链未�
 MonSeq 各序列的实际声音槽映射、音效听感、原版动态对照仍需真实 MPQ 与人工验证；统一的
 `MonSound_attack_1` 映射不能替代逐序列资源核对。特殊路径接入、完整自然路线和规模性能
 验收仍未完成。
+
+## 后续修正：LevelDef 生命周期与动态阻挡重规划（2026-10-30）
+
+提交 `87dc6db09` 修复 LevelDef 缓存生命周期：缓存仍保留到 DRLG 最终清理，避免
+`releaseDataTables()` 提前清空后被 D2MOO 清理逻辑再次查询。最新自然地图验收中此前的
+38 条 LevelDef 缺失警告已消失。
+
+提交 `dae6cb0c0` 将动态单位阻挡造成的步行超时转换为 `TourMovementBlock`，纳入既有的
+有限重规划与战斗清障流程。最新入口证据 `build/ai-tour-replan-dae6cb0c` 显示
+`visited=2/2`、`walks=4`、`transitions=1`、`detachedJumps=0`、`failures=0`，接敌窗口
+完整观察 200 tick，动态阻挡恢复成功；自然运行状态为 `OBSERVED_RUNTIME_ONLY`，GL 为
+`CAPTURED_REQUIRES_VISUAL_REVIEW`，总结果仍为 `PARTIAL`。
+
+特殊路径、完整自然路线/技能/怪物资源覆盖、规模性能、原版动态对照、跨电脑运行及音效
+听验仍未完成，不能据此关闭全部 AI 依赖工作。
