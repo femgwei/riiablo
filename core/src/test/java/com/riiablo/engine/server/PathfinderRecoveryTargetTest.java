@@ -114,7 +114,9 @@ class PathfinderRecoveryTargetTest {
       when(f.paths.dynamicCollision.isFreeForPath(f.actor, Engine.INVALID_ENTITY, 30, 10, 1))
           .thenReturn(false);
       assertFalse(f.paths.findPath(f.actor, f.targetPosition(), false, f.target));
-      assertEquals(1, f.queries.size());
+      // Skill-owned motion is rejected before NativePathRuntime can issue a
+      // query; it must not enter ordinary approach fallback.
+      assertEquals(0, f.queries.size());
       assertFalse(f.world.getMapper(Pathfind.class).has(f.actor));
     }
   }
