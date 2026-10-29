@@ -884,6 +884,12 @@ public class Map implements Disposable {
     Vector2 result = new Vector2(anchor);
     if (zone.findFreeCoordinates(anchor, Math.max(1, unitSize), 64,
         0x1C09, true, result)) return result;
+    // Some native A3 dock exports contain a conservative spawn mask around
+    // the ship marker. Keep the berth as the origin, but do not leave the
+    // player on that blocked marker when the strict 3x3 search cannot find a
+    // cell in the compatibility collision grid.
+    if (zone.findFreeCoordinates(anchor, 1, 32,
+        DT1.Tile.FLAG_BLOCK_WALK, true, result)) return result;
     return anchor;
   }
 
