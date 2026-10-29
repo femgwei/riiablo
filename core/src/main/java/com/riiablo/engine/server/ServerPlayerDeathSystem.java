@@ -150,7 +150,9 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
   public boolean respawnAtTown(int playerId) {
     if (!canRespawn(playerId) || map == null || !mPosition.has(playerId)) return false;
     if (mUnitStates.has(playerId) && mUnitStates.get(playerId).snapshotOnly) return false;
-    Vector2 town = map.townPlayerSpawn();
+    // D2Common uses DUNGEON_FindActSpawnLocationEx(tileIndex=0, size=3):
+    // the native marker is only the search origin and may itself be blocked.
+    Vector2 town = map.townPlayerSpawn(3);
     if (town == null || map.getZone(town) == null || !map.getZone(town).isTown()) return false;
 
     Position position = mPosition.get(playerId);

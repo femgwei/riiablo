@@ -583,7 +583,9 @@ public class DeathHandler extends PassiveSystem
     }
     
     // Use the retained native player spawn, distinct from the portal marker.
-    Vector2 townLocation = map.townPlayerSpawn();
+    // Match DUNGEON_FindActSpawnLocationEx(tileIndex=0, unitSize=3):
+    // search around the native marker before placing the revived player.
+    Vector2 townLocation = map.townPlayerSpawn(3);
     
     if (townLocation == null || map.getZone(townLocation) == null
         || !map.getZone(townLocation).isTown()) {

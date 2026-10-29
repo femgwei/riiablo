@@ -870,6 +870,23 @@ public class Map implements Disposable {
     return null;
   }
 
+  /**
+   * Resolves the native player spawn through the same free-coordinate search
+   * used by DUNGEON_FindActSpawnLocationEx.  Tile-info markers can sit on a
+   * water/blocked edge in Act III towns; the marker is an origin, not always a
+   * legal unit center.
+   */
+  public Vector2 townPlayerSpawn(int unitSize) {
+    Vector2 anchor = townPlayerSpawn();
+    if (anchor == null) return null;
+    Zone zone = getZone(anchor);
+    if (zone == null || !zone.isTown()) return anchor;
+    Vector2 result = new Vector2(anchor);
+    if (zone.findFreeCoordinates(anchor, Math.max(1, unitSize), 64,
+        0x1C09, true, result)) return result;
+    return anchor;
+  }
+
   public int flags(Vector2 vec) {
     return flags(round(vec.x), round(vec.y));
   }
