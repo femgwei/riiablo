@@ -2,6 +2,7 @@ package com.riiablo.save;
 
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.Riiablo;
+import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.StatListReader;
 import com.riiablo.io.ByteInput;
 import com.riiablo.io.InvalidFormat;
@@ -17,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class D2SWriter96HeaderTest {
+class D2SWriter96HeaderTest extends RiiabloTest {
   private static final int HEADER_SIZE = 0x14F;
 
   @Test
