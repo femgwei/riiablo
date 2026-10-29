@@ -83,4 +83,15 @@ public class EnvironmentCycleTest {
     assertEquals(EnvironmentCycle.CYCLE_NOON, environment.cycleIndex());
     assertEquals(1, environment.ticks());
   }
+
+  @Test
+  public void actFourEclipseTransitionSnapsToActFourBoundary() {
+    EnvironmentCycle environment = new EnvironmentCycle();
+    environment.initialize(EnvironmentCycle.CYCLE_SUNRISE,
+        350 * EnvironmentCycle.ECLIPSE_TIME_RATE, true);
+
+    assertTrue(environment.advance(3));
+    assertEquals(EnvironmentCycle.CYCLE_MORNING, environment.cycleIndex());
+    assertEquals(350 * EnvironmentCycle.ECLIPSE_TIME_RATE, environment.ticks());
+  }
 }

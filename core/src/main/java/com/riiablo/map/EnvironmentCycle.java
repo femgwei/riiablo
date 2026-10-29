@@ -150,7 +150,8 @@ public final class EnvironmentCycle {
       // essential when morning wraps from 340 degrees back to noon at 0:
       // retaining the old high tick value would satisfy every subsequent
       // boundary and make the environment cycle once per simulation tick.
-      Cycle nativeCycle = eclipse ? ECLIPSE[cycleIndex] : NORMAL[cycleIndex];
+      // Act IV keeps its own cycle table even while the eclipse flag is set.
+      Cycle nativeCycle = cycles(act)[cycleIndex];
       ticks = rate * nativeCycle.begin;
     }
     return previousPeriod != periodOfDay() || previousCycle != cycleIndex;
