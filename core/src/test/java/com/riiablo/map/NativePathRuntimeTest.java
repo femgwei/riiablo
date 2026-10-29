@@ -199,6 +199,26 @@ class NativePathRuntimeTest {
     }
   }
 
+  @Test void skillOwnedCastingDoesNotFallBackToHostPlanner() {
+    try(Fixture f=new Fixture()) {
+      int id=f.monster(20,20);
+      f.world.getMapper(Casting.class).create(id).skillId =  leapSkillId();
+      assertFalse(f.finder.findPath(id,new Vector2(32,20)));
+      assertNull(f.path(id));
+    }
+  }
+
+  @Test void skillOwnedWhirlwindDoesNotFallBackToHostPlanner() {
+    try(Fixture f=new Fixture()) {
+      int id=f.monster(20,20);
+      f.world.getMapper(WhirlwindRuntime.class).create(id);
+      assertFalse(f.finder.findPath(id,new Vector2(32,20)));
+      assertNull(f.path(id));
+    }
+  }
+
+  private static int leapSkillId() { return 126; }
+
   @Test void nativeLeapFreezePreservesRawPositionAndResumesWithoutInterpolation() {
     try(Fixture f=new Fixture()) {
       int id=f.monster(20,20);

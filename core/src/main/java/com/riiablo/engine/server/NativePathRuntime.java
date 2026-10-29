@@ -53,11 +53,16 @@ public final class NativePathRuntime implements D2PathTick.Effects {
     Velocity velocity = world.getMapper(Velocity.class).get(id);
     MapWrapper wrapper = world.getMapper(MapWrapper.class).get(id);
     Monster monster = world.getMapper(Monster.class).get(id);
+    // Skill-owned motion has a distinct authoritative owner.  Reject it here
+    // instead of returning null, which Pathfinder interprets as permission to
+    // fall back to the host planner and silently steal the movement state.
+    if (world.getMapper(Casting.class).has(id)
+        || world.getMapper(Leap.class).has(id)
+        || world.getMapper(WhirlwindRuntime.class).has(id)) return false;
     if (map == null || collision == null || monster == null || position == null || !position.hasNativePrecision()
         || velocity == null || velocity.nativeMonsterBaseVelocity < 0 || velocity.stateSpeedMultiplier != 1f
         || wrapper == null || wrapper.zone == null || !map.usesNativeCollision(wrapper.zone)
-        || !wrapper.zone.hasNativeRoomTopology() || world.getMapper(Casting.class).has(id)
-        || world.getMapper(Leap.class).has(id) || world.getMapper(WhirlwindRuntime.class).has(id)) return null;
+        || !wrapper.zone.hasNativeRoomTopology()) return null;
     if (targetId < 0 && (destination.x != (int) destination.x || destination.y != (int) destination.y
         || destination.x < 0 || destination.x > 65535 || destination.y < 0 || destination.y > 65535)) return null;
     NativePathUnitMetadata metadata;
