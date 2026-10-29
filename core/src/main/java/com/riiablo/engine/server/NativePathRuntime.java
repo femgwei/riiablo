@@ -56,7 +56,8 @@ public final class NativePathRuntime implements D2PathTick.Effects {
     // Skill-owned motion has a distinct authoritative owner.  Reject it here
     // instead of returning null, which Pathfinder interprets as permission to
     // fall back to the host planner and silently steal the movement state.
-    if (world.getMapper(Casting.class).has(id)
+    Casting casting = world.getMapper(Casting.class).get(id);
+    if ((casting != null && casting.diabRun == null)
         || world.getMapper(Leap.class).has(id)
         || world.getMapper(WhirlwindRuntime.class).has(id)) return false;
     if (map == null || collision == null || monster == null || position == null || !position.hasNativePrecision()
