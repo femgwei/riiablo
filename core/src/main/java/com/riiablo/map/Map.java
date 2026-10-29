@@ -915,6 +915,12 @@ public class Map implements Disposable {
 
   /** True when this map session owns the native collision grid for a zone. */
   public boolean usesNativeCollision(Zone zone) {
+    // Kurast Docks' native export contains incomplete floor coverage around
+    // the berth and water edge.  Treating those missing cells as native
+    // terrain collision incorrectly seals the otherwise walkable town area
+    // (most visibly after a player respawn).  Keep the native spawn/tiles,
+    // but use the compatibility DT1 collision for the town itself.
+    if (zone != null && zone.isTown() && zone.levelAct() == 3) return false;
     return zone != null && generationPolicy.usesNativeCollision(zone.hasNativeCollisionData());
   }
 
