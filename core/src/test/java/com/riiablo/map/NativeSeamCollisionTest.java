@@ -21,7 +21,7 @@ class NativeSeamCollisionTest extends RiiabloTest {
     }
     assertFalse(map.isBlockedForPath(town, 12, 6, 9, 2, false));
     assertFalse(map.isBlockedForPath(outdoor, 11, 6, 9, 2, false), "reverse traversal");
-    outdoor.flags[6 * outdoor.width + 1] = (byte) DT1.Tile.FLAG_BLOCK_PLAYER_WALK;
+    outdoor.setNativeCollisionMask(13, 6, DT1.Tile.FLAG_BLOCK_PLAYER_WALK);
     assertTrue(map.isBlockedForPath(town, 12, 6, 9, 2, false), "neighbor footprint obstacle");
     assertFalse(map.isBlockedForPath(detached, 13, 6, 9, 1, false), "detached scope retained");
     assertTrue(map.isBlockedForPath(detached, 11, 6, 9, 1, false), "detached cannot borrow town");
