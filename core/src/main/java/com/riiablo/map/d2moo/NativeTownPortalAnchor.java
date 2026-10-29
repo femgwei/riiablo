@@ -41,6 +41,16 @@ final class NativeTownPortalAnchor {
       zone.setTownPlayerSpawn(
           zone.x() + (playerMarker.getNPosX() - level.getLevelCoords().getNPosX()) * 5 + 3,
           zone.y() + (playerMarker.getNPosY() - level.getLevelCoords().getNPosY()) * 5 + 3);
+    } else if (level.getLevelId() == 75 && marker != null) {
+      // Retail 1.10f Kurast Docks can export no index 0..4 player marker.
+      // The native town's usable player berth is the same ship-side anchor
+      // used for the town portal; the compatibility center is behind the huts
+      // and lands in the water.
+      zone.setTownPlayerSpawn(
+          zone.x() + (marker.getNPosX() - level.getLevelCoords().getNPosX()) * 5 + 3,
+          zone.y() + (marker.getNPosY() - level.getLevelCoords().getNPosY()) * 5 + 3);
+      if (Gdx.app != null) Gdx.app.log(TAG,
+          "[TOWN_PLAYER_ANCHOR] level=75 missing index 0..4; reusing ship-side index 11");
     }
 
     // DUNGEON_FindActSpawnLocationEx uses gameTile * 5 + 3. Native

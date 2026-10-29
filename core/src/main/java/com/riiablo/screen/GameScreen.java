@@ -1310,6 +1310,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           + waypointTarget.LevelName + "(" + waypointTarget.Id
           + "); falling back to current-act town spawn, not a successful waypoint arrival");
     }
+    if (origin == null) origin = map.townPlayerSpawn(3);
     if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_1);
     if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_2);
     if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
