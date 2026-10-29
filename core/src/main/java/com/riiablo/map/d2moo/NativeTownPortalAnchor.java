@@ -31,15 +31,12 @@ final class NativeTownPortalAnchor {
     }
     if (marker == null) return false;
 
-    // GAME/Clients.cpp requests index 0 for players, independently of portals (11).
-    D2DrlgTileInfoStrc playerMarker = level.getPTileInfo(0);
-    for (int i = 0; i < level.getNTileInfo(); i++) {
-      D2DrlgTileInfoStrc candidate = level.getPTileInfo(i);
-      if (candidate != null && candidate.getNTileIndex() == 0) {
-        playerMarker = candidate;
-        break;
-      }
-    }
+    // GAME/Clients.cpp requests index 0 for players, independently of portals
+    // (11).  For positioned levels D2Common groups indices 0..4 together and
+    // selects one using the level seed.  Picking the first literal index 0 is
+    // wrong for Kurast Docks: that record can be the water-side preset while
+    // the native roll selects the berth beside the ship.
+    D2DrlgTileInfoStrc playerMarker = selectPlayerMarker(level);
     if (playerMarker != null) {
       zone.setTownPlayerSpawn(
           zone.x() + (playerMarker.getNPosX() - level.getLevelCoords().getNPosX()) * 5 + 3,
@@ -59,5 +56,27 @@ final class NativeTownPortalAnchor {
         + " local=(" + (x - zone.x()) + "," + (y - zone.y())
         + ") world=(" + x + "," + y + ")");
     return true;
+  }
+
+  private static D2DrlgTileInfoStrc selectPlayerMarker(D2DrlgLevel level) {
+    int matches = 0;
+    for (int i = 0; i < level.getNTileInfo(); i++) {
+      D2DrlgTileInfoStrc candidate = level.getPTileInfo(i);
+      if (isPlayerSpawnIndex(candidate)) matches++;
+    }
+    if (matches == 0) return null;
+    int lowSeed = level.getSeed() == null ? 0 : level.getSeed().getNLowSeed();
+    int pick = Math.floorMod(lowSeed, matches);
+    for (int i = 0; i < level.getNTileInfo(); i++) {
+      D2DrlgTileInfoStrc candidate = level.getPTileInfo(i);
+      if (isPlayerSpawnIndex(candidate) && pick-- == 0) return candidate;
+    }
+    return null;
+  }
+
+  private static boolean isPlayerSpawnIndex(D2DrlgTileInfoStrc candidate) {
+    if (candidate == null) return false;
+    int index = candidate.getNTileIndex();
+    return index >= 0 && index <= 4;
   }
 }
