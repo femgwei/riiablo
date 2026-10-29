@@ -67,11 +67,15 @@ class QuillRatMissileTest extends RiiabloTest {
   }
 
   @Test void seedUsesUnitIdAndCumulativeSignsAndRestartsEachAttack() {
+    // D2MOO eea008b8: low seed is 'SEIS', high seed is the unit id.  The
+    // offsets are cumulative; each attack consumes exactly two rolls per
+    // extra missile and starts from (+5,+5).
     int[][][] signs = {
         {{-5,-5},{-5,-5},{-5,-5},{5,-5},{-5,5},{-5,5}},
-        {{5,5},{5,5},{-5,-5},{5,-5},{5,-5},{-5,5}}
+        {{5,5},{5,5},{-5,-5},{5,-5},{5,-5},{-5,5}},
+        {{-5,-5},{5,5},{-5,-5},{5,-5},{-5,5},{-5,-5}}
     };
-    for (int id = 0; id < 2; id++) try (Fixture f = new Fixture(custom("quillrat1", 6), 0, id)) {
+    for (int id = 0; id < signs.length; id++) try (Fixture f = new Fixture(custom("quillrat1", 6), 0, id)) {
       assertEquals(id, f.caster);
       f.world.getMapper(Monster.class).get(f.caster).rngState = 123456;
       f.fire();
