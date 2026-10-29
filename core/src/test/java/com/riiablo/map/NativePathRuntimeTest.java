@@ -202,7 +202,7 @@ class NativePathRuntimeTest {
   @Test void skillOwnedCastingDoesNotFallBackToHostPlanner() {
     try(Fixture f=new Fixture()) {
       int id=f.monster(20,20);
-      f.world.getMapper(Casting.class).create(id).skillId =  leapSkillId();
+      f.world.getMapper(Casting.class).create(id).skillId = 126;
       assertFalse(f.finder.findPath(id,new Vector2(32,20)));
       assertNull(f.path(id));
     }
@@ -217,7 +217,14 @@ class NativePathRuntimeTest {
     }
   }
 
-  private static int leapSkillId() { return 126; }
+  @Test void skillOwnedLeapDoesNotFallBackToHostPlanner() {
+    try(Fixture f=new Fixture()) {
+      int id=f.monster(20,20);
+      f.world.getMapper(Leap.class).create(id).set(new Vector2(20,20),new Vector2(30,20),0.65f,-1);
+      assertFalse(f.finder.findPath(id,new Vector2(32,20)));
+      assertNull(f.path(id));
+    }
+  }
 
   @Test void nativeLeapFreezePreservesRawPositionAndResumesWithoutInterpolation() {
     try(Fixture f=new Fixture()) {
