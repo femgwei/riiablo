@@ -577,13 +577,20 @@ public class DrlgDrlgLogic {
                 nIndex = DrlgDrlgGrid.getGridEntry(a1.getPTileTypeGrid(), nPosX, nPosY);
             }
             
-            // 计算标志索引
-            int nFlagsIndex = a4 + 5 * dword_6FDCE650[nIndex] + 1;
-            if (nFlagsIndex < 0 || nFlagsIndex >= dword_6FDCE5EC.length) {
-                return;
+            // D2MOO 2026-10 修复：tile class -1（tile types 0/13）没有方向行。
+            // 原实现会读到表前的未定义内存；修复版把它视为无方向墙：
+            // 初始种子只标记自身，邻接洪泛不能穿过。
+            int tileClass = dword_6FDCE650[nIndex];
+            int nFlags;
+            if (tileClass < 0) {
+                nFlags = a4 == -1 ? 1 : 0;
+            } else {
+                int nFlagsIndex = a4 + 5 * tileClass + 1;
+                if (nFlagsIndex < 0 || nFlagsIndex >= dword_6FDCE5EC.length) {
+                    return;
+                }
+                nFlags = dword_6FDCE5EC[nFlagsIndex];
             }
-            
-            int nFlags = dword_6FDCE5EC[nFlagsIndex];
             
             // 根据标志位处理
             if ((nFlags & 1) != 0) {
