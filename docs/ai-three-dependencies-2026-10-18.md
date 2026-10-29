@@ -265,3 +265,15 @@ crossComputer=NOT_RUN、result=PARTIAL，不代表原版一致性或全部技能
 SequenceHandler/AnimStepper 仍排除 MonSeq KEYFRAME_SND，音效生产链未接齐。
 全部自然路线、怪物资源和规模性能也尚未完成自动验收。跨电脑、原版动态对照及音效听验
 另需人工或外部证据。保留聊天，不把上述代码遗留改标为人工验收。
+
+## 后续修正：击退与 MonSeq 音效事件（2026-10-30）
+
+提交 `4cccf9ff2` 已完成两项代码接入：`StatusEffectApplier.applyKnockback` 通过
+`DynamicUnitCollisionSystem.tryMove` 交给权威碰撞/边界处理；`SequenceHandler` 的起始点和
+`AnimStepper` 的后续点均处理 `KEYFRAME_SND`，通过 `SoundEvent` 交给客户端空间音效层。
+击退成功/阻挡测试与 `NativeMonsterSequenceIntegrationTest` 定向回归通过，构建成功。
+
+此前“仍排除 KEYFRAME_SND”和“击退只记录日志”的表述属于历史状态，以上述提交为准。
+MonSeq 各序列的实际声音槽映射、音效听感、原版动态对照仍需真实 MPQ 与人工验证；统一的
+`MonSound_attack_1` 映射不能替代逐序列资源核对。特殊路径接入、完整自然路线和规模性能
+验收仍未完成。
