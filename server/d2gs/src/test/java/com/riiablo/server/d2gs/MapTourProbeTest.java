@@ -122,6 +122,9 @@ public class MapTourProbeTest {
     com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder().with(collision).build());
     try {
       com.riiablo.map.Map map = new com.riiablo.map.Map(12345, 0);
+      java.lang.reflect.Field policy = com.riiablo.map.Map.class.getDeclaredField("generationPolicy");
+      policy.setAccessible(true);
+      policy.set(map, com.riiablo.map.MapGenerationPolicy.fromNativeToggle(false));
       com.riiablo.map.Map.Zone zone = new com.riiablo.map.Map.Zone();
       byte[] flags = new byte[40 * 5];
       java.util.Arrays.fill(flags, (byte) 1);
