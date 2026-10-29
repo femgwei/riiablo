@@ -447,3 +447,13 @@ git push origin master 2>&1 | ForEach-Object { $_.ToString() -replace 'https://[
 详细历史见 `docs/current-chat-ownership.md`、`docs/d2moo-upstream-port-2026-10-15.md`、
 `docs/path-collision-upstream-comparison-2026-10-15.md` 和 `docs/d2moo-progress-roadmap.md`。
 current-chat-ownership 顶部 dark-magic 技能进度是另一工作流，不是寻路完成度。
+
+## 第二十一批补充：技能拥有移动的拒绝边界（2026-10-30）
+
+提交 `62a45a907` 明确了 `NativePathRuntime.request` 的 owner 边界：实体带有
+`Casting`、`Leap` 或 `WhirlwindRuntime` 时返回显式拒绝，`Pathfinder` 不得将该结果解释为
+普通未知元数据并回退到主机 A*。这样可以避免技能移动状态被普通路径规划抢占。
+
+新增 `NativePathRuntimeTest` 回归覆盖 Casting 与 Whirlwind 两种情况，验证不会创建普通
+路径；定向测试 14 项全部通过。该提交只完成拒绝与隔离，不代表特殊路径的原版速度、朝向、
+owner 字段和完整运行时已经接入。
