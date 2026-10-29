@@ -457,3 +457,12 @@ current-chat-ownership 顶部 dark-magic 技能进度是另一工作流，不是
 新增 `NativePathRuntimeTest` 回归覆盖 Casting 与 Whirlwind 两种情况，验证不会创建普通
 路径；定向测试 14 项全部通过。该提交只完成拒绝与隔离，不代表特殊路径的原版速度、朝向、
 owner 字段和完整运行时已经接入。
+
+## 回归基线记录：Whirlwind 与 Native Seam fixture（2026-10-30）
+
+在提交 `62b02258c` 后单独复跑 `WhirlwindCollisionTest` 与 `NativeSeamCollisionTest`，结果为
+5 项中 2 项失败：`sweepClipsConstructionAtObjectsButMovementOnlyAtStaticBarriers` 和
+`scopedCollisionOnlyCrossesExplicitNativeSeamsAndKeepsFootprint`。失败分别发生在 fixture
+的 cast 阻挡结果与邻区 footprint 断言；与 `NativePathRuntime` 的技能 owner 拒绝分流无关，
+需要后续单独核对碰撞掩码/测试夹具基线。NativePathRuntime、PathfinderRecoveryTarget 和
+DiabRunIntegration 定向测试仍全部通过。
