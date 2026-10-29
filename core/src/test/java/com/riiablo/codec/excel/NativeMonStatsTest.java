@@ -32,4 +32,15 @@ class NativeMonStatsTest {
   void matchesEveryFieldLoadedByD2moo() {
     assertEquals(253, NativeMonStats.SCHEMA.columns().size());
   }
+
+  @Test
+  void preservesSignedNativeSpawnOffsets() throws Exception {
+    NativeMonStats monsters = NativeMonStats.parse(
+        ("Id\tspawnx\tspawny\n"
+            + "edge_monster\t-7\t-3\n").getBytes(StandardCharsets.ISO_8859_1));
+
+    NativeMonStats.Entry monster = monsters.get("EDGE_MONSTER");
+    assertEquals(-7, monster.nativeInteger("spawnx"));
+    assertEquals(-3, monster.nativeInteger("spawny"));
+  }
 }
