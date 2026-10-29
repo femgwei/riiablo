@@ -93,7 +93,7 @@ public class DataTbls {
         CacheState current = state();
         D2LevelDefBin record = current.levelDefsById == null ? null : current.levelDefsById.get(nLevelId);
         if (record == null) {
-            D2Log.debug("DATATBLS_LEVELDEF_MISS thread=" + Thread.currentThread().getName()
+            D2Log.info("DATATBLS_LEVELDEF_MISS thread=" + Thread.currentThread().getName()
                     + " levelId=" + nLevelId + " cacheRecords="
                     + (current.levelDefBinCache == null ? 0 : current.levelDefBinCache.length)
                     + " indexed=" + (current.levelDefsById == null ? 0 : current.levelDefsById.size()));
@@ -325,7 +325,7 @@ public class DataTbls {
         state().levelDefBinCache = cache;
         state().levelDefsById = indexLevelDefs(cache);
         state().portalLevels = indexPortalLevels(cache);
-        D2Log.debug("DATATBLS_LEVELDEF_INSTALL thread=" + Thread.currentThread().getName()
+        D2Log.info("DATATBLS_LEVELDEF_INSTALL thread=" + Thread.currentThread().getName()
                 + " cacheRecords=" + (cache == null ? 0 : cache.length)
                 + " indexed=" + (state().levelDefsById == null ? 0 : state().levelDefsById.size()));
     }

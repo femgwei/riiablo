@@ -40,6 +40,12 @@ public class D2Log {
         System.err.println(String.format("[D2Log][WARNING] %s", formattedMessage));
     }
 
+    /** Operational diagnostics that remain visible when debug logging is quiet. */
+    public static void info(String message, Object... args) {
+        String formattedMessage = format(message, args);
+        System.out.println(String.format("[D2Log][INFO] %s", formattedMessage));
+    }
+
     public static void error(String message, Object... args) {
         String formattedMessage = format(message, args);
         System.err.println(String.format("[D2Log][ERROR] %s", formattedMessage));
