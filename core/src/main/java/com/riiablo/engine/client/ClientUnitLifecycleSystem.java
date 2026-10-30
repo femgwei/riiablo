@@ -75,7 +75,7 @@ public class ClientUnitLifecycleSystem extends BaseSystem {
       simulationTickCoordinator.commands().submit(
           com.riiablo.engine.SimulationCommandEnvelope.builder("client-ui", "player.respawn",
               (Runnable) () -> requestedPlayer = player)
-              .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L)));
+              .tick(simulationTickCoordinator.nextCommandTick()));
     } else {
       requestedPlayer = player;
     }

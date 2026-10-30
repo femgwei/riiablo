@@ -42,7 +42,7 @@ public final class ClientVendorSystem extends BaseSystem {
     if (simulationTickCoordinator != null) {
       return simulationTickCoordinator.commands().submit(
           com.riiablo.engine.SimulationCommandEnvelope.builder("client-ui", "vendor.intent", guarded)
-              .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L))) != null;
+              .tick(simulationTickCoordinator.nextCommandTick())) != null;
     }
     pending.add(guarded);
     return true;

@@ -29,6 +29,22 @@ public final class SimulationTickCoordinator {
 
   public long tick() { return tick; }
   public Phase phase() { return phase; }
+  /**
+   * Returns the first tick on which a newly submitted command can be drained.
+   *
+   * <p>Commands submitted by systems while the current fixed step is already
+   * in {@link Phase#SIMULATION}, {@link Phase#EVENTS}, or
+   * {@link Phase#STRUCTURAL_COMMIT} cannot be consumed by that step: its
+   * command drain has already happened.  The old call sites blindly used
+   * {@code tick + 1}, which is the tick currently being simulated and is
+   * rejected as stale after the drain advances {@code lastDrainedTick}.
+   */
+  public long nextCommandTick() {
+    long next = tick + 1L;
+    if (phase == Phase.SIMULATION || phase == Phase.EVENTS
+        || phase == Phase.STRUCTURAL_COMMIT) next++;
+    return Math.max(1L, next);
+  }
   public SimulationCommandQueue commands() { return commands; }
   public SimulationEventQueue events() { return events; }
   public StructuralChangeQueue structuralChanges() { return structuralChanges; }

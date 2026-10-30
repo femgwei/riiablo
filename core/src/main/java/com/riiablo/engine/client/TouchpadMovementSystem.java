@@ -51,6 +51,6 @@ public class TouchpadMovementSystem extends BaseSystem {
     }
     simulationTickCoordinator.commands().submit(
         SimulationCommandEnvelope.builder("client-input", kind, movement)
-            .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L)));
+            .tick(simulationTickCoordinator.nextCommandTick()));
   }
 }

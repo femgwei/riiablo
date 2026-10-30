@@ -23,6 +23,29 @@ class SimulationTickCoordinatorTest {
     assertEquals(SimulationTickCoordinator.Phase.IDLE, coordinator.phase());
   }
 
+  @Test void commandsSubmittedDuringSimulationTargetTheFollowingTick() {
+    SimulationTickCoordinator coordinator = new SimulationTickCoordinator();
+    List<Long> executed = new ArrayList<>();
+    coordinator.advance(command -> {}, tick -> {
+      assertEquals(SimulationTickCoordinator.Phase.SIMULATION, coordinator.phase());
+      assertEquals(2L, coordinator.nextCommandTick());
+      coordinator.commands().submit(SimulationCommandEnvelope
+          .builder("input", "move", "east").tick(coordinator.nextCommandTick()));
+    }, event -> {});
+    assertEquals(1, coordinator.commands().pendingCount());
+    coordinator.advance(command -> executed.add(command.tick), tick -> {}, event -> {});
+    assertEquals(Collections.singletonList(2L), executed);
+  }
+
+  @Test void commandsSubmittedWhileIdleTargetTheNextTick() {
+    SimulationTickCoordinator coordinator = new SimulationTickCoordinator();
+    assertEquals(1L, coordinator.nextCommandTick());
+    coordinator.commands().submit(SimulationCommandEnvelope
+        .builder("input", "move", "east").tick(coordinator.nextCommandTick()));
+    coordinator.advance(command -> {}, tick -> {}, event -> {});
+    assertEquals(1L, coordinator.tick());
+  }
+
   @Test void structuralChangesEnqueuedDuringBarrierWaitForNextTick() {
     StructuralChangeQueue queue = new StructuralChangeQueue();
     List<String> trace = new ArrayList<>();

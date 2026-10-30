@@ -543,13 +543,27 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private void enqueueMovement(Runnable movement, String kind) {
-    // Cursor input is sampled on the render thread.  Do not defer the actual
-    // movement intent to the optional command queue: when that queue is not
-    // consumed by a client simulation loop, clicks otherwise disappear while
-    // all input diagnostics still look healthy.
-    Gdx.app.log(TAG, "[MOVEMENT_COMMAND] phase=execute-immediate kind=" + kind
-        + " queued=" + (simulationTickCoordinator != null));
-    movement.run();
+    if (simulationTickCoordinator == null) {
+      Gdx.app.log(TAG, "[MOVEMENT_COMMAND] phase=execute-immediate kind=" + kind);
+      movement.run();
+      return;
+    }
+    long targetTick = simulationTickCoordinator.nextCommandTick();
+    Gdx.app.log(TAG, "[MOVEMENT_COMMAND] phase=submit kind=" + kind
+        + " currentTick=" + simulationTickCoordinator.tick() + " targetTick=" + targetTick
+        + " phase=" + simulationTickCoordinator.phase());
+    com.riiablo.engine.SimulationCommandEnvelope command =
+        simulationTickCoordinator.commands().submit(
+            com.riiablo.engine.SimulationCommandEnvelope.builder("client-input", kind,
+                (Runnable) () -> {
+                  Gdx.app.log(TAG, "[MOVEMENT_COMMAND] phase=execute kind=" + kind
+                      + " tick=" + simulationTickCoordinator.tick());
+                  movement.run();
+                }).tick(targetTick));
+    if (command == null) {
+      Gdx.app.log(TAG, "[MOVEMENT_COMMAND] phase=reject kind=" + kind
+          + " reason=" + simulationTickCoordinator.commands().lastRejection());
+    }
   }
 
   private void rememberApproachSkill(int target, int skillId) {
@@ -624,7 +638,7 @@ public class CursorMovementSystem extends BaseSystem {
     if (simulationTickCoordinator != null) {
       simulationTickCoordinator.commands().submit(
           com.riiablo.engine.SimulationCommandEnvelope.builder("client-input", "skill.cast", cast)
-              .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L)));
+              .tick(simulationTickCoordinator.nextCommandTick()));
       return;
     }
     cast.run();

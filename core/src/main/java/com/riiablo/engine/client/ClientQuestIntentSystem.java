@@ -31,7 +31,7 @@ public final class ClientQuestIntentSystem extends BaseSystem {
     if (simulationTickCoordinator != null) {
       simulationTickCoordinator.commands().submit(
           com.riiablo.engine.SimulationCommandEnvelope.builder("client-ui", kind, intent)
-              .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L)));
+              .tick(simulationTickCoordinator.nextCommandTick()));
     } else {
       pending.add(intent);
     }
