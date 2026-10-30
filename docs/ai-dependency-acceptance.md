@@ -303,3 +303,43 @@ levels、rate、observeMillis、stageTimeoutSeconds 均经脚本逐项核对一�
 路线/AI 汇总及楼层样本数。本轮没有生产代码变更；入口编译和模块边界检查通过。
 此组合结果仍为 OBSERVED_RUNTIME_ONLY，全部 AI 依赖总验收仍为 PARTIAL；没有
 连续轨迹几何、自然怪物穿越、原版判定器、人工视觉/听感或跨电脑验证的新增结论。
+
+2026-10-30 新增自然地图怪物局部窄道观察及独立审计。观察器运行于权威 simulation
+线程，限定同层存活敌对地面怪物，校验怪物/玩家实体生命周期、真实脚印截面、动态
+占用、采样间隔和速度上限。至少两条连续记录、净位移至少 3 子格才形成一段合格
+局部进展；这不是完整走廊几何或原版一致性判定。显式 ObserveMonsterPursuit 选项
+通过正常 TCP 玩家行走向已走过的位置后退，每层最多三次，观察窗口不发玩家攻击。
+
+有界 Toward 原本不保留实时实体目标。新增 requestedTarget 诊断来源，不改变该语义，
+坐标路径替换/reset 清除；orbit 不标为 Toward。另以短期诊断记录被拒 Toward 请求，
+不供 AI、选目标或路径续行读取。LIVE_PATH、BOUNDED_TOWARD_REQUEST 与
+REJECTED_TOWARD_REQUEST 分开标识。拒绝请求期间的阻挡查询是朝目标的前向邻格，
+仅证明该邻格被动态单位占用，不证明它就是原生寻路失败的直接原因。恢复审计要求
+同一怪物与目标生命周期、至少 5 tick 停滞、匹配的先前 BLOCK、原查询点恢复可通行、
+250 tick 内实际窄道进展；不能仅凭移动或请求成功判为恢复。
+
+初始观察、目标诊断、TCP 后退三轮均未获得可采纳怪物移动，保留 build 下原始记录。
+提交 565b94c85 在 seed 2、62→63 的后退观察中获得 36 条合格移动、2 段连续局部进展，
+BLOCK/RECOVER 均为 0；自然路线 visited=2/2、walks=3、transitions=1、combatKills=7、
+failures=0，严格日志审计通过。不能据此声称自然阻挡恢复已验证。
+
+新增路径来源测试 3 项和观察器测试 2 项通过；前序相关路径/采样测试亦通过。
+独立证据审计通过普通恢复及 REJECTED→BOUNDED 来源切换正例，拒绝 9 类错误证据，
+包括缺少先前阻挡、未解除占用、非法截面/时间/速度、生命周期或来源错配、缺少连续
+移动和观察期玩家攻击。总验收仍为 PARTIAL；人工视觉/听感及跨电脑验证未执行。
+
+提交 204c53fc2 的后续自然实跑虽路线通过并产生 2 条恢复候选，独立审计因部分 BLOCK
+记录的 beforeSpan=0 拒绝整轮怪物证据，不能计为恢复验收成功。修正观察器：建立及
+延续 hold 均检查前后两端脚印可通行、截面 1..5；新增零截面、过宽及占用反例。
+原始失败证据保留于 build/ai-monster-narrow-maggot-rejection-seed2。
+
+修正提交 a3f4d8722 同 seed/路线复跑完成：visited=2/2、walks=3、transitions=1、
+combatKills=7、failures=0；自然阶段 OBSERVED_RUNTIME_ONLY，严格日志零告警/错误/
+回退。独立怪物审计通过，moveCount=36、passageCount=3、blockCount=105、
+recoveryCount=0。105 为持续阻挡采样记录数，不代表 105 次独立阻挡。RequireRecovery
+明确拒绝本轮：No observed dynamic-block recovery。自然怪物局部窄道进展及阻挡采样
+已有证据；自然阻挡解除后恢复追击仍未完成，不以受控测试代替。新增 hold 几何测试后
+观察器共 3 项通过。摘要、运行清单及原始证据 SHA256 保存在
+ai-monster-narrow-provenance-seed2-20261030.json 与
+ai-monster-narrow-hold-fixed-seed2-20261030.json。下一步应针对已走过的自然地图位置
+建立可重复的阻挡释放观察窗口，再按同一恢复标准验收；不继续盲目扩大种子矩阵。

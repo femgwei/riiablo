@@ -1,0 +1,208 @@
+{
+  "acceptance": {
+    "contract": 1,
+    "revision": "a3f4d8722cc0cfc865e3c8bcdebe18ee6b2c70fc",
+    "sourceSha256": "C562F6AFCB637893D7CFD68257F6A73D22161E2F550FAA9698C257F58E571975",
+    "profile": "1.10f",
+    "seed": 2,
+    "glSeed": 286247501,
+    "rate": 25,
+    "levels": "62,63",
+    "observeMillis": 8000,
+    "machine": "DESKTOP-7GGAVHU",
+    "os": "Microsoft Windows NT 10.0.19045.0",
+    "java": "openjdk version \"17.0.17\" 2025-10-21 LTS\nOpenJDK Runtime Environment Microsoft-12574423 (build 17.0.17+10-LTS)\nOpenJDK 64-Bit Server VM Microsoft-12574423 (build 17.0.17+10-LTS, mixed mode, sharing)",
+    "resources": [
+      {
+        "name": "d2char.mpq",
+        "bytes": 266908965,
+        "sha256": "714B71D086FFD87190848BB4D693F5AA47A85E11025CE4CA2DB4AF84C3F738ED"
+      },
+      {
+        "name": "d2data.mpq",
+        "bytes": 285890734,
+        "sha256": "EE6430422B3646449D101D23FC4C58F6F2DFCE2CE3A8AD2CED8B0F73EB510264"
+      },
+      {
+        "name": "d2exp.mpq",
+        "bytes": 251542397,
+        "sha256": "ED0E8A33B375BC9B7322479BA84F63073DBB809F0ED47D7973FE5F54FA57B4D9"
+      },
+      {
+        "name": "d2music.mpq",
+        "bytes": 16557,
+        "sha256": "06CC7DEFF49648F8916D972E630240D2A09C928AB4291F45F45E71568BC463E7"
+      },
+      {
+        "name": "d2sfx.mpq",
+        "bytes": 51948991,
+        "sha256": "B12C8A348ED14854756EDB64B257CF4743380627943BBCE116A85813811E2226"
+      },
+      {
+        "name": "d2speech.mpq",
+        "bytes": 163021838,
+        "sha256": "7A238F808BE9FBC74DA55C98DC629AB7FAC9A4F40C537CEC3C1B042FA45D211A"
+      },
+      {
+        "name": "d2video.mpq",
+        "bytes": 16557,
+        "sha256": "06CC7DEFF49648F8916D972E630240D2A09C928AB4291F45F45E71568BC463E7"
+      },
+      {
+        "name": "d2xmusic.mpq",
+        "bytes": 16557,
+        "sha256": "06CC7DEFF49648F8916D972E630240D2A09C928AB4291F45F45E71568BC463E7"
+      },
+      {
+        "name": "d2xtalk.mpq",
+        "bytes": 16557,
+        "sha256": "06CC7DEFF49648F8916D972E630240D2A09C928AB4291F45F45E71568BC463E7"
+      },
+      {
+        "name": "d2xvideo.mpq",
+        "bytes": 16557,
+        "sha256": "06CC7DEFF49648F8916D972E630240D2A09C928AB4291F45F45E71568BC463E7"
+      },
+      {
+        "name": "patch_d2.mpq",
+        "bytes": 5434023,
+        "sha256": "245E7835650D4C2DB8515F92ECCDCAFCB4331744443654EB4F7EF20AF6782FFE"
+      }
+    ],
+    "stageTimeoutSeconds": 1800,
+    "startedUtc": "2026-10-30T10:41:18.1233637Z",
+    "observeMonsterPursuit": true,
+    "coverage": "FOCUSED_LOCAL_OBSERVATION",
+    "correctness": "NOT_ASSERTED",
+    "natural": "OBSERVED_RUNTIME_ONLY",
+    "gl": "NOT_RUN",
+    "crossComputer": "NOT_RUN",
+    "result": "PARTIAL",
+    "completedUtc": "2026-10-30T10:45:21.2370823Z"
+  },
+  "audit": {
+    "revision": "a3f4d8722cc0cfc865e3c8bcdebe18ee6b2c70fc",
+    "seed": 2,
+    "levels": "62,63",
+    "coverage": "SAMPLED_LOCAL_MONSTER_NARROW_PROGRESS",
+    "correctness": "NOT_ASSERTED",
+    "moveCount": 36,
+    "blockCount": 105,
+    "recoveryCount": 0,
+    "passageCount": 3,
+    "passages": [
+      {
+        "entity": "200",
+        "target": "120",
+        "level": "62",
+        "lifetime": "7",
+        "targetLifetime": "2",
+        "crossAxis": "X",
+        "targetSource": "BOUNDED_TOWARD_REQUEST",
+        "firstTick": 1575,
+        "lastTick": 1587,
+        "from": [
+          12607.298,
+          137.46353
+        ],
+        "to": [
+          12608.0,
+          131.71875
+        ],
+        "consecutiveRecords": 2
+      },
+      {
+        "entity": "199",
+        "target": "120",
+        "level": "62",
+        "lifetime": "6",
+        "targetLifetime": "2",
+        "crossAxis": "Y",
+        "targetSource": "BOUNDED_TOWARD_REQUEST",
+        "firstTick": 1776,
+        "lastTick": 1789,
+        "from": [
+          12611.285,
+          122.638306
+        ],
+        "to": [
+          12617.0,
+          122.0
+        ],
+        "consecutiveRecords": 3
+      },
+      {
+        "entity": "197",
+        "target": "120",
+        "level": "62",
+        "lifetime": "5",
+        "targetLifetime": "2",
+        "crossAxis": "Y",
+        "targetSource": "BOUNDED_TOWARD_REQUEST",
+        "firstTick": 1834,
+        "lastTick": 1846,
+        "from": [
+          12614.0,
+          122.0
+        ],
+        "to": [
+          12618.0,
+          122.0
+        ],
+        "consecutiveRecords": 2
+      }
+    ],
+    "recoveries": []
+  },
+  "recoveryAcceptance": "NOT_OBSERVED",
+  "routeSummary": [
+    "[MAP_TOUR] SUMMARY planned=2 visited=2 coverage=AI_RUNTIME_OBSERVATION walks=3 transitions=1 detachedJumps=0 combatKills=7 failures=0 result=PASS"
+  ],
+  "aiSummary": [
+    "[AI_TOUR] SUMMARY run=COMPLETED coverage=OBSERVED_RUNTIME_ONLY oracle=NONE correctness=NOT_ASSERTED warnings=0 errors=0 fallbackRecords=0",
+    "Counts are log records, not unique actions, ticks, kills or coverage percentages.",
+    "Initialization does not prove activation. Unlisted monsters/branches are NOT_TESTED.",
+    "Positive damageRecords are melee damage-path records, not a full skill-effect audit.",
+    "[AI_TOUR] MONSTER monster=quillrat1 ai=QuillRat initRecords=5 moveRecords=0 decisionRecords=0 skillCastRecords=0 meleeDamageRecords=0 thinkSamples=0 movementSamples=0 nativeCombatant=true evidence=INIT_ONLY_NO_BEHAVIOR_EVIDENCE",
+    "[AI_TOUR] MONSTER monster=sandleaper1 ai=SandLeaper initRecords=8 moveRecords=0 decisionRecords=0 skillCastRecords=0 meleeDamageRecords=0 thinkSamples=0 movementSamples=0 nativeCombatant=true evidence=INIT_ONLY_NO_BEHAVIOR_EVIDENCE",
+    "[AI_TOUR] MONSTER monster=sandmaggot1 ai=SandMaggot initRecords=7 moveRecords=0 decisionRecords=23 skillCastRecords=10 meleeDamageRecords=0 thinkSamples=773 movementSamples=0 nativeCombatant=true evidence=BEHAVIOR_OBSERVED",
+    "[AI_TOUR] MONSTER monster=sandmaggot2 ai=SandMaggot initRecords=19 moveRecords=0 decisionRecords=38 skillCastRecords=35 meleeDamageRecords=0 thinkSamples=1401 movementSamples=0 nativeCombatant=true evidence=BEHAVIOR_OBSERVED",
+    "[AI_TOUR] MONSTER monster=scarab1 ai=Scarab initRecords=2 moveRecords=0 decisionRecords=0 skillCastRecords=0 meleeDamageRecords=0 thinkSamples=0 movementSamples=0 nativeCombatant=true evidence=INIT_ONLY_NO_BEHAVIOR_EVIDENCE",
+    "[AI_TOUR] MONSTER monster=scarab2 ai=Scarab initRecords=13 moveRecords=2 decisionRecords=21 skillCastRecords=11 meleeDamageRecords=13 thinkSamples=130 movementSamples=22 nativeCombatant=true evidence=BEHAVIOR_OBSERVED",
+    "[AI_TOUR] MONSTER monster=scarab3 ai=Scarab initRecords=33 moveRecords=15 decisionRecords=138 skillCastRecords=89 meleeDamageRecords=127 thinkSamples=2594 movementSamples=186 nativeCombatant=true evidence=BEHAVIOR_OBSERVED",
+    "[AI_TOUR] MONSTER monster=slinger1 ai=PantherJavelin initRecords=4 moveRecords=0 decisionRecords=0 skillCastRecords=0 meleeDamageRecords=0 thinkSamples=0 movementSamples=0 nativeCombatant=true evidence=INIT_ONLY_NO_BEHAVIOR_EVIDENCE",
+    "[AI_TOUR] MONSTER monster=swarm2 ai=Swarm initRecords=10 moveRecords=0 decisionRecords=0 skillCastRecords=0 meleeDamageRecords=0 thinkSamples=496 movementSamples=0 nativeCombatant=true evidence=AI_TICK_ONLY_NO_ACTION",
+    "[AI_TOUR] MONSTER monster=vulture1 ai=Vulture initRecords=3 moveRecords=0 decisionRecords=0 skillCastRecords=0 meleeDamageRecords=0 thinkSamples=0 movementSamples=0 nativeCombatant=true evidence=INIT_ONLY_NO_BEHAVIOR_EVIDENCE",
+    "[AI_TOUR] MONSTER monster=zombie1 ai=Zombie initRecords=2 moveRecords=0 decisionRecords=0 skillCastRecords=0 meleeDamageRecords=0 thinkSamples=0 movementSamples=0 nativeCombatant=true evidence=INIT_ONLY_NO_BEHAVIOR_EVIDENCE"
+  ],
+  "hashes": [
+    {
+      "path": "acceptance.json",
+      "sha256": "87E0B5E0032F2284FD3838280BBB596D6B5176835D11A798FC34F42E6FECDB9C"
+    },
+    {
+      "path": "natural-console.log",
+      "sha256": "4A575834F615A00B24680C31BA3C995BAAD38B1E9811D94540D0355172CA3DB6"
+    },
+    {
+      "path": "natural/map-tour.log",
+      "sha256": "62A8803E3D006E931B1DADD869237169945A022FB1F329110979F3684991E21E"
+    },
+    {
+      "path": "natural/ai-summary.txt",
+      "sha256": "251B09209E35A617524CC98E007393A51B89C64B579BD8A11923CF4B181C3E93"
+    }
+  ],
+  "priorRejectedRun": {
+    "path": "build/ai-monster-narrow-maggot-rejection-seed2",
+    "mapTourSha256": "5FD434F45E1C303F1353BC491F6701AA205FE4EA7038EA6C0DCB466259D875B9",
+    "revision": "204c53fc2",
+    "reason": "BLOCK beforeSpan=0; entire monster audit rejected"
+  },
+  "limitations": [
+    "Sampled local monster movement and stationary occupancy only",
+    "No observed accepted natural dynamic-block recovery",
+    "Rejected-request forward-neighbor occupancy does not prove path-rejection cause",
+    "No original-game oracle, human audiovisual or cross-computer validation"
+  ]
+}
