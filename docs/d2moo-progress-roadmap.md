@@ -1,5 +1,14 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
+## 2026-10-30 格挡动画自动绘制验收
+
+- 新增 `:desktop:offscreenBlockRender`：真实 1.10f MPQ、隐藏 GL、固定 40ms ECS 步进，
+  通过 CombatSystem 与 HitReactionResolver 触发 BL，验证帧提交、盾牌部件、FBO 像素和回到 NU。
+- 通用 AnimationRenderProbe 绑定动画 restart id，防止连续动作拼帧，并支持必需部件掩码。
+- 修复 CofUnloader 在同模式 restart 时误释放仍被解析器/图层加载器保留的 COF。
+- 验收范围、反向检查及运行命令见 [动画绘制验证](animation-render-validation.md)。
+  当前仅覆盖受控、预加载的动画舞台；地图裁剪、冷加载、完整怪物 AI 和联机仍须独立验收。
+
 ## 2026-10-20 六个武器近战技能定点闭环
 
 - Frenzy／Berserk／Zeal／Sacrifice／Jab／Fend 显式复用具体手 8.8 来源，

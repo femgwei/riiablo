@@ -1354,7 +1354,8 @@ public class RenderSystem extends BaseEntitySystem {
           com.riiablo.presentation.component.CofWrapper resolved = world.getMapper(
               com.riiablo.presentation.component.CofWrapper.class).get(entity);
           if (reference != null && resolved != null) {
-            animationRenderProbe.record(entity, reference.mode, resolved.cof, animation);
+            animationRenderProbe.record(entity, reference.mode, reference.animationRestartId,
+                resolved.cof, animation);
           }
         }
         diagnoseInvisibleBody(entity, animation, pos);

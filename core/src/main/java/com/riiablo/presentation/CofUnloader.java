@@ -28,6 +28,10 @@ public class CofUnloader extends BaseEntitySystem {
   @Subscribe
   public void onCofChanged(CofChangeEvent event) {
     if (DEBUG_EVENTS) Gdx.app.debug(TAG, "onCofChanged");
+    // Resolver/LayerLoader retain the resident composite on a same-mode
+    // restart. Its COF ownership must survive that same event too.
+    if (event instanceof com.riiablo.engine.server.event.ModeChangeEvent
+        && ((com.riiablo.engine.server.event.ModeChangeEvent) event).restart) return;
     unload(event.entityId);
   }
 

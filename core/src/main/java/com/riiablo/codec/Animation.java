@@ -40,6 +40,8 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
   int direction;
   int frame;
   private int submittedLayerCount;
+  private int submittedComponentMask;
+  public int getSubmittedComponentMask() { return submittedComponentMask; }
 
   /** Layers submitted by the most recent body draw (not resource readiness). */
   public int getSubmittedLayerCount() { return submittedLayerCount; }
@@ -88,6 +90,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     numDirections = 0;
     frame         = 0;
     submittedLayerCount = 0;
+    submittedComponentMask = 0;
     direction     = 0;
     startIndex    = 0;
     endIndex      = 0;
@@ -517,11 +520,14 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
 
   public void draw(PaletteIndexedBatch batch, float x, float y) {
     submittedLayerCount = 0;
+    submittedComponentMask = 0;
     if (frame >= numFrames) return;
     if (cof == null) {
-      for (Layer layer : layers) {
+      for (int c = 0; c < layers.length; c++) {
+        Layer layer = layers[c];
         if (layer == null) continue;
         drawLayer(batch, layer, x, y);
+        if (layer.drawSubmitted) submittedComponentMask |= 1 << c;
       }
     } else {
       int d = DC.Direction.toRealDir(direction, cof.getNumDirections());
@@ -532,6 +538,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
         Layer layer = layers[component];
         if (layer == null) continue;
         drawLayer(batch, layer, x, y);
+        if (layer.drawSubmitted) submittedComponentMask |= 1 << component;
       }
     }
 

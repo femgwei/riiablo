@@ -462,7 +462,10 @@ public class Client extends Game {
 
     bindCvars();
 
-    if (Boolean.getBoolean("riiablo.offscreen-menu-lifecycle")) {
+    if (Boolean.getBoolean("riiablo.offscreen-block-render")) {
+      setScreen(new com.riiablo.screen.OffscreenBlockRenderScreen(
+          System.getProperty("riiablo.offscreen-output", "build/visual-tests/block")));
+    } else if (Boolean.getBoolean("riiablo.offscreen-menu-lifecycle")) {
       setScreen(new com.riiablo.screen.OffscreenMenuLifecycleScreen(
           System.getProperty("riiablo.offscreen-output", "build/visual-tests/menu-lifecycle")));
     } else if (Boolean.getBoolean("riiablo.offscreen-hire-mercenaries")) {

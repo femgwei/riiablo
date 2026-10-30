@@ -51,6 +51,19 @@ task offscreenFontBaseline(type: JavaExec) {
   ignoreExitValue = false
 }
 
+task offscreenBlockRender(type: JavaExec) {
+  group = 'verification'
+  description = 'Automatically verify retail shield-block playback and framebuffer pixels.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-block-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/block',
+       '--mode', 'camp', '--d2-version', '1.10f'
+  systemProperty 'riiablo.offscreen-block-render', 'true'
+  ignoreExitValue = false
+}
+
 task offscreenCamp(type: JavaExec) {
   group = 'verification'
   description = 'Load and render the real Act I Rogue Encampment through a 1x1 hidden client.'
