@@ -681,7 +681,9 @@ public class Actioneer extends PassiveSystem {
   private void syncCombatDefenderContext(int entityId) {
     if (entityId == Engine.INVALID_ENTITY || !mAttributesWrapper.has(entityId)) return;
     Attributes attrs = mAttributesWrapper.get(entityId).attrs;
-    if (attrs != null) attrs.setCombatRunning(mRunning.has(entityId));
+    boolean running = mCofReference.has(entityId)
+        && mCofReference.get(entityId).mode == Engine.Player.MODE_RN;
+    if (attrs != null) attrs.setCombatRunning(running);
   }
 
   @Subscribe

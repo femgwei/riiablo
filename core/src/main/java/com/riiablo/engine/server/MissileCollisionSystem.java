@@ -1756,7 +1756,9 @@ public class MissileCollisionSystem extends IteratingSystem {
           && !missile.missile.ToHit && !missile.usesAttackRating;
       boolean ignoreTargetDefenseAllowed = isIgnoreTargetDefenseAllowed(targetId);
       if (mPlayer.has(targetId)) {
-        targetAttrs.setCombatRunning(mRunning.has(targetId));
+        boolean running = mCofReference.has(targetId)
+            && mCofReference.get(targetId).mode == Engine.Player.MODE_RN;
+        targetAttrs.setCombatRunning(running);
       }
       // Factory-audited ordinary missiles own their combat stream. Keep legacy
       // skill/special policies on their existing schedule until audited too.
