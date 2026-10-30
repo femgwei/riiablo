@@ -487,6 +487,8 @@ public class CursorMovementSystem extends BaseSystem {
 
   private void moveToGround(int src, Vector2 destination) {
     final Vector2 capturedDestination = new Vector2(destination);
+    Gdx.app.log(TAG, String.format("[GROUND_CLICK] entity=%d screen=(%d,%d) world=(%.2f,%.2f)",
+        src, Gdx.input.getX(), Gdx.input.getY(), destination.x, destination.y));
     enqueueMovement(() -> executeMoveToGround(src, capturedDestination), "movement.cursor.ground");
   }
 
@@ -513,6 +515,9 @@ public class CursorMovementSystem extends BaseSystem {
     if (!shouldRefreshHeldGroundPath(
         position != null ? position.position : null, pathfind, destination)) return;
     closeTradePanelsForMovement();
+    Gdx.app.log(TAG, String.format("[GROUND_MOVE_REQUEST] entity=%d from=(%.2f,%.2f) to=(%.2f,%.2f)",
+        src, position != null ? position.position.x : Float.NaN,
+        position != null ? position.position.y : Float.NaN, destination.x, destination.y));
     actioneer.moveTo(src, destination);
   }
 

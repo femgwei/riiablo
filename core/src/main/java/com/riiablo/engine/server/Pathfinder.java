@@ -580,12 +580,18 @@ public class Pathfinder extends IteratingSystem {
   }
 
   public boolean findPath(int src, Vector2 target, boolean raycast, int targetEntityId) {
+    Vector2 current = mPosition.has(src) ? mPosition.get(src).position : null;
+    log.info("[PATH_REQUEST] entity={} from=({}, {}) to={} raycast={} targetEntity={}",
+        src, current == null ? "nan" : current.x, current == null ? "nan" : current.y,
+        target == null ? "null" : "(" + target.x + ", " + target.y + ")",
+        raycast, targetEntityId);
     if (target != null && mNativeAiPathCache.has(src)) {
       // ECS A* endpoints are not native tTargetCoord / path-point state.
       mNativeAiPathCache.get(src).invalidate();
     }
     // Don't allow pathfinding if entity doesn't have Velocity component (e.g., dead player)
     if (!mVelocity.has(src)) {
+      log.warn("[PATH_RESULT] entity={} accepted=false reason=no_velocity", src);
       return false;
     }
 
