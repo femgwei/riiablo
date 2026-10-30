@@ -80,3 +80,14 @@ seed 3 路线同样完成（visited=2/2、walks=4、transitions=1、failures=0�
 状态 `OBSERVED_RUNTIME_ONLY`。原三种子失败证据保留；修复后全三种子尚未重跑。
 另有 `b5f7c058b` 修正未知装备上下文不应默认持盾，并通过 CombatSystemTest。
 
+2026-10-30 在 `81e7506b1` 完成修复后的 seed 1/2/3 验证：seed 1 证据位于
+`build/ai-matrix-equipment-roundtrip/seed-1`；磁盘空间耗尽后保留该成功结果，释放空间后
+在 `build/ai-equipment-resume-23` 重跑 seed 2、3。三份 manifest 的提交和源码哈希一致，
+每项均包含唯一的 `melee_save_roundtrip weapon=spr leftArm=empty result=PASS` 记录，
+即真实生成 D2S 后重读校验右手武器和空左手。三项均为 `OBSERVED_RUNTIME_ONLY`，
+visited=2/2、walks=4、transitions=1、detachedJumps=0、failures=0，严格资源审计通过。
+seed 1 combatKills=1，seed 2/3 为 0。合并索引为
+`build/ai-equipment-resume-23/combined-three-seeds.json`。磁盘故障时的失败文件未改写。
+这完成了 level 1/2 的三种子观察与装备存档读写回归，仍不代表门、窄道、完整技能、
+全部资源、性能或原版一致性已验收；人工视觉/听感和跨电脑为外部验证项。
+
