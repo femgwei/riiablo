@@ -118,11 +118,12 @@ final class MonsterNarrowProbe {
       Hold hold = holds.get(id);
       if (state.dynamicBlocked && stationary(before, state)) {
         if (hold == null || !same(hold.last, state) || hold.last.queryX != state.queryX
-            || hold.last.queryY != state.queryY || hold.first.movement.position.dst2(sample.position) >= .01f) {
+            || hold.last.queryY != state.queryY || hold.first.movement.position.dst2(sample.position) >= .01f
+            || !narrowHold(before, state, hold.axis)) {
           hold = null;
           holds.remove(id);
           for (int axis = 0; axis < 4; axis++) {
-            if (MapTourProbe.narrowSpan(sample, axis) <= 0) continue;
+            if (!narrowHold(before, state, axis)) continue;
             hold = new Hold(); hold.first = before; hold.axis = axis;
             break;
           }
@@ -161,6 +162,12 @@ final class MonsterNarrowProbe {
     long ticks = b.movement.tick - a.movement.tick;
     return same(a, b) && ticks > 0 && ticks <= 10 && a.dynamicBlocked && b.dynamicBlocked
         && a.movement.position.dst2(b.movement.position) < .01f;
+  }
+  static boolean narrowHold(State a, State b, int axis) {
+    int first = MapTourProbe.narrowSpan(a.movement, axis);
+    int last = MapTourProbe.narrowSpan(b.movement, axis);
+    return !a.movement.blocked && !b.movement.blocked && first >= 1 && first <= 5
+        && last >= 1 && last <= 5;
   }
   static boolean recovered(State first, State last, State before, State now, int axis) {
     return same(first, last) && same(last, now) && same(before, now)

@@ -7,6 +7,18 @@ import com.riiablo.engine.server.component.NativePathIdentity;
 import org.junit.Test;
 
 public class MonsterNarrowProbeTest {
+  @Test public void holdRequiresBothEndpointsToHaveLegalNarrowGeometry() {
+    MonsterNarrowProbe.State a = new MonsterNarrowProbe.State();
+    MonsterNarrowProbe.State b = new MonsterNarrowProbe.State();
+    a.movement.narrowSpanX = 2; b.movement.narrowSpanX = 2;
+    assertTrue(MonsterNarrowProbe.narrowHold(a, b, 0));
+    a.movement.narrowSpanX = 0;
+    assertFalse(MonsterNarrowProbe.narrowHold(a, b, 0));
+    a.movement.narrowSpanX = 6;
+    assertFalse(MonsterNarrowProbe.narrowHold(a, b, 0));
+    a.movement.narrowSpanX = 2; b.movement.blocked = true;
+    assertFalse(MonsterNarrowProbe.narrowHold(a, b, 0));
+  }
   @Test public void recoveryNeedsARealHoldContinuousProgressAndSameLifetimes() {
     World world = new World();
     try {
