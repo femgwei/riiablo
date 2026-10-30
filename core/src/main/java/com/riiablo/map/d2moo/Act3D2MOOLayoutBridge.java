@@ -187,7 +187,7 @@ public final class Act3D2MOOLayoutBridge {
                 if (externalEntity && x >= 0 && y >= 0
                     && x < width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
                     && y < height * com.riiablo.map.DT1.Tile.SUBTILE_SIZE) {
-                  NativeMonsterResolution resolved = resolveNativeMonster(index);
+                  NativeMonsterResolution resolved = resolveNativeMonster(index, ds1Raw);
                   exportedMonsters.add(new Map.NativeMonster(
                       roomId, resolved.monsterId, mode, x, y,
                       resolved.superUniqueId, resolved.superUniqueKey, spawned));
@@ -363,12 +363,12 @@ public final class Act3D2MOOLayoutBridge {
    * encoded {@code monstatsCount + superUniquesCount + hcIdx} form; the latter
    * is used by preset bosses that have no MonPreset row at the exported site.
    */
-  static NativeMonsterResolution resolveNativeMonster(int index) {
+  static NativeMonsterResolution resolveNativeMonster(int index, boolean ds1Raw) {
     if (D2MOOLayoutContext.files() == null || D2MOOLayoutContext.files().monstats == null) {
       return new NativeMonsterResolution(index, -1, null);
     }
     String placement = null;
-    if (D2MOOLayoutContext.files().MonPreset != null) {
+    if (ds1Raw && D2MOOLayoutContext.files().MonPreset != null) {
       try {
         placement = D2MOOLayoutContext.files().MonPreset.getPlace(3, index);
       } catch (RuntimeException ignored) {
@@ -394,6 +394,11 @@ public final class Act3D2MOOLayoutBridge {
     return new NativeMonsterResolution(monster == null ? index : monster.hcIdx,
         superUnique == null ? -1 : superUnique.hcIdx,
         superUnique == null ? null : superUnique.Superunique);
+  }
+
+  /** Compatibility entry point for tests and callers that pass a DS1 preset index. */
+  static NativeMonsterResolution resolveNativeMonster(int index) {
+    return resolveNativeMonster(index, true);
   }
 
   static final class NativeMonsterResolution {
