@@ -12978,6 +12978,16 @@ public final class D2GSHeadlessClient {
       }
     }
     byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
+    // Validate the serialized equipment, not just the in-memory slot map.
+    // This catches stale EQUIPPED starter items resurrected by a D2S read.
+    CharData restored = CharData.obtain().clear().load(
+        com.riiablo.save.D2SReader.INSTANCE.readComplete(data));
+    Item restoredWeapon = restored.getItems().getEquipped(BodyLoc.RARM);
+    if (restored.getItems().getEquipped(BodyLoc.LARM) != null
+        || restoredWeapon == null || !weaponCode.equals(restoredWeapon.base.code)) {
+      throw new IllegalStateException("Generated melee D2S equipment round-trip mismatch");
+    }
+    log("melee_save_roundtrip", "weapon=" + weaponCode + " leftArm=empty result=PASS");
     log("character_generated", "name=HeadAmaMelee class=amazon skill="
         + skillId + " skillLevel=" + skillLevel + " weapon=" + weaponCode
         + " level=" + character.level + " bytes=" + data.length);
