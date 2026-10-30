@@ -38,6 +38,16 @@ foreach ($seed in $Seeds) {
   } catch {
     $row.status = 'FAILED'
     $row.error = $_.Exception.Message
+    $manifestPath = Join-Path $run 'acceptance.json'
+    if (Test-Path -LiteralPath $manifestPath) {
+      $failedAcceptance = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+      $row.error = "$($row.error); natural=$($failedAcceptance.natural)"
+    }
+    $tourLog = Join-Path $run 'natural/map-tour.log'
+    if (Test-Path -LiteralPath $tourLog) {
+      $row.summary = @(Get-Content -LiteralPath $tourLog |
+        Where-Object { $_ -match '^\[MAP_TOUR\] SUMMARY ' })
+    }
   }
   Save-Report
 }

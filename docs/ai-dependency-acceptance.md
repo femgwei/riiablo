@@ -65,5 +65,11 @@
 2026-10-30 使用新矩阵脚本对源码提交 `c157ccf6a` 运行 seed 2，证据为
 `build/ai-matrix-seed2/matrix.json`。结果 `visited=2/2`、`walks=4`、
 `transitions=1`、`detachedJumps=0`、`failures=0`，状态 `OBSERVED_RUNTIME_ONLY`。
-这是新增种子的单行实测；默认 seed 1/2/3 全矩阵尚未整体执行。
+这是新增种子的单行实测。
+
+随后在提交 `d2ee7df1c` 上完成默认 seed 1/2/3 全矩阵，证据目录为
+`build/ai-matrix-three-seeds`。seed 1、2 状态为 `OBSERVED_RUNTIME_ONLY`；
+seed 3 路线同样完成（visited=2/2、walks=4、transitions=1、failures=0），
+但两条 `AnimDataResolver` 的 `AMBL2HT` 到 `AMGH2HT` COF 回退警告被审计拒绝，
+因此总矩阵为 `FAILED`。未放宽资源回退审计；该资源问题仍待修复。
 
