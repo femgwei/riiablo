@@ -12950,8 +12950,15 @@ public final class D2GSHeadlessClient {
     // Amazon start items normally leave the bow equipped.  Replace both hand
     // slots with a durable native javelin so Jab/Impale/Power/Charged/Fend
     // cannot accidentally enter the ranged missile branch.
-    character.getItems().unequipItem(BodyLoc.RARM);
-    character.getItems().unequipItem(BodyLoc.LARM);
+    // unequipItem only detaches the slot map; its item still serializes as
+    // EQUIPPED. Remove replaced fixture items so reading the D2S cannot
+    // resurrect a starter shield alongside a two-handed spear.
+    Item starterRight = character.getItems().getEquipped(BodyLoc.RARM);
+    Item starterLeft = character.getItems().getEquipped(BodyLoc.LARM);
+    if (starterRight != null) character.getItems().removeOwnedItem(starterRight);
+    if (starterLeft != null && starterLeft != starterRight) {
+      character.getItems().removeOwnedItem(starterLeft);
+    }
     Item weapon = new Item();
     weapon.reset();
     weapon.setBase(Riiablo.files.weapons.get(weaponCode));
