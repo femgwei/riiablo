@@ -159,3 +159,38 @@ warnings=0、errors=0、fallbackRecords=0、issues=0，矩阵为 OBSERVED_RUNTIM
 门平面穿越几何判定，也不证明全部门类型、关门/重连持久化、所有窄道或原版一致性。
 下一步可补窄道的明确几何/移动证据，或扩展其他门类型；人工视觉、听感和跨电脑
 验证继续留作外部验证项。
+
+2026-10-30 新增窄道只读采样及 `tools/audit-ai-narrow-movement.ps1`。在自然地形上，
+以生产 PLAYER 路径碰撞掩码及实际角色脚印检查采样中心，沿 X/Y/两条对角轴寻找
+正负方向三格内的首个阻挡，记录其间可用脚印中心数量（1..5）。这是截面格点计数，
+不是墙间物理宽度；对角采样一步为对角格距，不与轴向物理距离等同。越出楼层的边界
+不算墙，动态单位不代替地形/物体阻挡。两个连续权威样本必须同层、同脚印、未阻挡、
+tick 增量 1..10、沿截面的垂直方向至少移动 1 格、横移不超过 .75，且位移不超速度
+允许范围，才能记录 NARROW_MOVE。日志只表示采样点附近的局部进展，不证明采样间
+整段轨迹或整条走廊几何。
+
+独立审计要求自然路线及严格控制台审计已通过，校验 NARROW_MOVE 的格式、tick、
+投影及截面计数，并只保留同 sequence/level 后续出现 WALK_PASS 的样本。调用：
+`./tools/audit-ai-narrow-movement.ps1 -Run <某次 seed 目录>`，成功时输出 JSON，
+没有合格样本则抛错。审计 JSON 标记 SAMPLED_LOCAL_NARROW_MOVEMENT、NOT_ASSERTED。
+旧日志缺少采样不会补推为通过。合成正例和过期 tick/错误截面方向/未配对行走反例
+检查通过；这些审计检查本身不是地图实测证据。MapTourProbeTest 共 13 项通过。
+
+仅轴向版本 `c89adf50b` 的 `build/ai-narrow-jail-29-30`，以及加入对角投影版本
+`87a7c8fb4` 的 `build/ai-narrow-jail-diagonal` 均完成普通监牢路线观察，但
+NARROW_MOVE=0，窄道审计正确拒绝，不计为窄道覆盖。未扩大阈值追求阳性结果。
+
+同一提交 `87a7c8fb4`、seed 1 改跑蛆虫巢穴 62→63，证据目录
+`build/ai-narrow-maggot-62-63`。普通路线 visited=2/2、walks=3、transitions=1、
+detachedJumps=0、combatKills=23、failures=0，记录生产 TCP 的 62→63 WARP_WALK。
+自然阶段约 524.2 秒，warnings=0、errors=0、fallbackRecords=0，严格控制台审计通过，
+矩阵为 OBSERVED_RUNTIME_ONLY，单次总验收仍为 PARTIAL。
+
+窄道日志记录 95 条 NARROW_MOVE，独立审计将其中 90 条与后续成功行走配对，涉及
+level 62 的 30 个不同 sequence；5 条未与成功行走配对而未计入。截面方向为 X 54、
+Y 32、DPLUS 1、DMINUS 3；这是采样记录数，不是独立通道数量或覆盖率。level 63
+没有合格窄道样本，不扩推为两层均覆盖。审计结果保存于该目录 `narrow-evidence.json`。
+例如 sequence 6、tick 369→374，footprint=2，两端沿 Y 截面的可用脚印中心跨度
+均为 2，角色由 (12669.449,21.989368) 移至 (12666.637,21.99609)，随后同请求
+WALK_PASS。此项补齐了有明确截面及实际行走关联的单种子局部窄道证据，仍不代表
+连续全轨迹、所有窄道、怪物通过相同窄道或原版一致性已验证。
