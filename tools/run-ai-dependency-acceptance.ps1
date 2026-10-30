@@ -5,7 +5,9 @@ param(
   [string]$Revision = 'HEAD',
   [int]$Seed = 1,
   [string]$CompareWith,
-  [int]$StageTimeoutSeconds = 180
+  # A fresh archived source tree must compile every module before the tour
+  # starts; allow cold CI-style builds while retaining an explicit override.
+  [int]$StageTimeoutSeconds = 600
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
