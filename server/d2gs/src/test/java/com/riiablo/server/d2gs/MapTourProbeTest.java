@@ -42,6 +42,25 @@ public class MapTourProbeTest {
     org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, true));
   }
 
+  @Test public void diagonalNarrowProgressUsesPerpendicularProjection() {
+    MapTourProbe.Sample a = new MapTourProbe.Sample(), b = new MapTourProbe.Sample();
+    a.level = b.level = 29; a.nativeTerrain = b.nativeTerrain = true;
+    a.unitSize = b.unitSize = 2; a.maximumMovementSpeed = b.maximumMovementSpeed = 20;
+    a.narrowSpanDiagonalMinus = b.narrowSpanDiagonalMinus = 3;
+    a.narrowSpanDiagonalPlus = b.narrowSpanDiagonalPlus = 3;
+    a.position = new com.badlogic.gdx.math.Vector2(10, 10);
+    b.position = new com.badlogic.gdx.math.Vector2(12, 12);
+    a.tick = 10; b.tick = 15;
+    assertTrue(MapTourProbe.narrowProgress(a, b, 3));
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, 2));
+    b.position.set(12, 8);
+    assertTrue(MapTourProbe.narrowProgress(a, b, 2));
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, 3));
+    b.position.set(12, 10);
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, 2));
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, 3));
+  }
+
   @Test public void seamDoorMustFinishOpeningBeforeItsNextFrontierIsPlanned() {
     com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder().build());
     try {

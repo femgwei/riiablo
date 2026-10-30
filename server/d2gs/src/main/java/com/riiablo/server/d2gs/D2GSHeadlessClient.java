@@ -5798,14 +5798,14 @@ public final class D2GSHeadlessClient {
       }
       if (lastMovementAcknowledgement >= sequence && state.level == expectedLevel
           && currentLevelId == expectedLevel) {
-        for (boolean crossX : new boolean[] {true, false}) {
-          if (!MapTourProbe.narrowProgress(previous, state, crossX)) continue;
+        for (int axis = 0; axis < 4; axis++) {
+          if (!MapTourProbe.narrowProgress(previous, state, axis)) continue;
           tourLog(report, "NARROW_MOVE", "sequence=" + sequence + " level=" + state.level
-              + " crossAxis=" + (crossX ? "X" : "Y") + " footprint=" + state.unitSize
+              + " crossAxis=" + new String[] {"X", "Y", "DPLUS", "DMINUS"}[axis] + " footprint=" + state.unitSize
               + " firstTick=" + previous.tick + " lastTick=" + state.tick
               + " from=" + previous.position + " to=" + state.position
-              + " beforeSpan=" + (crossX ? previous.narrowSpanX : previous.narrowSpanY)
-              + " afterSpan=" + (crossX ? state.narrowSpanX : state.narrowSpanY)
+              + " beforeSpan=" + MapTourProbe.narrowSpan(previous, axis)
+              + " afterSpan=" + MapTourProbe.narrowSpan(state, axis)
               + " bound=3 movement=PRODUCTION_TCP coverage=SAMPLED_LOCAL_PROGRESS");
         }
       }

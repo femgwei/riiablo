@@ -22,6 +22,7 @@ final class MapTourProbe {
     long tick;
     float maximumMovementSpeed;
     int narrowSpanX, narrowSpanY;
+    int narrowSpanDiagonalPlus, narrowSpanDiagonalMinus;
     String name = "missing";
     int[] diagnostics = new int[0];
     int objects, monsters, entities, pendingMonsters, spawnedMonsters, spawnedObjects, groundItems;
@@ -208,6 +209,10 @@ final class MapTourProbe {
         sample.narrowSpanX = narrowCenterSpan(offset -> clear(map, zone, x + offset, y, size));
       if (zone.contains(x, y - 3) && zone.contains(x, y + 3))
         sample.narrowSpanY = narrowCenterSpan(offset -> clear(map, zone, x, y + offset, size));
+      if (zone.contains(x - 3, y - 3) && zone.contains(x + 3, y + 3))
+        sample.narrowSpanDiagonalPlus = narrowCenterSpan(offset -> clear(map, zone, x + offset, y + offset, size));
+      if (zone.contains(x - 3, y + 3) && zone.contains(x + 3, y - 3))
+        sample.narrowSpanDiagonalMinus = narrowCenterSpan(offset -> clear(map, zone, x + offset, y - offset, size));
     }
     if (local) {
       sample.transition = "LOCAL_WALK";
@@ -350,16 +355,38 @@ final class MapTourProbe {
   }
 
   static boolean narrowProgress(Sample previous, Sample current, boolean crossX) {
+    return narrowProgress(previous, current, crossX ? 0 : 1);
+  }
+
+  static int narrowSpan(Sample sample, int axis) {
+    switch (axis) {
+      case 0: return sample.narrowSpanX;
+      case 1: return sample.narrowSpanY;
+      case 2: return sample.narrowSpanDiagonalPlus;
+      case 3: return sample.narrowSpanDiagonalMinus;
+      default: return 0;
+    }
+  }
+
+  static boolean narrowProgress(Sample previous, Sample current, int axis) {
     long ticks = current.tick - previous.tick;
     if (ticks <= 0 || ticks > 10 || previous.level != current.level
         || !previous.nativeTerrain || !current.nativeTerrain || previous.synthetic || current.synthetic
         || previous.blocked || current.blocked || previous.unitSize != current.unitSize) return false;
-    int before = crossX ? previous.narrowSpanX : previous.narrowSpanY;
-    int after = crossX ? current.narrowSpanX : current.narrowSpanY;
+    int before = narrowSpan(previous, axis), after = narrowSpan(current, axis);
     if (before <= 0 || after <= 0) return false;
-    float dx = Math.abs(current.position.x - previous.position.x);
-    float dy = Math.abs(current.position.y - previous.position.y);
-    float along = crossX ? dy : dx, across = crossX ? dx : dy;
+    float dx = current.position.x - previous.position.x;
+    float dy = current.position.y - previous.position.y;
+    float along, across;
+    switch (axis) {
+      case 0: along = Math.abs(dy); across = Math.abs(dx); break;
+      case 1: along = Math.abs(dx); across = Math.abs(dy); break;
+      case 2: along = Math.abs(dx - dy) / (float) Math.sqrt(2);
+        across = Math.abs(dx + dy) / (float) Math.sqrt(2); break;
+      case 3: along = Math.abs(dx + dy) / (float) Math.sqrt(2);
+        across = Math.abs(dx - dy) / (float) Math.sqrt(2); break;
+      default: return false;
+    }
     float allowed = Math.max(previous.maximumMovementSpeed, current.maximumMovementSpeed) * ticks * .04f + .1f;
     return along >= 1f && across <= .75f && previous.position.dst(current.position) <= allowed;
   }

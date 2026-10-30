@@ -10,7 +10,7 @@ Assert-AiTourEvidence -Lines $lines -Summary (Get-Content (Join-Path $root 'natu
 $issues = @(Get-MapLogIssues -Lines (Get-Content (Join-Path $root 'natural-console.log')))
 if ($issues.Count) { throw 'Strict console audit failed' }
 $number = '(-?\d+(?:\.\d+)?)'
-$pattern = '^\[MAP_TOUR\] NARROW_MOVE sequence=(\d+) level=(\d+) crossAxis=([XY]) footprint=(\d+) firstTick=(\d+) lastTick=(\d+) from=\(' + $number + ',' + $number + '\) to=\(' + $number + ',' + $number + '\) beforeSpan=([1-5]) afterSpan=([1-5]) bound=3 movement=PRODUCTION_TCP coverage=SAMPLED_LOCAL_PROGRESS$'
+$pattern = '^\[MAP_TOUR\] NARROW_MOVE sequence=(\d+) level=(\d+) crossAxis=(X|Y|DPLUS|DMINUS) footprint=(\d+) firstTick=(\d+) lastTick=(\d+) from=\(' + $number + ',' + $number + '\) to=\(' + $number + ',' + $number + '\) beforeSpan=([1-5]) afterSpan=([1-5]) bound=3 movement=PRODUCTION_TCP coverage=SAMPLED_LOCAL_PROGRESS$'
 $accepted = @()
 for ($i = 0; $i -lt $lines.Count; $i++) {
   if ($lines[$i] -notmatch '^\[MAP_TOUR\] NARROW_MOVE ') { continue }
@@ -21,9 +21,13 @@ for ($i = 0; $i -lt $lines.Count; $i++) {
   $x0 = [double]::Parse($Matches[7], $culture); $y0 = [double]::Parse($Matches[8], $culture)
   $x1 = [double]::Parse($Matches[9], $culture); $y1 = [double]::Parse($Matches[10], $culture)
   $before = [int]$Matches[11]; $after = [int]$Matches[12]
-  $dx = [Math]::Abs($x1-$x0); $dy = [Math]::Abs($y1-$y0)
-  $along = if ($axis -eq 'X') { $dy } else { $dx }
-  $across = if ($axis -eq 'X') { $dx } else { $dy }
+  $dx = $x1-$x0; $dy = $y1-$y0
+  switch ($axis) {
+    X { $along=[Math]::Abs($dy); $across=[Math]::Abs($dx) }
+    Y { $along=[Math]::Abs($dx); $across=[Math]::Abs($dy) }
+    DPLUS { $along=[Math]::Abs($dx-$dy)/[Math]::Sqrt(2); $across=[Math]::Abs($dx+$dy)/[Math]::Sqrt(2) }
+    DMINUS { $along=[Math]::Abs($dx+$dy)/[Math]::Sqrt(2); $across=[Math]::Abs($dx-$dy)/[Math]::Sqrt(2) }
+  }
   if ($last -le $first -or $last-$first -gt 10 -or $along -lt 1 -or $across -gt .75 -or $footprint -lt 1) {
     throw 'Invalid narrow movement ticks or geometry'
   }
