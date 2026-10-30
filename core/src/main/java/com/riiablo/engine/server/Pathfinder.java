@@ -483,6 +483,20 @@ public class Pathfinder extends IteratingSystem {
   }
 
   public boolean findNativePath(int src, int targetId, int budget, int directionOffset) {
+    boolean accepted = findNativePathRequest(src, targetId, budget, directionOffset);
+    if (directionOffset == 0) {
+      com.riiablo.engine.server.component.NativeTowardRequestTrace trace = world.getMapper(
+          com.riiablo.engine.server.component.NativeTowardRequestTrace.class).create(src);
+      trace.revision++;
+      trace.targetId = targetId;
+      NativePathIdentity target = targetId < 0 ? null : world.getMapper(NativePathIdentity.class).get(targetId);
+      trace.targetIdentity = target == null ? null : target.token();
+      trace.accepted = accepted;
+    }
+    return accepted;
+  }
+
+  private boolean findNativePathRequest(int src, int targetId, int budget, int directionOffset) {
     if (mPosition.has(targetId)) {
       Boolean nativeResult = NativePathRuntime.request(world,src,map,dynamicCollision,
           mPosition.get(targetId).position,targetId,directionOffset == 0 ? 2 : directionOffset > 0 ? 5 : 6,

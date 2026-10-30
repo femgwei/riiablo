@@ -30,6 +30,9 @@ final class MonsterNarrowProbe {
   private final java.util.Map<Integer, Hold> holds = new HashMap<>();
   private final java.util.IdentityHashMap<NativePathIdentity.Token, Long> lifetimes = new java.util.IdentityHashMap<>();
   private long diagnosticTick = -25;
+  private final java.util.Map<Integer, Long> requestRevisions = new HashMap<>();
+  private final java.util.Map<Integer, Long> requestTicks = new HashMap<>();
+  private final java.util.Map<Integer, NativePathIdentity.Token> requestIdentities = new HashMap<>();
 
   List<String> observe(World world, Map map, int player, long tick) {
     List<String> events = new ArrayList<>();
@@ -38,23 +41,32 @@ final class MonsterNarrowProbe {
     DynamicUnitCollisionSystem collision = world.getSystem(DynamicUnitCollisionSystem.class);
     if (owner == null || owner.zone == null || collision == null) return events;
     com.artemis.utils.IntBag units = world.getAspectSubscriptionManager().get(Aspect.all(
-        Monster.class, Position.class, MapWrapper.class, Size.class, Pathfind.class,
+        Monster.class, Position.class, MapWrapper.class, Size.class,
         AttributesWrapper.class, NativePathIdentity.class)).getEntities();
     for (int i = 0; i < units.size(); i++) {
       int id = units.get(i);
       Monster monster = world.getMapper(Monster.class).get(id);
       MapWrapper wrapper = world.getMapper(MapWrapper.class).get(id);
       Pathfind path = world.getMapper(Pathfind.class).get(id);
+      NativeTowardRequestTrace trace = world.getMapper(NativeTowardRequestTrace.class).get(id);
       AttributesWrapper attrs = world.getMapper(AttributesWrapper.class).get(id);
       NativePathIdentity identity = world.getMapper(NativePathIdentity.class).get(id);
-      int targetId = path.targetEntityId >= 0 ? path.targetEntityId : path.requestedTargetEntityId;
-      NativePathIdentity.Token targetToken = path.targetEntityId >= 0 ? path.targetIdentity : path.requestedTargetIdentity;
+      if (trace != null && (requestIdentities.get(id) != identity.token()
+          || requestRevisions.getOrDefault(id, -1L) != trace.revision)) {
+        requestIdentities.put(id, identity.token());
+        requestRevisions.put(id, trace.revision); requestTicks.put(id, tick);
+      }
+      boolean rejected = path == null && trace != null && !trace.accepted
+          && tick - requestTicks.getOrDefault(id, -1000L) <= 25;
+      if (path == null && !rejected) continue;
+      int targetId = rejected ? trace.targetId : path.targetEntityId >= 0 ? path.targetEntityId : path.requestedTargetEntityId;
+      NativePathIdentity.Token targetToken = rejected ? trace.targetIdentity
+          : path.targetEntityId >= 0 ? path.targetIdentity : path.requestedTargetIdentity;
       if (tick - diagnosticTick >= 25 && wrapper.zone == owner.zone && MapTourProbe.hostileBlocker(monster))
         events.add("MONSTER_PATH_SAMPLE entity=" + id + " tick=" + tick + " level=" + wrapper.zone.level.Id
-            + " target=" + path.targetEntityId + " targetIdentity=" + (path.targetIdentity != null)
-            + " requestTarget=" + path.requestedTargetEntityId
-            + " nativeRuntime=" + (path.nativeRuntime != null) + " position="
-            + world.getMapper(Position.class).get(id).position + " dynamicBlocked=" + path.blockedByDynamic);
+            + " target=" + targetId + " targetIdentity=" + (targetToken != null)
+            + " nativeRuntime=" + (path != null && path.nativeRuntime != null) + " rejected=" + rejected + " position="
+            + world.getMapper(Position.class).get(id).position);
       if (!MapTourProbe.hostileBlocker(monster) || wrapper.zone != owner.zone
           || wrapper.zone.isSyntheticArena() || wrapper.zone.nativeTileGrid() == null
           || NativeGroundPathProfile.forUnit(false, monster.monstats) != NativeGroundPathProfile.MONSTER
@@ -65,7 +77,8 @@ final class MonsterNarrowProbe {
       State state = new State();
       state.entity = id; state.target = player;
       state.identity = identity.token(); state.targetIdentity = targetToken;
-      state.targetSource = path.targetEntityId >= 0 ? "LIVE_PATH" : "BOUNDED_TOWARD_REQUEST";
+      state.targetSource = rejected ? "REJECTED_TOWARD_REQUEST"
+          : path.targetEntityId >= 0 ? "LIVE_PATH" : "BOUNDED_TOWARD_REQUEST";
       state.lifetime = lifetimes.computeIfAbsent(state.identity, ignored -> (long) lifetimes.size() + 1);
       state.targetLifetime = lifetimes.computeIfAbsent(state.targetIdentity, ignored -> (long) lifetimes.size() + 1);
       MapTourProbe.Sample sample = state.movement;
@@ -84,9 +97,11 @@ final class MonsterNarrowProbe {
         sample.narrowSpanDiagonalPlus = span(map, wrapper.zone, x, y, sample.unitSize, 1, 1);
         sample.narrowSpanDiagonalMinus = span(map, wrapper.zone, x, y, sample.unitSize, 1, -1);
       }
-      state.queryX = Math.round(path.target.x); state.queryY = Math.round(path.target.y);
+      Vector2 targetPosition = world.getMapper(Position.class).get(player).position;
+      state.queryX = rejected ? x + Integer.signum(Math.round(targetPosition.x) - x) : Math.round(path.target.x);
+      state.queryY = rejected ? y + Integer.signum(Math.round(targetPosition.y) - y) : Math.round(path.target.y);
       state.queryFree = collision.isFreeForPath(id, -1, state.queryX, state.queryY, sample.unitSize);
-      state.dynamicBlocked = path.blockedByDynamic && !state.queryFree
+      state.dynamicBlocked = (rejected || path.blockedByDynamic) && !state.queryFree
           && clear(map, wrapper.zone, state.queryX, state.queryY, sample.unitSize);
       State before = previous.get(id);
       current.put(id, state);
@@ -124,6 +139,7 @@ final class MonsterNarrowProbe {
           events.add("MONSTER_NARROW_RECOVER " + pair(before, state, hold.axis)
               + " blockedFirstTick=" + hold.first.movement.tick + " blockedLastTick=" + hold.last.movement.tick
               + " blockedPosition=" + hold.last.movement.position
+              + " blockedTargetSource=" + hold.last.targetSource
               + " query=(" + hold.last.queryX + "," + hold.last.queryY + ") queryWasBlocked=true queryNowFree=true");
           holds.remove(id);
         } else if (sample.tick - hold.last.movement.tick > 250) holds.remove(id);
@@ -139,7 +155,6 @@ final class MonsterNarrowProbe {
     return a != null && b != null && a.entity == b.entity && a.target == b.target
         && a.identity != null && a.identity == b.identity && a.targetIdentity != null
         && a.targetIdentity == b.targetIdentity && a.movement.level == b.movement.level
-        && a.targetSource.equals(b.targetSource)
         && a.movement.unitSize == b.movement.unitSize;
   }
   static boolean stationary(State a, State b) {

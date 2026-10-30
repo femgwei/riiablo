@@ -34,7 +34,7 @@ foreach ($line in $lines) {
   if ($fields.identity -ne 'SAME_LIFETIME' -or $fields.movement -ne 'PRODUCTION_AI' `
       -or $fields.coverage -ne 'SAMPLED_LOCAL_PROGRESS' -or $fields.bound -ne '3' `
       -or $fields.context -notin @('WALK','OBSERVE') -or $fields.playerAttacks -ne '0' `
-      -or $fields.targetSource -notin @('LIVE_PATH','BOUNDED_TOWARD_REQUEST') `
+      -or $fields.targetSource -notin @('LIVE_PATH','BOUNDED_TOWARD_REQUEST','REJECTED_TOWARD_REQUEST') `
       -or [int]$fields.footprint -lt 1 -or [long]$fields.lifetime -lt 1 -or [long]$fields.targetLifetime -lt 1 `
       -or [int]$fields.beforeSpan -notin 1..5 -or [int]$fields.afterSpan -notin 1..5) { throw 'Invalid provenance or geometry' }
   $from = Point $fields.from; $to = Point $fields.to
@@ -59,7 +59,10 @@ foreach ($line in $lines) {
       -or (Distance $from $to) -gt (Number $fields.allowedDisplacement) + .001) { throw 'Discontinuous/non-narrow movement' }
   if ($kind -eq 'MONSTER_NARROW_RECOVER') {
     $blockedFirst = [long]$fields.blockedFirstTick; $blockedLast = [long]$fields.blockedLastTick
-    $block = $blocks["${key}:$blockedFirst`:$blockedLast"]
+    $blockSource = $fields.blockedTargetSource
+    $blockKey = @('entity','target','level','lifetime','targetLifetime' | ForEach-Object { $fields[$_] })
+    $blockKey = (@($blockKey) + @($blockSource,$fields.footprint,$fields.crossAxis)) -join ':'
+    $block = $blocks["${blockKey}:$blockedFirst`:$blockedLast"]
     if (!$block -or $first -lt $blockedLast -or $last -le $blockedLast -or $last-$blockedLast -gt 250 `
         -or $fields.queryWasBlocked -ne 'true' -or $fields.queryNowFree -ne 'true' `
         -or $block.query -ne $fields.query -or (Distance (Point $fields.blockedPosition) (Point $block.to)) -gt .001 `

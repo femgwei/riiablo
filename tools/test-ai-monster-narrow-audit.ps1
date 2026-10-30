@@ -21,11 +21,18 @@ $evidence = @(
   ('[MAP_TOUR] MONSTER_NARROW_BLOCK ' + $prefix + 'firstTick=10 lastTick=15 from=(10,10) to=(10,10)' + $tail + ' query=(11,10) queryWasBlocked=true' + $context),
   ('[MAP_TOUR] MONSTER_NARROW_MOVE ' + $prefix + 'firstTick=15 lastTick=20 from=(10,10) to=(11.5,10)' + $tail + $context),
   ('[MAP_TOUR] MONSTER_NARROW_MOVE ' + $prefix + 'firstTick=20 lastTick=25 from=(11.5,10) to=(13,10)' + $tail + $context),
-  ('[MAP_TOUR] MONSTER_NARROW_RECOVER ' + $prefix + 'firstTick=20 lastTick=25 from=(11.5,10) to=(13,10)' + $tail + ' blockedFirstTick=10 blockedLastTick=15 blockedPosition=(10,10) query=(11,10) queryWasBlocked=true queryNowFree=true' + $context))
+  ('[MAP_TOUR] MONSTER_NARROW_RECOVER ' + $prefix + 'firstTick=20 lastTick=25 from=(11.5,10) to=(13,10)' + $tail + ' blockedFirstTick=10 blockedLastTick=15 blockedPosition=(10,10) blockedTargetSource=LIVE_PATH query=(11,10) queryWasBlocked=true queryNowFree=true' + $context))
 ($header + $evidence) | Set-Content (Join-Path $fixture 'natural/map-tour.log')
 $result = & (Join-Path $PSScriptRoot 'audit-ai-monster-narrow.ps1') -Run $fixture -RequireRecovery | ConvertFrom-Json
 if ($result.passageCount -ne 1 -or $result.recoveryCount -ne 1) { throw 'Positive evidence rejected' }
+$transition = @($evidence[0] -replace ' targetSource=LIVE_PATH', ' targetSource=REJECTED_TOWARD_REQUEST') +
+  @($evidence[1..2] -replace ' targetSource=LIVE_PATH', ' targetSource=BOUNDED_TOWARD_REQUEST') +
+  @($evidence[3] -replace ' targetSource=LIVE_PATH', ' targetSource=BOUNDED_TOWARD_REQUEST' -replace 'blockedTargetSource=LIVE_PATH', 'blockedTargetSource=REJECTED_TOWARD_REQUEST')
+($header + $transition) | Set-Content (Join-Path $fixture 'natural/map-tour.log')
+$result = & (Join-Path $PSScriptRoot 'audit-ai-monster-narrow.ps1') -Run $fixture -RequireRecovery | ConvertFrom-Json
+if ($result.recoveryCount -ne 1) { throw 'Request-source transition rejected' }
 $cases = @(
+  @{ lines=@($transition -replace 'blockedTargetSource=REJECTED_TOWARD_REQUEST', 'blockedTargetSource=LIVE_PATH') },
   @{ lines=@($evidence | Where-Object { $_ -notmatch 'MONSTER_NARROW_BLOCK' }) },
   @{ lines=@($evidence -replace 'queryNowFree=true', 'queryNowFree=false') },
   @{ lines=@($evidence -replace 'beforeSpan=1', 'beforeSpan=0') },
