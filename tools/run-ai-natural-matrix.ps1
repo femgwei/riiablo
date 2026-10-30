@@ -3,9 +3,15 @@ param(
   [Parameter(Mandatory)][string]$D2Home,
   [Parameter(Mandatory)][string]$Output,
   [string]$Revision = 'HEAD',
+  [ValidatePattern('^\d+(,\d+)*$')][string]$Levels = '1,2',
   [int[]]$Seeds = @(1, 2, 3)
 )
 $ErrorActionPreference = 'Stop'
+$levelIds = @($Levels.Split(',') | ForEach-Object { [int]$_ })
+if (@($levelIds | Select-Object -Unique).Count -ne $levelIds.Count `
+    -or @($levelIds | Where-Object { $_ -lt 1 -or $_ -gt 132 }).Count) {
+  throw 'Levels must contain unique 1.10f level IDs in 1..132'
+}
 $repo = Split-Path -Parent $PSScriptRoot
 $commit = & git -C $repo rev-parse --verify "$Revision^{commit}"
 if ($LASTEXITCODE -ne 0) { throw 'Invalid revision' }
@@ -15,7 +21,7 @@ if (!$Seeds.Count -or @($Seeds | Select-Object -Unique).Count -ne $Seeds.Count) 
 $destination = [IO.Path]::GetFullPath($Output)
 if (Test-Path -LiteralPath $destination) { throw 'Output must be a new directory' }
 New-Item -ItemType Directory -Path $destination | Out-Null
-$report = [ordered]@{ revision = "$commit"; levels = '1,2'; seeds = $Seeds
+$report = [ordered]@{ revision = "$commit"; levels = $Levels; seeds = $Seeds
   coverage = 'MULTI_SEED_RUNTIME_OBSERVATION'; correctness = 'NOT_ASSERTED'
   result = 'RUNNING'; runs = @() }
 function Save-Report {
@@ -29,7 +35,7 @@ foreach ($seed in $Seeds) {
   Save-Report
   try {
     & (Join-Path $PSScriptRoot 'run-ai-dependency-acceptance.ps1') -D2Home $D2Home `
-      -Output $run -Revision $commit -Seed $seed -SkipGl
+      -Output $run -Revision $commit -Seed $seed -Levels $Levels -SkipGl
     $acceptance = Get-Content (Join-Path $run 'acceptance.json') -Raw | ConvertFrom-Json
     if ($acceptance.natural -ne 'OBSERVED_RUNTIME_ONLY') { throw 'Natural evidence rejected' }
     $row.summary = @(Get-Content (Join-Path $run 'natural/map-tour.log') |

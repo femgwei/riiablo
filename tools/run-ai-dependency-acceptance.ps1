@@ -4,6 +4,7 @@ param(
   [Parameter(Mandatory)][string]$Output,
   [string]$Revision = 'HEAD',
   [int]$Seed = 1,
+  [ValidatePattern('^\d+(,\d+)*$')][string]$Levels = '1,2',
   [switch]$SkipGl,
   [string]$CompareWith,
   # A fresh archived source tree must compile every module before the tour
@@ -11,6 +12,12 @@ param(
   [int]$StageTimeoutSeconds = 600
 )
 $ErrorActionPreference = 'Stop'
+$levelIds = @($Levels.Split(',') | ForEach-Object { [int]$_ })
+if (@($levelIds | Select-Object -Unique).Count -ne $levelIds.Count `
+    -or @($levelIds | Where-Object { $_ -lt 1 -or $_ -gt 132 }).Count) {
+  throw 'Levels must contain unique 1.10f level IDs in 1..132'
+}
+$levelCount = $levelIds.Count
 $repo = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'map-acceptance-audit.ps1')
 $homePath = (Resolve-Path -LiteralPath $D2Home).Path
@@ -32,7 +39,7 @@ $mpqs = @(Get-ChildItem -LiteralPath $homePath -File -Filter '*.mpq' |
 if ($mpqs.Count -eq 0) { throw 'No MPQ files found' }
 $manifest = [ordered]@{
   contract = 1; revision = "$commit"; sourceSha256 = (Get-FileHash $archive).Hash
-  profile = '1.10f'; seed = $Seed; glSeed = 0x110FCA4D; rate = 25; levels = '1,2'; observeMillis = 8000
+  profile = '1.10f'; seed = $Seed; glSeed = 0x110FCA4D; rate = 25; levels = $Levels; observeMillis = 8000
   machine = [Environment]::MachineName; os = [Environment]::OSVersion.ToString()
   java = ((& java -version 2>&1 | ForEach-Object { "$_" }) -join "`n")
   resources = $mpqs; startedUtc = [DateTime]::UtcNow.ToString('o')
@@ -48,7 +55,7 @@ if ($CompareWith) {
   $other = Get-Content -LiteralPath $CompareWith -Raw | ConvertFrom-Json
   $same = $other.contract -eq 1 -and $other.revision -eq $manifest.revision `
       -and $other.sourceSha256 -eq $manifest.sourceSha256 -and $other.profile -eq $manifest.profile `
-      -and $other.seed -eq $Seed -and $other.rate -eq 25 -and $other.levels -eq '1,2' `
+      -and $other.seed -eq $Seed -and $other.rate -eq 25 -and $other.levels -eq $Levels `
       -and $other.observeMillis -eq 8000
   $same = $same -and $other.glSeed -eq $manifest.glSeed
   $expected = @($other.resources | ForEach-Object { "$($_.name):$($_.bytes):$($_.sha256)" })
@@ -89,16 +96,22 @@ Push-Location $source
 try {
   $common = @("-Pd2Home=$homePath", '--no-daemon', '--max-workers=1', '--console=plain')
   $natural = Join-Path $destination 'natural'
-  $exitCode = Invoke-GradleStage 'natural' (@(':server:d2gs:headlessMapTour') + $common + @("-PtourSeed=$Seed", '-PtourLevels=1,2', '-PtourRate=25', '-PtourAiObserve', '-PtourAiObserveMillis=8000', "-PtourOutput=$natural")) (Join-Path $destination 'natural-console.log')
   try {
+    $exitCode = Invoke-GradleStage 'natural' (@(':server:d2gs:headlessMapTour') + $common + @("-PtourSeed=$Seed", "-PtourLevels=$Levels", '-PtourRate=25', '-PtourAiObserve', '-PtourAiObserveMillis=8000', "-PtourOutput=$natural")) (Join-Path $destination 'natural-console.log')
     if ($exitCode -ne 0) { throw "Gradle exited $exitCode" }
     $lines = Get-Content -LiteralPath (Join-Path $natural 'map-tour.log')
+    $loadedIds = @($lines | ForEach-Object {
+      if ($_ -match '^\[MAP_TOUR\] LOAD level=(\d+) ') { [int]$Matches[1] }
+    })
+    if (($loadedIds -join ',') -ne ($levelIds -join ',')) {
+      throw 'Loaded level itinerary does not match requested Levels'
+    }
     Assert-AiTourEvidence -Lines $lines -Summary (Get-Content (Join-Path $natural 'ai-summary.txt'))
     $issues = @(Get-MapLogIssues -Lines (Get-Content (Join-Path $destination 'natural-console.log')))
     $issues | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $destination 'natural-issues.json')
     if ($issues.Count) { throw "Unreviewed log issues: $($issues.Count)" }
     if ($lines -match '^\[MAP_TOUR\] (FAIL|DIAGNOSTIC_FAIL|DEATH_RECOVERY) ' `
-        -or -not ($lines -match '^\[MAP_TOUR\] SUMMARY planned=2 visited=2 .*failures=0 result=PASS$')) {
+        -or -not ($lines -match "^\[MAP_TOUR\] SUMMARY planned=$levelCount visited=$levelCount .*failures=0 result=PASS$")) {
       throw 'Focused tour did not complete cleanly'
     }
     $manifest.natural = 'OBSERVED_RUNTIME_ONLY'
@@ -108,8 +121,8 @@ try {
     $manifest.gl = 'NOT_RUN'
   } else {
   $gl = Join-Path $destination 'gl'
-  $exitCode = Invoke-GradleStage 'gl' (@(':desktop:offscreenCamp') + $common + @('-PoffscreenLevel=2', '-PoffscreenWidth=854', '-PoffscreenHeight=480', '-Pd2Version=1.10f', "-PsavesDir=$(Join-Path $destination 'saves')", "-PvisualOutput=$gl")) (Join-Path $destination 'gl-console.log')
   try {
+    $exitCode = Invoke-GradleStage 'gl' (@(':desktop:offscreenCamp') + $common + @('-PoffscreenLevel=2', '-PoffscreenWidth=854', '-PoffscreenHeight=480', '-Pd2Version=1.10f', "-PsavesDir=$(Join-Path $destination 'saves')", "-PvisualOutput=$gl")) (Join-Path $destination 'gl-console.log')
     if ($exitCode -ne 0) { throw "Gradle exited $exitCode" }
     $report = Get-Content (Join-Path $gl 'rogue-encampment-manifest.txt')
     if ('window=854x480' -notin $report -or 'result=PASS' -notin $report `
