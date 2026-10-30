@@ -113,3 +113,19 @@ seed 1 combatKills=1，seed 2/3 为 0。合并索引为
 默认仍为 600 秒。两入口拒绝 1..86400 秒之外的时间，矩阵和单次清单均保存
 `stageTimeoutSeconds`，便于识别每轮的运行预算。该值是每个 Gradle 阶段的超时上限，
 不包含源码导出和资源哈希准备时间，也不替代路线、观察窗口及资源审计。
+
+2026-10-30 使用 1800 秒阶段预算完成地下通道 seed 1 重跑，源码提交
+`de1b2169f`，证据位于 `build/ai-underground-10-14-long`。矩阵状态为
+`OBSERVED_RUNTIME_ONLY`；单次总验收仍为 PARTIAL（本轮跳过 GL，且没有原版判定器）。
+实际 LOAD 顺序为 10、14，`TRANSITION_PASS from=10 to=14 mode=WARP_WALK`
+记录 `warpRequests=1 movement=PRODUCTION_TCP`。SUMMARY 为 visited=2/2、walks=3、
+transitions=1、detachedJumps=0、combatKills=19、failures=0。walks 是最终汇总口径，
+不等同于逐段 WALK_PASS 的数量。
+
+两层入口均完成 200 tick 无玩家攻击观察窗口；重新执行严格证据及控制台审计通过，
+warnings=0、errors=0、fallbackRecords=0、issues=0。CorruptRogue、Fallen、
+FallenShaman 和 Bighead 有运行行为记录，其余仅初始化记录不计作行为覆盖。
+本轮自然阶段约 449.5 秒完成，早于旧的 600 秒上限；不能把本次成功单独归因于
+扩大时间预算，也不能据此认定之前超时的根因已解决。原失败证据保留。
+本轮 DOOR_PASS=0，只补充该地下路线的单种子观察，不代表门、所有窄道或全部 AI
+已验收。下一步应选择有实际门交互的路线补验。
