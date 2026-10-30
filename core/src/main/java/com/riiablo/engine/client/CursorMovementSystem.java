@@ -405,6 +405,10 @@ public class CursorMovementSystem extends BaseSystem {
       // set target entity -- unsets and interacts when within range
       boolean touched = touchDown(src);
       boolean canInterrupt = actioneer.canInterrupt(src);
+      Gdx.app.log(TAG, "[GROUND_DISPATCH] entity=" + src + " touched=" + touched
+          + " canInterrupt=" + canInterrupt + " casting=" + actioneer.hasCasting(src)
+          + " sequence=" + actioneer.hasSequence(src)
+          + " hovered=" + getHoveredAt(src, Gdx.input.getX(), Gdx.input.getY()));
       if (!touched && canInterrupt) {
         iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
         moveToGround(src, tmpVec2);
