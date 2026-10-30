@@ -292,3 +292,11 @@ MonSeq 各序列的实际声音槽映射、音效听感、原版动态对照仍�
 
 特殊路径、完整自然路线/技能/怪物资源覆盖、规模性能、原版动态对照、跨电脑运行及音效
 听验仍未完成，不能据此关闭全部 AI 依赖工作。
+
+## 验收脚本修复后的自然地图复跑（2026-10-30）
+
+提交 `8888da6a5` 后使用 `run-ai-dependency-acceptance.ps1` 完整复跑，证据目录为
+`build/ai-natural-round26`。阶段日志显示 natural 与 gl 均 `END_0`，不再出现阶段日志污染
+退出码的问题；结果为 `natural=OBSERVED_RUNTIME_ONLY`、`gl=CAPTURED_REQUIRES_VISUAL_REVIEW`、
+`crossComputer=NOT_RUN`、`result=PARTIAL`。源码快照首次冷编译约需 140 秒，因此默认阶段
+超时已设为 600 秒。该结果仍不覆盖人工视觉/听感、跨电脑和完整技能/怪物路线验收。
