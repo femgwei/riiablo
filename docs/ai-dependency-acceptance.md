@@ -129,3 +129,33 @@ FallenShaman 和 Bighead 有运行行为记录，其余仅初始化记录不计�
 扩大时间预算，也不能据此认定之前超时的根因已解决。原失败证据保留。
 本轮 DOOR_PASS=0，只补充该地下路线的单种子观察，不代表门、所有窄道或全部 AI
 已验收。下一步应选择有实际门交互的路线补验。
+
+2026-10-30 补门交互时，首轮误将 20/21 当成监牢；实际 LOAD 为 Forgotten Tower /
+Tower Cellar Level 1。证据目录 `build/ai-doors-jail-20-21` 的目录名不代表实际地图，
+只计作 20→21 普通路线观察：visited=2/2、transitions=1、failures=0、DOOR_PASS=0。
+后续依据 `D2LevelIds` 常量改为监牢 29→30。
+
+监牢首轮使用 `15cd68d28`，证据位于 `build/ai-doors-jail-29-30`。虽然路线 SUMMARY
+为 PASS，且 level 29 的真实原生门 entity 137/149/148（class 14/13/14）均记录
+`clientMode=ON animationComplete=true`，最终转换到 level 30，但控制台两条
+`Unsupported srvdofunc(93)` 使严格验收及矩阵为 FAILED；未加入警告豁免。
+
+对照 D2MOO `SKILLS_SrvDo093_GargoyleTrap`，提交 `09e9cfa56` 补齐石像鬼陷阱的
+原生服务端发射：必须有目标单位，次要瞄准轴最多四格，起点使用原生整数除法偏移，
+从 srvMissileA 创建一个有归属的弹体并初始化技能伤害；Actioneer 明确委托该处理，
+避免在实际服务端处理前误报 unsupported。发射集成测试 2 项覆盖六组正负方向/主轴/
+相等轴/不足六格的几何，以及缺失目标拒绝，第一幕原生 AI 集成测试 29 项通过。
+
+修复后的同种子监牢重跑证据位于 `build/ai-doors-jail-29-30-fixed`，源码固定为
+`09e9cfa56`，自然阶段约 147.7 秒。实际 LOAD 顺序 29、30；三个 DOOR_PASS 仍对应
+entity 137/149/148，后续生产 TCP 路线完成 `TRANSITION_PASS from=29 to=30`。
+SUMMARY 为 visited=2/2、walks=3、transitions=1、detachedJumps=0、combatKills=0、
+failures=0。控制台两条 GARGOYLE_TRAP 记录证明修复逻辑实际触发：skill=172、
+row=24、level=1，分别记录实际发射起点与瞄准向量。独立重跑观察窗口和控制台审计，
+warnings=0、errors=0、fallbackRecords=0、issues=0，矩阵为 OBSERVED_RUNTIME_ONLY。
+单次总验收仍为 PARTIAL；旧失败未改写，未增加任何警告豁免。
+
+该样本证明监牢原生门的网络开门、动画完成与后续路线推进；DOOR_PASS 本身不是
+门平面穿越几何判定，也不证明全部门类型、关门/重连持久化、所有窄道或原版一致性。
+下一步可补窄道的明确几何/移动证据，或扩展其他门类型；人工视觉、听感和跨电脑
+验证继续留作外部验证项。
