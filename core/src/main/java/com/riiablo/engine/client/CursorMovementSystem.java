@@ -553,7 +553,11 @@ public class CursorMovementSystem extends BaseSystem {
     Gdx.app.log(TAG, "[MOVEMENT_COMMAND] phase=submit kind=" + kind
         + " currentTick=" + currentTick + " targetTick=" + targetTick);
     simulationTickCoordinator.commands().submit(
+<<<<<<< HEAD
         com.riiablo.engine.SimulationCommandEnvelope.builder("client-input", kind, () -> {
+=======
+        com.riiablo.engine.SimulationCommandEnvelope.builder("client-input", kind, (Runnable) () -> {
+>>>>>>> d169e210c... Trace movement command queue execution
           Gdx.app.log(TAG, "[MOVEMENT_COMMAND] phase=execute kind=" + kind
               + " tick=" + simulationTickCoordinator.tick());
           movement.run();
@@ -931,4 +935,5 @@ public class CursorMovementSystem extends BaseSystem {
     return hitpoints.asFixed() <= 0f;
   }
 }
+
 
