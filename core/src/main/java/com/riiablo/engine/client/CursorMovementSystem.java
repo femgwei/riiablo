@@ -544,12 +544,20 @@ public class CursorMovementSystem extends BaseSystem {
 
   private void enqueueMovement(Runnable movement, String kind) {
     if (simulationTickCoordinator == null) {
+      Gdx.app.log(TAG, "[MOVEMENT_COMMAND] phase=execute-immediate kind=" + kind);
       movement.run();
       return;
     }
+    long currentTick = simulationTickCoordinator.tick();
+    long targetTick = Math.max(1L, currentTick + 1L);
+    Gdx.app.log(TAG, "[MOVEMENT_COMMAND] phase=submit kind=" + kind
+        + " currentTick=" + currentTick + " targetTick=" + targetTick);
     simulationTickCoordinator.commands().submit(
-        com.riiablo.engine.SimulationCommandEnvelope.builder("client-input", kind, movement)
-            .tick(Math.max(1L, simulationTickCoordinator.tick() + 1L)));
+        com.riiablo.engine.SimulationCommandEnvelope.builder("client-input", kind, () -> {
+          Gdx.app.log(TAG, "[MOVEMENT_COMMAND] phase=execute kind=" + kind
+              + " tick=" + simulationTickCoordinator.tick());
+          movement.run();
+        }).tick(targetTick));
   }
 
   private void rememberApproachSkill(int target, int skillId) {
