@@ -249,3 +249,24 @@ owner 高低两字恰好推进一次；无关单位在创建前、命中前及�
 生产随机流新测试 3 项、CreationCritical 5 项、Source 36 项共 44 项通过，无跳过。
 日志 build/ai-production-missile-rng-regression.log；模块边界检查同时通过。
 本轮没有生产实现修改，补齐的是工厂创建到碰撞结算的受控 ECS 自动验证。
+
+2026-10-30 扩展蛆虫巢穴 seed 2 的 62→63→64 自然路线。首次固定提交 e6b694216
+运行目录 build/ai-narrow-maggot-seed2-62-64：路线 visited=3/3、transitions=2、
+combatKills=42、failures=0，但严格审计发现 6 条 SEGHHTH 查找告警，故总结果 FAILED，
+不计为合格窄道证据。实体为 maggotegg2，MonStats2 未声明 GH，通用受击流程却仍
+强制切入。D2MOO SUnitDmg.cpp::sub_6FCC1870 对无 GH 的怪物保留软受击；BL 分支
+也检查模式能力。修复 a652b0ac6 在创建反应序列或删除当前动作之前检查已声明的
+MonStats2 模式能力，不支持 GH/BL 时发出软受击，保留动作。没有增加动画资源回退、
+屏蔽日志或放宽审计。新增三种蛆虫卵的 melee/missile、GH/BL 反例，以及普通骷髅
+仍进入 GH 的正例；HitReactionResolver 8 项及弹体相关 134 项共 142 项全部通过。
+
+同 seed/路线在修复提交重跑，目录 build/ai-narrow-maggot-seed2-62-64-fixed，
+自然阶段约 909.2 秒，visited=3/3、walks=5、transitions=2、detachedJumps=0、
+combatKills=40、failures=0，warnings=0、errors=0、fallbackRecords=0，严格审计通过。
+独立窄道审计从 273 条候选记录接受 259 条成功行走配对样本：level 62 为 57 条/
+18 个 sequence，level 63 为 190 条/60 个 sequence，level 64 为 12 条/3 个 sequence；
+方向 X=89、Y=119、DPLUS=22、DMINUS=29。补齐 seed 2 和先前缺失的 level 63 局部
+样本，同时获得 level 64 样本；旧 seed 1 证据属于旧提交，不能称为同版三种子矩阵。
+可追溯摘要与原始文件 SHA256 保存在 docs/ai-narrow-maggot-seed2-20261030.json。
+单次自然结果为 OBSERVED_RUNTIME_ONLY、总验收 PARTIAL；不外推为连续走廊几何、
+怪物自然窄道穿越或原版一致性覆盖。人工视觉/听感及跨电脑验证仍未执行。
