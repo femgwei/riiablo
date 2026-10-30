@@ -367,6 +367,18 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** Caller synchronizes once before the tick, then commits precision before publishing again. */
   boolean moveNativePath(int id, int x, int y, int mask, boolean unchecked) {
     SharedUnitCollisionIndex.Footprint footprint = shared.get(id);
+    if (footprint != null && footprint.zone != null && footprint.zone.map != null
+        && footprint.zone.map.usesNativeCollision(footprint.zone)
+        && (footprint.zone.nativeCollisionFlagsWorld(x, y)
+            & com.d2moo.common.collision.D2Collision.COLLIDE_WALL) == 0
+        && (footprint.zone.staticFlagsWorld(x, y)
+            & com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK) != 0) {
+      log.warn("[NATIVE_PATH_COLLISION_GAP] entity={} level={} cell=({}, {}) "
+          + "native=0x{} static=0x{} unchecked={}", id,
+          footprint.zone.level == null ? -1 : footprint.zone.level.Id, x, y,
+          Integer.toHexString(footprint.zone.nativeCollisionFlagsWorld(x, y)),
+          Integer.toHexString(footprint.zone.staticFlagsWorld(x, y)), unchecked);
+    }
     if (footprint == null) return unchecked || shared.check(zoneOf(id),x,y,
         D2Collision.PATTERN_NONE,0,mask,-1,-1) == 0;
     if (unchecked) { shared.update(id,footprint.at(x,y)); return true; }
