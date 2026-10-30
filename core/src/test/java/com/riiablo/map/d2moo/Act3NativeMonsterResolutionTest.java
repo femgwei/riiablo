@@ -8,6 +8,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.SuperUniques;
+import com.riiablo.map.Act1MapBuilderD2MOD;
 import org.junit.jupiter.api.Test;
 
 /** Verifies the Act III D2MOO MonPreset/SuperUniques index translation. */
@@ -90,5 +91,16 @@ class Act3NativeMonsterResolutionTest extends RiiabloTest {
     assertEquals(expectedBase.hcIdx, resolved.monsterId);
     assertEquals(expectedUnique.hcIdx, resolved.superUniqueId);
     assertEquals(expectedUnique.Superunique, resolved.superUniqueKey);
+  }
+
+  @Test
+  void resolvesTravincalWaterWatcherMonPlaceToHead() {
+    MonStats.Entry expected = Riiablo.files.monstats.get("tentaclehead1");
+    assertNotNull(expected, "Water Watcher head must exist in native MonStats");
+    assertEquals(261, expected.hcIdx);
+    assertEquals(expected, Act1MapBuilderD2MOD.resolveD2MooPresetMonster(
+        Riiablo.files, 10, "place_tentacle_ns"));
+    assertEquals(expected, Act1MapBuilderD2MOD.resolveD2MooPresetMonster(
+        Riiablo.files, 11, "place_tentacle_ew"));
   }
 }

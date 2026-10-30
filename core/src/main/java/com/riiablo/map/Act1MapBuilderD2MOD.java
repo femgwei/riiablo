@@ -1850,6 +1850,14 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
         }
       }
     }
+    // D2Game::D2GAME_SpawnPresetMonster_6FC66560 handles MonPlace rows 10
+    // and 11 (place_tentacle_ns/ew) as the Water Watcher head, not as
+    // MonStats rows 10/11 (Afflicted/Tainted).  DS1 preset units retain the
+    // MonPreset index until this bridge resolves the placement directive.
+    if ("place_tentacle_ns".equals(placement)
+        || "place_tentacle_ew".equals(placement)) {
+      return files.monstats.get("tentaclehead1");
+    }
     return placement == null
         ? files.monstats.get(index)
         : files.monstats.get(placement);
