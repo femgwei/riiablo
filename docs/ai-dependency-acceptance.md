@@ -347,3 +347,10 @@ ai-monster-narrow-hold-fixed-seed2-20261030.json。下一步应针对已走过�
 补充恢复观察窗口：TCP 确认阻挡单位死亡后，在进入原有路线重规划前执行一次完整
 AI 观察窗口，记录 BLOCKER_AFTER_CLEAR。该窗口只读，不改变战斗、怪物目标或路径
 语义；用于捕获阻挡解除后同一怪物恢复追击的自然证据。相关 d2gs 测试通过。
+
+最新提交 2bb2bc7da 的自然复跑目录为 build/ai-monster-narrow-recovery-window-seed2。
+路线 visited=2/2、walks=3、transitions=1、combatKills=7、failures=0，严格日志通过。
+新增 BLOCKER_AFTER_CLEAR 观察窗口出现 14 次；独立审计接受 69 条窄道移动、2 段
+连续局部进展、147 条阻挡采样，但 recoveryCount=0，RequireRecovery 仍明确拒绝。
+因此“死亡后观察窗口”已完成接入，仍不足以证明自然恢复追击。下一步应改为专门
+验证阻挡单位存活并离开查询点的场景，避免死亡/重规划同时发生导致目标状态变化。
