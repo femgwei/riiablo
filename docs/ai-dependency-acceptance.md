@@ -73,3 +73,10 @@ seed 3 路线同样完成（visited=2/2、walks=4、transitions=1、failures=0�
 但两条 `AnimDataResolver` 的 `AMBL2HT` 到 `AMGH2HT` COF 回退警告被审计拒绝，
 因此总矩阵为 `FAILED`。未放宽资源回退审计；该资源问题仍待修复。
 
+后续定位到生成近战存档的手部物品替换问题：`unequipItem` 仅移除装备槽映射，
+旧初始物品仍以 EQUIPPED 写入 D2S；重读后旧盾牌恢复，造成双手矛与持盾上下文并存。
+提交 `c4c222063` 改为移除被替换的初始手部物品。新快照 seed 3 在
+`build/ai-seed3-starter-fix` 复跑通过，路线 SUMMARY failures=0，资源审计无问题，
+状态 `OBSERVED_RUNTIME_ONLY`。原三种子失败证据保留；修复后全三种子尚未重跑。
+另有 `b5f7c058b` 修正未知装备上下文不应默认持盾，并通过 CombatSystemTest。
+
