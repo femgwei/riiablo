@@ -108,7 +108,8 @@ public class ZakarumPriest extends NativeDecisionAI {
         return;
       }
       if (hasSkill(1) && frame > lightningAfter
-          && rollAiChance(params[PARAM_LIGHTNING_CHANCE])) {
+          && rollAiChance(params[PARAM_LIGHTNING_CHANCE])
+          && hasLineOfSight(targetId)) {
         cast(1, targetId);
         lightningAfter = frame + 20;
         return;
@@ -190,6 +191,17 @@ public class ZakarumPriest extends NativeDecisionAI {
     if (source == null || source.map == null || source.zone == null) return false;
     ray.set(mPosition.get(entityId).position, mPosition.get(targetId).position);
     return source.map.castRay(source.zone, ray, DT1.Tile.FLAG_BLOCK_JUMP, 0, collision, false);
+  }
+
+  /** Lightning is a direct line spell; solid map walls stop the cast. */
+  private boolean hasLineOfSight(int targetId) {
+    MapWrapper source = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    // Unit-test/synthetic worlds may omit a map entirely; retain their
+    // previous behavior and enforce LOS whenever authoritative terrain exists.
+    if (source == null || source.map == null || source.zone == null
+        || !mPosition.has(targetId)) return true;
+    ray.set(mPosition.get(entityId).position, mPosition.get(targetId).position);
+    return !source.map.castRay(source.zone, ray, 0xC01, 0, collision, false);
   }
 
   private boolean canTeleportTo(Vector2 destination) {

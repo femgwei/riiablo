@@ -1636,7 +1636,15 @@ public class Actioneer extends PassiveSystem {
         // Monster Charge uses the same native start function but has no player
         // skill-move state; reserve a collision-safe path and resolve at impact.
         if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
-          pathfinder.findPath(entityId, mPosition.get(targetId).position, true, targetId);
+          boolean path = pathfinder.findPath(entityId, mPosition.get(targetId).position, true, targetId);
+          MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+          if (!path && wrapper != null && wrapper.map != null && wrapper.zone != null) {
+            log.info("[MONSTER_CHARGE] phase=start_reject entity={} target={} reason=no_reachable_path",
+                entityId, targetId);
+            mCasting.remove(entityId);
+            if (mSequence.has(entityId)) mSequence.remove(entityId);
+            break;
+          }
         }
         log.info("[MONSTER_CHARGE] phase=start entity={} target={}", entityId, targetId);
         break;
