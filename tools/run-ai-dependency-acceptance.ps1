@@ -4,7 +4,8 @@ param(
   [Parameter(Mandatory)][string]$Output,
   [string]$Revision = 'HEAD',
   [int]$Seed = 1,
-  [string]$CompareWith
+  [string]$CompareWith,
+  [int]$StageTimeoutSeconds = 180
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
@@ -55,14 +56,37 @@ if ($CompareWith) {
     else { 'INPUTS_MATCH_OTHER_HOST_RESULTS_REQUIRE_REVIEW' }
   Save-Manifest
 }
+function Write-Stage([string]$name, [string]$state) {
+  $line = "[$([DateTime]::UtcNow.ToString('o'))] stage=$name state=$state"
+  Write-Output $line
+  Add-Content -LiteralPath (Join-Path $destination 'stage-status.log') -Value $line
+}
+function Invoke-GradleStage([string]$name, [string[]]$arguments, [string]$logPath) {
+  Write-Stage $name 'START'
+  $job = Start-Job -ScriptBlock {
+    param($workingDirectory, $gradleArgs, $outputPath)
+    Push-Location $workingDirectory
+    try { & .\gradlew.bat @gradleArgs *> $outputPath; $global:LASTEXITCODE }
+    finally { Pop-Location }
+  } -ArgumentList $source, $arguments, $logPath
+  $done = Wait-Job -Job $job -Timeout $StageTimeoutSeconds
+  if ($null -eq $done) {
+    Stop-Job -Job $job -ErrorAction SilentlyContinue
+    Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+    Write-Stage $name "TIMEOUT_${StageTimeoutSeconds}s"
+    throw "$name timed out after $StageTimeoutSeconds seconds"
+  }
+  $output = Receive-Job -Job $job -ErrorAction SilentlyContinue
+  $exitCode = if ($output -is [int]) { $output } else { 0 }
+  Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+  Write-Stage $name "END_$exitCode"
+  return $exitCode
+}
 Push-Location $source
 try {
   $common = @("-Pd2Home=$homePath", '--no-daemon', '--max-workers=1', '--console=plain')
   $natural = Join-Path $destination 'natural'
-  & .\gradlew.bat :server:d2gs:headlessMapTour @common "-PtourSeed=$Seed" `
-      '-PtourLevels=1,2' -PtourRate=25 -PtourAiObserve -PtourAiObserveMillis=8000 `
-      "-PtourOutput=$natural" *> (Join-Path $destination 'natural-console.log')
-  $exitCode = $LASTEXITCODE
+  $exitCode = Invoke-GradleStage 'natural' (@(':server:d2gs:headlessMapTour') + $common + @("-PtourSeed=$Seed", '-PtourLevels=1,2', '-PtourRate=25', '-PtourAiObserve', '-PtourAiObserveMillis=8000', "-PtourOutput=$natural")) (Join-Path $destination 'natural-console.log')
   try {
     if ($exitCode -ne 0) { throw "Gradle exited $exitCode" }
     $lines = Get-Content -LiteralPath (Join-Path $natural 'map-tour.log')
@@ -78,11 +102,7 @@ try {
   } catch { $manifest.natural = "FAILED: $($_.Exception.Message)" }
   Save-Manifest
   $gl = Join-Path $destination 'gl'
-  & .\gradlew.bat :desktop:offscreenCamp @common -PoffscreenLevel=2 `
-      -PoffscreenWidth=854 -PoffscreenHeight=480 '-Pd2Version=1.10f' `
-      "-PsavesDir=$(Join-Path $destination 'saves')" "-PvisualOutput=$gl" `
-      *> (Join-Path $destination 'gl-console.log')
-  $exitCode = $LASTEXITCODE
+  $exitCode = Invoke-GradleStage 'gl' (@(':desktop:offscreenCamp') + $common + @('-PoffscreenLevel=2', '-PoffscreenWidth=854', '-PoffscreenHeight=480', '-Pd2Version=1.10f', "-PsavesDir=$(Join-Path $destination 'saves')", "-PvisualOutput=$gl")) (Join-Path $destination 'gl-console.log')
   try {
     if ($exitCode -ne 0) { throw "Gradle exited $exitCode" }
     $report = Get-Content (Join-Path $gl 'rogue-encampment-manifest.txt')
