@@ -9,7 +9,7 @@ param(
   [string]$CompareWith,
   # A fresh archived source tree must compile every module before the tour
   # starts; allow cold CI-style builds while retaining an explicit override.
-  [int]$StageTimeoutSeconds = 600
+  [ValidateRange(1, 86400)][int]$StageTimeoutSeconds = 600
 )
 $ErrorActionPreference = 'Stop'
 $levelIds = @($Levels.Split(',') | ForEach-Object { [int]$_ })
@@ -42,7 +42,8 @@ $manifest = [ordered]@{
   profile = '1.10f'; seed = $Seed; glSeed = 0x110FCA4D; rate = 25; levels = $Levels; observeMillis = 8000
   machine = [Environment]::MachineName; os = [Environment]::OSVersion.ToString()
   java = ((& java -version 2>&1 | ForEach-Object { "$_" }) -join "`n")
-  resources = $mpqs; startedUtc = [DateTime]::UtcNow.ToString('o')
+  resources = $mpqs; stageTimeoutSeconds = $StageTimeoutSeconds
+  startedUtc = [DateTime]::UtcNow.ToString('o')
   coverage = 'FOCUSED_LOCAL_OBSERVATION'; correctness = 'NOT_ASSERTED'
   natural = 'NOT_RUN'; gl = 'NOT_RUN'; crossComputer = 'NOT_RUN'; result = 'PARTIAL'
 }
