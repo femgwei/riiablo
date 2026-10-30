@@ -156,7 +156,8 @@ class PathfinderTerrainPursuitTest {
               rays.findCollision(call.getArgument(1), call.getArgument(2), call.getArgument(3),
                   call.getArgument(4), call.getArgument(5)));
       world = new World(new WorldConfigurationBuilder().with(collision, paths, new VelocityAdder())
-          .with(extraSystems).build().register("map", map));
+          .with(extraSystems).build().register("map", map)
+          .register("factory", mock(com.riiablo.engine.EntityFactory.class)));
       paths.actioneer = new Actioneer() {
         @Override public boolean isInMeleeRange(int a, int b, int bonus) { return false; }
         @Override public int getMeleeRange(int a) { return 1; }

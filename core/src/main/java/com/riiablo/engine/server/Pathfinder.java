@@ -731,6 +731,27 @@ public class Pathfinder extends IteratingSystem {
         }
       }
     }
+    // A unit can occupy a single-file corridor long before the target's
+    // approach ring. Advance to the reachable queue frontier rather than
+    // requiring a complete dynamic route all the way around that unit.
+    // Do not turn an impossible terrain route or a skill move into a partial pursuit.
+    if (!mMonster.has(entityId) || targetEntityId == Engine.INVALID_ENTITY || mCasting.has(entityId)) return false;
+    int flags = groundPathFlags(entityId);
+    MapWrapper owner = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    GraphPath terrain = Pools.obtain(GraphPath.class);
+    boolean terrainConnected;
+    try {
+      terrainConnected = map.findPath(owner == null ? null : owner.zone, source, target,
+          flags, size, terrain, null, entityId, targetEntityId, canOpenDoors(entityId))
+          && pathWithinNativeMonsterRooms(entityId, terrain);
+    } finally { Pools.free(terrain); }
+    if (!terrainConnected) return false;
+    GraphPath partial = Pools.obtain(GraphPath.class);
+    boolean success = findPathInCollisionSnapshot(entityId, source, target,
+        flags, size, partial, targetEntityId, true, true);
+    if (!success) Pools.free(partial);
+    if (success && hasUsableMovementPath(entityId, source)) return true;
+    if (success) findPath(entityId, null);
     return false;
   }
 
@@ -800,6 +821,13 @@ public class Pathfinder extends IteratingSystem {
   private boolean findPathInCollisionSnapshot(int src, Vector2 srcPos, Vector2 targetPos,
       int flags, int size, GraphPath path, int targetEntityId,
       boolean includeDynamicObstacles) {
+    return findPathInCollisionSnapshot(src, srcPos, targetPos, flags, size, path,
+        targetEntityId, includeDynamicObstacles, false);
+  }
+
+  private boolean findPathInCollisionSnapshot(int src, Vector2 srcPos, Vector2 targetPos,
+      int flags, int size, GraphPath path, int targetEntityId,
+      boolean includeDynamicObstacles, boolean partialPursuit) {
     if (mMonster.has(src) && !isMonsterTargetDestinationAllowed(src, targetPos)) {
       path.clear();
       return false;
@@ -827,7 +855,7 @@ public class Pathfinder extends IteratingSystem {
     // closest reachable node instead of clipping the command to the first
     // obstacle on a ray; that clipping discards valid routes around props.
     boolean playerGroundPath = mPlayer.has(src) && targetEntityId == Engine.INVALID_ENTITY;
-    boolean success = (runPath || playerGroundPath)
+    boolean success = (runPath || playerGroundPath || partialPursuit)
         ? map.findPartialPath(owner == null ? null : owner.zone,
             srcPos, targetPos, flags, size, path, obstacle, canOpenDoors(src))
         : map.findPath(owner == null ? null : owner.zone,
