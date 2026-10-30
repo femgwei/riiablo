@@ -13,6 +13,7 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.server.component.*;
+import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.component.serializer.VitalsSerializer;
 import com.riiablo.engine.server.event.DamageAppliedEvent;
 import com.riiablo.engine.server.event.DamageEvent;
@@ -139,6 +140,7 @@ class MonsterMissilePhysicalIntegrationTest extends RiiabloTest {
       f.target.attrs.base().put(Stat.toblock, 75);
       f.target.attrs.base().put(Stat.dexterity, 1000);
       f.target.attrs.reset();
+      f.target.attrs.setCombatBlockContext(true, 0);
       Missiles.Entry row = row();
       row.SrcDamage = 64;
       f.spawn(row);
@@ -263,6 +265,17 @@ class MonsterMissilePhysicalIntegrationTest extends RiiabloTest {
       MathUtils.random = new Random(0) {
         @Override public int nextInt(int bound) { return bound == 100 ? 0 : bound - 1; }
       };
+      // Compatibility combat now owns a named stream instead of reading MathUtils.
+      // Bind this arithmetic fixture explicitly; keep late overrides for miss tests.
+      try {
+        java.lang.reflect.Field resolver = MissileCollisionSystem.class
+            .getDeclaredField("combatSystemResolver");
+        resolver.setAccessible(true);
+        resolver.set(world.getSystem(MissileCollisionSystem.class),
+            new CombatSystem(bound -> MathUtils.random.nextInt(bound)));
+      } catch (ReflectiveOperationException e) {
+        throw new AssertionError("Cannot bind fixture combat random", e);
+      }
     }
     Missile spawn(Missiles.Entry row) {
       int id = world.create();

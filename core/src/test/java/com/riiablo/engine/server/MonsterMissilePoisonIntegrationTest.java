@@ -112,6 +112,7 @@ class MonsterMissilePoisonIntegrationTest extends RiiabloTest {
         row.MinDamage = row.MaxDamage = 1;
         f.target.attrs.base().put(Stat.toblock, 100);
         f.target.attrs.base().put(Stat.dexterity, 200); f.target.attrs.reset();
+        f.target.attrs.setCombatBlockContext(true, 0);
       }
       if ("miss".equals(scenario)) {
         row.ToHit = true;

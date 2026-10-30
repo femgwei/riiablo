@@ -219,3 +219,20 @@ RemainingMonsterSkill，以及 MonsterNarrowPursuit/MonsterNarrowDecision 场景
 窄道特殊技能改动无交集，当前工作区没有修改其实现，故未把这批次标成整体通过。
 聚焦重跑排除了该既有失败组并通过。需要另开独立任务定位 source-channel 基线变化，
 不能以本次技能链结果掩盖它。
+
+2026-10-30 继续定位并关闭上述 source-channel 13 个失败。根因为测试夹具仍替换
+MathUtils.random 来固定掷值，而 CombatSystem 默认已使用 combat.compatibility
+独立随机流。共享 MonsterMissilePhysicalIntegrationTest.Fixture 现显式绑定测试
+CombatSystem 随机源，保留原先上界前一值的算术断言及 miss 用例的后续覆盖。
+没有修改生产随机流或伤害结算。扩展回归还发现物理、毒伤各一个格挡场景未声明
+持盾上下文，现用 setCombatBlockContext(true, 0) 明确补齐测试前提。
+
+Source 36、Physical 19、Elemental 37、CreationCritical 5，以及 Act1MonsterEcsScenario
+16、RemainingMonsterSkill 5、SpecialMissileController 2、MonsterNarrowPursuit 3、
+MonsterNarrowDecision 1、PathfinderTerrainPursuit 7 均通过（合计 131）。同次扩展
+运行共 165 项，仅毒伤格挡失败；修复后 Poison 单独重跑 34 项全部通过。
+另补跑 ai 子包的 MonsterSkillStart 1、TrapMissileAi 7，全部通过，总计 173 项。
+证据日志：build/ai-source-skills-narrow-regression.log（保留首次毒伤失败）、
+build/ai-poison-block-regression.log、build/ai-skill-start-trap-regression.log。
+此前关于“与窄道改动无交集”的记录不是实现正确性的证明；本轮通过定位和重跑
+关闭该失败组。人工视觉/听感、跨电脑验证仍未执行，不据此扩大验收范围。
