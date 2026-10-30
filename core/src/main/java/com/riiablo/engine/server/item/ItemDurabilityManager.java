@@ -337,8 +337,17 @@ public class ItemDurabilityManager {
    * 检查物品是否不可破坏
    */
   private boolean isIndestructible(Item item) {
+    if (item == null) return true;
+
     // 检查物品标志
     if (item.base != null && item.base.nodurability) {
+      return true;
+    }
+
+    // D2MOO ITEMS_HasDurability also requires a non-zero instance maximum.
+    // This protects legacy/generated no-durability weapons whose table flag
+    // or stale stat list was not materialized correctly.
+    if (getMaxDurability(item) <= 0) {
       return true;
     }
     

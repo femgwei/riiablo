@@ -367,7 +367,17 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
 
   public boolean isActive(Item item) {
     if (item == null) return false;
-    return !item.hasFlag(Item.ITEMFLAG_BROKEN)
+    // D2MOO's ITEMS_HasDurability requires a real max-durability value before
+    // an item can be broken.  Javelins and other no-durability weapons may
+    // still carry a stale BROKEN flag from an older runtime/save, but that
+    // flag must not hide the equipped weapon from weapon-skill resolution.
+    boolean noDurability = item.base != null && item.base.nodurability;
+    if (!noDurability && item.attrs != null) {
+      StatRef maxDurability = item.attrs.get(Stat.maxdurability);
+      if (maxDurability == null) maxDurability = item.attrs.base().get(Stat.maxdurability);
+      noDurability = maxDurability != null && maxDurability.asInt() <= 0;
+    }
+    return (noDurability || !item.hasFlag(Item.ITEMFLAG_BROKEN))
         && item.bodyLoc == BodyLoc.getAlternate(item.bodyLoc, alternate);
   }
 
