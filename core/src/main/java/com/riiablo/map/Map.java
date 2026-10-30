@@ -859,6 +859,12 @@ public class Map implements Disposable {
     // searches the first zone and can return an Act I marker for Acts III-V.
     for (Zone zone : zones) {
       if (!zone.isTown() || zone.levelAct() != getAct() + 1) continue;
+      // Kurast Docks may export no player tile-info (indices 0..4), while
+      // the native bridge still captures the ship-side index-11 anchor.
+      // That anchor is the retail town berth and is a valid player fallback.
+      if (zone.levelId() == 75 && zone.townPortalSpawn != null) {
+        return zone.townPortalSpawn.cpy();
+      }
       Vector2 local = zone.find(ID.TOWN_ENTRY_1);
       if (local == null) local = zone.find(ID.TOWN_ENTRY_2);
       if (local != null) {
@@ -1266,6 +1272,10 @@ public class Map implements Disposable {
 
     public Vector2 townPlayerSpawn() {
       return townPlayerSpawn == null ? null : townPlayerSpawn.cpy();
+    }
+
+    public Vector2 townPortalSpawn() {
+      return townPortalSpawn == null ? null : townPortalSpawn.cpy();
     }
 
     public void setTownPlayerSpawn(float x, float y) {
