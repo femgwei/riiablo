@@ -60,6 +60,7 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.UnitLifecycle> mLifecycle;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
+  protected ComponentMapper<com.riiablo.engine.server.component.Box2DBody> mBox2DBody;
 
   protected CofManager cofs;
   protected ItemGenerator itemGenerator;
@@ -158,6 +159,14 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
     Position position = mPosition.get(playerId);
     position.invalidateNativePrecision();
     position.position.set(town);
+    // Respawn reuses the player entity. Move its existing physics body as
+    // well; updating ECS Position alone leaves the body at the corpse and
+    // makes every subsequent movement collide with the stale location.
+    if (mBox2DBody.has(playerId) && mBox2DBody.get(playerId).body != null) {
+      mBox2DBody.get(playerId).body.setTransform(town, 0f);
+      mBox2DBody.get(playerId).body.setLinearVelocity(0f, 0f);
+      mBox2DBody.get(playerId).body.setAngularVelocity(0f);
+    }
     if (mMapWrapper.has(playerId)) {
       mMapWrapper.get(playerId).set(map, map.getZone(town));
     } else {
