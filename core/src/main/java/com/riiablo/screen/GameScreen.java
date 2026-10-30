@@ -39,6 +39,7 @@ import com.riiablo.Client;
 import com.riiablo.Cvars;
 import com.riiablo.Keys;
 import com.riiablo.Riiablo;
+import com.riiablo.RiiabloVersion;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.COF;
 import com.riiablo.codec.DC;
@@ -1268,6 +1269,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   @Override
   public void show() {
     if (disposed) throw new IllegalStateException("GameScreen is disposed");
+    Gdx.app.log("BUILD_VERSION", "[BUILD_VERSION] version=" + RiiabloVersion.VERSION
+        + " buildDate=" + RiiabloVersion.BUILD_DATE
+        + " git=" + System.getProperty("riiablo.git.commit", "unknown"));
     if (map.getAct() == -1) {
       int savedAct = charData == null ? 0 : (charData.towns[charData.diff] & 0x7);
       if (savedAct < 0 || savedAct >= Riiablo.NUM_ACTS) savedAct = 0;
