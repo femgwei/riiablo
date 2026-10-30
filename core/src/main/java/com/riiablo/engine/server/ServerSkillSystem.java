@@ -1029,6 +1029,10 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       return;
     }
+    if (skill.srvdofunc == 93) {
+      spawnGargoyleTrap(event, skill);
+      return;
+    }
     if (skill.srvdofunc == 136) {
       spawnDeathMaul(event, skill);
       return;
@@ -4285,6 +4289,34 @@ public class ServerSkillSystem extends PassiveSystem {
       return mMonster.get(entityId).conversionOwnerId;
     }
     return entityId;
+  }
+
+  /** D2MOO SrvDo093 limits the minor aim axis to four cells and offsets the muzzle. */
+  private void spawnGargoyleTrap(SkillDoEvent event, Skills.Entry skill) {
+    if (event.targetId < 0 || !world.getEntityManager().isActive(event.targetId)
+        || !mPosition.has(event.targetId)) return;
+    Missiles.Entry row = hasText(skill.srvmissilea) ? files().Missiles.get(skill.srvmissilea) : null;
+    if (row == null) return;
+    Vector2 source = mPosition.get(event.entityId).position;
+    Vector2 target = mPosition.get(event.targetId).position;
+    int sx = com.badlogic.gdx.math.MathUtils.floor(source.x);
+    int sy = com.badlogic.gdx.math.MathUtils.floor(source.y);
+    int dx = com.badlogic.gdx.math.MathUtils.floor(target.x) - sx;
+    int dy = com.badlogic.gdx.math.MathUtils.floor(target.y) - sy;
+    if (Math.abs(dx) < Math.abs(dy)) dx = Math.max(-4, Math.min(4, dx));
+    else dy = Math.max(-4, Math.min(4, dy));
+    Vector2 direction = new Vector2(dx, dy).nor();
+    // Java integer division matches native truncation toward zero, including negative offsets.
+    Vector2 start = new Vector2(sx + dx / 6 - 1, sy + dy / 6 - 1);
+    int level = Math.max(1, getSkillLevel(event.entityId, skill.Id));
+    int id = createMissile(row, direction, start, event.entityId, null, level);
+    if (id < 0 || !mMissile.has(id)) return;
+    initializeSkillDamage(id, skill, event.entityId, level);
+    Missile missile = mMissile.get(id);
+    missile.skillId = skill.Id;
+    missile.damageLevel = level;
+    log.info("[GARGOYLE_TRAP] source={} target={} missile={} row={} skill={} level={} start={} aim=({}, {})",
+        event.entityId, event.targetId, id, row.Id, skill.Id, level, start, dx, dy);
   }
 
   /** SrvDo136 creates its stationary missile at the target, not at the caster. */

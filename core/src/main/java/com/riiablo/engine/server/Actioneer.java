@@ -2771,6 +2771,7 @@ public class Actioneer extends PassiveSystem {
       case 54: // Blade Shield periodic pulse is applied by StateUpdater
       case 76: // Whirlwind periodic hits are applied by WhirlwindSystem
       case 85: // Fallen Shaman chain missile
+      case 93: // Gargoyle Trap launch geometry is resolved by ServerSkillSystem.
       case 95: // Fetish Shaman inferno missile
       case 114: // Druid Raven summon is resolved by ServerSkillSystem
       case 115: // Druid vine summon is resolved by ServerSkillSystem
