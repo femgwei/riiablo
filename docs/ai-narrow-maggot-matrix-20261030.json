@@ -1,0 +1,112 @@
+{
+  "contract": 1,
+  "revision": "a652b0ac688eddb88a27dba0588a0e7d3fa13f52",
+  "sourceSha256": "93F06F42626D856DE91E441F15CFF4CB72CFF217F0296BB0C78E2D10CA86B8FB",
+  "profile": "1.10f",
+  "levels": "62,63,64",
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "rate": 25,
+  "observeMillis": 8000,
+  "stageTimeoutSeconds": 1800,
+  "inputComparison": "REVISION_SOURCE_RESOURCES_ROUTE_RATE_OBSERVATION_TIMEOUT_MATCH",
+  "result": "OBSERVED_RUNTIME_ONLY",
+  "coverage": "THREE_SEED_LOCAL_SAMPLED_PLAYER_NARROW_MOVEMENT",
+  "correctness": "NOT_ASSERTED",
+  "overallAcceptance": "PARTIAL",
+  "rawNarrowRecords": 543.0,
+  "acceptedNarrowRecords": 522.0,
+  "runs": [
+    {
+      "seed": 1,
+      "summary": "ai-narrow-maggot-seed1-20261030.json",
+      "summarySha256": "8F2A7CC3100BE7D3A1FA206EB59132E02946DDF8592F3E25CC7F1A8C84DA6F56",
+      "result": "OBSERVED_RUNTIME_ONLY",
+      "rawNarrowRecords": 134,
+      "acceptedNarrowRecords": 129,
+      "perLevel": [
+        {
+          "level": 62,
+          "samples": 94,
+          "successfulSequences": 32
+        },
+        {
+          "level": 63,
+          "samples": 25,
+          "successfulSequences": 7
+        },
+        {
+          "level": 64,
+          "samples": 10,
+          "successfulSequences": 3
+        }
+      ],
+      "routeSummary": [
+        "[MAP_TOUR] SUMMARY planned=3 visited=3 coverage=AI_RUNTIME_OBSERVATION walks=5 transitions=2 detachedJumps=0 combatKills=18 failures=0 result=PASS"
+      ],
+      "aiSummary": "[AI_TOUR] SUMMARY run=COMPLETED coverage=OBSERVED_RUNTIME_ONLY oracle=NONE correctness=NOT_ASSERTED warnings=0 errors=0 fallbackRecords=0"
+    },
+    {
+      "seed": 2,
+      "summary": "ai-narrow-maggot-seed2-20261030.json",
+      "summarySha256": "1CA6CF2B58D3620D75476ECD3FFDB1A01CE82E326156D8E35D8B215B5CDCABB6",
+      "result": "OBSERVED_RUNTIME_ONLY",
+      "rawNarrowRecords": 273,
+      "acceptedNarrowRecords": 259,
+      "perLevel": [
+        {
+          "level": 62,
+          "samples": 57,
+          "successfulSequences": 18
+        },
+        {
+          "level": 63,
+          "samples": 190,
+          "successfulSequences": 60
+        },
+        {
+          "level": 64,
+          "samples": 12,
+          "successfulSequences": 3
+        }
+      ],
+      "routeSummary": [
+        "[MAP_TOUR] SUMMARY planned=3 visited=3 coverage=AI_RUNTIME_OBSERVATION walks=5 transitions=2 detachedJumps=0 combatKills=40 failures=0 result=PASS"
+      ],
+      "aiSummary": "[AI_TOUR] SUMMARY run=COMPLETED coverage=OBSERVED_RUNTIME_ONLY oracle=NONE correctness=NOT_ASSERTED warnings=0 errors=0 fallbackRecords=0"
+    },
+    {
+      "seed": 3,
+      "summary": "ai-narrow-maggot-seed3-20261030.json",
+      "summarySha256": "7FA3329DD62A59A7ED4EE468ACAD8220FB4D39A5CFFBC1AAF9A7F2D9A42B8649",
+      "result": "OBSERVED_RUNTIME_ONLY",
+      "rawNarrowRecords": 136,
+      "acceptedNarrowRecords": 134,
+      "perLevel": [
+        {
+          "level": 62,
+          "samples": 25,
+          "successfulSequences": 8
+        },
+        {
+          "level": 63,
+          "samples": 98,
+          "successfulSequences": 32
+        },
+        {
+          "level": 64,
+          "samples": 11,
+          "successfulSequences": 3
+        }
+      ],
+      "routeSummary": [
+        "[MAP_TOUR] SUMMARY planned=3 visited=3 coverage=AI_RUNTIME_OBSERVATION walks=5 transitions=2 detachedJumps=0 combatKills=42 failures=0 result=PASS"
+      ],
+      "aiSummary": "[AI_TOUR] SUMMARY run=COMPLETED coverage=OBSERVED_RUNTIME_ONLY oracle=NONE correctness=NOT_ASSERTED warnings=0 errors=0 fallbackRecords=0"
+    }
+  ],
+  "limitations": "Local sampled player movement only; no continuous corridor geometry, monster traversal, original-game oracle, manual audiovisual review or cross-computer acceptance."
+}

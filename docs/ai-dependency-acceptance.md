@@ -285,3 +285,21 @@ docs/ai-narrow-maggot-seed3-20261030.json。当前 seed 2/3 均有同版三层�
 代码测试；运行入口自行完成编译及模块边界检查。自然结果仍为 OBSERVED_RUNTIME_ONLY，
 总验收 PARTIAL；沿用局部采样、玩家行走、非原版判定器的范围限制，未做人工听感/
 视觉或跨电脑验证。
+
+2026-10-30 在相同修复提交 a652b0ac6 补跑 seed 1、62→63→64，目录
+build/ai-narrow-maggot-seed1-62-64。自然阶段约 442.0 秒，visited=3/3、walks=5、
+transitions=2、detachedJumps=0、combatKills=18、failures=0，warnings=0、errors=0、
+fallbackRecords=0，严格日志审计通过。独立窄道审计从 134 条候选接受 129 条成功
+行走配对记录：level 62 为 94 条/32 个 sequence、level 63 为 25 条/7 个 sequence、
+level 64 为 10 条/3 个 sequence；X=68、Y=50、DPLUS=4、DMINUS=7。
+本次同版记录替代旧 seed 1 作为三种子组合的输入，旧版证据仍保留其历史范围。
+
+seed 1/2/3 的 contract、revision、sourceSha256、profile、资源清单/大小/SHA256、
+levels、rate、observeMillis、stageTimeoutSeconds 均经脚本逐项核对一致；每次自然
+审计通过且三层都有正数合格样本。同版三种子局部窄道组合现已完成，总候选记录
+543 条、合格记录 522 条（seed 1/2/3 分别为 129/259/134），不把记录数解释为独立
+走廊数或覆盖率。新增可追溯单次摘要 docs/ai-narrow-maggot-seed1-20261030.json，
+组合摘要 docs/ai-narrow-maggot-matrix-20261030.json，包含各单次摘要的 SHA256、
+路线/AI 汇总及楼层样本数。本轮没有生产代码变更；入口编译和模块边界检查通过。
+此组合结果仍为 OBSERVED_RUNTIME_ONLY，全部 AI 依赖总验收仍为 PARTIAL；没有
+连续轨迹几何、自然怪物穿越、原版判定器、人工视觉/听感或跨电脑验证的新增结论。
