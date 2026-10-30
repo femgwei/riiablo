@@ -60,6 +60,18 @@ public final class HitReactionResolver {
         ? reference.mode == Engine.Player.MODE_DT || reference.mode == Engine.Player.MODE_DD
         : reference.mode == Engine.Monster.MODE_DT || reference.mode == Engine.Monster.MODE_DD) return;
 
+    // SUnitDmg::sub_6FCC1870 rejects hard GH when MonStats2 has no such mode;
+    // the block branch likewise uses soft hit when BL is unavailable.
+    Monster monster = world.getMapper(Monster.class).get(victim);
+    int monsterReaction = blocked ? Engine.Monster.MODE_BL : Engine.Monster.MODE_GH;
+    if (type == Class.Type.MON && monster != null && monster.monstats2 != null
+        && monster.monstats2.mMode != null
+        && (monsterReaction >= monster.monstats2.mMode.length
+            || !monster.monstats2.mMode[monsterReaction])) {
+      softHit(world, victim);
+      return;
+    }
+
     Casting casting = world.getMapper(Casting.class).get(victim);
     Sequence sequence = world.getMapper(Sequence.class).get(victim);
     if (blocked) {
