@@ -1,0 +1,48 @@
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory)][string]$D2Home,
+  [Parameter(Mandatory)][string]$Output,
+  [string]$Revision = 'HEAD',
+  [int[]]$Seeds = @(1, 2, 3)
+)
+$ErrorActionPreference = 'Stop'
+$repo = Split-Path -Parent $PSScriptRoot
+$commit = & git -C $repo rev-parse --verify "$Revision^{commit}"
+if ($LASTEXITCODE -ne 0) { throw 'Invalid revision' }
+if (!$Seeds.Count -or @($Seeds | Select-Object -Unique).Count -ne $Seeds.Count) {
+  throw 'Seeds must be nonempty and unique'
+}
+$destination = [IO.Path]::GetFullPath($Output)
+if (Test-Path -LiteralPath $destination) { throw 'Output must be a new directory' }
+New-Item -ItemType Directory -Path $destination | Out-Null
+$report = [ordered]@{ revision = "$commit"; levels = '1,2'; seeds = $Seeds
+  coverage = 'MULTI_SEED_RUNTIME_OBSERVATION'; correctness = 'NOT_ASSERTED'
+  result = 'RUNNING'; runs = @() }
+function Save-Report {
+  $report | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $destination 'matrix.json') -Encoding UTF8
+}
+Save-Report
+foreach ($seed in $Seeds) {
+  $run = Join-Path $destination "seed-$seed"
+  $row = [ordered]@{ seed = $seed; status = 'RUNNING'; summary = $null; error = $null }
+  $report.runs += $row
+  Save-Report
+  try {
+    & (Join-Path $PSScriptRoot 'run-ai-dependency-acceptance.ps1') -D2Home $D2Home `
+      -Output $run -Revision $commit -Seed $seed -SkipGl
+    $acceptance = Get-Content (Join-Path $run 'acceptance.json') -Raw | ConvertFrom-Json
+    if ($acceptance.natural -ne 'OBSERVED_RUNTIME_ONLY') { throw 'Natural evidence rejected' }
+    $row.summary = @(Get-Content (Join-Path $run 'natural/map-tour.log') |
+      Where-Object { $_ -match '^\[MAP_TOUR\] SUMMARY ' })
+    $row.status = 'OBSERVED_RUNTIME_ONLY'
+  } catch {
+    $row.status = 'FAILED'
+    $row.error = $_.Exception.Message
+  }
+  Save-Report
+}
+$report.result = if (@($report.runs | Where-Object { $_.status -ne 'OBSERVED_RUNTIME_ONLY' }).Count) {
+  'FAILED'
+} else { 'OBSERVED_RUNTIME_ONLY' }
+Save-Report
+if ($report.result -eq 'FAILED') { throw 'Natural matrix failed; see matrix.json' }

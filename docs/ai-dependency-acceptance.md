@@ -51,3 +51,19 @@
 宣布跨电脑通过。需要同时复核两台日志和截图；主机名也不是硬件身份的证明。
 第二、三阶段遗留、全部自然路线、门/接缝/特殊技能、死亡复活、规模性能以及与原版的
 动态画面对照仍需补验。
+# 多种子自然路线自动观察
+
+可使用 `tools/run-ai-natural-matrix.ps1 -D2Home <1.10f目录> -Output <新目录>`
+依次运行 seed 1、2、3；用 `-Seeds` 指定唯一的种子列表。所有运行固定到同一提交，
+每个种子分别保存源码快照、资源哈希、TCP 日志和验收清单，根目录 `matrix.json`
+汇总状态、实际路线 SUMMARY 和失败原因。任一种子失败时，继续收集其他种子证据，
+最后以失败结束。矩阵跳过 GL，单次完整入口仍默认运行 GL。
+
+当前矩阵只覆盖 level 1/2 的自然路线变化。成功状态为 `OBSERVED_RUNTIME_ONLY`，
+不能推导门、窄道、全部技能、全部怪物资源、性能或原版一致性已验收。
+
+2026-10-30 使用新矩阵脚本对源码提交 `c157ccf6a` 运行 seed 2，证据为
+`build/ai-matrix-seed2/matrix.json`。结果 `visited=2/2`、`walks=4`、
+`transitions=1`、`detachedJumps=0`、`failures=0`，状态 `OBSERVED_RUNTIME_ONLY`。
+这是新增种子的单行实测；默认 seed 1/2/3 全矩阵尚未整体执行。
+

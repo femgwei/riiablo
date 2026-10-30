@@ -4,6 +4,7 @@ param(
   [Parameter(Mandatory)][string]$Output,
   [string]$Revision = 'HEAD',
   [int]$Seed = 1,
+  [switch]$SkipGl,
   [string]$CompareWith,
   # A fresh archived source tree must compile every module before the tour
   # starts; allow cold CI-style builds while retaining an explicit override.
@@ -103,6 +104,9 @@ try {
     $manifest.natural = 'OBSERVED_RUNTIME_ONLY'
   } catch { $manifest.natural = "FAILED: $($_.Exception.Message)" }
   Save-Manifest
+  if ($SkipGl) {
+    $manifest.gl = 'NOT_RUN'
+  } else {
   $gl = Join-Path $destination 'gl'
   $exitCode = Invoke-GradleStage 'gl' (@(':desktop:offscreenCamp') + $common + @('-PoffscreenLevel=2', '-PoffscreenWidth=854', '-PoffscreenHeight=480', '-Pd2Version=1.10f', "-PsavesDir=$(Join-Path $destination 'saves')", "-PvisualOutput=$gl")) (Join-Path $destination 'gl-console.log')
   try {
@@ -115,6 +119,7 @@ try {
     }
     $manifest.gl = 'CAPTURED_REQUIRES_VISUAL_REVIEW'
   } catch { $manifest.gl = "FAILED: $($_.Exception.Message)" }
+  }
 } finally {
   Pop-Location
   $manifest.completedUtc = [DateTime]::UtcNow.ToString('o')
