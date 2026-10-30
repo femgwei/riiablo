@@ -11,7 +11,9 @@ import com.riiablo.Riiablo;
 import com.riiablo.Files;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Objects;
+import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.monster.MonsterType;
 
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
@@ -192,6 +194,7 @@ public class MapManager extends PassiveSystem {
 
   public void createEntities(Map.Zone zone) {
     createNativeTownMonsters(zone);
+    createAct3Hratli(zone);
     if (shouldCreateNativeObjectsImmediately(zone)) {
       createNativeObjects(zone);
     } else {
@@ -217,6 +220,52 @@ public class MapManager extends PassiveSystem {
     }
 
     createPresetEntities(zone, false);
+  }
+
+  /**
+   * D2Game's A3Q0 object callbacks create Hratli from the town's quest
+   * objects instead of carrying him as a normal DS1 UNIT_MONSTER preset.
+   * The native export therefore contains objects 378 (HratliStart) and 379
+   * (HratliEnd), but no Hratli monster.  Materialize the start callback here;
+   * the end object remains the native fallback for a completed A3Q0 save.
+   */
+  private void createAct3Hratli(Map.Zone zone) {
+    if (zone == null || !zone.town || zone.level == null
+        || zone.level.Id != D2LevelIds.LEVEL_KURASTDOCKTOWN) return;
+    for (Map.NativeMonster monster : zone.getNativeMonsters()) {
+      if (monster != null && monster.monsterId == MonsterType.HRATLI) return;
+    }
+    if (zone.presets == null) return;
+
+    int endX = Integer.MIN_VALUE;
+    int endY = Integer.MIN_VALUE;
+    for (int x = 0, gridX = 0; x < zone.gridsX; x++, gridX += zone.gridSizeX) {
+      for (int y = 0, gridY = 0; y < zone.gridsY; y++, gridY += zone.gridSizeY) {
+        Map.Preset preset = zone.presets[x][y];
+        if (preset == null || preset.ds1 == null) continue;
+        DS1 ds1 = preset.ds1;
+        for (DS1.Object object : ds1.objects) {
+          if (object.type != DS1.Object.STATIC_TYPE) continue;
+          int objectId = files().obj.getObjectId(ds1.getAct(), object.id);
+          if (objectId == 379) {
+            endX = zone.x + gridX * DT1.Tile.SUBTILE_SIZE + object.x;
+            endY = zone.y + gridY * DT1.Tile.SUBTILE_SIZE + object.y;
+          }
+          if (objectId != 378) continue;
+          int id = factory.createMonster(MonsterType.HRATLI,
+              zone.x + gridX * DT1.Tile.SUBTILE_SIZE + object.x,
+              zone.y + gridY * DT1.Tile.SUBTILE_SIZE + object.y);
+          if (id != Engine.INVALID_ENTITY) zone.addEntity(id);
+          return;
+        }
+      }
+    }
+    // A completed A3Q0 save can omit the start callback's spawn.  Use the
+    // recorded end-object position when it is the only Hratli callback site.
+    if (endX != Integer.MIN_VALUE) {
+      int id = factory.createMonster(MonsterType.HRATLI, endX, endY);
+      if (id != Engine.INVALID_ENTITY) zone.addEntity(id);
+    }
   }
 
   /** Materializes native UNIT_MONSTER entries exported for town NPCs. */
