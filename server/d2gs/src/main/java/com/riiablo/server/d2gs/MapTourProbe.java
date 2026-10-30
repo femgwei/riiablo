@@ -18,6 +18,7 @@ import com.riiablo.map.MapTourPlan;
 /** Read-only probe. All access is on the authoritative simulation thread. */
 final class MapTourProbe {
   static final class Sample {
+    java.util.List<String> monsterEvidence = java.util.Collections.emptyList();
     int level = -1;
     long tick;
     float maximumMovementSpeed;

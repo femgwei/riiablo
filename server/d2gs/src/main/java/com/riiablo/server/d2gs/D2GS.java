@@ -434,6 +434,12 @@ public class D2GS extends ApplicationAdapter {
   }
 
   static MapTourProbe.Sample headlessMapTourSample(int playerId, int nextLevel, boolean local) {
+    return headlessMapTourSample(playerId, nextLevel, local, false);
+  }
+
+  private final MonsterNarrowProbe monsterNarrowProbe = new MonsterNarrowProbe();
+
+  static MapTourProbe.Sample headlessMapTourSample(int playerId, int nextLevel, boolean local, boolean monsters) {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.world == null || server.map == null || Gdx.app == null) return null;
     java.util.concurrent.CompletableFuture<MapTourProbe.Sample> result =
@@ -442,6 +448,8 @@ public class D2GS extends ApplicationAdapter {
       try {
         MapTourProbe.Sample sample = MapTourProbe.inspect(server.world, server.map, playerId, nextLevel, local);
         sample.tick = server.simulation.tickNumber();
+        if (monsters) sample.monsterEvidence = server.monsterNarrowProbe.observe(
+            server.world, server.map, playerId, sample.tick);
         result.complete(sample);
       } catch (RuntimeException e) {
         result.completeExceptionally(e);

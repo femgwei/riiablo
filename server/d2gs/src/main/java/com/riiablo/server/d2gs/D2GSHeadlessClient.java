@@ -5708,6 +5708,7 @@ public final class D2GSHeadlessClient {
     tourLog(report, "AI_OBSERVE_BEGIN", start);
     if (aiLog != null) aiLog.record(com.riiablo.logger.Level.INFO, "MapTour", "[AI_TOUR] WINDOW_BEGIN " + start);
     long tick = firstTick;
+    long monsterSampleAt = 0;
     while (tick - firstTick < requiredTicks && System.nanoTime() < deadline) {
       for (int i = 0; i < 64; i++) {
         com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
@@ -5719,6 +5720,10 @@ public final class D2GSHeadlessClient {
           || !Float.isFinite(lifecycle[3])) throw new IOException("AI observation player died/unavailable");
       Thread.sleep(20L);
       tick = D2GS.headlessSimulationState()[0];
+      if (System.currentTimeMillis() >= monsterSampleAt) {
+        monsterSampleAt = System.currentTimeMillis() + 200;
+        recordTourMonsterEvidence(report, D2GS.headlessMapTourSample(playerId, -1, true, true), "OBSERVE");
+      }
     }
     if (tick - firstTick < requiredTicks) throw new IOException("AI observation simulation stalled level=" + level);
     String end = "level=" + level + " reason=" + reason + " firstTick=" + firstTick
@@ -5761,7 +5766,8 @@ public final class D2GSHeadlessClient {
   private void walkTour(DataInputStream input, OutputStream output, Vector2 target,
       int expectedLevel, long sequence, java.io.PrintWriter report, String mode) throws Exception {
     sequence = mapTourMovementSequence++;
-    MapTourProbe.Sample start = D2GS.headlessMapTourSample(playerId, -1, true);
+    MapTourProbe.Sample start = D2GS.headlessMapTourSample(playerId, -1, true, true);
+    recordTourMonsterEvidence(report, start, "WALK");
     long readyUntil = System.currentTimeMillis() + 3000;
     while (!start.actionReady && System.currentTimeMillis() < readyUntil) {
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
@@ -5785,7 +5791,8 @@ public final class D2GSHeadlessClient {
           + " lifecycle=" + java.util.Arrays.toString(D2GS.headlessPlayerLifecycleState(playerId)));
       if (System.currentTimeMillis() < sampleAt) continue;
       sampleAt = System.currentTimeMillis() + 200;
-      state = D2GS.headlessMapTourSample(playerId, -1, true);
+      state = D2GS.headlessMapTourSample(playerId, -1, true, true);
+      recordTourMonsterEvidence(report, state, "WALK");
       if (state == null || state.position == null) throw new IOException("Player disappeared");
       if ("BOUNDARY_WALK".equals(mode)) {
         float allowed = Math.max(previous.maximumMovementSpeed, state.maximumMovementSpeed)
@@ -5845,6 +5852,15 @@ public final class D2GSHeadlessClient {
         + " blockedByDynamic=" + state.blockedByDynamic + " stalled=" + state.stalledTime
         + " blockReason=" + state.movementBlockReason + " pathTarget=" + state.pathTarget
         + " destination=" + state.destination);
+  }
+
+  private static void recordTourMonsterEvidence(java.io.PrintWriter report, MapTourProbe.Sample sample, String context) {
+    if (sample == null) return;
+    for (String evidence : sample.monsterEvidence) {
+      int space = evidence.indexOf(' ');
+      tourLog(report, evidence.substring(0, space), evidence.substring(space + 1)
+          + " context=" + context + " playerAttacks=0");
+    }
   }
 
   private static void tourLog(java.io.PrintWriter report, String phase, String details) {
