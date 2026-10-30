@@ -1367,10 +1367,6 @@ public class Map implements Disposable {
     public int levelId() { return level == null ? -1 : level.Id; }
     /** Stable native DRLG seed shared by server and client projections. */
     public int levelSeed() { return levelSeed; }
-    public Vector2 townPortalSpawn() {
-      return townPortalSpawn == null ? null : new Vector2(townPortalSpawn);
-    }
-
     public void setTownPortalSpawn(float x, float y) {
       if (townPortalSpawn == null) townPortalSpawn = new Vector2();
       townPortalSpawn.set(x, y);
