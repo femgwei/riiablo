@@ -913,6 +913,10 @@ public class Map implements Disposable {
   public boolean isBlockedForPath(int x, int y, int flags, boolean canOpenDoors) {
     Zone zone = getZone(x, y);
     if (zone == null) return true;
+    // Native water surfaces are not guaranteed to carry FLAG_BLOCK_WALK in
+    // every exported collision grid. Ground path masks must still reject
+    // them; flying paths (FLAG_BLOCK_JUMP) retain their native exception.
+    if ((flags & DT1.Tile.FLAG_BLOCK_JUMP) == 0 && isWater(x, y)) return true;
     int mask = flags;
     if (flags == DT1.Tile.FLAG_BLOCK_JUMP) mask |= 0x800;
     else if ((flags & DT1.Tile.FLAG_BLOCK_WALK) != 0) mask |= 0x400 | (canOpenDoors ? 0 : 0x800);
