@@ -2,6 +2,7 @@ package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
 import com.artemis.Aspect;
+import com.artemis.BaseSystem;
 import com.artemis.EntitySubscription;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
@@ -48,6 +49,18 @@ public class HoveredManager extends IteratingSystem {
 
   @Override
   protected void initialize() {
+    // The production world installs the hover adapter as a system.  Some
+    // hosts do not also register it under the optional "hoverPresentation"
+    // service name, so resolve that system before the first hit test instead
+    // of silently making every selectable entity unclickable.
+    if (hoverPresentation == null) {
+      for (BaseSystem system : world.getSystems()) {
+        if (system instanceof ClientHoverPresentationPort) {
+          hoverPresentation = (ClientHoverPresentationPort) system;
+          break;
+        }
+      }
+    }
     selectableSubscriber = world.getAspectSubscriptionManager().get(
         Aspect.all(Selectable.class, Position.class));
   }
