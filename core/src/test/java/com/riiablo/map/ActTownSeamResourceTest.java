@@ -2,6 +2,9 @@ package com.riiablo.map;
 
 import com.riiablo.RiiabloTest;
 import com.riiablo.drlg.TileGrid;
+import com.badlogic.gdx.ai.pfa.GraphPath;
+import com.badlogic.gdx.ai.pfa.DefaultGraphPath;
+import com.riiablo.map.pfa.Point2;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -100,6 +103,7 @@ class ActTownSeamResourceTest extends RiiabloTest {
       }
       assertTrue(playerCrossings > 0, "size-two scoped player path crosses seam " + townId);
       System.out.println("PLAYER_TOWN_SEAM " + townId + " crossings=" + playerCrossings);
+      if (townId == 75) assertKurastRespawnWalks(map, town);
       if (townId == 103) {
         TileGrid grid = town.nativeTileGrid();
         int overlays = 0, stairs = 0;
@@ -164,6 +168,27 @@ class ActTownSeamResourceTest extends RiiabloTest {
     if (grid == null || x < 0 || y < 0 || x >= zone.width() || y >= zone.height()) return false;
     if (grid.nativeCollisionFlags == null || !grid.nativeCollisionCells[y / 5][x / 5]) return false;
     return (grid.nativeCollisionFlags[y * zone.width() + x] & 9) == 0;
+  }
+
+  private static void assertKurastRespawnWalks(Map map, Map.Zone town) {
+    com.badlogic.gdx.math.Vector2 spawn = map.townPlayerSpawn(3);
+    assertNotNull(spawn, "Kurast Docks player spawn");
+    assertFalse(map.isBlockedForPath(town, Math.round(spawn.x), Math.round(spawn.y), 9, 3, false),
+        "Kurast Docks player spawn must accept a size-three footprint");
+    GraphPath<Point2> path = new DefaultGraphPath<>();
+    boolean found = false;
+    for (int y = town.y() + 4; y < town.y() + town.height() - 4 && !found; y++) {
+      for (int x = town.x() + 4; x < town.x() + town.width() - 4; x++) {
+        if (Math.abs(x - spawn.x) + Math.abs(y - spawn.y) < 12
+            || map.isBlockedForPath(town, x, y, 9, 3, false)) continue;
+        if (map.findPath(town, spawn, new com.badlogic.gdx.math.Vector2(x, y),
+            9, 3, path, null, -1, -1, false)) {
+          found = true;
+          break;
+        }
+      }
+    }
+    assertTrue(found, "Kurast Docks spawn must have a path into the town");
   }
 
   private static Map.Zone zone(Map map, int levelId) {
