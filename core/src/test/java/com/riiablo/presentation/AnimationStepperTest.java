@@ -6,14 +6,36 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.COF;
+import com.riiablo.codec.DC6;
 import com.riiablo.engine.SimulationClock;
 import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Player;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AnimationStepperTest extends RiiabloTest {
+  @Test void groundItemFlippyIgnoresCompositeLoadingMarkers() {
+    Riiablo.colors = new com.riiablo.Colors();
+    World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());
+    try {
+      int id = world.create();
+      Animation animation = world.getMapper(AnimationWrapper.class).create(id).animation;
+      DC6 flippy = DC6.loadFromFile(Riiablo.mpqs.resolve("data/global/items/flpgld.dc6"));
+      animation.edit().layer(flippy).build();
+      animation.setMode(Animation.Mode.CLAMP);
+      world.getMapper(Item.class).create(id);
+      // These markers are valid for COF/DCC units but must not pause a DC6
+      // flippy while another unit is waiting for its composite layers.
+      world.getMapper(com.riiablo.engine.shared.component.CofDirtyComponents.class).create(id);
+      world.getMapper(com.riiablo.presentation.component.CofLoadingComponents.class).create(id);
+      world.setDelta(SimulationClock.STEP_SECONDS);
+      for (int tick = 0; tick < flippy.getNumFramesPerDir() + 2; tick++) world.process();
+      assertEquals(flippy.getNumFramesPerDir() - 1, animation.getFrame());
+    } finally { world.dispose(); }
+  }
+
   @Test void ordinaryActionWaitsForCofAndPendingLayersBeforeAdvancing() {
     Riiablo.colors = new com.riiablo.Colors();
     World world = new World(new WorldConfigurationBuilder().with(new AnimationStepper()).build());

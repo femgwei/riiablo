@@ -6,6 +6,7 @@ import com.artemis.systems.IntervalIteratingSystem;
 import com.riiablo.engine.SimulationClock;
 import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.state.StateId;
@@ -13,6 +14,7 @@ import com.riiablo.engine.server.state.StateId;
 @All(AnimationWrapper.class)
 public class AnimationStepper extends IntervalIteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<Item> mItem;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.Casting> mCasting;
@@ -31,6 +33,14 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected void process(int entityId) {
     AnimationWrapper wrapper = mAnimationWrapper.get(entityId);
     if (wrapper == null || wrapper.animation == null) return;
+
+    // Ground items use a standalone DC6 flippy animation.  COF/DCC loading
+    // markers belong to composite units only; allowing them to gate a flippy
+    // can leave a dropped coin permanently on an intermediate bounce frame.
+    if (mItem.has(entityId)) {
+      wrapper.animation.update(SimulationClock.STEP_SECONDS);
+      return;
+    }
 
     // Mode resolution and DCC publication are asynchronous. Keep every action
     // on its resident frame until the selected composite is ready; otherwise
