@@ -246,6 +246,10 @@ public class CombatSystemTest extends RiiabloTest {
     player.base().put(Stat.dexterity, 35);
     player.base().put(Stat.toblock, 50);
     player.reset();
+    CombatSystem.CombatResult unknownEquipment = deterministicBlock.calculateAttack(
+        monster, player, false, true, false, 20, 20, 1000, true,
+        null, null, 0, 0, null, null);
+    assertTrue(!unknownEquipment.blocked, "unknown equipment must not invent a shield");
     player.setCombatBlockContext(true, 20);
 
     StateList holyShield = new StateList(2);

@@ -463,8 +463,10 @@ final class CombatSnapshotFactory {
     // treating every monster as shielded makes a player's attacks produce a
     // monster BL reaction and block sound even for monsters with only a
     // non-zero ToBlock row.
+    // UNITS_GetBlockRate requires INVENTORY_GetEquippedShield. Unknown
+    // equipment is not evidence of a shield, including for player snapshots.
     d.hasEquippedShield = defender.hasCombatShieldContext()
-        ? defender.combatHasShield() : defenderPlayer;
+        && defender.combatHasShield();
     d.blockFactor = defenderPlayer && defender.hasCombatShieldContext()
         ? defender.combatBlockFactor() : 0;
     d.isRunning = defender.hasCombatRunningContext()
