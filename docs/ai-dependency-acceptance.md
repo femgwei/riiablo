@@ -236,3 +236,16 @@ MonsterNarrowDecision 1、PathfinderTerrainPursuit 7 均通过（合计 131）�
 build/ai-poison-block-regression.log、build/ai-skill-start-trap-regression.log。
 此前关于“与窄道改动无交集”的记录不是实现正确性的证明；本轮通过定位和重跑
 关闭该失败组。人工视觉/听感、跨电脑验证仍未执行，不据此扩大验收范围。
+
+2026-10-30 补充生产随机流弹体结算回归 MonsterMissileProductionRandomIntegrationTest。
+测试使用真实 ServerEntityFactory、arrow 表项、ServerGameplayContext、碰撞系统及
+StateUpdater，不替换战斗解析器或随机源。seed 1、1234、-98765 各执行基线、同种子
+重放和无关怪物随机扰动三个独立世界，逐项比较伤害及最终随机状态。
+独立 BigInteger 原生种子参考计算验证物理 2560..2816、火焰 512..768、毒伤
+256..512 的掷值、即时生命损失、四帧毒伤和状态到期；碰撞事件捕获弹体种子高低
+两字，验证伤害随机流推进。真实 arrow 的 AR 判定消费 owner 随机流，单独检查
+owner 高低两字恰好推进一次；无关单位在创建前、命中前及毒伤期间反复取随机值，
+不改变结算结果。此场景无持盾、无抗性、无暴击，不能外推这些分支已新增覆盖。
+生产随机流新测试 3 项、CreationCritical 5 项、Source 36 项共 44 项通过，无跳过。
+日志 build/ai-production-missile-rng-regression.log；模块边界检查同时通过。
+本轮没有生产实现修改，补齐的是工厂创建到碰撞结算的受控 ECS 自动验证。
