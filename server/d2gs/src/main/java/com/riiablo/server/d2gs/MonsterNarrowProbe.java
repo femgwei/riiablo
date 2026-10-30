@@ -28,6 +28,7 @@ final class MonsterNarrowProbe {
   private final java.util.Map<Integer, State> previous = new HashMap<>();
   private final java.util.Map<Integer, Hold> holds = new HashMap<>();
   private final java.util.IdentityHashMap<NativePathIdentity.Token, Long> lifetimes = new java.util.IdentityHashMap<>();
+  private long diagnosticTick = -25;
 
   List<String> observe(World world, Map map, int player, long tick) {
     List<String> events = new ArrayList<>();
@@ -45,6 +46,11 @@ final class MonsterNarrowProbe {
       Pathfind path = world.getMapper(Pathfind.class).get(id);
       AttributesWrapper attrs = world.getMapper(AttributesWrapper.class).get(id);
       NativePathIdentity identity = world.getMapper(NativePathIdentity.class).get(id);
+      if (tick - diagnosticTick >= 25 && wrapper.zone == owner.zone && MapTourProbe.hostileBlocker(monster))
+        events.add("MONSTER_PATH_SAMPLE entity=" + id + " tick=" + tick + " level=" + wrapper.zone.level.Id
+            + " target=" + path.targetEntityId + " targetIdentity=" + (path.targetIdentity != null)
+            + " nativeRuntime=" + (path.nativeRuntime != null) + " position="
+            + world.getMapper(Position.class).get(id).position + " dynamicBlocked=" + path.blockedByDynamic);
       if (!MapTourProbe.hostileBlocker(monster) || wrapper.zone != owner.zone
           || wrapper.zone.isSyntheticArena() || wrapper.zone.nativeTileGrid() == null
           || NativeGroundPathProfile.forUnit(false, monster.monstats) != NativeGroundPathProfile.MONSTER
@@ -79,6 +85,11 @@ final class MonsterNarrowProbe {
           && clear(map, wrapper.zone, state.queryX, state.queryY, sample.unitSize);
       State before = previous.get(id);
       current.put(id, state);
+      if (tick - diagnosticTick >= 25) events.add("MONSTER_PATH_GEOMETRY entity=" + id + " tick=" + tick
+          + " level=" + sample.level + " position=" + sample.position + " blocked=" + sample.blocked
+          + " spans=" + sample.narrowSpanX + "," + sample.narrowSpanY + ","
+          + sample.narrowSpanDiagonalPlus + "," + sample.narrowSpanDiagonalMinus
+          + " speed=" + sample.maximumMovementSpeed);
       if (!same(before, state)) { holds.remove(id); continue; }
       for (int axis = 0; axis < 4; axis++) {
         if (MapTourProbe.narrowProgress(before.movement, sample, axis))
@@ -115,6 +126,7 @@ final class MonsterNarrowProbe {
     }
     previous.clear(); previous.putAll(current);
     holds.keySet().retainAll(current.keySet());
+    if (tick - diagnosticTick >= 25) diagnosticTick = tick;
     return events;
   }
 
