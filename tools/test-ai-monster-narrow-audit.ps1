@@ -14,7 +14,7 @@ $header = @(
   '[MAP_TOUR] LOAD level=62 nativeTerrain=true',
   '[MAP_TOUR] AI_OBSERVE_BEGIN level=62 reason=LEVEL_ENTRY firstTick=1 requiredTicks=200 playerAttacks=0',
   '[MAP_TOUR] AI_OBSERVE_END level=62 reason=LEVEL_ENTRY firstTick=1 lastTick=201 observedTicks=200 playerAttacks=0 correctness=NOT_ASSERTED')
-$prefix = 'entity=4 target=5 identity=SAME_LIFETIME level=62 lifetime=1 targetLifetime=2 crossAxis=Y footprint=3 '
+$prefix = 'entity=4 target=5 identity=SAME_LIFETIME level=62 lifetime=1 targetLifetime=2 targetSource=LIVE_PATH crossAxis=Y footprint=3 '
 $tail = ' beforeSpan=1 afterSpan=1 allowedDisplacement=2.1 bound=3 movement=PRODUCTION_AI coverage=SAMPLED_LOCAL_PROGRESS'
 $context = ' context=OBSERVE playerAttacks=0'
 $evidence = @(

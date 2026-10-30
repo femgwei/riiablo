@@ -17,6 +17,7 @@ final class MonsterNarrowProbe {
   static final class State {
     int entity, target, queryX, queryY;
     long lifetime, targetLifetime;
+    String targetSource = "LIVE_PATH";
     NativePathIdentity.Token identity, targetIdentity;
     MapTourProbe.Sample movement = new MapTourProbe.Sample();
     boolean dynamicBlocked, queryFree;
@@ -46,9 +47,12 @@ final class MonsterNarrowProbe {
       Pathfind path = world.getMapper(Pathfind.class).get(id);
       AttributesWrapper attrs = world.getMapper(AttributesWrapper.class).get(id);
       NativePathIdentity identity = world.getMapper(NativePathIdentity.class).get(id);
+      int targetId = path.targetEntityId >= 0 ? path.targetEntityId : path.requestedTargetEntityId;
+      NativePathIdentity.Token targetToken = path.targetEntityId >= 0 ? path.targetIdentity : path.requestedTargetIdentity;
       if (tick - diagnosticTick >= 25 && wrapper.zone == owner.zone && MapTourProbe.hostileBlocker(monster))
         events.add("MONSTER_PATH_SAMPLE entity=" + id + " tick=" + tick + " level=" + wrapper.zone.level.Id
             + " target=" + path.targetEntityId + " targetIdentity=" + (path.targetIdentity != null)
+            + " requestTarget=" + path.requestedTargetEntityId
             + " nativeRuntime=" + (path.nativeRuntime != null) + " position="
             + world.getMapper(Position.class).get(id).position + " dynamicBlocked=" + path.blockedByDynamic);
       if (!MapTourProbe.hostileBlocker(monster) || wrapper.zone != owner.zone
@@ -56,11 +60,12 @@ final class MonsterNarrowProbe {
           || NativeGroundPathProfile.forUnit(false, monster.monstats) != NativeGroundPathProfile.MONSTER
           || attrs.attrs == null || attrs.attrs.getValue(Stat.hitpoints, 0) <= 0
           || world.getMapper(Mercenary.class).has(id) || world.getMapper(SummonedPet.class).has(id)
-          || path.targetEntityId != player || path.targetIdentity == null
-          || !path.targetIdentity.isCurrent(world, player) || identity.token() == null) continue;
+          || targetId != player || targetToken == null
+          || !targetToken.isCurrent(world, player) || identity.token() == null) continue;
       State state = new State();
       state.entity = id; state.target = player;
-      state.identity = identity.token(); state.targetIdentity = path.targetIdentity;
+      state.identity = identity.token(); state.targetIdentity = targetToken;
+      state.targetSource = path.targetEntityId >= 0 ? "LIVE_PATH" : "BOUNDED_TOWARD_REQUEST";
       state.lifetime = lifetimes.computeIfAbsent(state.identity, ignored -> (long) lifetimes.size() + 1);
       state.targetLifetime = lifetimes.computeIfAbsent(state.targetIdentity, ignored -> (long) lifetimes.size() + 1);
       MapTourProbe.Sample sample = state.movement;
@@ -134,6 +139,7 @@ final class MonsterNarrowProbe {
     return a != null && b != null && a.entity == b.entity && a.target == b.target
         && a.identity != null && a.identity == b.identity && a.targetIdentity != null
         && a.targetIdentity == b.targetIdentity && a.movement.level == b.movement.level
+        && a.targetSource.equals(b.targetSource)
         && a.movement.unitSize == b.movement.unitSize;
   }
   static boolean stationary(State a, State b) {
@@ -152,6 +158,7 @@ final class MonsterNarrowProbe {
   private static String pair(State before, State now, int axis) {
     return "entity=" + now.entity + " target=" + now.target + " identity=SAME_LIFETIME level=" + now.movement.level
         + " lifetime=" + now.lifetime + " targetLifetime=" + now.targetLifetime
+        + " targetSource=" + now.targetSource
         + " crossAxis=" + new String[] {"X", "Y", "DPLUS", "DMINUS"}[axis]
         + " footprint=" + now.movement.unitSize + " firstTick=" + before.movement.tick
         + " lastTick=" + now.movement.tick + " from=" + before.movement.position + " to=" + now.movement.position

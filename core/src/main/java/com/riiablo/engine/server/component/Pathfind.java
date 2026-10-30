@@ -28,6 +28,9 @@ public class Pathfind extends PooledComponent {
   public int targetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
   /** Null means a legacy/unmanaged target whose allocation identity is unknown. */
   public NativePathIdentity.Token targetIdentity;
+  /** Diagnostic provenance of a bounded Toward request; never a live follow target. */
+  public int requestedTargetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
+  public NativePathIdentity.Token requestedTargetIdentity;
   public final Vector2 lastTargetPosition = new Vector2();
   public float repathTimer = 0f;  // Timer for periodic repathing when following player
   public static final float REPATH_INTERVAL = 0.5f;  // Repath every 0.5 seconds when following player
@@ -54,6 +57,8 @@ public class Pathfind extends PooledComponent {
     targets = Collections.emptyIterator();
     targetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
     targetIdentity = null;
+    requestedTargetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
+    requestedTargetIdentity = null;
     lastTargetPosition.setZero();
     repathTimer = 0f;
     pendingDirection = -1;
@@ -69,6 +74,8 @@ public class Pathfind extends PooledComponent {
 
   /** Retain the source centre when a fractional start cannot sweep to node two. */
   public Pathfind set(GraphPath path, boolean startAtSource) {
+    requestedTargetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
+    requestedTargetIdentity = null;
     nativeRuntime = null;
     nativeBounded = false;
     nativePathType = 0;

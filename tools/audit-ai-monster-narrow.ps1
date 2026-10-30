@@ -34,6 +34,7 @@ foreach ($line in $lines) {
   if ($fields.identity -ne 'SAME_LIFETIME' -or $fields.movement -ne 'PRODUCTION_AI' `
       -or $fields.coverage -ne 'SAMPLED_LOCAL_PROGRESS' -or $fields.bound -ne '3' `
       -or $fields.context -notin @('WALK','OBSERVE') -or $fields.playerAttacks -ne '0' `
+      -or $fields.targetSource -notin @('LIVE_PATH','BOUNDED_TOWARD_REQUEST') `
       -or [int]$fields.footprint -lt 1 -or [long]$fields.lifetime -lt 1 -or [long]$fields.targetLifetime -lt 1 `
       -or [int]$fields.beforeSpan -notin 1..5 -or [int]$fields.afterSpan -notin 1..5) { throw 'Invalid provenance or geometry' }
   $from = Point $fields.from; $to = Point $fields.to
@@ -47,7 +48,7 @@ foreach ($line in $lines) {
     DMINUS { $along=[Math]::Abs($dx+$dy)/[Math]::Sqrt(2); $across=[Math]::Abs($dx-$dy)/[Math]::Sqrt(2) }
     default { throw 'Invalid cross-section axis' }
   }
-  $key = @('entity','target','level','lifetime','targetLifetime','footprint','crossAxis' | ForEach-Object { $fields[$_] }) -join ':'
+  $key = @('entity','target','level','lifetime','targetLifetime','targetSource','footprint','crossAxis' | ForEach-Object { $fields[$_] }) -join ':'
   if ($kind -eq 'MONSTER_NARROW_BLOCK') {
     if ($last-$first -lt 5 -or (Distance $from $to) -ge .1 -or $fields.queryWasBlocked -ne 'true') { throw 'Invalid stationary dynamic hold' }
     $null = Point $fields.query
@@ -75,6 +76,7 @@ foreach ($line in $lines) {
     if ($chain.count -ge 2 -and (Distance $chain.start $to) -ge 3) {
       $passages += [ordered]@{ entity=$fields.entity; target=$fields.target; level=$fields.level
         lifetime=$fields.lifetime; targetLifetime=$fields.targetLifetime; crossAxis=$fields.crossAxis
+        targetSource=$fields.targetSource
         firstTick=$chain.first; lastTick=$last; from=$chain.start; to=$to; consecutiveRecords=$chain.count }
       $chains.Remove($key)
     }

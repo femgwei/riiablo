@@ -536,6 +536,10 @@ public class Pathfinder extends IteratingSystem {
     nativePath.nativeBounded = true;
     nativePath.targetEntityId = Engine.INVALID_ENTITY;
     nativePath.targetIdentity = null;
+    // Preserve request provenance without turning bounded coordinate movement
+    // into live pursuit/repath semantics. Orbit requests are not Toward evidence.
+    nativePath.requestedTargetEntityId = directionOffset == 0 ? targetId : Engine.INVALID_ENTITY;
+    nativePath.requestedTargetIdentity = directionOffset == 0 ? targetIdentity.token() : null;
     return true;
   }
 
