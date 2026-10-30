@@ -37,6 +37,14 @@ class SimulationTickCoordinatorTest {
     assertEquals(Collections.singletonList(2L), executed);
   }
 
+  @Test void nextCommandTickNeverFallsBehindQueueWatermark() {
+    SimulationTickCoordinator coordinator = new SimulationTickCoordinator();
+    coordinator.commands().drain(4, ignored -> {});
+    assertEquals(5L, coordinator.nextCommandTick());
+    assertNotNull(coordinator.commands().submit(SimulationCommandEnvelope
+        .builder("input", "move", "east").tick(coordinator.nextCommandTick())));
+  }
+
   @Test void commandsSubmittedWhileIdleTargetTheNextTick() {
     SimulationTickCoordinator coordinator = new SimulationTickCoordinator();
     assertEquals(1L, coordinator.nextCommandTick());

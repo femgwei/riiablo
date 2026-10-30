@@ -43,7 +43,12 @@ public final class SimulationTickCoordinator {
     long next = tick + 1L;
     if (phase == Phase.SIMULATION || phase == Phase.EVENTS
         || phase == Phase.STRUCTURAL_COMMIT) next++;
-    return Math.max(1L, next);
+    // The queue owns the admission watermark.  During a render catch-up (or
+    // when a host hook advances the queue before the coordinator publishes its
+    // completed tick) that watermark can be one or more ticks ahead of the
+    // coordinator's public clock.  Never manufacture a command that the queue
+    // will immediately reject as stale in that interval.
+    return Math.max(Math.max(1L, next), commands.lastDrainedTick() + 1L);
   }
   public SimulationCommandQueue commands() { return commands; }
   public SimulationEventQueue events() { return events; }

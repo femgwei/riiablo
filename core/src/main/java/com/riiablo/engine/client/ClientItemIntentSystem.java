@@ -1,5 +1,6 @@
 package com.riiablo.engine.client;
 
+import com.badlogic.gdx.Gdx;
 import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
@@ -47,10 +48,21 @@ public final class ClientItemIntentSystem extends BaseSystem implements ItemCont
       intent.run();
     };
     if (simulationTickCoordinator != null) {
-      return simulationTickCoordinator.commands().submit(
+      long targetTick = simulationTickCoordinator.nextCommandTick();
+      com.riiablo.engine.SimulationCommandEnvelope command =
+          simulationTickCoordinator.commands().submit(
           com.riiablo.engine.SimulationCommandEnvelope.builder(
               "client-ui", "item.intent", guarded)
-              .tick(simulationTickCoordinator.nextCommandTick())) != null;
+              .tick(targetTick));
+      if (command == null && Gdx.app != null) {
+        Gdx.app.log("ClientItemIntentSystem", "[ITEM_INTENT] phase=reject"
+            + " targetTick=" + targetTick
+            + " coordinatorTick=" + simulationTickCoordinator.tick()
+            + " phase=" + simulationTickCoordinator.phase()
+            + " lastDrainedTick=" + simulationTickCoordinator.commands().lastDrainedTick()
+            + " reason=" + simulationTickCoordinator.commands().lastRejection());
+      }
+      return command != null;
     }
     pending.add(guarded);
     return true;
