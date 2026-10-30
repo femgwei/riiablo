@@ -6,6 +6,42 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class MapTourProbeTest {
+  @Test public void narrowCrossSectionRequiresBothWallsAndAClearFootprint() {
+    assertEquals(3, MapTourProbe.narrowCenterSpan(offset -> Math.abs(offset) < 2));
+    assertEquals(5, MapTourProbe.narrowCenterSpan(offset -> Math.abs(offset) < 3));
+    assertEquals(1, MapTourProbe.narrowCenterSpan(offset -> offset == 0));
+    assertEquals(0, MapTourProbe.narrowCenterSpan(offset -> true));
+    assertEquals(0, MapTourProbe.narrowCenterSpan(offset -> offset > -2));
+    assertEquals(0, MapTourProbe.narrowCenterSpan(offset -> offset < 2));
+    assertEquals(0, MapTourProbe.narrowCenterSpan(offset -> offset != 0));
+  }
+
+  @Test public void narrowMovementRejectsStallsJumpsStaleTicksAndUnboundedSpace() {
+    MapTourProbe.Sample a = new MapTourProbe.Sample(), b = new MapTourProbe.Sample();
+    a.level = b.level = 29; a.nativeTerrain = b.nativeTerrain = true;
+    a.unitSize = b.unitSize = 2; a.maximumMovementSpeed = b.maximumMovementSpeed = 10;
+    a.narrowSpanX = b.narrowSpanX = 3;
+    a.position = new com.badlogic.gdx.math.Vector2(10, 10);
+    b.position = new com.badlogic.gdx.math.Vector2(10, 12);
+    a.tick = 10; b.tick = 15;
+    assertTrue(MapTourProbe.narrowProgress(a, b, true));
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, false));
+    b.position.set(10, 10);
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, true));
+    b.position.set(10, 20);
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, true));
+    b.position.set(10, 12); b.tick = 10;
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, true));
+    b.tick = 21;
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, true));
+    b.tick = 15; b.narrowSpanX = 0;
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, true));
+    b.narrowSpanX = 3; b.blocked = true;
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, true));
+    b.blocked = false; b.level = 30;
+    org.junit.Assert.assertFalse(MapTourProbe.narrowProgress(a, b, true));
+  }
+
   @Test public void seamDoorMustFinishOpeningBeforeItsNextFrontierIsPlanned() {
     com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder().build());
     try {

@@ -21,6 +21,7 @@ final class MapTourProbe {
     int level = -1;
     long tick;
     float maximumMovementSpeed;
+    int narrowSpanX, narrowSpanY;
     String name = "missing";
     int[] diagnostics = new int[0];
     int objects, monsters, entities, pendingMonsters, spawnedMonsters, spawnedObjects, groundItems;
@@ -199,6 +200,15 @@ final class MapTourProbe {
     }
     int size = world.getMapper(com.riiablo.engine.server.component.Size.class).get(playerId).size;
     sample.blocked = !clear(map, zone, sample.position.x, sample.position.y, size);
+    sample.unitSize = size;
+    if (!sample.blocked && sample.nativeTerrain && !sample.synthetic) {
+      int x = Math.round(sample.position.x), y = Math.round(sample.position.y);
+      // A zone edge is not a wall. Require every probe to remain inside the level.
+      if (zone.contains(x - 3, y) && zone.contains(x + 3, y))
+        sample.narrowSpanX = narrowCenterSpan(offset -> clear(map, zone, x + offset, y, size));
+      if (zone.contains(x, y - 3) && zone.contains(x, y + 3))
+        sample.narrowSpanY = narrowCenterSpan(offset -> clear(map, zone, x, y + offset, size));
+    }
     if (local) {
       sample.transition = "LOCAL_WALK";
       // Local smoke target must belong to the spawn's collision component;
@@ -327,6 +337,31 @@ final class MapTourProbe {
 
   static float arrivalToleranceSquared(String mode) {
     return "WARP_WALK".equals(mode) || "DOOR_APPROACH".equals(mode) ? 1f : 2.25f;
+  }
+
+  /** Count legal footprint centers between the first blocked offsets on both sides.
+   * Zero means no bounded cross-section within +/-3; this is not physical wall width. */
+  static int narrowCenterSpan(java.util.function.IntPredicate clear) {
+    if (!clear.test(0)) return 0;
+    int negative = 1, positive = 1;
+    while (negative <= 3 && clear.test(-negative)) negative++;
+    while (positive <= 3 && clear.test(positive)) positive++;
+    return negative <= 3 && positive <= 3 ? negative + positive - 1 : 0;
+  }
+
+  static boolean narrowProgress(Sample previous, Sample current, boolean crossX) {
+    long ticks = current.tick - previous.tick;
+    if (ticks <= 0 || ticks > 10 || previous.level != current.level
+        || !previous.nativeTerrain || !current.nativeTerrain || previous.synthetic || current.synthetic
+        || previous.blocked || current.blocked || previous.unitSize != current.unitSize) return false;
+    int before = crossX ? previous.narrowSpanX : previous.narrowSpanY;
+    int after = crossX ? current.narrowSpanX : current.narrowSpanY;
+    if (before <= 0 || after <= 0) return false;
+    float dx = Math.abs(current.position.x - previous.position.x);
+    float dy = Math.abs(current.position.y - previous.position.y);
+    float along = crossX ? dy : dx, across = crossX ? dx : dy;
+    float allowed = Math.max(previous.maximumMovementSpeed, current.maximumMovementSpeed) * ticks * .04f + .1f;
+    return along >= 1f && across <= .75f && previous.position.dst(current.position) <= allowed;
   }
 
   private static boolean clear(Map map, Map.Zone zone, float x, float y) {

@@ -5796,6 +5796,19 @@ public final class D2GSHeadlessClient {
         tourLog(report, "SEAM_POSITION", "sequence=" + sequence + " tick=" + state.tick + " level=" + state.level
             + " position=" + state.position + " clientLevel=" + currentLevelId + " allowedDisplacement=" + allowed);
       }
+      if (lastMovementAcknowledgement >= sequence && state.level == expectedLevel
+          && currentLevelId == expectedLevel) {
+        for (boolean crossX : new boolean[] {true, false}) {
+          if (!MapTourProbe.narrowProgress(previous, state, crossX)) continue;
+          tourLog(report, "NARROW_MOVE", "sequence=" + sequence + " level=" + state.level
+              + " crossAxis=" + (crossX ? "X" : "Y") + " footprint=" + state.unitSize
+              + " firstTick=" + previous.tick + " lastTick=" + state.tick
+              + " from=" + previous.position + " to=" + state.position
+              + " beforeSpan=" + (crossX ? previous.narrowSpanX : previous.narrowSpanY)
+              + " afterSpan=" + (crossX ? state.narrowSpanX : state.narrowSpanY)
+              + " bound=3 movement=PRODUCTION_TCP coverage=SAMPLED_LOCAL_PROGRESS");
+        }
+      }
       previous = state;
       furthest = Math.max(furthest, start.position.dst(state.position));
       if (lastMovementAcknowledgement >= sequence && state.level == expectedLevel
