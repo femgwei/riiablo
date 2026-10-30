@@ -210,6 +210,8 @@ public final class D2GSHeadlessClient {
   private float playerX = Float.NaN;
   private float playerY = Float.NaN;
   private long mapTourMovementSequence = 1;
+  private final java.util.List<MapTourProbe.Sample> monsterPursuitTrail = new java.util.ArrayList<>();
+  private final java.util.Map<Integer, Integer> monsterPursuitAttempts = new java.util.HashMap<>();
   private int mapTourCombatKills;
   private final Set<String> aiObservedBlockers = new HashSet<>();
   private MapTourAiLog aiLog;
@@ -5560,6 +5562,7 @@ public final class D2GSHeadlessClient {
     }
     if (config.tourAiObserve && aiObservedBlockers.add(level + ":" + blocker.warp)) {
       observeTourAi(input, level, "BLOCKER_BEFORE_CLEAR entity=" + blocker.warp, report);
+      if (config.tourMonsterPursuit && lureTourMonster(input, output, level, blocker, report)) return false;
       blocker = D2GS.headlessMapTourBlocker(playerId, destination, blocker.warp);
       if (blocker == null || !blocker.meleeReady) return false; // Replan, never attack a stale sample.
       before = monsters.get(blocker.warp);
@@ -5825,6 +5828,10 @@ public final class D2GSHeadlessClient {
         tourLog(report, "WALK_PASS", "sequence=" + sequence + " mode=" + mode
             + " level=" + state.level + " final=" + state.position + " displacement=" + furthest
             + " snapshot=(" + playerX + "," + playerY + ")");
+        if (config.tourMonsterPursuit) {
+          monsterPursuitTrail.add(state);
+          if (monsterPursuitTrail.size() > 32) monsterPursuitTrail.remove(0);
+        }
         return;
       }
       if (lastMovementAcknowledgement >= sequence && state.blockedByDynamic && state.stalledTime >= 0.5f) {
@@ -5852,6 +5859,36 @@ public final class D2GSHeadlessClient {
         + " blockedByDynamic=" + state.blockedByDynamic + " stalled=" + state.stalledTime
         + " blockReason=" + state.movementBlockReason + " pathTarget=" + state.pathTarget
         + " destination=" + state.destination);
+  }
+
+  private boolean lureTourMonster(DataInputStream input, OutputStream output, int level,
+      MapTourProbe.Sample monster, java.io.PrintWriter report) throws Exception {
+    int attempts = monsterPursuitAttempts.getOrDefault(level, 0);
+    if (attempts >= 3) return false;
+    MapTourProbe.Sample current = D2GS.headlessMapTourSample(playerId, -1, true);
+    for (int i = monsterPursuitTrail.size() - 1; i >= 0; i--) {
+      MapTourProbe.Sample earlier = monsterPursuitTrail.get(i);
+      float distance = current.position.dst(earlier.position);
+      if (earlier.level != level || distance < 8 || distance > 20
+          || earlier.position.dst(monster.position) < current.position.dst(monster.position) + 6) continue;
+      java.util.List<Vector2> route = D2GS.headlessMapTourRoute(playerId, earlier.position);
+      float length = 0; Vector2 previous = current.position;
+      for (Vector2 point : route) { length += previous.dst(point); previous = point; }
+      if (route.isEmpty() || length > 24) continue;
+      monsterPursuitAttempts.put(level, attempts + 1);
+      tourLog(report, "MONSTER_PURSUIT_LURE", "level=" + level + " entity=" + monster.warp
+          + " from=" + current.position + " to=" + earlier.position
+          + " movement=PRODUCTION_TCP playerAttacks=0 noMonsterMutation=true");
+      try {
+        for (Vector2 point : route) walkTour(input, output, point, level,
+            mapTourMovementSequence++, report, "MONSTER_PURSUIT_LURE");
+      } catch (TourMovementBlock blocked) {
+        tourLog(report, "MONSTER_PURSUIT_LURE_BLOCKED", "level=" + level + " entity=" + monster.warp);
+      }
+      observeTourAi(input, level, "MONSTER_PURSUIT entity=" + monster.warp, report);
+      return true;
+    }
+    return false;
   }
 
   private static void recordTourMonsterEvidence(java.io.PrintWriter report, MapTourProbe.Sample sample, String context) {
@@ -13411,6 +13448,7 @@ public final class D2GSHeadlessClient {
     boolean tourObjectLoads;
     boolean tourAllSeams;
     boolean tourAiObserve;
+    boolean tourMonsterPursuit;
     int tourAiObserveMillis = 8000;
     int tourFirstAct = 1, tourLastAct = 5;
     String tourLevels;
@@ -13519,6 +13557,7 @@ public final class D2GSHeadlessClient {
         else if ("--tour-object-loads".equals(arg)) config.tourObjectLoads = true;
         else if ("--tour-all-seams".equals(arg)) config.tourAllSeams = true;
         else if ("--tour-ai-observe".equals(arg)) config.tourAiObserve = true;
+        else if ("--tour-monster-pursuit".equals(arg)) config.tourMonsterPursuit = true;
         else if ("--tour-ai-observe-millis".equals(arg)) config.tourAiObserveMillis = integer(args, ++i, arg);
         else if ("--tour-first-act".equals(arg)) config.tourFirstAct = integer(args, ++i, arg);
         else if ("--tour-last-act".equals(arg)) config.tourLastAct = integer(args, ++i, arg);
@@ -13626,6 +13665,8 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("AI observation requires map-tour at 25Hz, difficulty 0..2,"
             + " observation 40..30000ms and no object-only/seam-only/town-only modes");
       }
+      if (config.tourMonsterPursuit && !config.tourAiObserve)
+        throw new IllegalArgumentException("Monster pursuit observation requires --tour-ai-observe");
       if (config.home == null) {
         String env = System.getenv("D2_HOME");
         if (env != null && !env.isEmpty()) config.home = new File(env);

@@ -6,6 +6,7 @@ param(
   [int]$Seed = 1,
   [ValidatePattern('^\d+(,\d+)*$')][string]$Levels = '1,2',
   [switch]$SkipGl,
+  [switch]$ObserveMonsterPursuit,
   [string]$CompareWith,
   # A fresh archived source tree must compile every module before the tour
   # starts; allow cold CI-style builds while retaining an explicit override.
@@ -44,6 +45,7 @@ $manifest = [ordered]@{
   java = ((& java -version 2>&1 | ForEach-Object { "$_" }) -join "`n")
   resources = $mpqs; stageTimeoutSeconds = $StageTimeoutSeconds
   startedUtc = [DateTime]::UtcNow.ToString('o')
+  observeMonsterPursuit = [bool]$ObserveMonsterPursuit
   coverage = 'FOCUSED_LOCAL_OBSERVATION'; correctness = 'NOT_ASSERTED'
   natural = 'NOT_RUN'; gl = 'NOT_RUN'; crossComputer = 'NOT_RUN'; result = 'PARTIAL'
 }
@@ -59,6 +61,7 @@ if ($CompareWith) {
       -and $other.seed -eq $Seed -and $other.rate -eq 25 -and $other.levels -eq $Levels `
       -and $other.observeMillis -eq 8000
   $same = $same -and $other.glSeed -eq $manifest.glSeed
+  $same = $same -and [bool]$other.observeMonsterPursuit -eq [bool]$ObserveMonsterPursuit
   $expected = @($other.resources | ForEach-Object { "$($_.name):$($_.bytes):$($_.sha256)" })
   $actual = @($mpqs | ForEach-Object { "$($_.name):$($_.bytes):$($_.sha256)" })
   $same = $same -and (($expected -join '|') -eq ($actual -join '|'))
@@ -96,6 +99,7 @@ function Invoke-GradleStage([string]$name, [string[]]$arguments, [string]$logPat
 Push-Location $source
 try {
   $common = @("-Pd2Home=$homePath", '--no-daemon', '--max-workers=1', '--console=plain')
+  if ($ObserveMonsterPursuit) { $common += '-PtourMonsterPursuit' }
   $natural = Join-Path $destination 'natural'
   try {
     $exitCode = Invoke-GradleStage 'natural' (@(':server:d2gs:headlessMapTour') + $common + @("-PtourSeed=$Seed", "-PtourLevels=$Levels", '-PtourRate=25', '-PtourAiObserve', '-PtourAiObserveMillis=8000', "-PtourOutput=$natural")) (Join-Path $destination 'natural-console.log')

@@ -75,6 +75,7 @@ tasks.register('headlessMapTour', JavaExec) {
   if (project.hasProperty('tourLevels')) args '--tour-levels', project.property('tourLevels')
   if (project.hasProperty('tourVerbose')) args '--verbose'
   if (project.hasProperty('tourAiObserve')) args '--tour-ai-observe'
+  if (project.hasProperty('tourMonsterPursuit')) args '--tour-monster-pursuit'
   if (project.hasProperty('tourAiObserveMillis')) {
     args '--tour-ai-observe-millis', project.property('tourAiObserveMillis')
   }
