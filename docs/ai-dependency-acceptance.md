@@ -206,3 +206,16 @@ Pathfinder 的动态阻挡恢复中增加有限的“队列前沿”接近：仅
 位置为 follower=(6,10)；修复后 PathfinderTerrainPursuitTest 及相关路径回归通过，
 真实 Skeleton AI 决策场景也通过，并验证恢复后仍携带目标实体身份。测试场景是受控
 地形/ECS，不等价于自然地图所有怪物和所有窄道的运行覆盖。
+
+2026-10-30 按建议执行窄道特殊技能链回归。聚焦测试通过（总构建 23 项任务成功）：
+Act1MonsterEcsScenario、MonsterSkillStart、TrapMissileAi、SpecialMissileController、
+RemainingMonsterSkill，以及 MonsterNarrowPursuit/MonsterNarrowDecision 场景均通过。
+覆盖 Fallen Shaman 的 ShamanFire 服务端弹体、Gargoyle Trap 原生发射、技能启动、
+特殊弹体控制器、窄道追击与阻挡恢复；测试继续检查弹体归属、技能 ID、目标身份、
+生产碰撞和路径恢复。没有加入音效听感判定。
+
+同一批次若额外包含 MonsterMissileSourceIntegrationTest，已有 13 个 source-channel
+断言失败（共 71 项），失败集中在物理/元素/毒伤固定点值和吸收快照；这些测试与本次
+窄道特殊技能改动无交集，当前工作区没有修改其实现，故未把这批次标成整体通过。
+聚焦重跑排除了该既有失败组并通过。需要另开独立任务定位 source-channel 基线变化，
+不能以本次技能链结果掩盖它。
