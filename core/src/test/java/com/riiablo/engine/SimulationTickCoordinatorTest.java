@@ -43,6 +43,15 @@ class SimulationTickCoordinatorTest {
     assertEquals(0, queue.pendingCount());
   }
 
+  @Test void commandsSkippedByFixedStepCatchupAreStillExecuted() {
+    SimulationCommandQueue queue = new SimulationCommandQueue();
+    List<String> drained = new ArrayList<>();
+    queue.submit(SimulationCommandEnvelope.builder("input", "move", "east").tick(2));
+    assertEquals(1, queue.drain(3, command -> drained.add(command.kind)));
+    assertEquals(Collections.singletonList("move"), drained);
+    assertEquals(0, queue.pendingCount());
+  }
+
   @Test void networkCommandsRequireIdentityAndAuthorizedTargets() {
     SimulationCommandQueue queue = new SimulationCommandQueue(
         SimulationCommandAdmission.network((command, target) -> command.actorId == 7 && target == 42));

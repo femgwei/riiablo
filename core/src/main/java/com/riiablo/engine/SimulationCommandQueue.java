@@ -54,10 +54,12 @@ public final class SimulationCommandQueue {
       SimulationCommandEnvelope command = pending.get(i);
       if (command.tick > tick) break;
       pending.remove(i);
-      if (command.tick == tick) {
-        consumer.accept(command);
-        applied++;
-      }
+      // A render frame may advance more than one fixed simulation tick.
+      // Commands submitted for an intermediate tick must not be silently
+      // discarded when the accumulator catches up; execute them in sequence
+      // on the first tick that observes them.
+      consumer.accept(command);
+      applied++;
     }
     if (tick > lastDrainedTick) lastDrainedTick = tick;
     return applied;
