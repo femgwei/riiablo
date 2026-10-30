@@ -5592,6 +5592,9 @@ public final class D2GSHeadlessClient {
         mapTourCombatKills++;
         tourLog(report, "COMBAT_PASS", "level=" + level + " entity=" + blocker.warp
             + " casts=" + casts + " life=" + current.life + " confirmed=TCP_DEATH resume=REPLAN");
+        if (config.tourAiObserve) {
+          observeTourAi(input, level, "BLOCKER_AFTER_CLEAR entity=" + blocker.warp, report);
+        }
         return true;
       }
       if (current != null && current.deleted) {

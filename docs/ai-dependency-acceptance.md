@@ -343,3 +343,7 @@ recoveryCount=0。105 为持续阻挡采样记录数，不代表 105 次独立�
 ai-monster-narrow-provenance-seed2-20261030.json 与
 ai-monster-narrow-hold-fixed-seed2-20261030.json。下一步应针对已走过的自然地图位置
 建立可重复的阻挡释放观察窗口，再按同一恢复标准验收；不继续盲目扩大种子矩阵。
+
+补充恢复观察窗口：TCP 确认阻挡单位死亡后，在进入原有路线重规划前执行一次完整
+AI 观察窗口，记录 BLOCKER_AFTER_CLEAR。该窗口只读，不改变战斗、怪物目标或路径
+语义；用于捕获阻挡解除后同一怪物恢复追击的自然证据。相关 d2gs 测试通过。
