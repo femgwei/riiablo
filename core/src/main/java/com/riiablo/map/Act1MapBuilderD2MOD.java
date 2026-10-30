@@ -3483,7 +3483,13 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     zone.restoreNativeWarpMarkers();
     CollisionApplyCounts collisionCounts = new CollisionApplyCounts();
     if (counts.floors > 0 || counts.walls > 0) {
-      TileGrid exportedFootprint = levelsFilledByExport.contains(zone.level.Id) ? grid : null;
+      // Kurast Docks' exported native floor coverage is incomplete around
+      // the ship berth.  Feeding it into the static zone flags seals cells
+      // that are walkable in retail, and Box2D then blocks even initial entry.
+      // Keep the native render/anchors, but build town terrain collision from
+      // the original DT1 layers.
+      TileGrid exportedFootprint = levelsFilledByExport.contains(zone.level.Id)
+          && !(zone.isTown() && zone.level.Id == 75) ? grid : null;
       collisionCounts = rebuildTileCollisionFlags(
           exportedFootprint, zone.tiles, zone.dt1s, zone.flags,
           zone.tilesX, zone.tilesY, width, height);
