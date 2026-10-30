@@ -60,7 +60,7 @@ if ($CompareWith) {
 }
 function Write-Stage([string]$name, [string]$state) {
   $line = "[$([DateTime]::UtcNow.ToString('o'))] stage=$name state=$state"
-  Write-Output $line
+  [Console]::WriteLine($line)
   Add-Content -LiteralPath (Join-Path $destination 'stage-status.log') -Value $line
 }
 function Invoke-GradleStage([string]$name, [string[]]$arguments, [string]$logPath) {
