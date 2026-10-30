@@ -82,8 +82,16 @@ public final class SimulationCommandQueue {
     return removed;
   }
 
-  public void clear() { pending.clear(); acceptedRequests.clear(); lastRejection =
-      SimulationCommandAdmission.Rejection.NONE; }
+  public void clear() {
+    pending.clear();
+    acceptedRequests.clear();
+    // A pause/resume starts a fresh local command epoch.  Retaining the old
+    // drain watermark would make the next command target a tick from the
+    // previous epoch, where it could never be consumed after the coordinator
+    // clock is reset.
+    lastDrainedTick = 0L;
+    lastRejection = SimulationCommandAdmission.Rejection.NONE;
+  }
 
   private static final class RequestKey {
     final String source;
