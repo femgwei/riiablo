@@ -82,6 +82,11 @@ import com.riiablo.util.DebugUtils;
 @GpuSystem
 @All(AnimationWrapper.class)
 public class RenderSystem extends BaseEntitySystem {
+  private com.riiablo.presentation.AnimationRenderProbe animationRenderProbe;
+
+  public void setAnimationRenderProbe(com.riiablo.presentation.AnimationRenderProbe probe) {
+    animationRenderProbe = probe;
+  }
   private static final String TAG = "RenderSystem";
   /** D2Common's default DRLG animation speed: 80 fixed-point units/tick. */
   private static final float MAP_ANIMATION_FRAMES_PER_SECOND =
@@ -1344,6 +1349,14 @@ public class RenderSystem extends BaseEntitySystem {
       int originalDirection = applyRenderDirection(entity, animation);
       try {
         animation.draw(batch, tmp.x, tmp.y);
+        if (animationRenderProbe != null) {
+          CofReference reference = mCofReference.get(entity);
+          com.riiablo.presentation.component.CofWrapper resolved = world.getMapper(
+              com.riiablo.presentation.component.CofWrapper.class).get(entity);
+          if (reference != null && resolved != null) {
+            animationRenderProbe.record(entity, reference.mode, resolved.cof, animation);
+          }
+        }
         diagnoseInvisibleBody(entity, animation, pos);
       } finally {
         if (animation.getNumDirections() > 0) animation.setDirection(originalDirection);

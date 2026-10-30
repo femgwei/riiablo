@@ -39,6 +39,10 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
   int numDirections;
   int direction;
   int frame;
+  private int submittedLayerCount;
+
+  /** Layers submitted by the most recent body draw (not resource readiness). */
+  public int getSubmittedLayerCount() { return submittedLayerCount; }
 
   int startIndex;
   int endIndex;
@@ -83,6 +87,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     numFrames     = 0;
     numDirections = 0;
     frame         = 0;
+    submittedLayerCount = 0;
     direction     = 0;
     startIndex    = 0;
     endIndex      = 0;
@@ -511,6 +516,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
   }
 
   public void draw(PaletteIndexedBatch batch, float x, float y) {
+    submittedLayerCount = 0;
     if (frame >= numFrames) return;
     if (cof == null) {
       for (Layer layer : layers) {
@@ -535,6 +541,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
 
   public void drawLayer(PaletteIndexedBatch batch, Layer layer, float x, float y) {
     layer.draw(batch, direction, frame, x, y);
+    if (layer.drawSubmitted) submittedLayerCount++;
   }
 
   /** Resident GPU layers for this frame; call after draw so lazy directions are loaded. */
@@ -788,7 +795,10 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       }
     }
 
+    private boolean drawSubmitted;
+
     protected void draw(Batch batch, int d, int f, float x, float y) {
+      drawSubmitted = false;
       BBox box = dc.getBox(d, f);
       if (box == null) return; // Invalid box, skip drawing
       x += box.xMin;
@@ -808,6 +818,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       b.setBlendMode(blendMode, tint, true);
       b.setColormap(transform, transformColor);
       b.draw(region, x, y);
+      drawSubmitted = tint.a > 0f;
     }
 
     protected void drawDebug(ShapeRenderer shapeRenderer, int d, int f, float x, float y) {
