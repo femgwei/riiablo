@@ -6,6 +6,8 @@ import static org.mockito.Mockito.*;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.item.Item;
+import com.riiablo.item.Location;
+import com.riiablo.item.StoreLoc;
 import com.riiablo.presentation.ClientGameplayContext;
 import com.riiablo.presentation.ClientItemContextAdapter;
 import com.riiablo.save.CharData;
@@ -49,6 +51,25 @@ class ClientItemIntentSystemTest extends RiiabloTest {
     owner.intents().processSystem();
     assertNull(data.getItems().getCursor());
     assertTrue(data.getItems().contains(other));
+  }
+
+  @Test void duplicateIdsStillResolveTheExactClickedItem() {
+    CharData data = character();
+    Item belt = ClientInventoryQuestReceiverTest.item(11);
+    belt.location = Location.BELT;
+    belt.storeLoc = StoreLoc.NONE;
+    belt.gridX = 0;
+    belt.gridY = 0;
+    Item selected = ClientInventoryQuestReceiverTest.item(11);
+    data.getItems().add(belt);
+    data.getItems().addToInventory(selected);
+
+    ClientItemManager owner = owner(data);
+    owner.intents().storeToCursor(1);
+    owner.intents().processSystem();
+
+    assertSame(selected, data.getItems().getCursor());
+    assertEquals(Location.BELT, belt.location);
   }
 
   @Test void cursorChangeAndDeathAreRevalidatedOnTick() {

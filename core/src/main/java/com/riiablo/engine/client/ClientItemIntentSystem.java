@@ -32,6 +32,26 @@ public final class ClientItemIntentSystem extends BaseSystem implements ItemCont
   }
   private Item find(int id) { return character() == null ? null : character().getItems().findItemById(id); }
 
+  /**
+   * Resolves an item captured by the UI without allowing a duplicate native
+   * id to redirect the command to another item.  Authoritative snapshots may
+   * replace Item instances, so a unique id remains a valid fallback; when an
+   * id is duplicated we reject the stale command instead of guessing.
+   */
+  private Item resolve(Item captured, int id) {
+    CharData data = character();
+    if (data == null) return null;
+    if (captured != null && data.getItems().contains(captured)) return captured;
+
+    Item match = null;
+    for (Item candidate : data.getItems().getItems()) {
+      if (candidate == null || candidate.id != id) continue;
+      if (match != null) return null;
+      match = candidate;
+    }
+    return match;
+  }
+
   private boolean enqueue(Runnable intent, boolean cursorSensitive) {
     CharData captured = character();
     if (captured == null) return false;
@@ -73,7 +93,7 @@ public final class ClientItemIntentSystem extends BaseSystem implements ItemCont
     if (selected == null) return;
     int id = selected.id;
     enqueue(() -> {
-      Item current = find(id);
+      Item current = resolve(selected, id);
       if (current != null) intent.accept(character().getItems().indexOf(current));
     }, cursorSensitive);
   }
@@ -155,12 +175,16 @@ public final class ClientItemIntentSystem extends BaseSystem implements ItemCont
   @Override public void useInventoryItem(Item item) {
     if (item == null) return;
     int id = item.id;
-    enqueue(() -> { Item current = find(id); if (current != null) owner.useInventoryItem(current); }, false);
+    enqueue(() -> {
+      Item current = resolve(item, id);
+      if (current != null) owner.useInventoryItem(current);
+    }, false);
   }
   @Override public boolean identifyItem(Item source, Item target) {
     if (character() == null || !character().getItems().canIdentifyItem(source, target)) return false;
     int sourceId = source.id, targetId = target.id;
-    return enqueue(() -> owner.identifyItem(find(sourceId), find(targetId)), false);
+    return enqueue(() -> owner.identifyItem(
+        resolve(source, sourceId), resolve(target, targetId)), false);
   }
   @Override public void dropGold(int amount) { if (amount > 0) enqueue(() -> owner.dropGold(amount), false); }
   @Override public void depositGold(int amount) { if (amount > 0) enqueue(() -> owner.depositGold(amount), false); }
