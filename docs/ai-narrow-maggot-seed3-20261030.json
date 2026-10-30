@@ -1,0 +1,151 @@
+{
+  "acceptance": {
+    "contract": 1,
+    "revision": "a652b0ac688eddb88a27dba0588a0e7d3fa13f52",
+    "sourceSha256": "93F06F42626D856DE91E441F15CFF4CB72CFF217F0296BB0C78E2D10CA86B8FB",
+    "profile": "1.10f",
+    "seed": 3,
+    "glSeed": 286247501,
+    "rate": 25,
+    "levels": "62,63,64",
+    "observeMillis": 8000,
+    "machine": "DESKTOP-7GGAVHU",
+    "os": "Microsoft Windows NT 10.0.19045.0",
+    "java": "openjdk version \"17.0.17\" 2025-10-21 LTS\nOpenJDK Runtime Environment Microsoft-12574423 (build 17.0.17+10-LTS)\nOpenJDK 64-Bit Server VM Microsoft-12574423 (build 17.0.17+10-LTS, mixed mode, sharing)",
+    "resources": [
+      {
+        "name": "d2char.mpq",
+        "bytes": 266908965,
+        "sha256": "714B71D086FFD87190848BB4D693F5AA47A85E11025CE4CA2DB4AF84C3F738ED"
+      },
+      {
+        "name": "d2data.mpq",
+        "bytes": 285890734,
+        "sha256": "EE6430422B3646449D101D23FC4C58F6F2DFCE2CE3A8AD2CED8B0F73EB510264"
+      },
+      {
+        "name": "d2exp.mpq",
+        "bytes": 251542397,
+        "sha256": "ED0E8A33B375BC9B7322479BA84F63073DBB809F0ED47D7973FE5F54FA57B4D9"
+      },
+      {
+        "name": "d2music.mpq",
+        "bytes": 16557,
+        "sha256": "06CC7DEFF49648F8916D972E630240D2A09C928AB4291F45F45E71568BC463E7"
+      },
+      {
+        "name": "d2sfx.mpq",
+        "bytes": 51948991,
+        "sha256": "B12C8A348ED14854756EDB64B257CF4743380627943BBCE116A85813811E2226"
+      },
+      {
+        "name": "d2speech.mpq",
+        "bytes": 163021838,
+        "sha256": "7A238F808BE9FBC74DA55C98DC629AB7FAC9A4F40C537CEC3C1B042FA45D211A"
+      },
+      {
+        "name": "d2video.mpq",
+        "bytes": 16557,
+        "sha256": "06CC7DEFF49648F8916D972E630240D2A09C928AB4291F45F45E71568BC463E7"
+      },
+      {
+        "name": "d2xmusic.mpq",
+        "bytes": 16557,
+        "sha256": "06CC7DEFF49648F8916D972E630240D2A09C928AB4291F45F45E71568BC463E7"
+      },
+      {
+        "name": "d2xtalk.mpq",
+        "bytes": 16557,
+        "sha256": "06CC7DEFF49648F8916D972E630240D2A09C928AB4291F45F45E71568BC463E7"
+      },
+      {
+        "name": "d2xvideo.mpq",
+        "bytes": 16557,
+        "sha256": "06CC7DEFF49648F8916D972E630240D2A09C928AB4291F45F45E71568BC463E7"
+      },
+      {
+        "name": "patch_d2.mpq",
+        "bytes": 5434023,
+        "sha256": "245E7835650D4C2DB8515F92ECCDCAFCB4331744443654EB4F7EF20AF6782FFE"
+      }
+    ],
+    "stageTimeoutSeconds": 1800,
+    "startedUtc": "2026-10-30T09:17:08.8770879Z",
+    "coverage": "FOCUSED_LOCAL_OBSERVATION",
+    "correctness": "NOT_ASSERTED",
+    "natural": "OBSERVED_RUNTIME_ONLY",
+    "gl": "NOT_RUN",
+    "crossComputer": "NOT_RUN",
+    "result": "PARTIAL",
+    "completedUtc": "2026-10-30T09:31:02.3110018Z"
+  },
+  "routeSummary": [
+    "[MAP_TOUR] SUMMARY planned=3 visited=3 coverage=AI_RUNTIME_OBSERVATION walks=5 transitions=2 detachedJumps=0 combatKills=42 failures=0 result=PASS"
+  ],
+  "aiSummary": "[AI_TOUR] SUMMARY run=COMPLETED coverage=OBSERVED_RUNTIME_ONLY oracle=NONE correctness=NOT_ASSERTED warnings=0 errors=0 fallbackRecords=0",
+  "rawNarrowRecords": 136,
+  "acceptedNarrowRecords": 134,
+  "perLevel": [
+    {
+      "level": 62,
+      "samples": 25,
+      "successfulSequences": 8
+    },
+    {
+      "level": 63,
+      "samples": 98,
+      "successfulSequences": 32
+    },
+    {
+      "level": 64,
+      "samples": 11,
+      "successfulSequences": 3
+    }
+  ],
+  "perAxis": [
+    {
+      "axis": "DMINUS",
+      "samples": 6
+    },
+    {
+      "axis": "DPLUS",
+      "samples": 11
+    },
+    {
+      "axis": "X",
+      "samples": 54
+    },
+    {
+      "axis": "Y",
+      "samples": 63
+    }
+  ],
+  "files": [
+    {
+      "path": "acceptance.json",
+      "sha256": "A25D42E129B1162AA600FD1308187E068E4A7D090C22DC71947A4607F85B0182",
+      "bytes": 2630
+    },
+    {
+      "path": "natural/map-tour.log",
+      "sha256": "ED86A29E30A0E4D3444F222218E8A2D9D0B9F69543357EB5C01467206C5C7F7C",
+      "bytes": 620858
+    },
+    {
+      "path": "natural/ai-summary.txt",
+      "sha256": "6B69BE89322E4D81C0E248F3492874BCD7867357A115A87E742F8672E48C25FA",
+      "bytes": 3321
+    },
+    {
+      "path": "natural-console.log",
+      "sha256": "437853250EE59A08A43CA7D36802023989C16CC12AC532A465404CD4F0789B74",
+      "bytes": 12046513
+    },
+    {
+      "path": "narrow-evidence.json",
+      "sha256": "CABC876F9A8FF65E943DE014499DBABFC685FD56690D31407B40D09E1C1DB064",
+      "bytes": 51393
+    }
+  ],
+  "limitations": "Local sampled player movement only; no continuous corridor geometry, monster traversal, original-game oracle, manual audiovisual review or cross-computer acceptance."
+}

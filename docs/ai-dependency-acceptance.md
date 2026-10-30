@@ -270,3 +270,18 @@ combatKills=40、failures=0，warnings=0、errors=0、fallbackRecords=0，严格
 可追溯摘要与原始文件 SHA256 保存在 docs/ai-narrow-maggot-seed2-20261030.json。
 单次自然结果为 OBSERVED_RUNTIME_ONLY、总验收 PARTIAL；不外推为连续走廊几何、
 怪物自然窄道穿越或原版一致性覆盖。人工视觉/听感及跨电脑验证仍未执行。
+
+2026-10-30 继续在同一修复提交 a652b0ac6 执行 seed 3、62→63→64，目录
+build/ai-narrow-maggot-seed3-62-64。已逐项核对与 seed 2 的 revision、源码包 SHA256、
+MPQ 资源清单/大小/SHA256、楼层路线一致，只有地图 seed 不同。自然阶段约 831.2 秒，
+visited=3/3、walks=5、transitions=2、detachedJumps=0、combatKills=42、failures=0，
+warnings=0、errors=0、fallbackRecords=0，严格日志审计通过。
+
+独立窄道审计从 136 条候选接受 134 条成功行走配对记录：level 62 为 25 条/8 个
+sequence、level 63 为 98 条/32 个 sequence、level 64 为 11 条/3 个 sequence；
+X=54、Y=63、DPLUS=11、DMINUS=6。摘要与原始证据文件 SHA256 保存于
+docs/ai-narrow-maggot-seed3-20261030.json。当前 seed 2/3 均有同版三层局部窄道证据，
+仍缺同版 seed 1，不能标成三种子矩阵完成。本轮未修改生产代码，未重复已通过的
+代码测试；运行入口自行完成编译及模块边界检查。自然结果仍为 OBSERVED_RUNTIME_ONLY，
+总验收 PARTIAL；沿用局部采样、玩家行走、非原版判定器的范围限制，未做人工听感/
+视觉或跨电脑验证。
