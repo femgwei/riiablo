@@ -464,7 +464,14 @@ public class ItemGrid extends Group implements Disposable {
             return;
           }
           if (itemData.getCursor() == null) {
-            if (onPickup(StoredItem.this.item)) removeActor(StoredItem.this);
+            // Remote and tick-queued controllers acknowledge the pickup before
+            // mutating ItemData. Keep the actor until the item really reaches
+            // the cursor; otherwise the next sync pass briefly recreates it
+            // in the grid and makes the pickup look like a duplicated item.
+            if (onPickup(StoredItem.this.item)
+                && itemData.getCursor() == StoredItem.this.item) {
+              removeActor(StoredItem.this);
+            }
             event.handle();
           } else {
             ItemGrid.this.clickListener.clicked(event, x, y);
