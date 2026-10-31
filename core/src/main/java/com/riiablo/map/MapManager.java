@@ -194,7 +194,9 @@ public class MapManager extends PassiveSystem {
 
   public void createEntities(Map.Zone zone) {
     createNativeTownMonsters(zone);
+    createAct2Jerhyn(zone);
     createAct3Hratli(zone);
+    createAct5Larzuk(zone);
     if (shouldCreateNativeObjectsImmediately(zone)) {
       createNativeObjects(zone);
     } else {
@@ -220,6 +222,44 @@ public class MapManager extends PassiveSystem {
     }
 
     createPresetEntities(zone, false);
+  }
+
+  /** D2Game A2Q4's InitFn18/19 callbacks materialize Jerhyn from town DS1. */
+  private void createAct2Jerhyn(Map.Zone zone) {
+    if (zone == null || !zone.town || zone.level == null
+        || zone.level.Id != D2LevelIds.LEVEL_LUTGHOLEIN) return;
+    for (Map.NativeMonster monster : zone.getNativeMonsters()) {
+      if (monster != null && monster.monsterId == MonsterType.JERHYN) return;
+    }
+    int fallbackX = Integer.MIN_VALUE;
+    int fallbackY = Integer.MIN_VALUE;
+    if (zone.presets == null) return;
+    for (int x = 0, gridX = 0; x < zone.gridsX; x++, gridX += zone.gridSizeX) {
+      for (int y = 0, gridY = 0; y < zone.gridsY; y++, gridY += zone.gridSizeY) {
+        Map.Preset preset = zone.presets[x][y];
+        if (preset == null || preset.ds1 == null) continue;
+        DS1 ds1 = preset.ds1;
+        for (DS1.Object object : ds1.objects) {
+          if (object.type != DS1.Object.STATIC_TYPE) continue;
+          int objectId = files().obj.getObjectId(ds1.getAct(), object.id);
+          Objects.Entry base = files().objects.get(objectId);
+          if (base == null || (base.InitFn != 18 && base.InitFn != 19)) continue;
+          int objectX = zone.x + gridX * DT1.Tile.SUBTILE_SIZE + object.x;
+          int objectY = zone.y + gridY * DT1.Tile.SUBTILE_SIZE + object.y;
+          if (base.InitFn == 18) {
+            int id = factory.createMonster(MonsterType.JERHYN, objectX, objectY);
+            if (id != Engine.INVALID_ENTITY) zone.addEntity(id);
+            return;
+          }
+          fallbackX = objectX;
+          fallbackY = objectY;
+        }
+      }
+    }
+    if (fallbackX != Integer.MIN_VALUE) {
+      int id = factory.createMonster(MonsterType.JERHYN, fallbackX, fallbackY);
+      if (id != Engine.INVALID_ENTITY) zone.addEntity(id);
+    }
   }
 
   /**
@@ -265,6 +305,34 @@ public class MapManager extends PassiveSystem {
     if (endX != Integer.MIN_VALUE) {
       int id = factory.createMonster(MonsterType.HRATLI, endX, endY);
       if (id != Engine.INVALID_ENTITY) zone.addEntity(id);
+    }
+  }
+
+  /** D2Game A5Q1's InitFn71 callback materializes Larzuk at his town object. */
+  private void createAct5Larzuk(Map.Zone zone) {
+    if (zone == null || !zone.town || zone.level == null
+        || zone.level.Id != D2LevelIds.LEVEL_HARROGATH) return;
+    for (Map.NativeMonster monster : zone.getNativeMonsters()) {
+      if (monster != null && monster.monsterId == MonsterType.LARZUK) return;
+    }
+    if (zone.presets == null) return;
+    for (int x = 0, gridX = 0; x < zone.gridsX; x++, gridX += zone.gridSizeX) {
+      for (int y = 0, gridY = 0; y < zone.gridsY; y++, gridY += zone.gridSizeY) {
+        Map.Preset preset = zone.presets[x][y];
+        if (preset == null || preset.ds1 == null) continue;
+        DS1 ds1 = preset.ds1;
+        for (DS1.Object object : ds1.objects) {
+          if (object.type != DS1.Object.STATIC_TYPE) continue;
+          int objectId = files().obj.getObjectId(ds1.getAct(), object.id);
+          Objects.Entry base = files().objects.get(objectId);
+          if (base == null || base.InitFn != 71) continue;
+          int id = factory.createMonster(MonsterType.LARZUK,
+              zone.x + gridX * DT1.Tile.SUBTILE_SIZE + object.x,
+              zone.y + gridY * DT1.Tile.SUBTILE_SIZE + object.y);
+          if (id != Engine.INVALID_ENTITY) zone.addEntity(id);
+          return;
+        }
+      }
     }
   }
 
