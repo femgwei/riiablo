@@ -94,14 +94,11 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
         case EQUIPPED:
           equipped.put(item.bodyLoc, i);
           break;
-        case BELT:
-          item.gridY = (byte) -(item.gridX >>> 2);
-          item.gridX &= 0x3;
-          break;
         case CURSOR:
           assert cursor == INVALID_ITEM : "Only one item should be marked as cursor";
           cursor = i;
           break;
+        case BELT: // ItemReader already converted native slots to runtime (column, row).
         case STORED:
         case GROUND:
         case UNK5:

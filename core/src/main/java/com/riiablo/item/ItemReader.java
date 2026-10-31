@@ -95,6 +95,12 @@ public class ItemReader {
     item.gridX = bits.read7u(4);
     item.gridY = bits.read7u(4);
     item.storeLoc = StoreLoc.valueOf(bits.read7u(3));
+    if (item.location == Location.BELT && item.gridX >= 4) {
+      // Native belt coordinates are (slot 0..15, 0), not (column, row).
+      // Older riiablo saves wrote (column, row); retain those when x < 4.
+      item.gridY = (byte) (item.gridX >>> 2);
+      item.gridX &= 3;
+    }
 
     if ((item.flags & Item.ITEMFLAG_BODYPART) == Item.ITEMFLAG_BODYPART) {
       int charClass = bits.read7u(3);

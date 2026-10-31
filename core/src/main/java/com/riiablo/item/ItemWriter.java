@@ -66,8 +66,9 @@ public class ItemWriter {
     bits.skipBits(2); // Unknown
     bits.write7u(item.location == null ? 0 : item.location.ordinal(), 3); // FIXME: workaround for #99
     bits.write7u(item.bodyLoc.ordinal(), 4);
-    bits.write7u(item.gridX, 4);
-    bits.write7u(item.gridY, 4);
+    // INVENTORY_PlaceItemInBeltSlot stores native belt items at (slot, 0).
+    bits.write7u(item.location == Location.BELT ? item.gridX + 4 * item.gridY : item.gridX, 4);
+    bits.write7u(item.location == Location.BELT ? 0 : item.gridY, 4);
     bits.write7u(item.storeLoc.ordinal(), 3);
 
     if ((item.flags & Item.ITEMFLAG_BODYPART) == Item.ITEMFLAG_BODYPART) {
