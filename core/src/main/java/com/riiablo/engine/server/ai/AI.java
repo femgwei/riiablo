@@ -546,6 +546,8 @@ public abstract class AI implements Interactable.Interactor {
 
   /** Authoritative damage reaction, independent of whether a local client plays a sound. */
   public final void onDamageCommitted(int attackerId) {
+    // Shared Idle has no backing entity and cannot receive unit hit callbacks.
+    if (entityId == Engine.INVALID_ENTITY) return;
     invalidateNativePathCache();
     onNativeHit(attackerId);
   }
@@ -766,7 +768,8 @@ public abstract class AI implements Interactable.Interactor {
 
   /** Invalidate only opted-in native path projections, never infer from A*. */
   protected final void invalidateNativePathCache() {
-    if (mNativeAiPathCache != null && mNativeAiPathCache.has(entityId)) {
+    if (entityId != Engine.INVALID_ENTITY
+        && mNativeAiPathCache != null && mNativeAiPathCache.has(entityId)) {
       mNativeAiPathCache.get(entityId).invalidate();
     }
   }
