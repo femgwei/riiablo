@@ -2297,9 +2297,8 @@ public class Map implements Disposable {
       return Material.getMaterial(level, get(FLOOR_OFFSET, tx, ty));
     }
 
-    /** Checks the floor material at world-subtile coordinates without applying
-     * the footstep-material fallback (water is intentionally not a footstep
-     * material in {@link Material}). */
+    /** Checks water at world-subtile coordinates, including the untagged
+     * shoreline tiles in the native Kurast pool set. */
     public boolean isWater(int worldX, int worldY) {
       int localX = Math.floorDiv(worldX - x, DT1.Tile.SUBTILE_SIZE);
       int localY = Math.floorDiv(worldY - y, DT1.Tile.SUBTILE_SIZE);
@@ -2307,7 +2306,23 @@ public class Map implements Disposable {
         return false;
       }
       DT1.Tile tile = get(FLOOR_OFFSET, tx + localX, ty + localY);
-      return tile != null && (tile.materialFlags() & DT1.Tile.MATERIAL_WATER) != 0;
+      if (tile != null && (tile.materialFlags() & DT1.Tile.MATERIAL_WATER) != 0) return true;
+      // In 1.10f, Kurast/sets.dt1 style 29 contains the pools. Only the
+      // interior (sequence 12) carries MATERIAL_WATER; the edge/corner
+      // sequences have material=0 and mark the submerged part with WALL.
+      // Use the immutable export, not shared runtime collision: object/unit
+      // mask resets must not make a shoreline become valid drop terrain.
+      // Floors.dt1 style 20 is ordinary paving, not a pool identifier.
+      if (nativeTileGrid == null || !nativeTileGrid.inBounds(localX, localY)
+          || nativeTileGrid.nativeCollisionFlags == null) return false;
+      int floorId = nativeTileGrid.floorIds[localY][localX];
+      if (floorId < 0 || DT1.Tile.Index.mainIndex(floorId) != 29) return false;
+      String source = nativeTileGrid.sourceFile(nativeTileGrid.floorSourceFiles[localY][localX]);
+      if (source == null || !source.replace('\\', '/').toLowerCase(java.util.Locale.ROOT)
+          .endsWith("act3/kurast/sets.dt1")) return false;
+      int subtileX = worldX - x, subtileY = worldY - y;
+      int index = subtileY * nativeTileGrid.width * DT1.Tile.SUBTILE_SIZE + subtileX;
+      return (nativeTileGrid.nativeCollisionFlags[index] & DT1.Tile.FLAG_BLOCK_WALK) != 0;
     }
 
     /** Should not be accessed directly. Managed by {@link com.riiablo.map.MapManager} */

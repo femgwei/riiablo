@@ -5,13 +5,10 @@ import com.riiablo.codec.excel.Excel;
 import com.riiablo.codec.excel.ObjGroup;
 import com.riiablo.codec.excel.Objects;
 import com.d2moo.common.drlg.D2Seed;
-import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.seed.Seed;
 
 /** D2Game Objects.cpp object groups and placement; separate from DS1 presets. */
 final class NativeObjectPopulation {
-  private static final int TRAVINCAL_LEVEL_ID = D2LevelIds.LEVEL_TRAVINCAL;
-  private static final int KURAST_POOL_FLOOR_STYLE = 20;
   private ObjGroup groups;
   private final java.util.IdentityHashMap<Map.Zone, Region> regions = new java.util.IdentityHashMap<>();
   private final java.util.IdentityHashMap<Map, D2Seed> controls = new java.util.IdentityHashMap<>();
@@ -185,10 +182,10 @@ final class NativeObjectPopulation {
         && clear(z, x, y, b.SizeX, b.SizeY);
   }
   private static boolean add(Map.Zone zone, Map.RoomEx room, int classId, int x, int y, String source) {
-    // D2MOO's placement mask does not include the DT1 water material.  The
-    // retail population pass never puts random containers/corpses in water,
-    // so reject the completed roll here while preserving all RNG advances.
-    if (zone.isWater(x, y) || isTravincalWaterPool(zone, x, y)) return false;
+    // Keep water exclusion independent of mutable shared collision, and
+    // check the whole object footprint rather than just its center.
+    Objects.Entry base = zone.map.files().objects.get(classId);
+    if (!isDryFootprint(zone, x, y, base.SizeX, base.SizeY)) return false;
     zone.getNativeObjects().add(new Map.NativeObject(room.id, classId, 0,
         x - zone.x(), y - zone.y(), false, false, source, true));
     return true;
@@ -213,20 +210,14 @@ final class NativeObjectPopulation {
       add(z, r, 103, z.x() + last.x, z.y() + last.y, source + "/flies");
   }
 
-  private static boolean isTravincalWaterPool(Map.Zone zone, int worldX, int worldY) {
-    if (zone == null || zone.level == null || zone.level.Id != TRAVINCAL_LEVEL_ID) return false;
-    com.riiablo.drlg.TileGrid grid = zone.nativeTileGrid();
-    if (grid == null) return false;
-    int tileX = Math.floorDiv(worldX - zone.x(), com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
-    int tileY = Math.floorDiv(worldY - zone.y(), com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
-    if (!grid.inBounds(tileX, tileY)) return false;
-    int floorId = grid.floorIds[tileY][tileX];
-    if (floorId < 0
-        || com.riiablo.map.DT1.Tile.Index.mainIndex(floorId) != KURAST_POOL_FLOOR_STYLE) return false;
-    String source = grid.sourceFile(grid.floorSourceFiles[tileY][tileX]);
-    return source != null
-        && source.replace('\\', '/').toLowerCase(java.util.Locale.ROOT)
-            .endsWith("act3/kurast/floors.dt1");
+  static boolean isDryFootprint(Map.Zone zone, int x, int y, int width, int height) {
+    width = Math.max(1, width);
+    height = Math.max(1, height);
+    int minX = x - width / 2, minY = y - height / 2;
+    for (int dy = 0; dy < height; dy++) for (int dx = 0; dx < width; dx++) {
+      if (zone.isWater(minX + dx, minY + dy)) return false;
+    }
+    return true;
   }
   private static boolean clusterClear(Map.Zone z, Map.RoomEx r, Objects.Entry b, int x, int y) {
     return bounds(r, x, y, b.SizeX, b.SizeY, 2) && clear(z, x, y, b.SizeX + 2, b.SizeY + 2);
