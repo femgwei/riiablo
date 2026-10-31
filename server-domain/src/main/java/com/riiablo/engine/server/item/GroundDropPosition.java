@@ -1,6 +1,7 @@
 package com.riiablo.engine.server.item;
 
 import java.util.Set;
+import java.util.function.BiPredicate;
 
 import com.badlogic.gdx.math.Vector2;
 
@@ -15,15 +16,34 @@ public final class GroundDropPosition {
 
   public static Vector2 findFree(float originX, float originY, Set<Long> occupied,
       int maxRadius, Vector2 out) {
+    return findFree(originX, originY, occupied, maxRadius, out, null);
+  }
+
+  /**
+   * Chooses the first unused cell that also satisfies a caller-owned terrain
+   * predicate.  The fallback remembers the nearest valid terrain cell so a
+   * saturated search never puts a drop back onto forbidden terrain.
+   */
+  public static Vector2 findFree(float originX, float originY, Set<Long> occupied,
+      int maxRadius, Vector2 out, BiPredicate<Integer, Integer> allowed) {
     int centerX = Math.round(originX);
     int centerY = Math.round(originY);
     int limit = Math.max(0, maxRadius);
+    int fallbackX = centerX;
+    int fallbackY = centerY;
+    boolean hasFallback = false;
     for (int radius = 0; radius <= limit; radius++) {
       for (int dy = -radius; dy <= radius; dy++) {
         for (int dx = -radius; dx <= radius; dx++) {
           if (radius != 0 && Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
           int x = centerX + dx;
           int y = centerY + dy;
+          if (allowed != null && !allowed.test(x, y)) continue;
+          if (!hasFallback) {
+            fallbackX = x;
+            fallbackY = y;
+            hasFallback = true;
+          }
           if (!occupied.contains(key(x, y))) {
             out.set(x, y);
             return out;
@@ -33,7 +53,7 @@ public final class GroundDropPosition {
     }
     // Native code eventually gives up in a saturated area; preserving the
     // requested subtile is preferable to moving an item an unbounded distance.
-    return out.set(centerX, centerY);
+    return out.set(hasFallback ? fallbackX : centerX, hasFallback ? fallbackY : centerY);
   }
 
   public static long key(int x, int y) {

@@ -182,15 +182,16 @@ public class DeathRewardSystem extends PassiveSystem {
     }
 
     LootManager.LootResult result = lootManager.calculateLoot(config);
-    Set<Long> occupiedDropCells = collectGroundDropCells(
-        mMapWrapper.has(event.victim) ? mMapWrapper.get(event.victim).zone : null);
+    com.riiablo.map.Map.Zone dropZone = mMapWrapper.has(event.victim)
+        ? mMapWrapper.get(event.victim).zone : null;
+    Set<Long> occupiedDropCells = collectGroundDropCells(dropZone);
     int createdItems = 0;
     for (int i = 0; i < result.getItemCount(); i++) {
       String code = result.itemCodes.get(i);
       int quality = result.itemQualities.get(i);
       int itemLevel = result.itemLevels.get(i);
       int itemSeed = config.rngSeed ^ ((i + 1) * 0x9E3779B9);
-      Vector2 drop = nextDropPosition(position.position, occupiedDropCells);
+      Vector2 drop = nextDropPosition(dropZone, position.position, occupiedDropCells);
       int itemId = createItem(code, quality, itemLevel, itemSeed, difficulty,
           drop.x, drop.y, ownerId);
       if (itemId >= 0) createdItems++;
@@ -198,7 +199,7 @@ public class DeathRewardSystem extends PassiveSystem {
               + "ilvl={}, entity={}", event.killer, event.victim, code, quality, itemLevel, itemId);
     }
 
-    Vector2 goldDrop = nextDropPosition(position.position, occupiedDropCells);
+    Vector2 goldDrop = nextDropPosition(dropZone, position.position, occupiedDropCells);
     int goldEntity = createGold(result.goldAmount, monsterLevel,
         goldDrop.x, goldDrop.y, ownerId);
     log.info("[DEATH_REWARD] killer={}, victim={}, monster={}, rank={}, tc={}, level={}, "
@@ -214,9 +215,14 @@ public class DeathRewardSystem extends PassiveSystem {
         config.isBoss, result.goldAmount, goldEntity, result.getItemCount(), createdItems);
   }
 
-  private Vector2 nextDropPosition(Vector2 origin, Set<Long> occupied) {
-    Vector2 result = GroundDropPosition.findFree(origin.x, origin.y, occupied, 2,
-        new Vector2());
+  private Vector2 nextDropPosition(com.riiablo.map.Map.Zone zone, Vector2 origin,
+      Set<Long> occupied) {
+    // D2Common searches up to 50 subtiles for a spawnable drop position. Keep
+    // the normal compact spread on dry ground, but allow a water-bound monster
+    // to reach the surrounding bank instead of falling back into the pool.
+    int maxRadius = zone == null ? 2 : 50;
+    Vector2 result = GroundDropPosition.findFree(origin.x, origin.y, occupied, maxRadius,
+        new Vector2(), zone == null ? null : (x, y) -> !zone.isWater(x, y));
     occupied.add(GroundDropPosition.key(Math.round(result.x), Math.round(result.y)));
     return result;
   }

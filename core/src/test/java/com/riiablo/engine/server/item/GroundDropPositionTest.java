@@ -35,4 +35,30 @@ class GroundDropPositionTest {
     assertEquals(10, Math.round(result.x));
     assertEquals(10, Math.round(result.y));
   }
+
+  @Test
+  void terrainPredicateRejectsWaterAndUsesNearestValidFallback() {
+    Set<Long> occupied = new HashSet<>();
+    Vector2 result = GroundDropPosition.findFree(10, 10, occupied, 2,
+        new Vector2(), (x, y) -> x != 10);
+
+    assertEquals(9, Math.round(result.x));
+    assertEquals(9, Math.round(result.y));
+  }
+
+  @Test
+  void saturatedSearchStillReturnsValidTerrain() {
+    Set<Long> occupied = new HashSet<>();
+    for (int y = 8; y <= 12; y++) {
+      for (int x = 8; x <= 12; x++) {
+        occupied.add(GroundDropPosition.key(x, y));
+      }
+    }
+
+    Vector2 result = GroundDropPosition.findFree(10, 10, occupied, 2,
+        new Vector2(), (x, y) -> x == 8);
+
+    assertEquals(8, Math.round(result.x));
+    assertEquals(8, Math.round(result.y));
+  }
 }

@@ -184,9 +184,14 @@ final class NativeObjectPopulation {
         && clear(z, x, y, b.SizeX + 7, b.SizeY + 7, 0xC01)
         && clear(z, x, y, b.SizeX, b.SizeY);
   }
-  private static void add(Map.Zone zone, Map.RoomEx room, int classId, int x, int y, String source) {
+  private static boolean add(Map.Zone zone, Map.RoomEx room, int classId, int x, int y, String source) {
+    // D2MOO's placement mask does not include the DT1 water material.  The
+    // retail population pass never puts random containers/corpses in water,
+    // so reject the completed roll here while preserving all RNG advances.
+    if (zone.isWater(x, y) || isTravincalWaterPool(zone, x, y)) return false;
     zone.getNativeObjects().add(new Map.NativeObject(room.id, classId, 0,
         x - zone.x(), y - zone.y(), false, false, source, true));
+    return true;
   }
   private static void common(Map.Zone z, Map.RoomEx r, Objects.Entry base, int density,
       D2Seed seed, String source, int function) {
@@ -197,14 +202,7 @@ final class NativeObjectPopulation {
       int x = r.x + next(seed, r.width - base.SizeX - 1);
       int y = r.y + next(seed, r.height - base.SizeY - 1);
       if (bounds(r, x, y, 1, 1, 0) && clear(z, x, y, base.SizeX + 6, base.SizeY + 6)) {
-        // D2MOO's ObjGroup/42 corpse roll is valid on ordinary Kurast ground,
-        // but the retail Travincal pool is a water preset and never receives a
-        // corpse object.  The pool DT1 has no placement collision bit of its
-        // own, so relying on COLLIDE_MASK_PLACEMENT alone incorrectly places a
-        // corpse in the water.  Keep the same random rolls/attempt count and
-        // reject only this object at the water-pool tile.
-        if (base.Id == 272 && isTravincalWaterPool(z, x, y)) continue;
-        add(z, r, base.Id, x, y, source);
+        if (!add(z, r, base.Id, x, y, source)) continue;
         last = z.getNativeObjects().peek();
         if (function == 9) return;
         break;

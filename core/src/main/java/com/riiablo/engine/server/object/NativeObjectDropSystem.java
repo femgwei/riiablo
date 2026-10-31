@@ -1,5 +1,6 @@
 package com.riiablo.engine.server.object;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.artemis.Aspect;
@@ -15,6 +16,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.NativeRng;
+import com.riiablo.engine.server.item.GroundDropPosition;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeObjectState;
@@ -444,7 +446,14 @@ public class NativeObjectDropSystem extends BaseSystem {
     for (int i = 0; i < DROP_OFFSETS.length; i++) {
       int[] offset = DROP_OFFSETS[(index + i) % DROP_OFFSETS.length];
       dropPosition.set(origin.x + offset[0], origin.y + offset[1]);
-      if (map == null || map.flags(dropPosition) == 0) return dropPosition;
+      if (map == null || map.flags(dropPosition) == 0
+          && !map.isWater(Math.round(dropPosition.x), Math.round(dropPosition.y))) {
+        return dropPosition;
+      }
+    }
+    if (map != null) {
+      return GroundDropPosition.findFree(origin.x, origin.y, Collections.emptySet(), 50,
+          dropPosition, (x, y) -> map.flags(x, y) == 0 && !map.isWater(x, y));
     }
     return dropPosition.set(origin);
   }
