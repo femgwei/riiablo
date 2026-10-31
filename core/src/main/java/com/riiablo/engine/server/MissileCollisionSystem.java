@@ -392,6 +392,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       moveDistance = velocity.velocity.len() * world.delta;
       Vector2 next = tmpVec.set(position.position).add(
           velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
+      if (missile.poisonCloudTraveling
+          && position.position.dst2(missile.poisonCloudTarget) <= moveDistance * moveDistance) {
+        next.set(missile.poisonCloudTarget);
+        moveDistance = position.position.dst(next);
+      }
       if (missile.wakeMaker && position.position.dst2(missile.wakeTargetX,
           missile.wakeTargetY) <= moveDistance * moveDistance) {
         next.set(missile.wakeTargetX, missile.wakeTargetY);
@@ -408,7 +413,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (!updateNativeRoom(entityId, missile, position)) return;
 
     if (missile.poisonCloudTraveling) {
-      advancePoisonCloudTravel(missile, position, velocity, moveDistance);
+      advancePoisonCloudTravel(missile, position, velocity);
     }
 
     if (!missile.persistent && isStationaryPoisonCloud(missile, velocity)) {
@@ -3238,13 +3243,14 @@ public class MissileCollisionSystem extends IteratingSystem {
       Skills.Entry skill, Attributes ownerAttrs, Vector2 origin,
       int offsetX, int offsetY, int loops, boolean subRing) {
     int id = factory.createMissile(row, Vector2.X,
-        new Vector2(origin).add(offsetX, offsetY), source.ownerId,
+        new Vector2(origin), source.ownerId,
         Math.max(1, source.damageLevel));
     if (id < 0 || !mMissile.has(id)) return 0;
     Missile cloud = mMissile.get(id);
     cloud.skillId = source.skillId;
     cloud.damageLevel = Math.max(1, source.damageLevel);
     cloud.poisonCloudLoops = loops;
+    cloud.nativeLifetimeFrames = poisonCloudLifetime(row, loops);
     cloud.poisonCloudTarget.set(origin).add(offsetX, offsetY);
     cloud.poisonCloudTraveling = true;
     int speedParam = arrayValue(row.Param, subRing ? 1 : 0);
@@ -3264,10 +3270,10 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   /** Advances a D2MOO poison-cloud child to its ring target and starts its area mode. */
   private void advancePoisonCloudTravel(Missile cloud, Position position,
-      Velocity velocity, float moveDistance) {
+      Velocity velocity) {
     if (cloud == null || position == null || velocity == null || !cloud.poisonCloudTraveling) return;
     float remaining = position.position.dst(cloud.poisonCloudTarget);
-    if (remaining > Math.max(0.05f, moveDistance) && moveDistance > 0f) return;
+    if (remaining > 0.0001f) return;
     position.invalidateNativePrecision();
     position.position.set(cloud.poisonCloudTarget);
     velocity.velocity.setZero();
@@ -3314,7 +3320,11 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     cloud.persistent = true;
     int loops = Math.max(0, cloud.poisonCloudLoops);
-    cloud.remainingFrames = poisonCloudLifetime(cloud.missile, loops);
+    cloud.nativeLifetimeFrames = poisonCloudLifetime(cloud.missile, loops);
+    // Native loops extend Range at creation, not again on arrival. Travel
+    // consumes that same clock; the persistent branch decrements once below.
+    cloud.remainingFrames = Math.max(1, Math.min(cloud.nativeLifetimeFrames,
+        cloud.nativeLifetimeFrames - cloud.nativeFrame + 1));
     // SrvDo03 calls MISSMODE_HandleMissileCollision every native frame when
     // DamageRate is zero; DamageRate is not a poison-cloud tick interval.
     cloud.tickInterval = Math.max(1, cloud.missile.DamageRate);

@@ -784,6 +784,36 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
           .filter(m -> m.missile != null && "plaguejavcloud".equalsIgnoreCase(m.missile.Missile))
           .filter(m -> m.poisonCloudTraveling).count(),
           "ring children must travel from the impact origin to their native offsets");
+      int firstCloud = -1;
+      Vector2 impact = null;
+      for (int i = 0; i < factory.created.size(); i++) {
+        Missile cloud = factory.created.get(i);
+        if (cloud.missile == null || !"plaguejavcloud".equalsIgnoreCase(cloud.missile.Missile)) continue;
+        if (impact == null) impact = new Vector2(cloud.start);
+        assertEquals(impact, cloud.start, "all ring children must be born at the common impact origin");
+        assertTrue(cloud.start.dst2(cloud.poisonCloudTarget) >= 4f,
+            "the ring coordinate is a TARGET, not the child's birth position");
+        assertEquals(cloud.start, world.getMapper(Position.class).get(factory.createdIds.get(i)).position);
+        assertEquals(87, cloud.nativeLifetimeFrames, "loops extend the creation clock");
+        if (firstCloud < 0) firstCloud = factory.createdIds.get(i);
+      }
+      assertTrue(firstCloud >= 0);
+      Missile cloud = world.getMapper(Missile.class).get(firstCloud);
+      Vector2 birth = new Vector2(cloud.start);
+      Vector2 endpoint = new Vector2(cloud.poisonCloudTarget);
+      world.process();
+      Vector2 moved = world.getMapper(Position.class).get(firstCloud).position;
+      assertTrue(moved.dst2(birth) > 0f);
+      assertTrue(moved.dst2(endpoint) < birth.dst2(endpoint));
+      assertTrue(cloud.poisonCloudTraveling, "the first update must not stop the expanding ring");
+      for (int frame = 1; frame < 40; frame++) world.process();
+      assertFalse(cloud.poisonCloudTraveling);
+      assertTrue(cloud.persistent);
+      assertEquals(endpoint, world.getMapper(Position.class).get(firstCloud).position);
+      assertEquals(87 - cloud.nativeFrame, cloud.remainingFrames,
+          "arrival must not restart the native lifetime");
+      for (int frame = cloud.nativeFrame; frame < 87; frame++) world.process();
+      assertFalse(world.getEntityManager().isActive(firstCloud));
     } finally {
       world.dispose();
     }

@@ -1214,3 +1214,54 @@ task fingerMageRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// Keep the prior Finger Mage gate and add poison-client/server coverage without
+// pulling unrelated legacy UI tests into the focused compilation.
+sourceSets {
+  plagueJavelinTest {
+    java.srcDir 'src/test/java'
+    java.setIncludes((sourceSets.fingerMageTest.java.includes + [
+        'com/riiablo/presentation/PlagueJavelinPresentationLifecycleTest.java',
+        'com/riiablo/engine/server/AmazonSkillSpecializationTest.java',
+        'com/riiablo/engine/server/PlagueJavelinGoldenDamageTest.java',
+        'com/riiablo/engine/server/PoisonJavelinGoldenDamageTest.java'
+    ]) as Set)
+    compileClasspath += sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output
+  }
+}
+configurations {
+  plagueJavelinTestImplementation.extendsFrom testImplementation
+  plagueJavelinTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+task plagueJavelinRegression(type: Test) {
+  group = 'verification'
+  description = '1.10f Plague Javelin cloud paths, smoke lifecycle, poison damage and adjacent client callbacks.'
+  dependsOn plagueJavelinTestClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.plagueJavelinTest.output.classesDirs
+  classpath = sourceSets.plagueJavelinTest.runtimeClasspath
+  useJUnitPlatform()
+  // The default gate is poison + adjacent presentation. Opt into the full
+  // Amazon specialist class (including its separately tracked Exploding
+  // Arrow failure) with -PplagueExtendedRegression; do not hide that failure
+  // from the normal test suite or the explicit expanded run.
+  if (!project.hasProperty('plagueExtendedRegression')) {
+    filter {
+      ['com.riiablo.presentation.*',
+       'com.riiablo.engine.server.FingerMage*',
+       'com.riiablo.engine.server.PlagueJavelinGoldenDamageTest',
+       'com.riiablo.engine.server.PoisonJavelinGoldenDamageTest',
+       'com.riiablo.engine.server.AmazonSkillSpecializationTest.poisonJavelinCreatesPersistentPoisonCloud',
+       'com.riiablo.engine.server.AmazonSkillSpecializationTest.corpsePoisonCloudUsesSharedPersistentAreaLifecycle',
+       'com.riiablo.engine.server.AmazonSkillSpecializationTest.plagueJavelinHitFansOutNativePoisonCloudRing'
+      ].each { includeTestsMatching it }
+    }
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

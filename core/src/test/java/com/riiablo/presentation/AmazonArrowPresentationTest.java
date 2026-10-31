@@ -193,36 +193,28 @@ class AmazonArrowPresentationTest extends RiiabloTest {
   }
 
   @Test
-  void poisonCloudCallbackUsesRandomChanceAndRadiusInsteadOfFixedModulo() {
+  void poisonCloudCallbackUsesIndependentNativeRandomTargetStream() {
     Missile cloud = new Missile();
     cloud.rngState = 0x12345678;
     assertTrue(MissileImpactPresentationSystem.rollClientSpawn(cloud, 1));
 
     int stateBefore = cloud.rngState;
-    int first = MissileImpactPresentationSystem.randomClientOffset(cloud, 6);
-    int second = MissileImpactPresentationSystem.randomClientOffset(cloud, 6);
-    assertTrue(first >= -6 && first <= 6);
-    assertTrue(second >= -6 && second <= 6);
-    assertNotEquals(stateBefore, cloud.rngState);
-    assertEquals(0.375f, MissileImpactPresentationSystem.clientOffsetToWorld(6), 0.0001f);
+    int first = MissileImpactPresentationSystem.randomClientTargetOffset(cloud, 6);
+    int second = MissileImpactPresentationSystem.randomClientTargetOffset(cloud, 6);
+    assertTrue(first >= -12 && first <= -7 || first >= 6 && first <= 11);
+    assertTrue(second >= -12 && second <= -7 || second >= 6 && second <= 11);
+    assertEquals(stateBefore, cloud.rngState);
+    assertNotEquals(stateBefore, cloud.clientSeed.getNLowSeed());
   }
 
   @Test
-  void poisonSmokePuffsUseDifferentDeterministicAnimationPhases() {
+  void poisonSmokePuffsKeepNativeZeroStartAndTwentyFiveFrameLifetime() {
     Missiles.Entry puff = Riiablo.files.Missiles.get("poisonpuff");
     assertNotNull(puff);
     assertTrue(MissileLoader.isPoisonSmokePuff(puff));
-    Missile first = new Missile();
-    first.start.set(10f, 20f);
-    first.rngState = 11;
-    Missile second = new Missile();
-    second.start.set(10f, 20f);
-    second.rngState = 29;
-    int frameCount = puff.AnimLen;
-    assertTrue(MissileLoader.poisonPuffPhase(first, 101, frameCount) >= 0);
-    assertTrue(MissileLoader.poisonPuffPhase(first, 101, frameCount) < frameCount);
-    assertNotEquals(MissileLoader.poisonPuffPhase(first, 101, frameCount),
-        MissileLoader.poisonPuffPhase(second, 102, frameCount));
+    assertEquals(0, puff.RandStart);
+    assertEquals(1, puff.Vel);
+    assertEquals(25, MissileImpactPresentationSystem.nativePresentationLifetimeFrames(puff));
   }
 
   @Test

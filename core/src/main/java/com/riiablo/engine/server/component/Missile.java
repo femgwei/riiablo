@@ -144,6 +144,11 @@ public class Missile extends PooledComponent {
   public int clientFrame;
   /** Whether the native client flight callback has emitted its initial child. */
   public boolean clientFlightInitialized;
+  /** Presentation-local pSeed: client smoke must never consume the server damage stream. */
+  public com.d2moo.common.drlg.D2Seed clientSeed;
+  /** Last observed integer path cell for the native CltDo3 movement gate. */
+  public int clientPathX;
+  public int clientPathY;
   /** Native client pCltDoFunc=51 recycler-delay vine child gate. */
   public boolean clientRecyclerVineSpawned;
   /** Native client pCltDoFunc=51 recycler-delay explosion child gate. */
@@ -342,6 +347,9 @@ public class Missile extends PooledComponent {
     nativeFrame = 0;
     clientFrame = 0;
     clientFlightInitialized = false;
+    clientSeed = null;
+    clientPathX = 0;
+    clientPathY = 0;
     clientRecyclerVineSpawned = false;
     clientRecyclerExplosionSpawned = false;
     nativeLifetimeFrames = 0;
