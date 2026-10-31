@@ -705,9 +705,10 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // callback. Icebreak effects can otherwise block the render thread while
     // AssetManager waits for decode/texture upload, leaving the window marked
     // unresponsive immediately after a frozen monster shatters. The
-    // presentation system does not advance lifetime until AnimationWrapper
-    // exists, so an uncached effect can safely wait for MissileLoader's next
-    // pass. Preserve same-tick presentation only for an already cached DCC.
+    // Most impact effects wait for AnimationWrapper before advancing their
+    // lifetime. CltDo15 trails are different: their native countdown runs
+    // even while the DCC is cold. Preserve same-tick presentation only for
+    // an already cached DCC.
     MissileLoader loader = world.getSystem(MissileLoader.class);
     if (loader != null && clientContext.assets().isLoaded(descriptor)) loader.loadNow(id);
     return id;

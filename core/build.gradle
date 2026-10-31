@@ -1175,3 +1175,42 @@ task m8ReplayRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// Focused client-missile gate. A separate source set avoids compiling unrelated
+// legacy UI tests while the Client/GameScreen module migration is in progress.
+sourceSets {
+  fingerMageTest {
+    java.srcDir 'src/test/java'
+    java.setIncludes([
+        'com/riiablo/RiiabloTest.java',
+        'com/riiablo/presentation/FingerMage*Test.java',
+        'com/riiablo/presentation/AmazonArrowPresentationTest.java',
+        'com/riiablo/presentation/PoisonCloudPresentationTest.java',
+        'com/riiablo/presentation/DruidVineRecyclerPresentationTest.java',
+        'com/riiablo/presentation/MissileLoaderTest.java',
+        'com/riiablo/engine/server/FingerMageFlightTest.java',
+        'com/riiablo/engine/server/FingerMageCurseTest.java'
+    ] as Set)
+    compileClasspath += sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output
+  }
+}
+configurations {
+  fingerMageTestImplementation.extendsFrom testImplementation
+  fingerMageTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+task fingerMageRegression(type: Test) {
+  group = 'verification'
+  description = '1.10f Finger Mage callback evidence, trail lifecycle and adjacent missile presentation.'
+  dependsOn fingerMageTestClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.fingerMageTest.output.classesDirs
+  classpath = sourceSets.fingerMageTest.runtimeClasspath
+  useJUnitPlatform()
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

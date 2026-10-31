@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class FingerMageTrailTest extends com.riiablo.RiiabloTest {
   @Test void nativeHitTenAttachesSparkleToVictimNotGround() {
     MissileImpactPresentationSystem system = new MissileImpactPresentationSystem();
+    system.clientContext = ClientGameplayContext.fromGlobals();
     system.overlays = org.mockito.Mockito.mock(OverlayManager.class);
     system.onMissileImpact(com.riiablo.engine.server.event.MissileImpactEvent.obtain(
         1, 177, 2, 3, com.badlogic.gdx.math.Vector2.Zero));
@@ -33,6 +34,6 @@ class FingerMageTrailTest extends com.riiablo.RiiabloTest {
     assertFalse(trail.homing);
     assertEquals(-1, trail.targetId);
     assertEquals(0, trail.range);
-    assertEquals(20, trail.nativeLifetimeFrames);
+    assertEquals(21, trail.nativeLifetimeFrames);
   }
 }

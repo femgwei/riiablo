@@ -74,7 +74,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // advanced and deleted before their DCC can be attached, making the hit
     // appear to have no explosion at all.  Keep the presentation entity alive
     // until MissileLoader has installed its animation component.
-    if (!mAnimationWrapper.has(entityId)) return;
+    // CltDo15's head cadence and TargetX trail countdown are simulation
+    // clocks, not animation clocks. A cold DCC must not pause either one.
+    boolean fingerMage = visual.missile != null && visual.missile.pCltDoFunc == 15;
+    if (!mAnimationWrapper.has(entityId) && !fingerMage) return;
     float delta = Math.max(0f, world.delta);
     Vector2 velocity = mVelocity.get(entityId).velocity;
     float distance = velocity.len() * delta;
@@ -120,6 +123,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // gets a visible frame.  Only rows without a native lifetime use the
     // animation-finished fallback.
     if (visual.nativeLifetimeFrames <= 0
+        && animation != null
         && !animation.animation.isLooping()
         && animation.animation.isFinished()) {
       processClientHitFunction(visual, mPosition.get(entityId).position);
@@ -296,7 +300,9 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     trail.targetId = -1;
     trail.range = 0;
     trail.nativeFrame = 0;
-    trail.nativeLifetimeFrames = Math.max(1, cltParam(source, 1, 20));
+    // CltDo15 checks TargetX <= -CltParam2 BEFORE decrementing it. Starting
+    // at zero, 20 updates reach -20; update 21 deletes the vanilla trail.
+    trail.nativeLifetimeFrames = Math.max(1, cltParam(source, 1, 20) + 1);
   }
 
   /** Executes the native pCltDoFunc=51 recycler-delay timeline. */
