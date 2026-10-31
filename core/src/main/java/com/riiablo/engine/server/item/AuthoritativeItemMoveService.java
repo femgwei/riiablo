@@ -97,7 +97,10 @@ public final class AuthoritativeItemMoveService {
         case ItemMoveOperation.SWAP_BELT_ITEM:
           character.swapBeltItem(indexOf(character, intent.itemId)); break;
         case ItemMoveOperation.USE_BELT_ITEM:
-          if (!character.useBeltPotion(intent.x)) {
+          // D2Game's native 0x26 packet identifies the exact belt item by
+          // GUID. The column remains part of validation, but must not be used
+          // to resolve a possibly changed belt after the request was formed.
+          if (!character.useBeltPotion(ownedById(character, intent.itemId))) {
             return new Outcome(false, ItemMoveFailure.ITEM_NOT_OWNED, current);
           }
           break;

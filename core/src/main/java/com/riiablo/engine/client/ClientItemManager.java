@@ -273,7 +273,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   public void useBeltSlot(int column) {
     if (clientContext.charData() == null) return;
     com.riiablo.item.Item potion = clientContext.charData().getItems().getBeltPotion(column);
-    if (potion != null && clientContext.charData().useBeltPotion(column)) {
+    if (potion != null && clientContext.charData().useBeltPotion(potion)) {
       dispatchSound(potion.getUseSound());
     }
   }

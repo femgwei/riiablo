@@ -1068,8 +1068,14 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 
   /** Uses the lowest potion in one of the four native belt columns. */
   public boolean useBeltPotion(int column) {
-    Item potion = itemData.getBeltPotion(column);
-    if (potion == null || potion.type == null || !potion.type.is(Type.POTI)) return false;
+    return useBeltPotion(itemData.getBeltPotion(column));
+  }
+
+  /** Uses this exact belt item, matching D2Game's GUID-based 0x26 request. */
+  public boolean useBeltPotion(Item potion) {
+    if (potion == null || !itemData.contains(potion)
+        || potion.location != Location.BELT
+        || potion.type == null || !potion.type.is(Type.POTI)) return false;
     if (!applyPotion(potion)) return false;
     return itemData.consumeBeltPotion(potion);
   }
