@@ -51,6 +51,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   protected final ClientItemContextPort clientContext;
   @com.artemis.annotations.SkipWire
   private ClientItemIntentSystem intents;
+  private final Set<Long> pendingBeltDrops = new HashSet<>();
 
   public ClientItemIntentSystem intents() {
     if (intents == null) intents = new ClientItemIntentSystem(this);
@@ -192,7 +193,12 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   }
 
   private Vector2 freeGroundPosition(int playerId, Vector2 origin) {
+    return freeGroundPosition(playerId, origin, java.util.Collections.emptySet());
+  }
+
+  private Vector2 freeGroundPosition(int playerId, Vector2 origin, Set<Long> pending) {
     Set<Long> occupied = new HashSet<>();
+    occupied.addAll(pending);
     MapWrapper playerMap = mMapWrapper.has(playerId) ? mMapWrapper.get(playerId) : null;
     if (playerMap != null && playerMap.map != null) {
       IntBag entities = world.getAspectSubscriptionManager().get(
@@ -241,17 +247,37 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
   @Override
   public void bodyToCursor(BodyLoc bodyLoc, boolean merc) {
-    if (clientContext.charData() != null) clientContext.charData().bodyToCursor(bodyLoc, merc);
+    if (clientContext.charData() != null) {
+      pendingBeltDrops.clear();
+      clientContext.charData().bodyToCursor(bodyLoc, merc, this::dropBeltOverflow);
+    }
   }
 
   @Override
   public void cursorToBody(BodyLoc bodyLoc, boolean merc) {
-    if (clientContext.charData() != null) clientContext.charData().cursorToBody(bodyLoc, merc);
+    if (clientContext.charData() != null) {
+      pendingBeltDrops.clear();
+      clientContext.charData().cursorToBody(bodyLoc, merc, this::dropBeltOverflow);
+    }
   }
 
   @Override
   public void swapBodyItem(BodyLoc bodyLoc, boolean merc) {
-    if (clientContext.charData() != null) clientContext.charData().swapBodyItem(bodyLoc, merc);
+    if (clientContext.charData() != null) {
+      pendingBeltDrops.clear();
+      clientContext.charData().swapBodyItem(bodyLoc, merc, this::dropBeltOverflow);
+    }
+  }
+
+  /** Creates ground entities for belt potions that did not fit in inventory. */
+  protected boolean dropBeltOverflow(com.riiablo.item.Item item) {
+    if (factory == null) return false;
+    int player = clientContext.playerId();
+    if (player < 0 || mPosition == null || mPosition.get(player) == null) return false;
+    Vector2 position = freeGroundPosition(player, mPosition.get(player).position, pendingBeltDrops);
+    if (factory.createItem(item, position) < 0) return false;
+    pendingBeltDrops.add(GroundDropPosition.key(Math.round(position.x), Math.round(position.y)));
+    return true;
   }
 
   @Override

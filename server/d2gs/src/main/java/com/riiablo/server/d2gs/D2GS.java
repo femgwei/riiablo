@@ -9479,7 +9479,9 @@ public class D2GS extends ApplicationAdapter {
           () -> potions != null && potions.useOnMercenary(playerEntityId,
               character.getItems().getCursor()));
     } else {
-      outcome = authoritativeItems.apply(playerEntityId, character, intent);
+      Set<Long> pendingBeltDrops = new HashSet<>();
+      outcome = authoritativeItems.apply(playerEntityId, character, intent,
+          item -> dropBeltOverflow(playerEntityId, item, pendingBeltDrops));
     }
     Gdx.app.log(TAG, "[ITEM_PICKUP] phase=result client=" + packet.id
         + " success=" + outcome.success + " failure=" + outcome.failure
@@ -9495,6 +9497,26 @@ public class D2GS extends ApplicationAdapter {
       if (item != null && item.id == itemId) return item;
     }
     return null;
+  }
+
+  /** Publishes belt potions that no longer fit after removing a belt. */
+  private boolean dropBeltOverflow(int playerEntityId, com.riiablo.item.Item item,
+      Set<Long> pendingBeltDrops) {
+    if (factory == null || world == null || playerEntityId == Engine.INVALID_ENTITY) return false;
+    com.riiablo.engine.server.component.Position position = world.getMapper(
+        com.riiablo.engine.server.component.Position.class).get(playerEntityId);
+    if (position == null) return false;
+    Vector2 dropPosition = findFreeGroundDropPosition(playerEntityId, position.position, pendingBeltDrops);
+    int droppedEntity = factory.createItem(item, dropPosition.x, dropPosition.y);
+    if (droppedEntity < 0) return false;
+    pendingBeltDrops.add(GroundDropPosition.key(Math.round(dropPosition.x), Math.round(dropPosition.y)));
+    com.riiablo.engine.server.component.Item dropped = mItemSafe(droppedEntity);
+    int partyId = partyManager == null ? -1 : partyManager.getPartyId(playerEntityId);
+    com.riiablo.engine.server.item.GroundDropOwnership.applyMetadata(dropped,
+        playerEntityId, partyId, 10_000L, 10_000L, false);
+    com.riiablo.engine.server.item.GroundDropOwnership.register(droppedEntity,
+        playerEntityId, partyId, 10_000L, 10_000L);
+    return true;
   }
 
   /** Creates a native town-portal visual/warp pair for a validated tsc/tbk. */
@@ -9574,7 +9596,12 @@ public class D2GS extends ApplicationAdapter {
 
   /** Finds a free logical item subtile while preserving native sprite overlap. */
   private Vector2 findFreeGroundDropPosition(int playerEntityId, Vector2 origin) {
+    return findFreeGroundDropPosition(playerEntityId, origin, java.util.Collections.emptySet());
+  }
+
+  private Vector2 findFreeGroundDropPosition(int playerEntityId, Vector2 origin, Set<Long> pending) {
     Set<Long> occupied = new HashSet<>();
+    occupied.addAll(pending);
     com.riiablo.engine.server.component.MapWrapper playerMap =
         world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerEntityId);
     if (playerMap != null && playerMap.map != null) {

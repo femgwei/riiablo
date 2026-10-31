@@ -20,9 +20,48 @@ import com.artemis.annotations.Wire;
 
 public class ServerItemManager extends ItemManager {
   private static final String TAG = "ServerItemManager";
+  private final Set<Long> pendingBeltDrops = new HashSet<>();
 
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
+
+  @Override
+  public void bodyToCursor(int entityId, int bodyLoc, boolean merc) {
+    pendingBeltDrops.clear();
+    mPlayer.get(entityId).data.bodyToCursor(com.riiablo.item.BodyLoc.valueOf(bodyLoc),
+        merc, item -> dropBeltOverflow(entityId, item));
+  }
+
+  @Override
+  public void cursorToBody(int entityId, int bodyLoc, boolean merc) {
+    pendingBeltDrops.clear();
+    mPlayer.get(entityId).data.cursorToBody(com.riiablo.item.BodyLoc.valueOf(bodyLoc),
+        merc, item -> dropBeltOverflow(entityId, item));
+  }
+
+  @Override
+  public void swapBodyItem(int entityId, int bodyLoc, boolean merc) {
+    pendingBeltDrops.clear();
+    mPlayer.get(entityId).data.swapBodyItem(com.riiablo.item.BodyLoc.valueOf(bodyLoc),
+        merc, item -> dropBeltOverflow(entityId, item));
+  }
+
+  private boolean dropBeltOverflow(int entityId, com.riiablo.item.Item item) {
+    if (mPlayer.get(entityId) == null || mPlayer.get(entityId).data == null
+        || mPosition.get(entityId) == null || factory == null) return false;
+    Vector2 position = freeGroundPosition(entityId, mPosition.get(entityId).position, pendingBeltDrops);
+    int dropped = factory.createItem(item, position);
+    if (dropped < 0) return false;
+    pendingBeltDrops.add(GroundDropPosition.key(Math.round(position.x), Math.round(position.y)));
+    if (mItem.has(dropped)) {
+      com.riiablo.engine.server.component.Item ground = mItem.get(dropped);
+      GroundDropOwnership.applyMetadata(ground, entityId,
+          partyManager == null ? Party.INVALID_ID : partyManager.getPartyId(entityId),
+          10_000L, 0L, false);
+      GroundDropOwnership.register(dropped, entityId, 10_000L);
+    }
+    return true;
+  }
 
   @Override
   public void groundToCursor(int entityId, int dst) {
@@ -90,7 +129,12 @@ public class ServerItemManager extends ItemManager {
   }
 
   private Vector2 freeGroundPosition(int playerId, Vector2 origin) {
+    return freeGroundPosition(playerId, origin, java.util.Collections.emptySet());
+  }
+
+  private Vector2 freeGroundPosition(int playerId, Vector2 origin, Set<Long> pending) {
     Set<Long> occupied = new HashSet<>();
+    occupied.addAll(pending);
     MapWrapper playerMap = world.getMapper(MapWrapper.class).get(playerId);
     if (playerMap != null && playerMap.map != null) {
       IntBag entities = world.getAspectSubscriptionManager().get(

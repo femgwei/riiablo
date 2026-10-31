@@ -14,8 +14,9 @@ import com.riiablo.engine.server.party.PartyGoldShareService;
 
 /**
  * Small transaction boundary around CharData's legacy item methods. All
- * validation happens before mutation; failed operations leave the character
- * untouched and can be answered with its current snapshot by the transport.
+ * validation happens before mutation. Failed validation leaves the character
+ * untouched. A belt overflow delivery can partially commit transfers before a
+ * world failure; its revision advances and the transport sends a fresh snapshot.
  */
 public final class AuthoritativeItemMoveService {
   public static final class Outcome {
@@ -59,6 +60,11 @@ public final class AuthoritativeItemMoveService {
   }
 
   public synchronized Outcome apply(int playerEntityId, CharData character, ItemMoveIntent intent) {
+    return apply(playerEntityId, character, intent, null);
+  }
+
+  public synchronized Outcome apply(int playerEntityId, CharData character, ItemMoveIntent intent,
+      java.util.function.Function<Item, Boolean> createGround) {
     long current = revision(playerEntityId);
     if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
@@ -85,11 +91,17 @@ public final class AuthoritativeItemMoveService {
           character.swapStoreItem(indexOf(character, intent.itemId),
               com.riiablo.item.StoreLoc.valueOf(intent.storeLoc), intent.x, intent.y); break;
         case ItemMoveOperation.BODY_TO_CURSOR:
-          character.bodyToCursor(com.riiablo.item.BodyLoc.valueOf(intent.bodyLoc), false); break;
+          if (!character.bodyToCursor(com.riiablo.item.BodyLoc.valueOf(intent.bodyLoc), false,
+              createGround)) return beltTransferFailed(playerEntityId);
+          break;
         case ItemMoveOperation.CURSOR_TO_BODY:
-          character.cursorToBody(com.riiablo.item.BodyLoc.valueOf(intent.bodyLoc), false); break;
+          if (!character.cursorToBody(com.riiablo.item.BodyLoc.valueOf(intent.bodyLoc), false,
+              createGround)) return beltTransferFailed(playerEntityId);
+          break;
         case ItemMoveOperation.SWAP_BODY_ITEM:
-          character.swapBodyItem(com.riiablo.item.BodyLoc.valueOf(intent.bodyLoc), false); break;
+          if (!character.swapBodyItem(com.riiablo.item.BodyLoc.valueOf(intent.bodyLoc), false,
+              createGround)) return beltTransferFailed(playerEntityId);
+          break;
         case ItemMoveOperation.BELT_TO_CURSOR:
           character.beltToCursor(indexOf(character, intent.itemId)); break;
         case ItemMoveOperation.CURSOR_TO_BELT:
@@ -125,11 +137,22 @@ public final class AuthoritativeItemMoveService {
           return new Outcome(false, ItemMoveFailure.INVALID_OPERATION, current);
       }
     } catch (Throwable t) {
+      if (intent.operation == ItemMoveOperation.BODY_TO_CURSOR
+          || intent.operation == ItemMoveOperation.CURSOR_TO_BODY
+          || intent.operation == ItemMoveOperation.SWAP_BODY_ITEM)
+        return beltTransferFailed(playerEntityId);
       return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
     }
     long next = current + 1L;
     revisions.put(playerEntityId, next);
     return new Outcome(true, ItemMoveFailure.NONE, next);
+  }
+
+  private Outcome beltTransferFailed(int playerEntityId) {
+    // A failed drop keeps the original belt equipped, but earlier successful
+    // overflow transfers may already have committed. Invalidate stale intents.
+    return new Outcome(false, ItemMoveFailure.MUTATION_FAILED,
+        markExternalMutation(playerEntityId));
   }
 
   /** Applies a validated inventory consumable whose world side effect is

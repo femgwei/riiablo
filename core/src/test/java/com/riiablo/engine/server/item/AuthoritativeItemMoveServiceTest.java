@@ -409,6 +409,64 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
     return CharData.obtain().set(Riiablo.NORMAL, false, "MoveHero", Riiablo.AMAZON);
   }
 
+  @Test
+  void removingBeltDropsOverflowWithinTheAuthoritativeRevision() {
+    CharData character = character();
+    equipBelt(character, "hbl", 800);
+    Item belt = character.getItems().getSlot(BodyLoc.BELT);
+    for (int i = 0; i < 16; i++)
+      assertTrue(character.getItems().addPotionToBelt(item("hp1", 810 + i)));
+    for (int i = 0; i < 40; i++)
+      assertTrue(character.getItems().addToInventory(item("hp1", 900 + i)));
+    java.util.List<Item> dropped = new java.util.ArrayList<>();
+    ItemMoveIntent intent = new ItemMoveIntent(1L, 0L, ItemMoveOperation.BODY_TO_CURSOR,
+        -1, -1, -1, -1, -1, BodyLoc.BELT.ordinal(), false);
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+
+    AuthoritativeItemMoveService.Outcome result = service.apply(50, character, intent, item -> {
+      assertFalse(character.getItems().contains(item));
+      dropped.add(item);
+      item.location = Location.GROUND;
+      return true;
+    });
+
+    assertTrue(result.success);
+    assertEquals(1L, result.revision);
+    assertEquals(12, dropped.size());
+    assertSame(belt, character.getItems().getCursor());
+    assertEquals(4, character.getItems().getLocation(Location.BELT).size);
+    assertFalse(service.apply(50, character, intent, item -> {
+      throw new AssertionError("Stale intent must not create another ground item");
+    }).success);
+    assertEquals(12, dropped.size());
+  }
+
+  @Test
+  void failedBeltDropRetainsEquipmentAndInvalidatesPartiallyChangedInventory() {
+    CharData character = character();
+    equipBelt(character, "hbl", 1000);
+    Item belt = character.getItems().getSlot(BodyLoc.BELT);
+    for (int i = 0; i < 16; i++)
+      assertTrue(character.getItems().addPotionToBelt(item("hp1", 1010 + i)));
+    for (int i = 0; i < 39; i++)
+      assertTrue(character.getItems().addToInventory(item("hp1", 1100 + i)));
+    ItemMoveIntent intent = new ItemMoveIntent(1L, 0L, ItemMoveOperation.BODY_TO_CURSOR,
+        -1, -1, -1, -1, -1, BodyLoc.BELT.ordinal(), false);
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+
+    AuthoritativeItemMoveService.Outcome result = service.apply(51, character, intent, item -> {
+      throw new IllegalStateException("World creation unavailable");
+    });
+
+    assertFalse(result.success);
+    assertEquals(ItemMoveFailure.MUTATION_FAILED, result.failure);
+    assertEquals(1L, result.revision);
+    assertSame(belt, character.getItems().getSlot(BodyLoc.BELT));
+    assertEquals(15, character.getItems().getLocation(Location.BELT).size);
+    assertEquals(40, character.getItems().getStore(StoreLoc.INVENTORY).size);
+    assertEquals(56, character.getItems().getItems().size);
+  }
+
   private static Item item(String code, int id) {
     Item item = new ItemGenerator().generate(code);
     item.id = id;

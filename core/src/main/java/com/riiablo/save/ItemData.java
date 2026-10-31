@@ -1,5 +1,7 @@
 package com.riiablo.save;
 
+import java.util.function.Function;
+
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.IntIntMap;
@@ -1030,7 +1032,10 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
 
   /** Native belt height: four quick slots without a belt, up to four rows. */
   public int getBeltRows() {
-    Item belt = getSlot(BodyLoc.BELT);
+    return beltRows(getSlot(BodyLoc.BELT));
+  }
+
+  static int beltRows(Item belt) {
     if (belt == null || belt.code == null) return 1;
     String code = belt.code.toLowerCase(java.util.Locale.ROOT);
     if ("hbl".equals(code) || "zhb".equals(code) || "uhc".equals(code)) return 4;
@@ -1038,6 +1043,50 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
         || "zmb".equals(code) || "ztb".equals(code)
         || "umc".equals(code) || "utc".equals(code)) return 3;
     return 2;
+  }
+
+  /**
+   * D2Game sub_6FC45930: pack excess rows into inventory in belt-slot order,
+   * then drop what does not fit without using or replacing the cursor.
+   * Run before removing/replacing the belt. If a drop fails, the original belt
+   * stays equipped and the undelivered item stays owned in its original slot.
+   * Earlier successful transfers remain committed.
+   */
+  boolean prepareBeltRows(int rows, Function<Item, Boolean> createGround) {
+    for (int row = rows; row < 4; row++) {
+      for (int column = 0; column < 4; column++) {
+        Item overflow = null;
+        for (Item item : itemData) {
+          if (item != null && item.location == Location.BELT
+              && item.gridX == column && item.gridY == row) {
+            overflow = item;
+            break;
+          }
+        }
+        if (overflow == null) continue;
+        if (!moveOwnedToInventory(overflow)) {
+          if (createGround == null) return false;
+          int id = overflow.id;
+          if (!removeOwnedItem(overflow)) return false;
+          boolean created = false;
+          try {
+            created = Boolean.TRUE.equals(createGround.apply(overflow));
+          } finally {
+            if (!created) {
+              overflow.id = id;
+              overflow.gridX = (byte) column;
+              overflow.gridY = (byte) row;
+              overflow.storeLoc = StoreLoc.NONE;
+              overflow.bodyLoc = BodyLoc.NONE;
+              add(overflow);
+              setLocation(overflow, Location.BELT);
+            }
+          }
+          if (!created) return false;
+        }
+      }
+    }
+    return true;
   }
 
   /** Returns whether an item can occupy one of the currently equipped belt's slots. */

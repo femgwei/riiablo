@@ -3,6 +3,7 @@ package com.riiablo.save;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.function.Function;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -920,42 +921,59 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 
 //  @Override
   public void bodyToCursor(BodyLoc bodyLoc, boolean merc) {
+    bodyToCursor(bodyLoc, merc, null);
+  }
+
+  /** World-owned ground creation is required when belt overflow cannot fit. */
+  public boolean bodyToCursor(BodyLoc bodyLoc, boolean merc,
+      Function<Item, Boolean> createGround) {
     if (DEBUG_ITEMS) Gdx.app.log(TAG, "bodyToCursor " + bodyLoc + "," + (merc ? "merc" : "player"));
     if (itemData.cursor != ItemData.INVALID_ITEM) {
       log.warn("[ITEM_MOVE_REJECTED] operation=bodyToCursor bodyLoc={} merc={} reason=cursor_occupied",
           bodyLoc, merc);
-      return;
+      return false;
     }
     Item item;
     if (merc) {
       int i = mercData.itemData.unequip(bodyLoc);
       if (i == ItemData.INVALID_ITEM) {
         log.warn("[ITEM_MOVE_REJECTED] operation=bodyToCursor bodyLoc={} merc=true reason=empty_slot", bodyLoc);
-        return;
+        return false;
       }
       itemData.cursor = itemData.add(item = mercData.itemData.remove(i));
     } else {
-      itemData.cursor = itemData.unequip(bodyLoc);
-      if (itemData.cursor == ItemData.INVALID_ITEM) {
+      if (bodyLoc == BodyLoc.BELT && itemData.getSlot(bodyLoc) != null
+          && !itemData.prepareBeltRows(1, createGround)) return false;
+      int unequipped = itemData.unequip(bodyLoc);
+      if (unequipped == ItemData.INVALID_ITEM) {
         log.warn("[ITEM_MOVE_REJECTED] operation=bodyToCursor bodyLoc={} merc=false reason=empty_slot", bodyLoc);
-        return;
+        return false;
       }
-      item = itemData.getItem(itemData.cursor);
+      item = itemData.getItem(unequipped);
+      itemData.cursor = unequipped;
     }
     itemData.setLocation(item, Location.CURSOR);
+    return true;
   }
 
 //  @Override
   public void cursorToBody(BodyLoc bodyLoc, boolean merc) {
+    cursorToBody(bodyLoc, merc, null);
+  }
+
+  public boolean cursorToBody(BodyLoc bodyLoc, boolean merc,
+      Function<Item, Boolean> createGround) {
     if (DEBUG_ITEMS) Gdx.app.log(TAG, "cursorToBody " + bodyLoc + "," + (merc ? "merc" : "player"));
     if (itemData.cursor == ItemData.INVALID_ITEM) {
       log.warn("[ITEM_MOVE_REJECTED] operation=cursorToBody bodyLoc={} merc={} reason=empty_cursor",
           bodyLoc, merc);
-      return;
+      return false;
     }
     // Some UI paths use CURSOR_TO_BODY even when the destination is already
     // occupied.  Preserve native quiver-merge behavior for that path too.
-    if (!merc && itemData.mergeCursorIntoEquippedAmmo(bodyLoc)) return;
+    if (!merc && itemData.mergeCursorIntoEquippedAmmo(bodyLoc)) return true;
+    if (!merc && bodyLoc == BodyLoc.BELT && itemData.getSlot(bodyLoc) != null)
+      return swapBodyItem(bodyLoc, false, createGround);
     if (merc) {
       Item item = itemData.getItem(itemData.cursor);
       itemData.remove(itemData.cursor);
@@ -964,6 +982,7 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
       itemData.equip(bodyLoc, itemData.cursor);
     }
     itemData.cursor = ItemData.INVALID_ITEM;
+    return true;
   }
 
   /**
@@ -975,26 +994,34 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
    */
 //  @Override
   public void swapBodyItem(BodyLoc bodyLoc, boolean merc) {
+    swapBodyItem(bodyLoc, merc, null);
+  }
+
+  public boolean swapBodyItem(BodyLoc bodyLoc, boolean merc,
+      Function<Item, Boolean> createGround) {
     if (DEBUG_ITEMS) Gdx.app.log(TAG, "swapBodyItem " + bodyLoc + "," + (merc ? "merc" : "player"));
 
     if (itemData.cursor == ItemData.INVALID_ITEM) {
       log.warn("[ITEM_MOVE_REJECTED] operation=swapBodyItem bodyLoc={} merc={} reason=empty_cursor",
           bodyLoc, merc);
-      return;
+      return false;
     }
 
     // Dragging a compatible arrow/bolt quiver onto the equipped quiver is a
     // native quantity merge.  Keep this before the regular swap path so a
     // partially consumed equipped stack is topped up instead of replaced.
-    if (!merc && itemData.mergeCursorIntoEquippedAmmo(bodyLoc)) return;
+    if (!merc && itemData.mergeCursorIntoEquippedAmmo(bodyLoc)) return true;
 
     ItemData equippedItems = merc ? mercData.itemData : itemData;
     if (equippedItems.getSlot(bodyLoc) == null) {
       log.warn("[ITEM_MOVE_RECOVERED] operation=swapBodyItem bodyLoc={} merc={} reason=empty_slot action=cursorToBody",
           bodyLoc, merc);
-      cursorToBody(bodyLoc, merc);
-      return;
+      return cursorToBody(bodyLoc, merc, createGround);
     }
+
+    if (!merc && bodyLoc == BodyLoc.BELT
+        && !itemData.prepareBeltRows(ItemData.beltRows(itemData.getCursor()), createGround))
+      return false;
 
     // #bodyToCursor(BodyLoc,boolean)
     Item newCursorItem;
@@ -1019,6 +1046,7 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 
     itemData.cursor = newCursor;
     itemData.setLocation(newCursorItem, Location.CURSOR);
+    return true;
   }
 
 //  @Override
