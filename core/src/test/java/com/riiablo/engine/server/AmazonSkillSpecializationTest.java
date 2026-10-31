@@ -783,8 +783,10 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertEquals(23, factory.created.stream()
           .filter(m -> m.missile != null && "plaguejavcloud".equalsIgnoreCase(m.missile.Missile))
           .filter(m -> m.poisonCloudTraveling).count(),
-          "ring children must travel from the impact origin to their native offsets");
+          "ring children must keep expanding along their initial native directions");
       int firstCloud = -1;
+      int outerCardinalCloud = -1;
+      int cloudIndex = 0;
       Vector2 impact = null;
       for (int i = 0; i < factory.created.size(); i++) {
         Missile cloud = factory.created.get(i);
@@ -795,25 +797,47 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
             "the ring coordinate is a TARGET, not the child's birth position");
         assertEquals(cloud.start, world.getMapper(Position.class).get(factory.createdIds.get(i)).position);
         assertEquals(87, cloud.nativeLifetimeFrames, "loops extend the creation clock");
+        assertTrue(cloud.persistent, "moving clouds apply poison without waiting for a target arrival");
+        assertTrue(cloud.damageSnapshot);
+        assertEquals(cloudIndex < 8 ? 1.171875f : 2.34375f,
+            world.getMapper(Velocity.class).get(factory.createdIds.get(i)).velocity.len(), .00001f,
+            "Param<<7, native 75/100 scaling, 16.16 path velocity and 25-Hz conversion");
+        if (cloudIndex >= 8 && cloud.poisonCloudTarget.equals(new Vector2(cloud.start).add(2, 0))) {
+          outerCardinalCloud = factory.createdIds.get(i);
+        }
+        cloudIndex++;
         if (firstCloud < 0) firstCloud = factory.createdIds.get(i);
       }
       assertTrue(firstCloud >= 0);
+      assertTrue(outerCardinalCloud >= 0);
       Missile cloud = world.getMapper(Missile.class).get(firstCloud);
       Vector2 birth = new Vector2(cloud.start);
       Vector2 endpoint = new Vector2(cloud.poisonCloudTarget);
+      int distantTarget = monster(world, birth.x + 5.5f, birth.y);
+      world.getMapper(AttributesWrapper.class).create(distantTarget).attrs = attributes(1, 10000);
+      world.getMapper(UnitStates.class).create(distantTarget).init(distantTarget);
+      boolean distantPoisoned = false;
+      for (int frame = 1; frame <= 86; frame++) {
+        world.process();
+        assertTrue(world.getEntityManager().isActive(firstCloud));
+        assertTrue(world.getEntityManager().isActive(outerCardinalCloud));
+        Vector2 inner = world.getMapper(Position.class).get(firstCloud).position;
+        Vector2 outer = world.getMapper(Position.class).get(outerCardinalCloud).position;
+        assertEquals(frame * .046875f, inner.dst(birth), .0001f);
+        assertEquals(frame * .09375f, outer.dst(birth), .0001f);
+        assertTrue(cloud.poisonCloudTraveling);
+        assertEquals(87 - frame, cloud.remainingFrames, "crossing the target must not restart lifetime");
+        distantPoisoned |= world.getMapper(UnitStates.class).get(distantTarget).stateList.hasState(StateId.POISON);
+        if (frame == 60) {
+          assertTrue(inner.dst(birth) > endpoint.dst(birth),
+              "the two-subtile target is only a direction reference, not a stopping point");
+          assertEquals(5.625f, outer.dst(birth), .0001f);
+        }
+      }
+      assertTrue(distantPoisoned, "the expanding outer cloud must poison targets beyond the old stop radius");
       world.process();
-      Vector2 moved = world.getMapper(Position.class).get(firstCloud).position;
-      assertTrue(moved.dst2(birth) > 0f);
-      assertTrue(moved.dst2(endpoint) < birth.dst2(endpoint));
-      assertTrue(cloud.poisonCloudTraveling, "the first update must not stop the expanding ring");
-      for (int frame = 1; frame < 40; frame++) world.process();
-      assertFalse(cloud.poisonCloudTraveling);
-      assertTrue(cloud.persistent);
-      assertEquals(endpoint, world.getMapper(Position.class).get(firstCloud).position);
-      assertEquals(87 - cloud.nativeFrame, cloud.remainingFrames,
-          "arrival must not restart the native lifetime");
-      for (int frame = cloud.nativeFrame; frame < 87; frame++) world.process();
       assertFalse(world.getEntityManager().isActive(firstCloud));
+      assertFalse(world.getEntityManager().isActive(outerCardinalCloud));
     } finally {
       world.dispose();
     }

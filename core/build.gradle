@@ -1224,6 +1224,8 @@ sourceSets {
         'com/riiablo/presentation/PlagueJavelinPresentationLifecycleTest.java',
         'com/riiablo/engine/server/AmazonSkillSpecializationTest.java',
         'com/riiablo/engine/server/PlagueJavelinGoldenDamageTest.java',
+        'com/riiablo/engine/server/PrimePoisonNovaIntegrationTest.java',
+        'com/riiablo/engine/replay/MissileRuntimeCheckpointTest.java',
         'com/riiablo/engine/server/PoisonJavelinGoldenDamageTest.java'
     ]) as Set)
     compileClasspath += sourceSets.main.output
@@ -1250,6 +1252,8 @@ task plagueJavelinRegression(type: Test) {
       ['com.riiablo.presentation.*',
        'com.riiablo.engine.server.FingerMage*',
        'com.riiablo.engine.server.PlagueJavelinGoldenDamageTest',
+       'com.riiablo.engine.server.PrimePoisonNovaIntegrationTest',
+       'com.riiablo.engine.replay.MissileRuntimeCheckpointTest',
        'com.riiablo.engine.server.PoisonJavelinGoldenDamageTest',
        'com.riiablo.engine.server.AmazonSkillSpecializationTest.poisonJavelinCreatesPersistentPoisonCloud',
        'com.riiablo.engine.server.AmazonSkillSpecializationTest.corpsePoisonCloudUsesSharedPersistentAreaLifecycle',

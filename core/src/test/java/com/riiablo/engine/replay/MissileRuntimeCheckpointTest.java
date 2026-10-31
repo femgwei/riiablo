@@ -64,6 +64,7 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       for (Field field : Missile.class.getDeclaredFields()) {
         if (!Modifier.isPublic(field.getModifiers()) || Modifier.isStatic(field.getModifiers())) continue;
         Class<?> type = field.getType();
+        if (MissileRuntimeCheckpoint.presentationLocalFields().contains(field.getName())) continue;
         if (type == int.class || type == float.class || type == boolean.class
             || type == String.class || type == Vector2.class) {
           assertEquals(field.get(missile), field.get(target.get(0)), field.getName());
@@ -91,6 +92,25 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       assertTrue(first.x < 3f); // the fifth-step acceleration phase survived
       byte[] detached = snapshots.get(0).bytes(); detached[0] ^= 1;
       assertArrayEquals(bytes, snapshots.get(0).bytes());
+    }
+  }
+
+  @Test void localSmokeCachesDoNotChangeAuthorityBytesAndAreClearedOnRestore() {
+    try (Fixture source = new Fixture(1); Fixture target = new Fixture(1)) {
+      byte[] before = source.capture().get(0).bytes();
+      source.get(0).clientSeed = new D2Seed(123, 456);
+      source.get(0).clientPathX = 91;
+      source.get(0).clientPathY = -27;
+      Map<Integer, MissileRuntimeCheckpoint> snapshots = source.capture();
+      assertArrayEquals(before, snapshots.get(0).bytes(), "local caches cannot affect server replay hashes");
+      target.get(0).clientSeed = new D2Seed(789, 10);
+      target.get(0).clientPathX = 88;
+      target.get(0).clientPathY = -99;
+      MissileRuntimeCheckpoint.restore(target.world, snapshots);
+      assertNull(target.get(0).clientSeed);
+      assertEquals(0, target.get(0).clientPathX);
+      assertEquals(0, target.get(0).clientPathY);
+      assertArrayEquals(before, target.capture().get(0).bytes());
     }
   }
 

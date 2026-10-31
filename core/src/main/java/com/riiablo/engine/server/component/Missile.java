@@ -121,8 +121,9 @@ public class Missile extends PooledComponent {
   public boolean poisonAttackerPlayer;
   /** Native poison-cloud child loop count used to extend SubLoop lifetime. */
   public int poisonCloudLoops;
-  /** Hit-submissile path travels from the impact origin to its ring offset. */
+  /** Expanding poison cloud; its ring offset sets direction, not a stopping point. */
   public boolean poisonCloudTraveling;
+  /** Initial direction reference retained for runtime-checkpoint compatibility. */
   public final Vector2 poisonCloudTarget = new Vector2();
 
   /** Optional native homing target (Guided Arrow/Bone Spirit). */

@@ -5,9 +5,15 @@
 按 D2MOO 服务端源码、原版 1.10f MPQ 和 REA 的 D2Client.dll 静态证据修正：
 
 - SrvHit2 的 8 个主环 + 15 个交错环子云统一出生在命中中心，以原偏移为目标向外移动，
-  不再直接出生在终点后立即停止。到达前钳制最后一步，避免提前一帧吸附或越过目标。
+  不再直接出生在偏移点。**根据实机反馈纠正上一批判断：偏移只决定初始方向，不是停止终点。**
+  删除到点钳制和停车，子云持续沿原方向移动至寿命耗尽。
 - 创建时设置 `Range + loops * (SubStop - SubStart)` 时钟；原表为 `60 + 3 * 9 = 87` 帧。
-  移动消耗同一寿命，到达后不重启 87 帧。普通 Poison Javelin / 尸体毒云保留共享生命周期。
+  从出生就配置移动毒伤区域，移动消耗同一寿命。普通 Poison Javelin / 尸体毒云保留共享生命周期。
+- 主/交错环的原生速度是 `(Param << 7) * 75 / 100`，再按路径方向长度 4096、16.16 坐标
+  转换到 ECS 每秒速度。原表 Param=2/4，对应每帧 0.046875/0.09375 子格，
+  每秒 1.171875/2.34375 子格；不再用 `Param * 0.75` 冒充每秒速度。
+  第 86 帧两组轴向半径为 4.03125/8.0625 子格，第 87 次更新删除；旧逻辑在约 2～2.8 格处停住。
+  此处是云团中心距离，不含云团碰撞体积或烟雾图片边缘。
 - CltDo4 的烟雾出生点继承父云位置，随机的是绝对目标坐标，不是出生点像素抖动。
   每轴 `d = rollLimited(2*r) - r; target = parentIntegerCoordinate + d + sign(d)*r`，
   其中零走正分支。原表 r=6，偏移为 `[-12,-7]` 或 `[6,11]` 世界子格，
@@ -31,8 +37,11 @@
 这是适配当前权威同步架构的去重，不是声称恢复了原客户端预测时序。
 
 客户端烟雾另存 `clientSeed`，初次从现有完整 nativeSeed 复制；无完整种子时用
-`rngState/666` 初始化。之后不修改服务端 nativeSeed / rngState。该流与 clientFrame 一样
-是瞬态表现状态，实体回收时清空，不加入服务端存档、回放或网络权威数据。
+`rngState/666` 初始化。之后不修改服务端 nativeSeed / rngState。新加的 clientSeed / clientPathX/Y
+是本地表现缓存，实体回收及权威快照恢复时清空，不进入版本 1 的服务端快照字节。
+本次补齐显式字段策略和缓存隔离/恢复测试，保持快照格式不变。
+纠正上版文档：既有 clientFrame / clientFlightInitialized 实际已在版本 1 中序列化，不能统称瞬态。
+服务端快照不保证精确恢复烟雾随机流或拖尾观察格。
 因此不保证两台客户端具有逐烟雾相同的随机轨迹，也不保证与原版的初始种子一致。
 未审计的 CltDo8/49 继续使用旧 fallback，没有借此批顺带改写。
 
@@ -56,8 +65,17 @@ ImageBase `0x6FAA0000`，SHA-256：
   此处以汇编和创建结构字段偏移互证。
 - D2MOO `source/D2Game/src/MISSILES/MissMode.cpp`：
   `MISSMODE_CreatePoisonCloudHitSubmissiles`（D2Game `0x6FC568F0`）。
-  `Missiles.cpp` 的创建分支在 flags&8 且 SubLoop 时延长 Range。
-  `source/D2Common/src/Path/Step.cpp` 给出 flag 0x8 的整数坐标变化语义。
+  `Missiles.cpp` 的创建分支在 flags&8 且 SubLoop 时延长 Range；精确速度 flags&0x10
+  避免再次左移 8 位，但仍经过统一的 `75 * velocity / 100`。
+- 扩散范围的决定性证据：`source/D2Common/src/Path/Step.cpp` 的
+  `sub_6FDACEC0`（1.10f `0x6FDACEC0`）对 `PATHTYPE_MISSILE` 设置 `v40=0`，
+  跳过普通单位的目标点步长钳制及到点路径索引递增。`Path.cpp` 创建 UNIT_MISSILE 时
+  选择该路径类型；`PathMisc.cpp` 的 `D2Common_10226` 也不为该类型逐帧重新朝目标转向。
+  上版只核对子云创建参数，没有核对该路径类型的推进语义，因而误加了停车逻辑。
+- `PATH_GetDirectionVector`（Step.cpp，1.10f `0x6FDAC5E0`）方向 LUT 长度约 4096；
+  `PATH_ComputeVelocityAndDirectionVectorsToNextPoint`（PathMisc.cpp，`0x6FDAC790`）
+  使用 `(direction * velocity) >> 8` 写入 16.16 步长，因此轴向每帧距离为 velocity/4096。
+  Step.cpp 也给出 flag 0x8 的整数坐标变化语义。
 - 原版 MPQ 的原始 `missiles.txt` 与加载后的表互证：
   `plaguejavelin(43)` → `plaguejavcloud(221, PoisonSparks)` →
   `poisonpuff(141, PoisonSmokePuff)`；CltParam=24/1/6，命中参数=1/2/3。
@@ -88,14 +106,15 @@ JDK 17，真实 1.10f MPQ：
 ```
 
 专用 source set 编译本批与相邻回归，默认选择毒云相关的 3 个 Amazon ECS 测试、
-两项毒枪逐级伤害 golden、全部选入的表现测试及 FingerMage 服务端回归。
-最终定向回归 13 类 / 47 项全部通过，失败、错误、跳过均为 0；生产代码编译和模块边界检查通过。
+两项毒枪逐级伤害 golden、全部选入的表现测试及 FingerMage 服务端回归，
+并加入 PrimePoisonNova 共享路径和 MissileRuntimeCheckpoint 字段策略回归。
+本次定向回归 15 类 / 55 项全部通过，失败、错误、跳过均为 0；生产代码编译和模块边界检查通过。
 不会修改默认 `:core:test` 的测试范围。报告位于
 `core/build/test-results/plagueJavelinRegression`；本机用独立输出目录
 `.gradle/plaguejavelin-rea-validation` 避免与其他聊天的地图构建相互覆盖。
 
 扩大到完整 AmazonSkillSpecializationTest 的入口是在同一命令追加
-`-PplagueExtendedRegression`。本批扩大回归 13 类 / 85 项：84 通过，1 失败，零错误 / 跳过。
+`-PplagueExtendedRegression`。本次扩大回归 15 类 / 93 项：92 通过，1 失败，零错误 / 跳过。
 唯一失败是既有 `explodingArrowCreatesAuthoritativeAreaSubMissile` 的爆炸半径伤害断言。
 将提交 `e874b59c0` 的原 MissileCollisionSystem 独立编译，并在测试 classpath 中覆盖本批版本，
 同一断言依旧失败；该测试不运行本批表现系统。修改前服务端源码覆盖实验保存在本机忽略的
@@ -104,9 +123,13 @@ JDK 17，真实 1.10f MPQ：
 
 新增生命周期测试运行生产系统和真实 ECS 子实体，独立 uint64 oracle 验证机会抽样、
 两轴目标和种子隔离，并覆盖冷/热 DCC、25 帧寿命、整数格拖尾门禁、中央云去重和对象池清理。
-服务端测试验证 23 云同源出生、实际向目标移动、终点停留和统一 87 帧到期。
+服务端测试验证 23 云同源出生、两组原生速度、86 次连续移动及统一 87 帧到期，
+独立常量逐帧检查两组轴向位置，第 60 帧外环达到 5.625 格，并验证出生点 5.5 格外的目标中毒。
+共享路径的 PrimePoisonNova 验证持续移动和自身生命周期，本次没有改它既有的速度换算。
 不使用 GPU，也不是真实网络收包测试。
 
 另一台电脑应对照原版观察：低/高技能等级、飞行拖尾、命中怪物及空投到期、
 毒云从中心向外铺开、烟雾多方向飘动和消退、首次冷加载与再次施放、联机观察端是否重复云团。
 DCC 像素混合、路径固定点精度、网络预测/丢包时序仍不在已验收范围。
+当前环方向仍由浮点单位向量归一化，没有移植完整原版方向 LUT 和逐分量定点截断；
+轴向速度已对齐，但不声称斜向轨迹逐位一致。以上无 GL 回归不能证明实机画面已与原版完全一致。

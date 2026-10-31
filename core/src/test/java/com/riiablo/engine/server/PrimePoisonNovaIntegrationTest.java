@@ -38,7 +38,7 @@ class PrimePoisonNovaIntegrationTest extends RiiabloTest {
     for (int difficulty = 0; difficulty < 3; difficulty++) {
       RecordingFactory factory = new RecordingFactory();
       World world = new World(new WorldConfigurationBuilder()
-          .with(new EventSystem(), new ServerSkillSystem(true), factory)
+          .with(new EventSystem(), new ServerSkillSystem(true), new MissileCollisionSystem(), factory)
           .build().register("factory", factory).register("map", new Map(1, difficulty)));
       try {
         int actor = world.create();
@@ -74,6 +74,23 @@ class PrimePoisonNovaIntegrationTest extends RiiabloTest {
           assertEquals(row.Param[i < 8 ? 0 : 1] / 4f, velocity.len(), .0001f);
           assertTrue(velocity.dot(new Vector2(cloud.poisonCloudTarget).sub(10, 10)) > 0);
         }
+        int first = factory.ids.get(0);
+        Missile expanding = world.getMapper(Missile.class).get(first);
+        float stepDistance = world.getMapper(Velocity.class).get(first).velocity.len() / 25f;
+        int lifetime = MissileCollisionSystem.poisonCloudLifetime(row, expanding.poisonCloudLoops);
+        world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+        for (int frame = 1; frame < lifetime; frame++) {
+          world.process();
+          assertTrue(world.getEntityManager().isActive(first));
+          assertTrue(expanding.persistent);
+          assertTrue(expanding.poisonCloudTraveling);
+          assertEquals(frame * stepDistance,
+              world.getMapper(Position.class).get(first).position.dst(10, 10), .001f,
+              "the shared missile path must not stop at its initial ring offset");
+          assertEquals(lifetime - frame, expanding.remainingFrames);
+        }
+        world.process();
+        assertFalse(world.getEntityManager().isActive(first));
       } finally {
         world.dispose();
       }

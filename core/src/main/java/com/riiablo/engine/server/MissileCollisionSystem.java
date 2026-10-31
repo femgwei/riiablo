@@ -392,11 +392,6 @@ public class MissileCollisionSystem extends IteratingSystem {
       moveDistance = velocity.velocity.len() * world.delta;
       Vector2 next = tmpVec.set(position.position).add(
           velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
-      if (missile.poisonCloudTraveling
-          && position.position.dst2(missile.poisonCloudTarget) <= moveDistance * moveDistance) {
-        next.set(missile.poisonCloudTarget);
-        moveDistance = position.position.dst(next);
-      }
       if (missile.wakeMaker && position.position.dst2(missile.wakeTargetX,
           missile.wakeTargetY) <= moveDistance * moveDistance) {
         next.set(missile.wakeTargetX, missile.wakeTargetY);
@@ -412,11 +407,10 @@ public class MissileCollisionSystem extends IteratingSystem {
 
     if (!updateNativeRoom(entityId, missile, position)) return;
 
-    if (missile.poisonCloudTraveling) {
-      advancePoisonCloudTravel(missile, position, velocity);
-    }
-
-    if (!missile.persistent && isStationaryPoisonCloud(missile, velocity)) {
+    // PATHTYPE_MISSILE uses the ring target only to choose its initial
+    // direction. Unlike a unit path, it neither clamps nor stops there.
+    if (!missile.persistent && (missile.poisonCloudTraveling
+        || isStationaryPoisonCloud(missile, velocity))) {
       configurePersistentPoisonCloud(missile, null);
     }
 
@@ -3253,6 +3247,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     cloud.nativeLifetimeFrames = poisonCloudLifetime(row, loops);
     cloud.poisonCloudTarget.set(origin).add(offsetX, offsetY);
     cloud.poisonCloudTraveling = true;
+    configurePersistentPoisonCloud(cloud, skill);
     int speedParam = arrayValue(row.Param, subRing ? 1 : 0);
     if (mVelocity.has(id)) {
       Vector2 velocity = mVelocity.get(id).velocity;
@@ -3260,26 +3255,15 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (velocity.isZero(0.0001f)) {
         cloud.poisonCloudTraveling = false;
         velocity.setZero();
-        configurePersistentPoisonCloud(cloud, skill);
       } else {
-        velocity.setLength(Math.max(0.1f, speedParam) * 0.75f);
+        // CreatePoisonCloudHitSubmissiles passes Param<<7 with precise-velocity
+        // flags. CreateMissileFromParams applies 75/100; a length-4096 path
+        // direction produces nativeVelocity/4096 subtiles per 25-Hz frame.
+        int nativeVelocity = (Math.max(0, speedParam) << 7) * 75 / 100;
+        velocity.setLength(nativeVelocity * (25f / 4096f));
       }
     }
     return 1;
-  }
-
-  /** Advances a D2MOO poison-cloud child to its ring target and starts its area mode. */
-  private void advancePoisonCloudTravel(Missile cloud, Position position,
-      Velocity velocity) {
-    if (cloud == null || position == null || velocity == null || !cloud.poisonCloudTraveling) return;
-    float remaining = position.position.dst(cloud.poisonCloudTarget);
-    if (remaining > 0.0001f) return;
-    position.invalidateNativePrecision();
-    position.position.set(cloud.poisonCloudTarget);
-    velocity.velocity.setZero();
-    cloud.poisonCloudTraveling = false;
-    Skills.Entry skill = cloud.skillId >= 0 ? files().skills.get(cloud.skillId) : null;
-    configurePersistentPoisonCloud(cloud, skill);
   }
 
   private void configurePersistentPoisonCloud(Missile cloud, Skills.Entry sourceSkill) {
@@ -3321,8 +3305,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     cloud.persistent = true;
     int loops = Math.max(0, cloud.poisonCloudLoops);
     cloud.nativeLifetimeFrames = poisonCloudLifetime(cloud.missile, loops);
-    // Native loops extend Range at creation, not again on arrival. Travel
-    // consumes that same clock; the persistent branch decrements once below.
+    // Moving and stationary clouds share one creation clock. When configured
+    // on the first update, nativeFrame already includes this tick, which the
+    // persistent branch will decrement below.
     cloud.remainingFrames = Math.max(1, Math.min(cloud.nativeLifetimeFrames,
         cloud.nativeLifetimeFrames - cloud.nativeFrame + 1));
     // SrvDo03 calls MISSMODE_HandleMissileCollision every native frame when

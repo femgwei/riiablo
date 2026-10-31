@@ -31,7 +31,13 @@ public final class MissileRuntimeCheckpoint {
   public int missileId() { return decode(null).missileId; }
   public int ownerId() { return decode(null).missile.ownerId; }
 
-  /** Schema audit must fail when Missile gains a field without an explicit decision. */
+  /** Client-only caches deliberately omitted from the version-1 server codec. */
+  public static Set<String> presentationLocalFields() {
+    return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+        "clientSeed", "clientPathX", "clientPathY")));
+  }
+
+  /** Schema audit includes explicit omission policies, not only persisted fields. */
   public static Set<String> coveredFields() {
     return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
       "range", "ownerId", "nativeBaalWave", "rngState", "roomId",
@@ -46,7 +52,8 @@ public final class MissileRuntimeCheckpoint {
       "diabWallCastId", "fixedPoisonRate", "poisonMinRateFixed", "poisonMaxRateFixed", "poisonDurationFrames",
       "poisonPiercePercent", "poisonAttackerPlayer", "poisonCloudLoops", "poisonCloudTraveling", "targetId",
       "homing", "homingNextTurnFrame", "attachedEntityId", "attached", "nativeFrame",
-      "clientFrame", "clientFlightInitialized", "clientRecyclerVineSpawned", "clientRecyclerExplosionSpawned", "nativeLifetimeFrames",
+      "clientFrame", "clientFlightInitialized", "clientSeed", "clientPathX", "clientPathY",
+      "clientRecyclerVineSpawned", "clientRecyclerExplosionSpawned", "nativeLifetimeFrames",
       "deathMaul", "wakeMaker", "wakeSpawned", "wakeTargetX", "wakeTargetY",
       "wakeDirectionX", "wakeDirectionY", "damageOwnerId", "chargedBoltPath", "chargedBoltMainDirection",
       "chargedBoltSeedLow", "chargedBoltSeedHigh", "chargedBoltNextTurnDistance", "chargedBoltTargetX", "chargedBoltTargetY",
@@ -151,6 +158,11 @@ public final class MissileRuntimeCheckpoint {
     for (Map.Entry<Integer, MissileRuntimeCheckpoint> entry : snapshots.entrySet()) {
       Missile live = world.getMapper(Missile.class).get(entry.getKey());
       Decoded d = entry.getValue().decode(live);
+      // Restore authority state without retaining a previous client's local
+      // smoke RNG or observed path cells. The wire layout stays at version 1.
+      live.clientSeed = null;
+      live.clientPathX = 0;
+      live.clientPathY = 0;
       live.hitTargets.clear();
       for (int target : d.hitTargets) live.hitTargets.add(target);
       groups.put(d.hitGroup, live.hitTargets);
