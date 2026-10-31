@@ -46,6 +46,7 @@ public class HoveredManager extends IteratingSystem {
   private final Vector2 hitCoords = new Vector2();
   private final Vector2 hitEntityScreen = new Vector2();
   private EntitySubscription selectableSubscriber;
+  private int selectedHoverEntity = Engine.INVALID_ENTITY;
 
   @Override
   protected void initialize() {
@@ -69,6 +70,15 @@ public class HoveredManager extends IteratingSystem {
   protected void begin() {
     coords.set(Gdx.input.getX(), Gdx.input.getY());
     iso.unproject(coords);
+    // Use the same winner for visual hover that click handling uses.  Native
+    // D2 exposes one hovered unit; allowing every overlapping selectable to
+    // retain Hovered makes a static corpse label and a monster header appear
+    // at the same cursor position (notably around Travincal's water pools).
+    selectedHoverEntity = Engine.INVALID_ENTITY;
+    if (Riiablo.game != null && Riiablo.game.player >= 0) {
+      selectedHoverEntity = getHoveredAt(
+          Riiablo.game.player, Gdx.input.getX(), Gdx.input.getY());
+    }
   }
 
   @Override
@@ -91,6 +101,9 @@ public class HoveredManager extends IteratingSystem {
     iso.toScreen(tmpVec2.set(position));
     boolean b = containsScreenPoint(box, tmpVec2, coords,
         hitPaddingX(entityId), hitPaddingY(entityId));
+    if (selectedHoverEntity != Engine.INVALID_ENTITY) {
+      b = b && entityId == selectedHoverEntity;
+    }
     setHovered(entityId, b);
   }
 
