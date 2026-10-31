@@ -30,6 +30,10 @@ public final class Act2QuestMessageValidator {
       return Act2HoradricStaffQuest.isCainMessageAllowed(messageIndex,
           act2[Act2HoradricStaffQuest.RECORD], data.getItems());
     }
+    if (npcType == MonsterType.JERHYN && act2.length > Act2JerhynIntroQuest.RECORD
+        && messageIndex == Act2JerhynIntroQuest.MESSAGE) {
+      return Act2JerhynIntroQuest.isAvailable(act2[Act2JerhynIntroQuest.RECORD]);
+    }
     // Duriel's Tyrael appears in the lair after the boss death.  Message 302
     // is the native portal offer; it is valid only once A2Q6 has reached the
     // post-Duriel state and remains replayable so a second client can receive

@@ -14,6 +14,10 @@ import com.riiablo.codec.excel.Objects;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.monster.MonsterType;
+import com.riiablo.engine.server.quest.Act2DurielQuest;
+import com.riiablo.engine.server.quest.Act2JerhynIntroQuest;
+import com.riiablo.engine.server.quest.Act3HratliIntroQuest;
+import com.riiablo.engine.server.quest.NativeQuestRecord;
 
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
@@ -231,8 +235,10 @@ public class MapManager extends PassiveSystem {
     for (Map.NativeMonster monster : zone.getNativeMonsters()) {
       if (monster != null && monster.monsterId == MonsterType.JERHYN) return;
     }
-    int fallbackX = Integer.MIN_VALUE;
-    int fallbackY = Integer.MIN_VALUE;
+    int startX = Integer.MIN_VALUE;
+    int startY = Integer.MIN_VALUE;
+    int palaceX = Integer.MIN_VALUE;
+    int palaceY = Integer.MIN_VALUE;
     if (zone.presets == null) return;
     for (int x = 0, gridX = 0; x < zone.gridsX; x++, gridX += zone.gridSizeX) {
       for (int y = 0, gridY = 0; y < zone.gridsY; y++, gridY += zone.gridSizeY) {
@@ -247,17 +253,46 @@ public class MapManager extends PassiveSystem {
           int objectX = zone.x + gridX * DT1.Tile.SUBTILE_SIZE + object.x;
           int objectY = zone.y + gridY * DT1.Tile.SUBTILE_SIZE + object.y;
           if (base.InitFn == 18) {
-            int id = factory.createMonster(MonsterType.JERHYN, objectX, objectY);
-            if (id != Engine.INVALID_ENTITY) zone.addEntity(id);
-            return;
+            startX = objectX;
+            startY = objectY;
+          } else {
+            palaceX = objectX;
+            palaceY = objectY;
           }
-          fallbackX = objectX;
-          fallbackY = objectY;
         }
       }
     }
-    if (fallbackX != Integer.MIN_VALUE) {
-      int id = factory.createMonster(MonsterType.JERHYN, fallbackX, fallbackY);
+    short[] act2 = character() == null ? null : character().getQuests(Riiablo.ACT2);
+    boolean introDone = act2 != null && act2.length > Act2JerhynIntroQuest.RECORD
+        && NativeQuestRecord.has(act2[Act2JerhynIntroQuest.RECORD],
+            NativeQuestRecord.REWARD_GRANTED);
+    boolean usingPalace = introDone;
+    int spawnX = usingPalace ? palaceX : startX;
+    int spawnY = usingPalace ? palaceY : startY;
+    if (spawnX == Integer.MIN_VALUE) {
+      // A reduced export can omit the state-selected callback site. Preserve
+      // the NPC rather than silently losing it, using the other native site.
+      usingPalace = !introDone;
+      spawnX = usingPalace ? palaceX : startX;
+      spawnY = usingPalace ? palaceY : startY;
+    }
+    if (spawnX != Integer.MIN_VALUE) {
+      if (usingPalace) {
+        // ACT2Q4_InitializeJerhynMonster applies this offset after the
+        // introduction. Before Duriel has started, the native position is
+        // ten subtiles to the left; later states use the right-hand offset.
+        short duriel = act2 != null && act2.length > Act2DurielQuest.RECORD
+            ? act2[Act2DurielQuest.RECORD] : 0;
+        boolean durielStarted = NativeQuestRecord.has(duriel, NativeQuestRecord.STARTED)
+            || NativeQuestRecord.has(duriel, NativeQuestRecord.LEFT_TOWN)
+            || NativeQuestRecord.has(duriel, NativeQuestRecord.ENTERED_AREA)
+            || NativeQuestRecord.has(duriel, NativeQuestRecord.CUSTOM1)
+            || NativeQuestRecord.has(duriel, NativeQuestRecord.PRIMARY_GOAL_DONE)
+            || NativeQuestRecord.has(duriel, NativeQuestRecord.REWARD_GRANTED);
+        spawnX += durielStarted ? 15 : -10;
+        spawnY -= 3;
+      }
+      int id = factory.createMonster(MonsterType.JERHYN, spawnX, spawnY);
       if (id != Engine.INVALID_ENTITY) zone.addEntity(id);
     }
   }
@@ -266,8 +301,8 @@ public class MapManager extends PassiveSystem {
    * D2Game's A3Q0 object callbacks create Hratli from the town's quest
    * objects instead of carrying him as a normal DS1 UNIT_MONSTER preset.
    * The native export therefore contains objects 378 (HratliStart) and 379
-   * (HratliEnd), but no Hratli monster.  Materialize the start callback here;
-   * the end object remains the native fallback for a completed A3Q0 save.
+   * (HratliEnd), but no Hratli monster.  Materialize the state-selected
+   * callback here; only one object creates Hratli for a given A3Q0 save.
    */
   private void createAct3Hratli(Map.Zone zone) {
     if (zone == null || !zone.town || zone.level == null
@@ -277,6 +312,8 @@ public class MapManager extends PassiveSystem {
     }
     if (zone.presets == null) return;
 
+    int startX = Integer.MIN_VALUE;
+    int startY = Integer.MIN_VALUE;
     int endX = Integer.MIN_VALUE;
     int endY = Integer.MIN_VALUE;
     for (int x = 0, gridX = 0; x < zone.gridsX; x++, gridX += zone.gridSizeX) {
@@ -291,19 +328,27 @@ public class MapManager extends PassiveSystem {
             endX = zone.x + gridX * DT1.Tile.SUBTILE_SIZE + object.x;
             endY = zone.y + gridY * DT1.Tile.SUBTILE_SIZE + object.y;
           }
-          if (objectId != 378) continue;
-          int id = factory.createMonster(MonsterType.HRATLI,
-              zone.x + gridX * DT1.Tile.SUBTILE_SIZE + object.x,
-              zone.y + gridY * DT1.Tile.SUBTILE_SIZE + object.y);
-          if (id != Engine.INVALID_ENTITY) zone.addEntity(id);
-          return;
+          if (objectId == 378) {
+            startX = zone.x + gridX * DT1.Tile.SUBTILE_SIZE + object.x;
+            startY = zone.y + gridY * DT1.Tile.SUBTILE_SIZE + object.y;
+          }
         }
       }
     }
-    // A completed A3Q0 save can omit the start callback's spawn.  Use the
-    // recorded end-object position when it is the only Hratli callback site.
-    if (endX != Integer.MIN_VALUE) {
-      int id = factory.createMonster(MonsterType.HRATLI, endX, endY);
+    short[] act3 = character() == null ? null : character().getQuests(Riiablo.ACT3);
+    boolean introDone = act3 != null && act3.length > Act3HratliIntroQuest.RECORD
+        && NativeQuestRecord.has(act3[Act3HratliIntroQuest.RECORD],
+            NativeQuestRecord.REWARD_GRANTED);
+    int spawnX = introDone ? endX : startX;
+    int spawnY = introDone ? endY : startY;
+    if (spawnX == Integer.MIN_VALUE) {
+      // Keep compatibility with reduced exports that contain only one of the
+      // two callback objects.
+      spawnX = introDone ? startX : endX;
+      spawnY = introDone ? startY : endY;
+    }
+    if (spawnX != Integer.MIN_VALUE) {
+      int id = factory.createMonster(MonsterType.HRATLI, spawnX, spawnY);
       if (id != Engine.INVALID_ENTITY) zone.addEntity(id);
     }
   }

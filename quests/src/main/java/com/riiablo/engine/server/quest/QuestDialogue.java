@@ -48,6 +48,12 @@ public final class QuestDialogue {
 
   public static Offer select(int npc, QuestPlayer player, int levelId) {
     if (player == null) return null;
+    short jerhynIntro = player.record(1, Act2JerhynIntroQuest.RECORD);
+    if (npc == MonsterType.JERHYN && Act2JerhynIntroQuest.isAvailable(jerhynIntro))
+      return offer(Act2JerhynIntroQuest.MESSAGE, true);
+    short hratliIntro = player.record(2, Act3HratliIntroQuest.RECORD);
+    if (npc == MonsterType.HRATLI && Act3HratliIntroQuest.isAvailable(hratliIntro))
+      return offer(Act3HratliIntroQuest.MESSAGE, true);
     short radament = player.record(1, Act2RadamentQuest.RECORD);
     if (npc == MonsterType.ATMA && !finished(radament)) {
       boolean attention = !has(radament, STARTED) || has(radament, REWARD_PENDING);

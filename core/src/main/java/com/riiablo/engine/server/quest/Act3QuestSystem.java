@@ -567,6 +567,21 @@ public class Act3QuestSystem extends ContextualQuestSystem {
     Monster npc = mMonster.get(event.npcId);
     if (player == null || player.data == null || npc == null || npc.monstats == null) return;
     int npcType = QuestNpcPolicy.resolve(npc.monstats);
+    if (npcType == MonsterType.HRATLI
+        && (event.messageIndex == Act3HratliIntroQuest.MESSAGE
+            || event.messageIndex == Act3HratliIntroQuest.MESSAGE_SORCERESS)) {
+      short[] act3 = player.data.getQuests(Riiablo.ACT3);
+      if (act3 != null && act3.length > Act3HratliIntroQuest.RECORD) {
+        short previous = act3[Act3HratliIntroQuest.RECORD];
+        short next = Act3HratliIntroQuest.acknowledge(previous);
+        if (next != previous) {
+          act3[Act3HratliIntroQuest.RECORD] = next;
+          persist(player.data);
+          log.info("[A3Q0] Hratli introduction acknowledged: player={}", event.entityId);
+        }
+      }
+      return;
+    }
     if (Act3GoldenBirdQuest.isCain(npcType)) {
       onCainMessage(event, player);
     } else if (Act3GoldenBirdQuest.isMeshif(npcType)) {

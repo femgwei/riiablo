@@ -156,6 +156,20 @@ public class Act2QuestSystem extends ContextualQuestSystem {
       onSummonerRewardMessage(event, player);
       return;
     }
+    if (npcType == MonsterType.JERHYN
+        && event.messageIndex == Act2JerhynIntroQuest.MESSAGE) {
+      short[] act2 = player.data.getQuests(Riiablo.ACT2);
+      if (act2 != null && act2.length > Act2JerhynIntroQuest.RECORD) {
+        short previous = act2[Act2JerhynIntroQuest.RECORD];
+        short next = Act2JerhynIntroQuest.acknowledge(previous);
+        if (next != previous) {
+          act2[Act2JerhynIntroQuest.RECORD] = next;
+          persist(player.data);
+          log.info("[A2Q0] Jerhyn introduction acknowledged: player={}", event.entityId);
+        }
+      }
+      return;
+    }
     if (npcType != MonsterType.ATMA && npcType != MonsterType.DECKARDCAIN_ACT2) return;
 
     if (npcType == MonsterType.DECKARDCAIN_ACT2) {

@@ -38,6 +38,20 @@ class QuestModuleRulesTest {
     assertNull(QuestDialogue.select(MonsterType.ATMA, p, -1));
   }
 
+  @Test void townIntroOffersCompleteBeforeFollowupQuestOffers() {
+    Player p = new Player();
+    offer(p, MonsterType.JERHYN, Act2JerhynIntroQuest.MESSAGE, true);
+    p.records[1][Act2JerhynIntroQuest.RECORD] =
+        Act2JerhynIntroQuest.acknowledge((short) 0);
+    // Jerhyn's later quest chain is now allowed to replace the intro offer.
+    assertNull(QuestDialogue.select(MonsterType.JERHYN, p, -1));
+
+    offer(p, MonsterType.HRATLI, Act3HratliIntroQuest.MESSAGE, true);
+    p.records[2][Act3HratliIntroQuest.RECORD] =
+        Act3HratliIntroQuest.acknowledge((short) 0);
+    offer(p, MonsterType.HRATLI, Act3GidbinnQuest.MESSAGE_HRATLI_INIT, true);
+  }
+
   @Test void cainStaffDoesNotAdvertiseAcknowledgedAssemblyForever() {
     Player p = new Player();
     assertNull(QuestDialogue.select(MonsterType.DECKARDCAIN_ACT2, p, -1));
@@ -66,6 +80,8 @@ class QuestModuleRulesTest {
 
   @Test void gidbinnRewardsRemainIndependent() {
     Player p = new Player();
+    p.records[2][Act3HratliIntroQuest.RECORD] =
+        Act3HratliIntroQuest.acknowledge((short) 0);
     offer(p, MonsterType.HRATLI, 571, true);
     p.inventory.add("g33");
     offer(p, MonsterType.ORMUS, 587, true);
