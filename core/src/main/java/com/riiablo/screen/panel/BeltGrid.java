@@ -1,9 +1,11 @@
 package com.riiablo.screen.panel;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.utils.Array;
@@ -147,7 +149,10 @@ public class BeltGrid extends ItemGrid {
   @Override
   public void draw(Batch batch, float parentAlpha) {
     if (!isActive()) return;
-    setHidden(!clickListener.isOver());
+    // The belt expands above row zero. ClickListener.isOver() only tracks the
+    // compact row that opened it, so moving into an upper row used to collapse
+    // the belt before the pointer could click or drop an item there.
+    setHidden(!isPointerOver());
     if (!hidden) {
       float x = getX() - 1;
       float y = getY() + boxHeight;
@@ -166,5 +171,15 @@ public class BeltGrid extends ItemGrid {
       hotkey.setPosition(x, y);
       hotkey.draw(batch, 1);
     }
+  }
+
+  private boolean isPointerOver() {
+    if (clickListener.isOver()) return true;
+    if (Gdx.input == null || getStage() == null) return false;
+    Vector2 point = new Vector2(Gdx.input.getX(), Gdx.input.getY());
+    getStage().screenToStageCoordinates(point);
+    stageToLocalCoordinates(point);
+    return point.x >= 0 && point.x < getWidth()
+        && point.y >= 0 && point.y < rows * boxHeight;
   }
 }
