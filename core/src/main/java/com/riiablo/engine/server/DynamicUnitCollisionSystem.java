@@ -379,9 +379,29 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
           Integer.toHexString(footprint.zone.nativeCollisionFlagsWorld(x, y)),
           Integer.toHexString(footprint.zone.staticFlagsWorld(x, y)), unchecked);
     }
-    if (footprint == null) return unchecked || shared.check(zoneOf(id),x,y,
-        D2Collision.PATTERN_NONE,0,mask,-1,-1) == 0;
-    if (unchecked) { shared.update(id,footprint.at(x,y)); return true; }
+    if (footprint == null) {
+      // Units without a registered footprint still have to respect terrain.
+      // `unchecked` only suppresses dynamic-unit presence checks; returning
+      // true here would let special movement cross native walls before a
+      // footprint is allocated (or for units intentionally omitted from the
+      // presence grid).
+      int terrainMask = unchecked ? D2Collision.COLLIDE_WALL : mask;
+      return shared.check(zoneOf(id), x, y, D2Collision.PATTERN_NONE, 0,
+          terrainMask, -1, -1) == 0;
+    }
+    if (unchecked) {
+      // Step.cpp's unchecked path bit bypasses dynamic presence checks for
+      // special movement, but it must never bypass terrain walls.  Native
+      // maps keep wall masks in the same shared grid, so test only the hard
+      // terrain bit before publishing the new footprint.
+      int wall = shared.check(footprint.zone, x, y, footprint.pattern, footprint.size,
+          com.d2moo.common.collision.D2Collision.COLLIDE_WALL, id, -1);
+      if ((wall & com.d2moo.common.collision.D2Collision.COLLIDE_WALL) != 0) {
+        return false;
+      }
+      shared.update(id, footprint.at(x, y));
+      return true;
+    }
     return shared.move(id, footprint.at(x,y), mask);
   }
 

@@ -2043,6 +2043,19 @@ public class Map implements Disposable {
 
     public int nativeCollisionGeneration() { return nativeCollisionGeneration; }
 
+    /**
+     * Drops the lazily materialized collision grid after terrain flags are
+     * replaced by a native export.  Room population can query collision while
+     * the bridge is still exporting levels, so the grid may have been created
+     * from the old empty compatibility layer before the final TileGrid is
+     * applied.  Keeping that instance would permanently lose native wall
+     * masks for the level.
+     */
+    void invalidateNativeCollision() {
+      nativeCollision = null;
+      nativeCollisionGeneration++;
+    }
+
     /** Resolve room-grid cells through actual continuous links, never detached overlapping levels. */
     public Zone nativeCollisionZone(int worldX, int worldY) {
       if (contains(worldX, worldY)) return this;

@@ -3947,7 +3947,18 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
     zone.restoreNativeWarpMarkers();
     rebuildTileCollisionFlags(grid, zone.tiles, zone.dt1s, zone.flags,
         zone.tilesX, zone.tilesY, width, height);
+    int repairedRoomWallSeams = repairNativeRoomBoundaryWallGaps(zone, grid);
+    // Native room population may have touched collision before this terrain
+    // pass (for example while capturing spawn exclusions).  That lazily
+    // created grid was based on the pre-export compatibility flags; discard
+    // it so the next query snapshots the just-applied native wall masks.
+    zone.invalidateNativeCollision();
     if (Gdx.app != null) {
+      if (repairedRoomWallSeams > 0) {
+        Gdx.app.log(TAG, String.format(
+            "Native RoomEx wall seams repaired: level=%d subtiles=%d",
+            zone.levelId(), repairedRoomWallSeams));
+      }
       Gdx.app.log(TAG, String.format(
           "Applied native TileGrid: level=%d grid=%dx%d floor=%d wall=%d shadow=%d",
           zone.levelId(), grid.width, grid.height,
@@ -4074,6 +4085,7 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
+        int tileIndex = Zone.index(zoneTilesX, x, y);
         if (exportedFootprint != null && exportedFootprint.nativeCollisionCells != null
             && exportedFootprint.inBounds(x, y)
             && exportedFootprint.nativeCollisionCells[y][x]) {
@@ -4086,6 +4098,16 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
                 (y * 5 + sy) * nativeWidth + x * 5, flags,
                 (y * 5 + sy) * subtileWidth + x * 5, 5);
           }
+
+          // The native RoomEx mask is authoritative for the floor cell, but
+          // the exported wall graphics still carry collision that is not
+          // always present in D2MOO's selected floor mask.  In Travincal this
+          // is the corner where room 31 meets the small waypoint building:
+          // copying only the native mask leaves a walkable seam through the
+          // rendered wall.  Merge ordinary wall orientations on top of the
+          // native mask while keeping door/special/roof tiles dynamic.
+          mergeNativeWallCollision(layers, dt1s, tileIndex, flags, subtileWidth,
+              x, y);
           counts.tiles++;
           continue;
         }
@@ -4096,7 +4118,6 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
           counts.voidTiles++;
           continue;
         }
-        int tileIndex = Zone.index(zoneTilesX, x, y);
         for (int layer = Map.FLOOR_OFFSET;
              layer < Map.FLOOR_OFFSET + Map.MAX_FLOORS; layer++) {
           DT1.Tile[] tiles = layers[layer];
@@ -4156,6 +4177,161 @@ public final class Act1MapBuilderD2MOD extends MapBuilderResources implements Ma
         flags[rowStart + startX + x] |= tile.flags[t];
       }
     }
+  }
+
+  /**
+   * Adds collision carried by static wall graphics to a native RoomEx cell.
+   * Door orientations are intentionally omitted: their walkability is owned
+   * by the runtime door state, while ordinary walls/corners must remain solid
+   * even when the native floor mask is sparse.
+   */
+  private static void mergeNativeWallCollision(DT1.Tile[][] layers, DT1s dt1s,
+      int tileIndex, byte[] flags, int subtileWidth, int tileX, int tileY) {
+    if (layers == null) return;
+    for (int layer = Map.WALL_OFFSET;
+        layer < Map.WALL_OFFSET + Map.MAX_WALLS; layer++) {
+      DT1.Tile[] tiles = layers[layer];
+      if (tiles == null || tileIndex < 0 || tileIndex >= tiles.length) continue;
+      DT1.Tile tile = tiles[tileIndex];
+      if (tile == null || !isStaticWallCollisionOrientation(tile.orientation)) continue;
+      orTileCollisionFlags(flags, subtileWidth, tileX, tileY, tile);
+
+      // Match Preset.copyWalls: right north-corner graphics use the left
+      // sibling's collision data as well.
+      if (dt1s != null && tile.orientation == Orientation.RIGHT_NORTH_CORNER_WALL) {
+        DT1.Tile sibling = dt1s.get(
+            Orientation.LEFT_NORTH_CORNER_WALL, tile.mainIndex, tile.subIndex);
+        if (sibling != null) {
+          orTileCollisionFlags(flags, subtileWidth, tileX, tileY, sibling);
+        }
+      }
+    }
+  }
+
+  private static boolean isStaticWallCollisionOrientation(int orientation) {
+    switch (orientation) {
+      case Orientation.LEFT_WALL:
+      case Orientation.RIGHT_WALL:
+      case Orientation.RIGHT_NORTH_CORNER_WALL:
+      case Orientation.LEFT_NORTH_CORNER_WALL:
+      case Orientation.LEFT_END_WALL:
+      case Orientation.RIGHT_END_WALL:
+      case Orientation.SOUTH_CORNER_WALL:
+      case Orientation.LOWER_LEFT_WALL:
+      case Orientation.LOWER_RIGHT_WALL:
+      case Orientation.LOWER_NORTH_CORNER_WALL:
+      case Orientation.LOWER_SOUTH_CORNER_WALL:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Repairs the narrow collision seam left where two native RoomEx rectangles
+   * share a wall.  D2MOO can export the wall graphic on either side of that
+   * boundary while its selected floor mask stops a few subtiles short.  The
+   * missing strip is enough for a unit (or a missile ray) to cross a rendered
+   * building wall.  Only an explicitly adjacent pair with a nearby ordinary
+   * wall is repaired; bare RoomEx joins remain walkable for doors and paths.
+   */
+  static int repairNativeRoomBoundaryWallGaps(Zone zone) {
+    return repairNativeRoomBoundaryWallGaps(zone, null);
+  }
+
+  private static int repairNativeRoomBoundaryWallGaps(Zone zone, TileGrid grid) {
+    if (zone == null || zone.flags == null || zone.getRoomsEx().size < 2
+        || zone.tilesX <= 0 || zone.tilesY <= 0) return 0;
+    final int subtileSize = DT1.Tile.SUBTILE_SIZE;
+    final int subtileWidth = zone.tilesX * subtileSize;
+    final int seamFlags = DT1.Tile.FLAG_BLOCK_WALK | DT1.Tile.FLAG_BLOCK_JUMP;
+    int repaired = 0;
+
+    for (int i = 0; i < zone.getRoomsEx().size; i++) {
+      Map.RoomEx first = zone.getRoomsEx().get(i);
+      for (int j = i + 1; j < zone.getRoomsEx().size; j++) {
+        Map.RoomEx second = zone.getRoomsEx().get(j);
+        if (!(first.isAdjacentTo(second.id) || second.isAdjacentTo(first.id))) continue;
+
+        if (first.x + first.width == second.x || second.x + second.width == first.x) {
+          int boundaryX = first.x + first.width == second.x ? second.x : first.x;
+          int startY = Math.max(first.y, second.y);
+          int endY = Math.min(first.y + first.height, second.y + second.height);
+          for (int rowY = tileOriginAtOrBefore(zone.y, startY, subtileSize);
+              rowY < endY; rowY += subtileSize) {
+            if (!hasStaticWallNear(zone, grid, boundaryX, rowY, 2)) continue;
+            repaired += markNativeSeamStrip(zone, boundaryX - subtileSize,
+                rowY, subtileSize * 2, subtileSize, subtileWidth, seamFlags);
+          }
+        } else if (first.y + first.height == second.y || second.y + second.height == first.y) {
+          int boundaryY = first.y + first.height == second.y ? second.y : first.y;
+          int startX = Math.max(first.x, second.x);
+          int endX = Math.min(first.x + first.width, second.x + second.width);
+          for (int colX = tileOriginAtOrBefore(zone.x, startX, subtileSize);
+              colX < endX; colX += subtileSize) {
+            if (!hasStaticWallNear(zone, grid, colX, boundaryY, 2)) continue;
+            repaired += markNativeSeamStrip(zone, colX, boundaryY - subtileSize,
+                subtileSize, subtileSize * 2, subtileWidth, seamFlags);
+          }
+        }
+      }
+    }
+    return repaired;
+  }
+
+  private static int tileOriginAtOrBefore(int zoneOrigin, int coordinate, int tileSize) {
+    return zoneOrigin + Math.floorDiv(coordinate - zoneOrigin, tileSize) * tileSize;
+  }
+
+  private static boolean hasStaticWallNear(Zone zone, TileGrid grid,
+      int worldX, int worldY, int radiusTiles) {
+    int centerTileX = Math.floorDiv(worldX - zone.x, DT1.Tile.SUBTILE_SIZE);
+    int centerTileY = Math.floorDiv(worldY - zone.y, DT1.Tile.SUBTILE_SIZE);
+    if (grid != null) {
+      for (int dx = -radiusTiles; dx <= radiusTiles; dx++) {
+        int tileX = centerTileX + dx;
+        if (tileX < 0 || tileX >= grid.width || centerTileY < 0 || centerTileY >= grid.height) continue;
+        for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS; layer++) {
+          int id = grid.wallIds[layer][centerTileY][tileX];
+          if (id != -1 && !grid.hiddenWallCells[layer][centerTileY][tileX]
+              && isStaticWallCollisionOrientation(DT1.Tile.Index.orientation(id))) return true;
+        }
+      }
+      return false;
+    }
+    centerTileX = Math.floorDiv(worldX, DT1.Tile.SUBTILE_SIZE);
+    centerTileY = Math.floorDiv(worldY, DT1.Tile.SUBTILE_SIZE);
+    for (int dx = -radiusTiles; dx <= radiusTiles; dx++) {
+      for (int layer = Map.WALL_OFFSET;
+          layer < Map.WALL_OFFSET + Map.MAX_WALLS; layer++) {
+        DT1.Tile tile = zone.get(layer, centerTileX + dx, centerTileY);
+        if (tile != null && isStaticWallCollisionOrientation(tile.orientation)) return true;
+      }
+    }
+    return false;
+  }
+
+  private static int markNativeSeamStrip(Zone zone, int worldX, int worldY,
+      int width, int height, int subtileWidth, int mask) {
+    int minX = Math.max(0, worldX - zone.x);
+    int minY = Math.max(0, worldY - zone.y);
+    int maxX = Math.min(zone.tilesX * DT1.Tile.SUBTILE_SIZE, worldX - zone.x + width);
+    int maxY = Math.min(zone.tilesY * DT1.Tile.SUBTILE_SIZE, worldY - zone.y + height);
+    int changed = 0;
+    for (int y = minY; y < maxY; y++) {
+      int rowStart = y * subtileWidth;
+      for (int x = minX; x < maxX; x++) {
+        int index = rowStart + x;
+        if (index < 0 || index >= zone.flags.length) continue;
+        int old = zone.flags[index] & 0xFF;
+        int next = old | mask;
+        if (next != old) {
+          zone.flags[index] = (byte) next;
+          changed++;
+        }
+      }
+    }
+    return changed;
   }
 
   static final class LayerApplyCounts {

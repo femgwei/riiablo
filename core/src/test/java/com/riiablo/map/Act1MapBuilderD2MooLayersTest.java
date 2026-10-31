@@ -65,6 +65,111 @@ class Act1MapBuilderD2MooLayersTest {
     assertEquals(DT1.Tile.FLAG_BLOCK_WALK, actual[5], "truly unexported space stays blocked");
   }
 
+  @Test
+  void nativeRoomMaskStillMergesStaticCornerWallCollision() throws IOException {
+    TileGrid grid = new TileGrid(1, 1);
+    grid.exportedFloorCells[0][0] = true;
+    grid.nativeCollisionCells = new boolean[][] {{true}};
+    grid.nativeCollisionFlags = new byte[DT1.Tile.NUM_SUBTILES];
+
+    DT1.Tile rightCorner = tile(Orientation.RIGHT_NORTH_CORNER_WALL, 12, 3);
+    DT1.Tile leftCorner = tile(Orientation.LEFT_NORTH_CORNER_WALL, 12, 3);
+    Arrays.fill(rightCorner.flags, (byte) 0);
+    Arrays.fill(leftCorner.flags, (byte) 0);
+    rightCorner.flags[0] = (byte) DT1.Tile.FLAG_BLOCK_WALK;
+    leftCorner.flags[20] = (byte) DT1.Tile.FLAG_BLOCK_PLAYER_WALK;
+
+    DT1s library = new DT1s();
+    library.add(rightCorner);
+    library.add(leftCorner);
+    DT1.Tile[][] layers = new DT1.Tile[Map.MAX_LAYERS][];
+    layers[Map.WALL_OFFSET] = new DT1.Tile[] {rightCorner};
+    byte[] actual = new byte[DT1.Tile.NUM_SUBTILES];
+
+    Act1MapBuilderD2MOD.rebuildTileCollisionFlags(
+        grid, layers, library, actual, 1, 1, 1, 1);
+
+    assertEquals(DT1.Tile.FLAG_BLOCK_WALK, actual[20] & 0xFF,
+        "native floor mask must not erase the rendered corner wall");
+    assertEquals(DT1.Tile.FLAG_BLOCK_PLAYER_WALK, actual[0] & 0xFF,
+        "right-corner sibling collision must remain available");
+  }
+
+  @Test
+  void repairsOnlyRoomBoundarySeamsWithNearbyStaticWalls() throws IOException {
+    Map.Zone zone = new Map.Zone();
+    zone.setPosition(0, 0);
+    zone.tilesX = 8;
+    zone.tilesY = 4;
+    zone.width = zone.tilesX * DT1.Tile.SUBTILE_SIZE;
+    zone.height = zone.tilesY * DT1.Tile.SUBTILE_SIZE;
+    zone.flags = new byte[zone.width * zone.height];
+    zone.tiles[Map.WALL_OFFSET] = new DT1.Tile[zone.tilesX * zone.tilesY];
+    Map.RoomEx left = zone.addRoomEx(0, 0, 20, 20);
+    Map.RoomEx right = zone.addRoomEx(20, 0, 20, 20);
+    left.setAdjacentRoomIds(new int[] {right.id});
+    right.setAdjacentRoomIds(new int[] {left.id});
+    zone.tiles[Map.WALL_OFFSET][Map.Zone.index(zone.tilesX, 2, 0)] =
+        tile(Orientation.LEFT_WALL, 1, 1);
+
+    int repaired = Act1MapBuilderD2MOD.repairNativeRoomBoundaryWallGaps(zone);
+    assertTrue(repaired > 0);
+    for (int y = 0; y < 5; y++) {
+      for (int x = 15; x < 25; x++) {
+        int flags = zone.flags[y * zone.width + x] & 0xFF;
+        assertEquals(DT1.Tile.FLAG_BLOCK_WALK | DT1.Tile.FLAG_BLOCK_JUMP, flags);
+      }
+    }
+    for (int y = 5; y < 20; y++) {
+      for (int x = 15; x < 25; x++) {
+        assertEquals(0, zone.flags[y * zone.width + x]);
+      }
+    }
+
+    Map.Zone open = new Map.Zone();
+    open.setPosition(0, 0);
+    open.tilesX = zone.tilesX;
+    open.tilesY = zone.tilesY;
+    open.width = zone.width;
+    open.height = zone.height;
+    open.flags = new byte[open.width * open.height];
+    Map.RoomEx openLeft = open.addRoomEx(0, 0, 20, 20);
+    Map.RoomEx openRight = open.addRoomEx(20, 0, 20, 20);
+    openLeft.setAdjacentRoomIds(new int[] {openRight.id});
+    openRight.setAdjacentRoomIds(new int[] {openLeft.id});
+    assertEquals(0, Act1MapBuilderD2MOD.repairNativeRoomBoundaryWallGaps(open));
+    assertEquals(0, open.flags[10 * open.width + 20]);
+  }
+
+  @Test
+  void refreshesNativeCollisionWhenExportArrivesAfterAnEarlyQuery() {
+    Map map = new Map(1, 0);
+    Map.Zone zone = new Map.Zone();
+    zone.map = map;
+    zone.x = zone.y = 0;
+    zone.tilesX = zone.tilesY = 1;
+    zone.width = zone.height = DT1.Tile.SUBTILE_SIZE;
+    zone.flags = new byte[zone.width * zone.height];
+    zone.tiles[Map.FLOOR_OFFSET] = new DT1.Tile[1];
+    zone.dt1s = new DT1s();
+    map.zones.add(zone);
+
+    // Room population can query this before the authoritative native export.
+    assertEquals(0, zone.nativeCollisionFlagsWorld(2, 2));
+
+    com.riiablo.drlg.TileGrid grid = new com.riiablo.drlg.TileGrid(1, 1);
+    grid.nativeCollisionFlags = new byte[DT1.Tile.NUM_SUBTILES];
+    grid.nativeCollisionCells = new boolean[1][1];
+    grid.nativeCollisionCells[0][0] = true;
+    grid.nativeCollisionFlags[2 * DT1.Tile.SUBTILE_SIZE + 2] =
+        (byte) com.d2moo.common.collision.D2Collision.COLLIDE_WALL;
+
+    Act1MapBuilderD2MOD.applyExportedTileGrid(zone, grid);
+
+    assertTrue((zone.nativeCollisionFlagsWorld(2, 2)
+        & com.d2moo.common.collision.D2Collision.COLLIDE_WALL) != 0);
+  }
+
   @Test void collisionRebuildDoesNotRerollTheNativeSelectedDt1Variant() throws IOException {
     TileGrid grid = new TileGrid(1, 1);
     grid.exportedFloorCells[0][0] = true;

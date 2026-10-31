@@ -86,6 +86,37 @@ class NativePathRuntimeTest {
     }
   }
 
+  @Test void uncheckedNativeStepStillStopsAtTerrainWall() throws Exception {
+    try(Fixture f=new Fixture()) {
+      int id=f.monster(20,20);
+      assertTrue(f.finder.findPath(id,new Vector2(32,20)));
+      NativePathRuntime runtime=f.path(id).nativeRuntime;
+      // The native path bit is used by special movement to skip dynamic
+      // presence, but an ordinary terrain wall remains a hard barrier.
+      runtime.result.path.pathFlags |= 4;
+      f.zone.setNativeCollisionMask(21,20,com.d2moo.common.collision.D2Collision.COLLIDE_WALL);
+      java.lang.reflect.Method move = DynamicUnitCollisionSystem.class.getDeclaredMethod(
+          "moveNativePath", int.class, int.class, int.class, int.class, boolean.class);
+      move.setAccessible(true);
+      assertFalse((Boolean) move.invoke(f.collision, id, 21, 20, 0x3000, true));
+      assertEquals(com.d2moo.common.collision.D2Collision.COLLIDE_WALL,
+          f.zone.nativeCollisionFlagsWorld(21,20)
+              & com.d2moo.common.collision.D2Collision.COLLIDE_WALL);
+    }
+  }
+
+  @Test void uncheckedNativeStepWithoutFootprintStillStopsAtTerrainWall() throws Exception {
+    try(Fixture f=new Fixture()) {
+      int id=f.monster(20,20);
+      f.collision.releaseNativeCollision(id);
+      f.zone.setNativeCollisionMask(21,20,com.d2moo.common.collision.D2Collision.COLLIDE_WALL);
+      java.lang.reflect.Method move = DynamicUnitCollisionSystem.class.getDeclaredMethod(
+          "moveNativePath", int.class, int.class, int.class, int.class, boolean.class);
+      move.setAccessible(true);
+      assertFalse((Boolean) move.invoke(f.collision, id, 21, 20, 0x3000, true));
+    }
+  }
+
   @Test void movedTargetUsesNativeFiveCellThresholdAndRetainsAllocationGuard() {
     try(Fixture f=new Fixture()) {
       int id=f.monster(20,20), target=f.monster(40,20);
