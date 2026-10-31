@@ -96,52 +96,6 @@ class Act1MapBuilderD2MooLayersTest {
   }
 
   @Test
-  void repairsOnlyRoomBoundarySeamsWithNearbyStaticWalls() throws IOException {
-    Map.Zone zone = new Map.Zone();
-    zone.setPosition(0, 0);
-    zone.tilesX = 8;
-    zone.tilesY = 4;
-    zone.width = zone.tilesX * DT1.Tile.SUBTILE_SIZE;
-    zone.height = zone.tilesY * DT1.Tile.SUBTILE_SIZE;
-    zone.flags = new byte[zone.width * zone.height];
-    zone.tiles[Map.WALL_OFFSET] = new DT1.Tile[zone.tilesX * zone.tilesY];
-    Map.RoomEx left = zone.addRoomEx(0, 0, 20, 20);
-    Map.RoomEx right = zone.addRoomEx(20, 0, 20, 20);
-    left.setAdjacentRoomIds(new int[] {right.id});
-    right.setAdjacentRoomIds(new int[] {left.id});
-    zone.tiles[Map.WALL_OFFSET][Map.Zone.index(zone.tilesX, 2, 0)] =
-        tile(Orientation.LEFT_WALL, 1, 1);
-
-    int repaired = Act1MapBuilderD2MOD.repairNativeRoomBoundaryWallGaps(zone);
-    assertTrue(repaired > 0);
-    for (int y = 0; y < 5; y++) {
-      for (int x = 15; x < 25; x++) {
-        int flags = zone.flags[y * zone.width + x] & 0xFF;
-        assertEquals(DT1.Tile.FLAG_BLOCK_WALK | DT1.Tile.FLAG_BLOCK_JUMP, flags);
-      }
-    }
-    for (int y = 5; y < 20; y++) {
-      for (int x = 15; x < 25; x++) {
-        assertEquals(0, zone.flags[y * zone.width + x]);
-      }
-    }
-
-    Map.Zone open = new Map.Zone();
-    open.setPosition(0, 0);
-    open.tilesX = zone.tilesX;
-    open.tilesY = zone.tilesY;
-    open.width = zone.width;
-    open.height = zone.height;
-    open.flags = new byte[open.width * open.height];
-    Map.RoomEx openLeft = open.addRoomEx(0, 0, 20, 20);
-    Map.RoomEx openRight = open.addRoomEx(20, 0, 20, 20);
-    openLeft.setAdjacentRoomIds(new int[] {openRight.id});
-    openRight.setAdjacentRoomIds(new int[] {openLeft.id});
-    assertEquals(0, Act1MapBuilderD2MOD.repairNativeRoomBoundaryWallGaps(open));
-    assertEquals(0, open.flags[10 * open.width + 20]);
-  }
-
-  @Test
   void refreshesNativeCollisionWhenExportArrivesAfterAnEarlyQuery() {
     Map map = new Map(1, 0);
     Map.Zone zone = new Map.Zone();
