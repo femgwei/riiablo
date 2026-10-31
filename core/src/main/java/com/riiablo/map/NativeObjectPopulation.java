@@ -5,10 +5,13 @@ import com.riiablo.codec.excel.Excel;
 import com.riiablo.codec.excel.ObjGroup;
 import com.riiablo.codec.excel.Objects;
 import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.seed.Seed;
 
 /** D2Game Objects.cpp object groups and placement; separate from DS1 presets. */
 final class NativeObjectPopulation {
+  private static final int TRAVINCAL_LEVEL_ID = D2LevelIds.LEVEL_TRAVINCAL;
+  private static final int KURAST_POOL_FLOOR_STYLE = 20;
   private ObjGroup groups;
   private final java.util.IdentityHashMap<Map.Zone, Region> regions = new java.util.IdentityHashMap<>();
   private final java.util.IdentityHashMap<Map, D2Seed> controls = new java.util.IdentityHashMap<>();
@@ -194,6 +197,13 @@ final class NativeObjectPopulation {
       int x = r.x + next(seed, r.width - base.SizeX - 1);
       int y = r.y + next(seed, r.height - base.SizeY - 1);
       if (bounds(r, x, y, 1, 1, 0) && clear(z, x, y, base.SizeX + 6, base.SizeY + 6)) {
+        // D2MOO's ObjGroup/42 corpse roll is valid on ordinary Kurast ground,
+        // but the retail Travincal pool is a water preset and never receives a
+        // corpse object.  The pool DT1 has no placement collision bit of its
+        // own, so relying on COLLIDE_MASK_PLACEMENT alone incorrectly places a
+        // corpse in the water.  Keep the same random rolls/attempt count and
+        // reject only this object at the water-pool tile.
+        if (base.Id == 272 && isTravincalWaterPool(z, x, y)) continue;
         add(z, r, base.Id, x, y, source);
         last = z.getNativeObjects().peek();
         if (function == 9) return;
@@ -203,6 +213,22 @@ final class NativeObjectPopulation {
     // PopulateFn6 adds flies only at the final successfully-created corpse.
     if (function == 6 && last != null && next(seed, 100) > 70)
       add(z, r, 103, z.x() + last.x, z.y() + last.y, source + "/flies");
+  }
+
+  private static boolean isTravincalWaterPool(Map.Zone zone, int worldX, int worldY) {
+    if (zone == null || zone.level == null || zone.level.Id != TRAVINCAL_LEVEL_ID) return false;
+    com.riiablo.drlg.TileGrid grid = zone.nativeTileGrid();
+    if (grid == null) return false;
+    int tileX = Math.floorDiv(worldX - zone.x(), com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
+    int tileY = Math.floorDiv(worldY - zone.y(), com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
+    if (!grid.inBounds(tileX, tileY)) return false;
+    int floorId = grid.floorIds[tileY][tileX];
+    if (floorId < 0
+        || com.riiablo.map.DT1.Tile.Index.mainIndex(floorId) != KURAST_POOL_FLOOR_STYLE) return false;
+    String source = grid.sourceFile(grid.floorSourceFiles[tileY][tileX]);
+    return source != null
+        && source.replace('\\', '/').toLowerCase(java.util.Locale.ROOT)
+            .endsWith("act3/kurast/floors.dt1");
   }
   private static boolean clusterClear(Map.Zone z, Map.RoomEx r, Objects.Entry b, int x, int y) {
     return bounds(r, x, y, b.SizeX, b.SizeY, 2) && clear(z, x, y, b.SizeX + 2, b.SizeY + 2);
