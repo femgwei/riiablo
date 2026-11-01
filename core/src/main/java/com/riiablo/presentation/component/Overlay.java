@@ -30,7 +30,7 @@ public class Overlay extends PooledComponent {
 
   public boolean usesNativeRendering() {
     return nativeAura || entry != null
-        && com.riiablo.presentation.AuraRenderPolicy.isWarCryOverlay(entry.overlay);
+        && com.riiablo.presentation.AuraRenderPolicy.isBarbarianOverlay(entry.overlay);
   }
 
   public Overlay set(com.riiablo.codec.excel.Overlay.Entry overlay) {

@@ -15,6 +15,14 @@ public final class AuraRenderPolicy {
         || "battlecry".equalsIgnoreCase(name) || "stun".equalsIgnoreCase(name);
   }
 
+  /** Audited Barbarian state layers and short-lived activation flashes. */
+  public static boolean isBarbarianOverlay(String name) {
+    return isWarCryOverlay(name) || "frenzy".equalsIgnoreCase(name)
+        || "berserkfront".equalsIgnoreCase(name) || "berserkback".equalsIgnoreCase(name)
+        || "whirlwind".equalsIgnoreCase(name) || "shoutstart".equalsIgnoreCase(name)
+        || "battleorderscast".equalsIgnoreCase(name) || "battlecommandcast".equalsIgnoreCase(name);
+  }
+
   // D2Client 6FB5BE13: AnimRate << 4; frames have eight fractional bits.
   public static float frameDuration(int animRate) {
     return animRate <= 0 ? Float.POSITIVE_INFINITY

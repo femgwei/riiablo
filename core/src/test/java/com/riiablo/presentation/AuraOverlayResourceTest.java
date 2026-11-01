@@ -17,6 +17,42 @@ import com.riiablo.codec.util.BBox;
 import com.riiablo.graphics.BlendMode;
 
 class AuraOverlayResourceTest extends RiiabloTest {
+  @Test void barbarianStateLayersAndActivationFlashesUseNativeAnimationParameters() {
+    AssetManager saved = Riiablo.assets;
+    com.riiablo.Colors savedColors = Riiablo.colors;
+    Riiablo.colors = new com.riiablo.Colors();
+    AssetManager assets = Riiablo.assets = mock(AssetManager.class);
+    DCC dcc = mock(DCC.class);
+    when(dcc.getNumDirections()).thenReturn(1);
+    when(dcc.getNumFramesPerDir()).thenReturn(16);
+    when(dcc.getBox(anyInt())).thenReturn(new BBox());
+    when(assets.isLoaded(any(AssetDescriptor.class))).thenReturn(true);
+    when(assets.get(any(AssetDescriptor.class))).thenReturn(dcc);
+    OverlayManager manager = new OverlayManager();
+    World world = new World(new WorldConfigurationBuilder().with(manager).build()
+        .register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      for (String name : new String[] {"frenzy", "berserkfront", "berserkback", "whirlwind",
+          "shoutstart", "battleorderscast", "battlecommandcast"}) {
+        int entity = world.create();
+        manager.set(entity, name);
+        world.process();
+        com.riiablo.presentation.component.Overlay effect = world.getMapper(
+            com.riiablo.presentation.component.Overlay.class).get(entity);
+        assertTrue(effect.usesNativeRendering(), name);
+        assertFalse(effect.persistent);
+        assertEquals(AuraRenderPolicy.blendMode(effect.entry.Trans),
+            effect.animation.getLayer(0).getBlendMode(), name);
+        assertEquals(AuraRenderPolicy.frameDuration(effect.entry.AnimRate),
+            effect.animation.getFrameDuration(), .000001f, name);
+        assertSame(dcc, effect.animation.getLayer(0).getDC());
+      }
+    } finally {
+      world.dispose();
+      Riiablo.assets = saved;
+      Riiablo.colors = savedColors;
+    }
+  }
   @Test void savedRightHandAuraIsRestoredWithoutSkillSelectionEvent() {
     com.riiablo.engine.server.AuraEcsSystem auras = new com.riiablo.engine.server.AuraEcsSystem();
     World world = new World(new WorldConfigurationBuilder().with(auras).build());
