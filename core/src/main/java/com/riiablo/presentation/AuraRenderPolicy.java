@@ -20,7 +20,8 @@ public final class AuraRenderPolicy {
     return isWarCryOverlay(name) || "frenzy".equalsIgnoreCase(name)
         || "berserkfront".equalsIgnoreCase(name) || "berserkback".equalsIgnoreCase(name)
         || "whirlwind".equalsIgnoreCase(name) || "shoutstart".equalsIgnoreCase(name)
-        || "battleorderscast".equalsIgnoreCase(name) || "battlecommandcast".equalsIgnoreCase(name);
+        || "battleorderscast".equalsIgnoreCase(name) || "battlecommandcast".equalsIgnoreCase(name)
+        || "bash".equalsIgnoreCase(name) || "doubledamage1".equalsIgnoreCase(name);
   }
 
   // D2Client 6FB5BE13: AnimRate << 4; frames have eight fractional bits.

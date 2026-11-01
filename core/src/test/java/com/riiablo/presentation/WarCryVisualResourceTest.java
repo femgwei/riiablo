@@ -29,7 +29,7 @@ class WarCryVisualResourceTest extends RiiabloTest {
       if ("berserkback".equals(name)) assertTrue(row.PreDraw);
       System.out.println("BARB_OVERLAY " + name + " rate=" + row.AnimRate + " trans="
           + row.Trans + " pre=" + row.PreDraw + " height2=" + row.Height2);
-      if (!"bash".equals(name) && !"doubledamage1".equals(name)) {
+      {
         com.riiablo.presentation.component.Overlay effect = new com.riiablo.presentation.component.Overlay();
         effect.set(row);
         assertTrue(effect.usesNativeRendering(), name);
