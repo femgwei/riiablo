@@ -320,8 +320,12 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       int n = Math.min(2, source.CltSubMissile.length);
       String child = first(source.CltSubMissile, nextClientRandom(visual, n));
       if (child != null) {
+        int radius = Math.max(1, cltParam(source, 1, 5));
+        Vector2 origin = mPosition.get(entityId).position;
+        float x = MathUtils.floor(origin.x) + randomClientTargetOffset(visual, radius);
+        float y = MathUtils.floor(origin.y) + randomClientTargetOffset(visual, radius);
         int id = createFlightVisual(source, child,
-            mPosition.get(entityId).position, 0f);
+            new Vector2(x, y), 0f);
         // CltDo13 starts both Blizzard fall DCCs at frame zero and lets the
         // animation run to completion.  The client row has a non-zero Vel,
         // so the generic presentation lifetime intentionally returns zero;
@@ -345,19 +349,23 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     if (visual.clientFlightInitialized || factory == null
         || source.CltSubMissile == null) return;
     Vector2 at = mPosition.get(entityId).position;
+    int spread = Math.max(1, cltParam(source, 1, 25) - 1);
+    Vector2 impact = new Vector2(
+        MathUtils.floor(at.x) + cltParam(source, 0, 59) - nextClientRandom(visual, spread * 2),
+        MathUtils.floor(at.y) + cltParam(source, 0, 59) - nextClientRandom(visual, spread * 2));
     String rock = first(source.CltSubMissile, 0);
     String tail = first(source.CltSubMissile, 1);
     // World Y is the vertical screen axis in the isometric renderer.
-    createMeteorVisual(source, rock, at);
-    createMeteorVisual(source, tail, at);
+    createMeteorVisual(source, rock, impact, at);
+    createMeteorVisual(source, tail, impact, at);
     visual.clientFlightInitialized = true;
   }
 
   /** Creates the rock/tail pair and gives them the native 59-frame descent. */
   private void createMeteorVisual(Missiles.Entry source, String childName,
-      Vector2 target) {
+      Vector2 start, Vector2 target) {
     if (childName == null) return;
-    int id = createFlightVisual(source, childName, target, 0f, 0f, -6f);
+    int id = createFlightVisual(source, childName, start, 0f);
     if (id == com.riiablo.engine.Engine.INVALID_ENTITY || !mMissile.has(id)) return;
     Missile child = mMissile.get(id);
     child.nativeLifetimeFrames = Math.max(1, cltParam(source, 0, 59));
@@ -365,7 +373,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // keep authoritative damage at the center and animate only this replica.
     if (mVelocity.has(id)) {
       float frames = child.nativeLifetimeFrames;
-      mVelocity.get(id).velocity.set(0f, 6f * 25f / frames);
+      mVelocity.get(id).velocity.set(target).sub(start).scl(25f / frames);
     }
   }
 
