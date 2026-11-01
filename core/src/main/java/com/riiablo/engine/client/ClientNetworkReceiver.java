@@ -1,5 +1,6 @@
 package com.riiablo.engine.client;
 
+import com.d2moo.common.drlg.D2Seed;
 import com.google.flatbuffers.Table;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -1303,10 +1304,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
           //Gdx.app.log(TAG, "  " + angle);
           break;
         }
-        case ComponentP.MissileP:
-          // Identity is consumed during createEntity; later packets only
-          // update position, velocity and angle.
+        case ComponentP.MissileP: {
+          // Identity is consumed during createEntity.  The component can also
+          // be present on later snapshots; apply presentation metadata without
+          // touching the local visual clock/path cache.
+          if (mMissile.has(entityId)) {
+            MissileP data = (MissileP) entityData.component(new MissileP(), i);
+            applyMissileSnapshot(mMissile.get(entityId), data);
+          }
           break;
+        }
         default:
           Gdx.app.error(TAG, "Unknown packet type: " + ComponentP.name(entityData.componentType(i)));
       }
@@ -1575,9 +1582,22 @@ public class ClientNetworkReceiver extends IntervalSystem {
     local.range = data.range();
     local.skillId = data.skillId();
     local.damageLevel = data.damageLevel();
-    if (data.nativeFrame() >= 0) local.nativeFrame = data.nativeFrame();
+    if (data.nativeFrame() >= 0) {
+      local.nativeFrame = data.nativeFrame();
+      local.clientSnapshotKnown = true;
+    }
     if (data.nativeLifetimeFrames() >= 0) {
       local.nativeLifetimeFrames = data.nativeLifetimeFrames();
+    }
+    if (data.presentationSeedKnown()
+        && (local.clientSeed == null
+            || !local.presentationSeedKnown || local.presentationSeed != data.presentationSeed())) {
+      local.presentationSeed = data.presentationSeed();
+      local.presentationSeedKnown = true;
+      // This is a presentation stream, deliberately independent from the
+      // authoritative damage pSeed/rngState.  Repeated equal snapshots leave
+      // the stream untouched so smoke callbacks do not jump backwards.
+      local.clientSeed = new D2Seed(local.presentationSeed, 666);
     }
   }
 

@@ -21,7 +21,7 @@ import java.util.*;
  * shared cast hit sets are rebound only after every entity has been assembled.
  */
 public final class MissileRuntimeCheckpoint {
-  private static final int VERSION = 1;
+  private static final int VERSION = 2;
   public static final int MAX_BYTES = 1024 * 1024;
   private static final int MAX_TARGETS = 65536;
   private final byte[] bytes;
@@ -31,16 +31,19 @@ public final class MissileRuntimeCheckpoint {
   public int missileId() { return decode(null).missileId; }
   public int ownerId() { return decode(null).missile.ownerId; }
 
-  /** Client-only caches deliberately omitted from the version-1 server codec. */
+  /** Client-only caches deliberately omitted from the server codec. */
   public static Set<String> presentationLocalFields() {
     return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-        "clientSeed", "clientPathX", "clientPathY")));
+        "clientSeed", "clientPathX", "clientPathY", "clientSnapshotKnown",
+        "clientSampleFrame", "clientSamplePosition")));
   }
 
   /** Schema audit includes explicit omission policies, not only persisted fields. */
   public static Set<String> coveredFields() {
     return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
       "range", "ownerId", "nativeBaalWave", "rngState", "roomId",
+      "presentationSeed", "presentationSeedKnown", "clientSnapshotKnown",
+      "clientSampleFrame", "clientSamplePosition",
       "authoritative", "presentationOnly", "distanceTraveled", "attackMinDamage", "attackMaxDamage",
       "attackRating", "masteryAttackRatingPercent", "masteryDamagePercent", "masteryCriticalChance", "damageSnapshot",
       "ordinaryWeaponSnapshot", "damageLevel", "skillId", "freezesTarget", "damageChannel",
@@ -159,10 +162,13 @@ public final class MissileRuntimeCheckpoint {
       Missile live = world.getMapper(Missile.class).get(entry.getKey());
       Decoded d = entry.getValue().decode(live);
       // Restore authority state without retaining a previous client's local
-      // smoke RNG or observed path cells. The wire layout stays at version 1.
+      // smoke RNG or observed path cells. Version 2 also preserves birth seed.
       live.clientSeed = null;
       live.clientPathX = 0;
       live.clientPathY = 0;
+      live.clientSnapshotKnown = false;
+      live.clientSampleFrame = -1;
+      live.clientSamplePosition.setZero();
       live.hitTargets.clear();
       for (int target : d.hitTargets) live.hitTargets.add(target);
       groups.put(d.hitGroup, live.hitTargets);
@@ -195,6 +201,8 @@ public final class MissileRuntimeCheckpoint {
     out.writeInt(m.ownerId);
     out.writeInt(m.nativeBaalWave);
     out.writeInt(m.rngState);
+    out.writeInt(m.presentationSeed);
+    out.writeBoolean(m.presentationSeedKnown);
     out.writeInt(m.roomId);
     out.writeBoolean(m.authoritative);
     out.writeBoolean(m.presentationOnly);
@@ -344,7 +352,8 @@ public final class MissileRuntimeCheckpoint {
   private Decoded decode(Missile target) {
     try {
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
-      if (in.readInt() != VERSION) throw new IllegalArgumentException("missile runtime version");
+      int version = in.readInt();
+      if (version != 1 && version != VERSION) throw new IllegalArgumentException("missile runtime version");
       Decoded d = new Decoded(target == null ? new Missile() : target);
       d.missileId = in.readInt();
       if (d.missileId < 0) throw new IllegalArgumentException("missile row");
@@ -353,6 +362,8 @@ public final class MissileRuntimeCheckpoint {
       m.ownerId = in.readInt();
       m.nativeBaalWave = in.readInt();
       m.rngState = in.readInt();
+      m.presentationSeed = version >= 2 ? in.readInt() : 0;
+      m.presentationSeedKnown = version >= 2 && presence(in);
       m.roomId = in.readInt();
       m.authoritative = presence(in);
       m.presentationOnly = presence(in);

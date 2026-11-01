@@ -23,6 +23,123 @@ import org.junit.jupiter.api.Test;
 
 /** Production callbacks with an independent uint64 RNG oracle; no GL or DCC required. */
 class PlagueJavelinPresentationLifecycleTest extends RiiabloTest {
+  @Test void nativeDiagonalStepsTruncateEachComponentAndRetainRawPrecision() {
+    Vector2 from = new Vector2(10, 20);
+    Vector2 velocity = new Vector2();
+    com.riiablo.engine.server.missile.NativePoisonMissileMotion.velocity(
+        from, new Vector2(12, 22), 192, velocity);
+    assertEquals(2172, com.riiablo.engine.server.missile.NativePoisonMissileMotion.frameStep(velocity.x));
+    assertEquals(2172, com.riiablo.engine.server.missile.NativePoisonMissileMotion.frameStep(velocity.y));
+    com.riiablo.engine.server.missile.NativePoisonMissileMotion.velocity(
+        from, new Vector2(8, 18), 192, velocity);
+    assertEquals(-2172, com.riiablo.engine.server.missile.NativePoisonMissileMotion.frameStep(velocity.x));
+    Position split = new Position(), batch = new Position();
+    split.position.set(from); batch.position.set(from);
+    for (int i = 0; i < 86; i++)
+      com.riiablo.engine.server.missile.NativePoisonMissileMotion.advance(split, velocity, 1);
+    com.riiablo.engine.server.missile.NativePoisonMissileMotion.advance(batch, velocity, 86);
+    assertEquals((10 << 16) + 32768 - 2172 * 86, batch.nativePrecisionX());
+    assertEquals(batch.nativePrecisionX(), split.nativePrecisionX());
+    assertEquals(batch.nativePrecisionY(), split.nativePrecisionY());
+  }
+
+  @Test void coldSmokeAnimationUsesAgeButNewSmokeStillStartsAtZero() {
+    Missile puff = new Missile();
+    puff.missile = Riiablo.files.Missiles.get("poisonpuff");
+    assertEquals(0, MissileLoader.poisonSmokeFrame(puff, 25));
+    puff.nativeFrame = 13;
+    assertEquals(13, MissileLoader.poisonSmokeFrame(puff, 25));
+    puff.nativeFrame = 100;
+    assertEquals(24, MissileLoader.poisonSmokeFrame(puff, 25));
+  }
+
+  @Test void sparseSnapshotsReplayTheSameTicksAndDoNotRollTwice() {
+    try (Fixture dense = new Fixture(false); Fixture sparse = new Fixture(false)) {
+      int a = dense.cloud(1, false);
+      sparse.parent(new Missiles.Entry(), false); // Deliberately different local ECS id.
+      int b = sparse.cloud(1, false);
+      for (Fixture f : new Fixture[] {dense, sparse}) {
+        Missile m = f.missile(f == dense ? a : b);
+        m.clientSnapshotKnown = true;
+        m.presentationSeedKnown = true;
+        m.presentationSeed = 0x12345678;
+      }
+      for (int frame = 1; frame <= 12; frame++) {
+        dense.missile(a).nativeFrame = frame;
+        dense.world.getMapper(Position.class).get(a).position.set(10.25f + frame / 8f, 20.75f);
+        dense.world.getMapper(Velocity.class).get(a).velocity.set(25f / 8f, 0);
+        dense.step();
+      }
+      sparse.missile(b).nativeFrame = 12;
+      sparse.world.getMapper(Position.class).get(b).position.set(11.75f, 20.75f);
+      sparse.world.getMapper(Velocity.class).get(b).velocity.set(25f / 8f, 0);
+      sparse.step();
+      assertEquals(dense.births, sparse.births);
+      assertEquals(dense.directions, sparse.directions);
+      for (int i = 0; i < 12; i++) {
+        int x = dense.children.get(i), y = sparse.children.get(i);
+        assertEquals(dense.missile(x).nativeFrame, sparse.missile(y).nativeFrame);
+        assertEquals(dense.world.getMapper(Position.class).get(x).position,
+            sparse.world.getMapper(Position.class).get(y).position);
+      }
+      int low = sparse.missile(b).clientSeed.getNLowSeed();
+      sparse.step();
+      assertEquals(12, sparse.children.size());
+      assertEquals(low, sparse.missile(b).clientSeed.getNLowSeed());
+      assertEquals(dense.missile(a).clientSeed.getNLowSeed(), low);
+    }
+  }
+
+  @Test void networkPlagueTrailBackfillsTicksWithStationaryCarriers() {
+    try (Fixture f = new Fixture(false)) {
+      int parent = f.parent(Riiablo.files.Missiles.get("plaguejavelin"), false);
+      Missile root = f.missile(parent);
+      root.clientSnapshotKnown = true;
+      root.presentationSeedKnown = true;
+      root.presentationSeed = 123;
+      root.nativeFrame = 4;
+      f.world.getMapper(Velocity.class).get(parent).velocity.set(25, 0);
+      f.world.getMapper(Position.class).get(parent).position.set(14.25f, 20.75f);
+      f.step();
+      assertEquals(4, f.cloudCount(), "one carrier per moving native tick, not per packet");
+      for (int i = 0; i < f.children.size(); i++) {
+        if (!"plaguejavcloud".equals(f.names.get(i))) continue;
+        int id = f.children.get(i);
+        assertTrue(f.world.getMapper(Velocity.class).get(id).velocity.isZero());
+        assertTrue(f.missile(id).presentationSeedKnown);
+      }
+      long count = f.cloudCount();
+      f.step();
+      assertEquals(count, f.cloudCount());
+    }
+  }
+
+  @Test void latePlagueHistoryMatchesDenseUpdatesIncludingExpiredCarriersAndSmoke() {
+    try (Fixture dense = new Fixture(false); Fixture sparse = new Fixture(false)) {
+      int a = dense.parent(Riiablo.files.Missiles.get("plaguejavelin"), false);
+      int b = sparse.parent(Riiablo.files.Missiles.get("plaguejavelin"), false);
+      for (Fixture f : new Fixture[] {dense, sparse}) {
+        int id = f == dense ? a : b;
+        Missile root = f.missile(id);
+        root.clientSnapshotKnown = true;
+        root.presentationSeedKnown = true;
+        root.presentationSeed = 0x12345678;
+        root.nativeLifetimeFrames = 120;
+        f.world.getMapper(Velocity.class).get(id).velocity.set(25, 0);
+      }
+      for (int frame = 1; frame <= 100; frame++) {
+        dense.missile(a).nativeFrame = frame;
+        dense.world.getMapper(Position.class).get(a).position.set(10.25f + frame, 20.75f);
+        dense.step();
+      }
+      sparse.missile(b).nativeFrame = 100;
+      sparse.world.getMapper(Position.class).get(b).position.set(110.25f, 20.75f);
+      sparse.step();
+      assertEquals(dense.livingSmoke(), sparse.livingSmoke());
+      assertEquals(dense.cloudCount(), sparse.cloudCount());
+    }
+  }
+
   @Test void smokeIsBornAtParentAndMovesTowardNativeRandomTargetsWithoutConsumingServerSeed() {
     for (boolean authoritative : new boolean[] {true, false}) {
       try (Fixture f = new Fixture(false)) {
@@ -208,6 +325,22 @@ class PlagueJavelinPresentationLifecycleTest extends RiiabloTest {
     Missile missile(int id) { return world.getMapper(Missile.class).get(id); }
     boolean active(int id) { return world.getEntityManager().isActive(id); }
     long cloudCount() { return names.stream().filter("plaguejavcloud"::equals).count(); }
+    List<String> livingSmoke() {
+      List<String> result = new ArrayList<>();
+      // Artemis may reuse ids: use the active subscription, not historical allocations.
+      com.artemis.utils.IntBag ids = world.getAspectSubscriptionManager()
+          .get(com.artemis.Aspect.all(Missile.class, Position.class)).getEntities();
+      for (int i = 0; i < ids.size(); i++) {
+        int id = ids.get(i);
+        Missile m = missile(id);
+        if (!m.presentationOnly) continue;
+        result.add(m.missile.Missile + ":" + m.nativeFrame + ":"
+            + world.getMapper(Position.class).get(id).position);
+        assertTrue(m.nativeFrame < m.nativeLifetimeFrames);
+      }
+      java.util.Collections.sort(result);
+      return result;
+    }
     int cloud(int interval, boolean authoritative) {
       Missiles.Entry row = new Missiles.Entry();
       row.Missile = "test-plague-cloud";

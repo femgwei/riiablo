@@ -81,15 +81,7 @@ public class MissileLoader extends IteratingSystem {
       }
     }
 
-    int blendMode;
-    switch (entry.Trans) {
-      case 0:  blendMode = BlendMode.ID; break;
-      // Ground-fire DCCs use the native luminosity mask. Missiles.txt
-      // Light/Flicker describe the spatial light radius, not sprite alpha.
-      case 1:  blendMode = isPoisonMissile(entry) ? BlendMode.SCREEN
-          : isGroundFire(entry) ? BlendMode.LUMINOSITY : BlendMode.ADDITIVE; break;
-      default: blendMode = BlendMode.ID; break;
-    }
+    int blendMode = nativeBlendMode(entry);
     // IceArrowExplode.dcc is a fully-coloured impact sprite, but its native
     // Trans=1 row still uses the same additive missile compositing as
     // FreezeExplodeCenter/Ejecta. Keep the explicit branch as documentation
@@ -114,7 +106,9 @@ public class MissileLoader extends IteratingSystem {
       initialFrame += groundFirePhase(missile, animation.getNumFramesPerDir());
     }
     if (animation.getNumFramesPerDir() > 0) {
-      animation.setFrame(Math.floorMod(initialFrame, animation.getNumFramesPerDir()));
+      animation.setFrame(isPoisonSmokePuff(entry)
+          ? poisonSmokeFrame(missile, animation.getNumFramesPerDir())
+          : Math.floorMod(initialFrame, animation.getNumFramesPerDir()));
     }
     // D2Common initializes missile wAnimSpeed as
     //   (animrate << 8) / 1024.
@@ -203,17 +197,22 @@ public class MissileLoader extends IteratingSystem {
         && "PoisonSmokePuff".equalsIgnoreCase(entry.CelFile);
   }
 
-  /** Native poison/plague missiles use PL2 Screen instead of alpha-over. */
-  static boolean isPoisonMissile(Missiles.Entry entry) {
-    if (entry == null) return false;
-    String type = entry.EType;
-    String missile = entry.Missile;
-    String skill = entry.Skill;
-    return "pois".equalsIgnoreCase(type) || "poison".equalsIgnoreCase(type)
-        || missile != null && (missile.toLowerCase(java.util.Locale.ROOT).contains("poison")
-            || missile.toLowerCase(java.util.Locale.ROOT).contains("plague"))
-        || skill != null && (skill.toLowerCase(java.util.Locale.ROOT).contains("poison")
-            || skill.toLowerCase(java.util.Locale.ROOT).contains("plague"));
+  /** Cold-loaded or reconstructed smoke starts at its actual simulation age. */
+  static int poisonSmokeFrame(Missile missile, int frames) {
+    if (frames <= 0) return 0;
+    long frame = missile.missile.RandStart
+        + (long) Math.max(0, missile.nativeFrame) * nativeFrameDelta(null, missile) / 256;
+    return (int) Math.max(0, Math.min(frames - 1, frame));
+  }
+
+  static int nativeBlendMode(Missiles.Entry entry) {
+    if (entry == null || entry.Trans != 1) return BlendMode.ID;
+    // D2Client 1.10f 0x6FB5B011..0x6FB5B025 maps missile Trans=1
+    // to draw mode 3, without an element/name exception for poison clouds.
+    // D2Glide implements that mode as ONE + ONE. Screen attenuates the
+    // destination instead, changing both smoke density and overlap colour.
+    // Keep the independently configured ground-fire mask unchanged here.
+    return isGroundFire(entry) ? BlendMode.LUMINOSITY : BlendMode.ADDITIVE;
   }
 
   /** Stable world-cell phase, so neighbouring fire cells do not animate in lockstep. */

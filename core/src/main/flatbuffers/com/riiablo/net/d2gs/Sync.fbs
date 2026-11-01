@@ -271,6 +271,10 @@ table MissileP {
   // -1 means an older sender omitted the clock; zero is a valid state.
   nativeFrame:int32 = -1;
   nativeLifetimeFrames:int32 = -1;
+  // Presentation-only seed for deterministic client callback effects.  The
+  // separate presence bit keeps seed zero valid and makes old packets safe.
+  presentationSeed:int32 = 0;
+  presentationSeedKnown:bool = false;
 }
 
 // One-shot presentation event.  It is deliberately not an ECS component:

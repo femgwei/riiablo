@@ -10,6 +10,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.graphics.BlendMode;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -22,6 +23,26 @@ import org.junit.jupiter.api.Test;
  * poisonpuff (PoisonSmokePuff.dcc); there is no poisonjavcloudsub row.</p>
  */
 class PoisonCloudPresentationTest extends RiiabloTest {
+  @Test
+  void poisonAndPlagueTransOneUseNativeAdditiveNotScreen() {
+    for (String name : new String[] {
+        "poisonjav", "plaguejavelin", "poisonjavcloud", "plaguejavcloud", "poisonpuff"
+    }) {
+      Missiles.Entry entry = row(name);
+      assertEquals(entry.Trans == 1 ? BlendMode.ADDITIVE : BlendMode.ID,
+          MissileLoader.nativeBlendMode(entry), name);
+    }
+    // Element/skill/name must not override the native Trans selector.
+    Missiles.Entry synthetic = new Missiles.Entry();
+    synthetic.Missile = "plaguejavelin";
+    synthetic.Skill = "Poison Javelin";
+    synthetic.EType = "pois";
+    synthetic.Trans = 1;
+    assertEquals(BlendMode.ADDITIVE, MissileLoader.nativeBlendMode(synthetic));
+    synthetic.Trans = 0;
+    assertEquals(BlendMode.ID, MissileLoader.nativeBlendMode(synthetic));
+  }
+
   @Test
   void vanillaPoisonCloudRowsExposeTheNativeClientVisualContract() {
     Missiles.Entry cloud = row("poisonjavcloud");

@@ -17,7 +17,7 @@
 - CltDo4 的烟雾出生点继承父云位置，随机的是绝对目标坐标，不是出生点像素抖动。
   每轴 `d = rollLimited(2*r) - r; target = parentIntegerCoordinate + d + sign(d)*r`，
   其中零走正分支。原表 r=6，偏移为 `[-12,-7]` 或 `[6,11]` 世界子格，
-  不再使用 `[-6,6]/16`。速度方向取出生点到目标的单位向量，静止父云不再只向 +X 吐烟。
+  不再使用 `[-6,6]/16`。速度方向取出生点到目标的原生路径 LUT，静止父云不再只向 +X 吐烟。
 - CltDo4 使用两字种子：`next = uint32(low) * 0x6AC690C5 + uint32(high)`；
   有界取值用低 32 位取模 / 二次幂掩码。正 interval（包括 1）消耗一次机会抽样；
   **剩余帧**为零或 interval<=0 时才跳过机会抽样。elapsed=0 不是“必定首帧生成”。
@@ -26,7 +26,7 @@
 - CltDo3 拖尾改为整数路径格变化时生成；CltDo3/4 与烟雾的时钟不再等待 DCC。
   其他短命中动画仍等待自己的资源加载，不改变此前 FingerMage 的第 21 次更新到期规则。
 
-没有改毒伤公式、抗性和减伤，也没有重做 PL2 Screen / 透明度规则。
+没有改毒伤公式、抗性和减伤。本轮删除毒类强制 Screen 的规则，依据见文末。
 新扩散路径及统一寿命会改变云团在何处、何时覆盖目标，这是本批修复的预期影响。
 
 ## 当前架构的明确选择
@@ -36,18 +36,41 @@
 客户端命中事件只消费音效，不再额外创建一团中央云；烟雾继续由每个真实子云的 CltDo4 生成。
 这是适配当前权威同步架构的去重，不是声称恢复了原客户端预测时序。
 
-客户端烟雾另存 `clientSeed`，初次从现有完整 nativeSeed 复制；无完整种子时用
-`rngState/666` 初始化。之后不修改服务端 nativeSeed / rngState。新加的 clientSeed / clientPathX/Y
-是本地表现缓存，实体回收及权威快照恢复时清空，不进入版本 1 的服务端快照字节。
-本次补齐显式字段策略和缓存隔离/恢复测试，保持快照格式不变。
+客户端烟雾另存 `clientSeed`，优先从同步的不可变出生 `presentationSeed/666` 初始化；
+旧包没有出生种子时才复制现有完整 nativeSeed，或回退到 `rngState/666`。
+重复相同快照不回退随机流，不修改服务端 nativeSeed / rngState。FlatBuffers 尾部追加 seed / known，
+known 区分旧包和合法零种子。权威检查点升级为版本 2 保存出生种子，并兼容读取版本 1。
+clientSeed、clientPathX/Y、clientSnapshotKnown、clientSampleFrame/Position 均为本地表现缓存，
+实体回收及权威快照恢复时清空，不进入服务端检查点。
 纠正上版文档：既有 clientFrame / clientFlightInitialized 实际已在版本 1 中序列化，不能统称瞬态。
 服务端快照不保证精确恢复烟雾随机流或拖尾观察格。
-因此不保证两台客户端具有逐烟雾相同的随机轨迹，也不保证与原版的初始种子一致。
+同一出生种子和相同路径样本可在不同本地实体 ID 下复现烟雾；不保证与原版的初始种子一致。
+当前服务器仍用 NativeRng.forUnit 分配出生种子，而非完整移植 SUNIT_InitSeed 的全局分配调度。
+D2MOO `source/D2Game/src/UNIT/SUnit.cpp:406-423` 的 SUNIT_InitSeed 先初始化 seed，
+再从父/游戏种子抽取 dwInitSeed，以 low=dwInitSeed / high=666 初始化；本轮只同步现有出生 seed。
+CltDo3 本地子云用父出生种子和生成帧稳定派生，属于当前同步架构的分配策略，不是原版调度证据。
 未审计的 CltDo8/49 继续使用旧 fallback，没有借此批顺带改写。
 
 CltDo3 的原版门禁是动态路径 flag 0x8。当前浮点 ECS / 网络副本没有暴露该标记，
 本批以当前整数格与上次观察格（首次为 start 的格）比较实现对应门禁。
-网络稀疏快照跨过多个格时仍只生成当前观察点的一团云，不插值补齐未观察的原版路径。
+网络副本按已接收的 nativeFrame 补齐 25 Hz 回调，每帧最多生成一团载体，而非每穿过一格生成一团。
+常速段用前后位置线性插值，首包按当前速度倒推，并落到 16.16 网格以避免插值尾差改变门禁。
+历史子云/烟雾按年龄推进，过期烟雾删除，冷 DCC 装载也使用已过年龄；同一快照不重复抽样。
+这解决稀疏快照断段，不是恢复网络未传输的真实路径低位，也不覆盖碰撞/变速前的未知历史。
+
+## 本轮纠正：CltDo3 载体不继承标枪速度
+
+此前将 flags=0x8005 解释为速度继承不成立。复核相同 SHA-256 的 DLL：
+`0x6FB302FB..0x6FB30306` 清零整个创建结构，`0x6FB3030C` 设置 flags=5；
+Range override 存在时改为 0x8005。D2MissileStrc 的 nVelocity 位于 +0x28，helper 没有写它。
+通用创建 `0x6FB3E2EE` 的 flags&4 分支直接读取这个零值，0x8000 则控制 Range override。
+D2MOO 的同名 CreatePlagueJavelin_PoisonJavelin_PoisonTrapHitSubmissiles 同样没有赋值 nVelocity。
+因此拖尾载体改回静止，移动的是随后生成的 poisonpuff；根 plaguejavelin DCC 保持显示，
+已针对用户确认的多余载体基础 DCC 的隐藏规则本轮保留，未声称该隐藏规则已获逐像素原版证据。
+
+命中环和 smoke 的方向复用 D2PathStep 127 比值量化 / 128 项方向 LUT，
+逐分量 `(direction * nativeVelocity) >> 8` 后保存 16.16 步长，负方向同样使用算术右移。
+毒云运动累加 raw precision，不再每帧 float 积分。PrimePoisonNova 的既有速度适配没有改写。
 
 ## 原版静态证据与可追溯位置
 
@@ -108,7 +131,7 @@ JDK 17，真实 1.10f MPQ：
 专用 source set 编译本批与相邻回归，默认选择毒云相关的 3 个 Amazon ECS 测试、
 两项毒枪逐级伤害 golden、全部选入的表现测试及 FingerMage 服务端回归，
 并加入 PrimePoisonNova 共享路径和 MissileRuntimeCheckpoint 字段策略回归。
-本次定向回归 15 类 / 55 项全部通过，失败、错误、跳过均为 0；生产代码编译和模块边界检查通过。
+此前定向回归 15 类 / 55 项全部通过；本轮新增回归结果见文末。
 不会修改默认 `:core:test` 的测试范围。报告位于
 `core/build/test-results/plagueJavelinRegression`；本机用独立输出目录
 `.gradle/plaguejavelin-rea-validation` 避免与其他聊天的地图构建相互覆盖。
@@ -130,6 +153,41 @@ JDK 17，真实 1.10f MPQ：
 
 另一台电脑应对照原版观察：低/高技能等级、飞行拖尾、命中怪物及空投到期、
 毒云从中心向外铺开、烟雾多方向飘动和消退、首次冷加载与再次施放、联机观察端是否重复云团。
-DCC 像素混合、路径固定点精度、网络预测/丢包时序仍不在已验收范围。
-当前环方向仍由浮点单位向量归一化，没有移植完整原版方向 LUT 和逐分量定点截断；
-轴向速度已对齐，但不声称斜向轨迹逐位一致。以上无 GL 回归不能证明实机画面已与原版完全一致。
+DCC 像素混合、软件后端调色板量化和真实网络预测/丢包时序仍需实机验收。
+原生方向量化、逐分量截断及模拟稀疏快照现有定向覆盖，但不声称全部路径基础设施已移植。
+以上无 GL 回归不能证明实机画面已与原版完全一致。
+
+## 后续修正：毒烟的混合模式
+
+本轮修复定向验收：JDK 17，真实 1.10f MPQ，`:core:plagueJavelinRegression` 共 16 类 / 68 项，
+失败、错误、跳过均为 0；生产代码编译及模块边界检查通过。新增覆盖斜向逐分量截断、86 帧 raw
+precision 累加、连续/稀疏网络时钟、重复快照、不同 ECS id 的种子一致性、100 帧历史中已到期
+载体及其末尾烟雾、冷加载动画年龄、FlatBuffers 零 seed/旧包，以及版本 1/2 检查点兼容。
+这些结果替代前述“尚未覆盖 LUT / 稀疏快照”的旧状态，不替代另一台电脑上的实际画面验收。
+
+之前按毒元素/名称选用 `SCREEN` 没有原版证据，本轮删除该例外。
+`MissileLoader` 的毒标、瘟疫标枪、子云和 `poisonpuff` 现遵循自己的 `Trans`：
+`Trans=1` 使用既有 `ADDITIVE`（源色 + 目标色），不再以 Screen 的
+`source + destination * (1-source)` 压低烟雾重叠区域的颜色。
+`Trans=0` 根标枪仍用正常绘制；不增加额外透明度/亮度或动画相位。
+隐藏重复拖尾层的独立规则与地面火焰分支没有改变。
+
+依据为上文同 SHA-256 的本机 1.10f `D2Client.dll`，本轮通过已安装的 objdump
+只读复核 `0x6FB5AFD2..0x6FB5B07A`。`UNIT_MISSILE=3` 分支按导弹编号取得行后：
+
+- `0x6FB5B011` 读取 `Missiles.Trans`（行偏移 `0x18D`）；
+- `0x6FB5B017..0x6FB5B025`：默认模式 5，`Trans=1` 改为模式 3；
+- 此后没有毒元素/技能名称判定；`Trans=2` 改为模式 4，hover 高亮可覆盖为 7；
+- `0x6FB5B059..0x6FB5B066` 把所选模式传给绘制接口。
+
+这也与 `docs/d2moo-progress-roadmap.md` 的“2026-10-18 闪电导弹加法混合”
+已核验链路一致：D2Gfx #10072 → D2Glide `0x6F815AE0` → 模式 3 选混合状态 2 →
+`0x6F812AD2` 调用 `grAlphaBlendFunction(ONE, ONE, ZERO, ZERO)`。
+本轮同样只读复核了该 D2Glide 调用附近的原始指令，没有执行原版 DLL。
+D2MOO `source/D2Gfx/include/DrawMode.h` 的模式 3 为 `DRAWMODE_MODULATE`；
+具体方程以该版本 D2Glide 指令为准，不能从枚举名称猜测。
+
+`PoisonCloudPresentationTest` 新增五条真实表行与合成毒元素/技能名的选择器断言，
+锁定毒类不能覆盖 Trans=1 的原生选择。此处仅修复已证明的硬件后端混合方程，
+不声称还原 D2DDraw 软件后端的 256×256 调色板查表量化，亦未进行 GPU 逐像素验收。
+上文 CltDo3/CltDo4 等 REA Evidence ID 继续保留；本段 objdump 复核不伪造为新的 REA 记录。

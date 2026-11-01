@@ -28,6 +28,9 @@ public class Missile extends PooledComponent {
   /** Low-word diagnostic/legacy mirror; nativeSeed persists the full pSeed. */
   public int rngState;
   public com.d2moo.common.drlg.D2Seed nativeSeed;
+  /** Immutable allocation seed, independent of the damage RNG's current state. */
+  public int presentationSeed;
+  public boolean presentationSeedKnown;
 
   /** Current native RoomEx id, updated as the missile crosses room borders. */
   public int roomId = -1;
@@ -150,6 +153,10 @@ public class Missile extends PooledComponent {
   /** Last observed integer path cell for the native CltDo3 movement gate. */
   public int clientPathX;
   public int clientPathY;
+  /** Accepted server clock/last callback sample; presentation-only caches. */
+  public boolean clientSnapshotKnown;
+  public int clientSampleFrame = -1;
+  public final Vector2 clientSamplePosition = new Vector2();
   /** Native client pCltDoFunc=51 recycler-delay vine child gate. */
   public boolean clientRecyclerVineSpawned;
   /** Native client pCltDoFunc=51 recycler-delay explosion child gate. */
@@ -286,6 +293,8 @@ public class Missile extends PooledComponent {
     nativeBaalOwnerIdentity = null;
     rngState = 0;
     nativeSeed = null;
+    presentationSeed = 0;
+    presentationSeedKnown = false;
     roomId = -1;
     authoritative = true;
     presentationOnly = false;
@@ -351,6 +360,9 @@ public class Missile extends PooledComponent {
     clientSeed = null;
     clientPathX = 0;
     clientPathY = 0;
+    clientSnapshotKnown = false;
+    clientSampleFrame = -1;
+    clientSamplePosition.setZero();
     clientRecyclerVineSpawned = false;
     clientRecyclerExplosionSpawned = false;
     nativeLifetimeFrames = 0;

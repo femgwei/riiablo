@@ -1543,6 +1543,8 @@ public class ServerEntityFactory extends EntityFactory {
               damageLevel);
     }
     missileComponent.rngState = NativeRng.forUnit(gameSeed(), id).state();
+    missileComponent.presentationSeed = missileComponent.rngState;
+    missileComponent.presentationSeedKnown = true;
 
     if (!restoring) {
       Attributes ownerAttrs = ownerId >= 0 && mAttributesWrapper.has(ownerId)

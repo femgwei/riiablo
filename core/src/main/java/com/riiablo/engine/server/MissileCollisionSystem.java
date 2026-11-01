@@ -44,6 +44,7 @@ import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.CombatOwnership;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.missile.NativePoisonMissileMotion;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
@@ -392,14 +393,33 @@ public class MissileCollisionSystem extends IteratingSystem {
       moveDistance = velocity.velocity.len() * world.delta;
       Vector2 next = tmpVec.set(position.position).add(
           velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
+      boolean fixedPoisonPath = missile.poisonCloudTraveling && missile.missile != null
+          && ("plaguejavcloud".equalsIgnoreCase(missile.missile.Missile)
+              || "poisonjavcloud".equalsIgnoreCase(missile.missile.Missile));
+      int nextPrecisionX = 0, nextPrecisionY = 0;
+      if (fixedPoisonPath) {
+        int frames = Math.max(1, Math.round(world.delta * 25f));
+        nextPrecisionX = (position.hasNativePrecision() ? position.nativePrecisionX()
+            : NativePoisonMissileMotion.precision(position.position.x))
+            + NativePoisonMissileMotion.frameStep(velocity.velocity.x) * frames;
+        nextPrecisionY = (position.hasNativePrecision() ? position.nativePrecisionY()
+            : NativePoisonMissileMotion.precision(position.position.y))
+            + NativePoisonMissileMotion.frameStep(velocity.velocity.y) * frames;
+        next.set((float) (Integer.toUnsignedLong(nextPrecisionX) / 65536.0 - 0.5),
+            (float) (Integer.toUnsignedLong(nextPrecisionY) / 65536.0 - 0.5));
+        moveDistance = position.position.dst(next);
+      }
       if (missile.wakeMaker && position.position.dst2(missile.wakeTargetX,
           missile.wakeTargetY) <= moveDistance * moveDistance) {
         next.set(missile.wakeTargetX, missile.wakeTargetY);
         moveDistance = position.position.dst(next);
       }
       if (checkNativeMapCollision(entityId, missile, position.position, next)) return;
-      position.invalidateNativePrecision();
-      position.position.set(next);
+      if (fixedPoisonPath) position.setNativePrecision(nextPrecisionX, nextPrecisionY);
+      else {
+        position.invalidateNativePrecision();
+        position.position.set(next);
+      }
       if (missile.diabWallMaker) missile.diabWallMoved =
           MathUtils.floor(lastPos.x) != MathUtils.floor(next.x)
               || MathUtils.floor(lastPos.y) != MathUtils.floor(next.y);
@@ -3260,7 +3280,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         // flags. CreateMissileFromParams applies 75/100; a length-4096 path
         // direction produces nativeVelocity/4096 subtiles per 25-Hz frame.
         int nativeVelocity = (Math.max(0, speedParam) << 7) * 75 / 100;
-        velocity.setLength(nativeVelocity * (25f / 4096f));
+        NativePoisonMissileMotion.velocity(origin, cloud.poisonCloudTarget, nativeVelocity, velocity);
       }
     }
     return 1;

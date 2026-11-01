@@ -10,6 +10,7 @@ import com.d2moo.common.seed.Seed;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.NativeRng;
+import com.riiablo.engine.server.missile.NativePoisonMissileMotion;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
@@ -105,8 +106,13 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       processClientFlightFunction(entityId, visual, velocity, delta);
     }
     if (distance > 0f) {
-      mPosition.get(entityId).invalidateNativePrecision();
-      mPosition.get(entityId).position.mulAdd(velocity, delta);
+      if (MissileLoader.isPoisonSmokePuff(visual.missile)) {
+        NativePoisonMissileMotion.advance(mPosition.get(entityId), velocity,
+            Math.max(1, Math.round(delta * 25f)));
+      } else {
+        mPosition.get(entityId).invalidateNativePrecision();
+        mPosition.get(entityId).position.mulAdd(velocity, delta);
+      }
       visual.distanceTraveled += distance;
     }
     visual.nativeFrame += Math.max(1, Math.round(delta * 25f));
@@ -238,31 +244,73 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   private void processPoisonFlight(int entityId, Missile visual, Missiles.Entry source,
       Vector2 velocity, float delta) {
+    processPoisonFlight(entityId, visual, source, velocity, delta, 0);
+  }
+
+  private void processPoisonFlight(int entityId, Missile visual, Missiles.Entry source,
+      Vector2 velocity, float delta, int historyAge) {
     // SrvDo2 already supplies Poison Javelin's trail; Plague's SrvDo3 does not.
     if (source.pCltDoFunc == 3 && source.pSrvDoFunc != 3) return;
     if (factory == null) return;
     String child = first(source.CltSubMissile, 0);
     if (child == null || child.isEmpty()) return;
-    int previous = advanceClientFrame(visual, Math.max(1, Math.round(delta * 25f)));
-    Vector2 at = mPosition.get(entityId).position;
-    if (source.pCltDoFunc == 3) {
-      // D2Client 0x6FB302E0 tests path flag 0x8 (integer cell changed).
-      // Our local/network paths expose positions rather than that native flag.
-      if (!poisonTrailCellChanged(visual, at)) return;
-      float angle = velocity.isZero() ? 0f : MathUtils.atan2(velocity.y, velocity.x);
-      // CltDo3 calls the generic client missile creator with flags 0x8005:
-      // the child inherits the parent's current custom velocity even though
-      // plaguejavcloud.Vel is zero. Leaving that velocity at zero turns the
-      // whole trail into a stationary pile of PoisonSparks instead of the
-      // moving, exhaust-like plume seen in the retail client.
-      createFlightVisual(source, child, at, angle, velocity);
-      return;
+    boolean networkClock = !visual.authoritative && !visual.presentationOnly
+        && visual.clientSnapshotKnown;
+    int previous = visual.clientFrame;
+    int end = networkClock ? visual.nativeFrame
+        : previous + Math.max(1, Math.round(delta * 25f));
+    // Network history cannot contain callbacks beyond the missile's lifetime.
+    // Also bound malformed/legacy snapshots whose lifetime is unavailable.
+    if (networkClock) end = Math.min(end, visual.nativeLifetimeFrames > 0
+        ? visual.nativeLifetimeFrames : Math.max(1, source.Range));
+    if (end <= previous) return; // Repeated snapshots must not emit/RNG-roll twice.
+    Vector2 current = mPosition.get(entityId).position;
+    // Linear poison missiles can reconstruct missed native ticks from two
+    // accepted snapshots. Never emit once for every crossed grid boundary:
+    // native CltDo3 emits at most once per 25-Hz update, even at high speed.
+    Vector2 begin = networkClock && visual.clientSampleFrame >= 0
+        ? new Vector2(visual.clientSamplePosition)
+        : new Vector2(current).mulAdd(velocity, networkClock ? -(end - previous) / 25f : 0f);
+    if (networkClock && !visual.clientFlightInitialized && source.pCltDoFunc == 3) {
+      visual.clientPathX = MathUtils.floor(begin.x);
+      visual.clientPathY = MathUtils.floor(begin.y);
+      visual.clientFlightInitialized = true;
     }
     int interval = source.CltParam != null && source.CltParam.length > 0
         ? source.CltParam[0] : 0;
     int count = Math.max(1, cltParam(source, 1, 1));
     int radius = Math.max(0, cltParam(source, 2, 0));
-    for (int frame = previous; frame < visual.clientFrame; frame++) {
+    for (int frame = previous; frame < end; frame++) {
+      visual.clientFrame = frame + 1;
+      Vector2 at = networkClock
+          ? new Vector2(begin).lerp(current, (frame - previous + 1f) / (end - previous))
+          : new Vector2(current).mulAdd(velocity, (visual.presentationOnly
+              ? frame - previous : frame - end + 1) / 25f);
+      if (networkClock) {
+        // Interpolation's float roundoff must not change integer-cell gates
+        // or LUT bins depending on how many snapshots happened to arrive.
+        at.set((float) (Math.rint(at.x * 65536.0) / 65536.0),
+            (float) (Math.rint(at.y * 65536.0) / 65536.0));
+      }
+      int age = end - frame - 1 + historyAge;
+      if (source.pCltDoFunc == 3) {
+        if (!poisonTrailCellChanged(visual, at)) continue;
+        int id = createFlightVisual(source, child, at, Vector2.X);
+        if (id < 0 || !mMissile.has(id)) continue;
+        Missile cloud = mMissile.get(id);
+        cloud.damageLevel = visual.damageLevel;
+        cloud.poisonCloudLoops = cloud.missile.SubLoop > 0
+            ? 2 * Math.max(0, visual.damageLevel - 1) : 0;
+        cloud.nativeLifetimeFrames = Math.max(1, cloud.missile.Range
+            + cloud.poisonCloudLoops * Math.max(0, cloud.missile.SubStop - cloud.missile.SubStart));
+        // 0x6FB302E0 zeroes D2MissileStrc; flags&4 reads its nVelocity at
+        // +0x28, which remains ZERO. 0x8000 is a range override, not velocity
+        // inheritance. The moving layer is poisonpuff, not this callback carrier.
+        mVelocity.get(id).velocity.setZero();
+        seedFlightChild(visual, cloud, frame);
+        agePoisonVisual(id, age);
+        continue;
+      }
       // #11124 is REMAINING frames, not elapsed frames. Only zero remaining
       // (or a nonpositive interval) bypasses the random roll.
       int remaining = visual.nativeLifetimeFrames - frame;
@@ -274,9 +322,55 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         float targetY = MathUtils.floor(at.y) + dy;
         // Flags 0x20: inherit the parent's birth position, use the two
         // randomized ABSOLUTE target coordinates to choose the path.
-        createFlightVisual(source, child, at,
+        int id = createFlightVisual(source, child, at,
             new Vector2(targetX - at.x, targetY - at.y).nor());
+        if (id >= 0 && mMissile.has(id)) {
+          Missile puff = mMissile.get(id);
+          int nativeVelocity = (Math.max(0, puff.missile.Vel) << 8) * 75 / 100;
+          NativePoisonMissileMotion.velocity(at, new Vector2(targetX, targetY),
+              nativeVelocity, mVelocity.get(id).velocity);
+          agePoisonVisual(id, age);
+        }
       }
+    }
+    visual.clientSampleFrame = end;
+    visual.clientSamplePosition.set(current);
+  }
+
+  /** Stable child allocation policy, independent of each client's local ECS ids. */
+  private static void seedFlightChild(Missile parent, Missile child, int frame) {
+    if (!parent.presentationSeedKnown) return;
+    child.presentationSeed = NativeRng.forUnit(parent.presentationSeed, frame).state();
+    child.presentationSeedKnown = true;
+    child.clientSeed = new D2Seed(child.presentationSeed, 666);
+  }
+
+  /** Bring historical smoke to its current age rather than drawing fresh puffs in a burst. */
+  private void agePoisonVisual(int id, int age) {
+    if (age <= 0 || !mMissile.has(id)) return;
+    Missile child = mMissile.get(id);
+    if (child.nativeLifetimeFrames > 0 && age >= child.nativeLifetimeFrames) {
+      // A cloud can outlive its own emitter through its last 25-frame puffs.
+      // Replay callbacks below; terminal expired puffs need no render entity.
+      if (child.missile.pCltDoFunc != 4) { world.delete(id); return; }
+    }
+    if (child.missile.pCltDoFunc == 4) {
+      // Use the same authoritative-clock catch-up for the reconstructed carrier.
+      child.presentationOnly = false;
+      child.clientSnapshotKnown = true;
+      child.nativeFrame = Math.min(age, child.nativeLifetimeFrames);
+      processPoisonFlight(id, child, child.missile, mVelocity.get(id).velocity,
+          1f / 25f, Math.max(0, age - child.nativeFrame));
+      child.presentationOnly = true;
+    } else {
+      NativePoisonMissileMotion.advance(mPosition.get(id), mVelocity.get(id).velocity, age);
+    }
+    child.nativeFrame = age;
+    if (child.nativeLifetimeFrames > 0 && age >= child.nativeLifetimeFrames) world.delete(id);
+    AnimationWrapper animation = mAnimationWrapper.get(id);
+    if (animation != null && MissileLoader.isPoisonSmokePuff(child.missile)) {
+      animation.animation.setFrame(MissileLoader.poisonSmokeFrame(child,
+          animation.animation.getNumFramesPerDir()));
     }
   }
 
@@ -398,7 +492,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   private static int nextClientRandom(Missile visual, int bound) {
     if (visual.clientSeed == null) {
       // Snapshot once, never alias or write the authoritative pSeed/mirror.
-      visual.clientSeed = visual.nativeSeed != null
+      visual.clientSeed = visual.presentationSeedKnown ? new D2Seed(visual.presentationSeed, 666)
+          : visual.nativeSeed != null
           ? new D2Seed(visual.nativeSeed.getNLowSeed(), visual.nativeSeed.getNHighSeed())
           : new D2Seed(visual.rngState, 666);
     }
@@ -438,15 +533,6 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   private int createFlightVisual(Missiles.Entry source, String childName,
       Vector2 position, float angle) {
     return createFlightVisual(source, childName, position, angle, 0f, 0f);
-  }
-
-  private void createFlightVisual(Missiles.Entry source, String childName,
-      Vector2 position, float angle, Vector2 inheritedVelocity) {
-    int id = createFlightVisual(source, childName, position, angle);
-    if (id != com.riiablo.engine.Engine.INVALID_ENTITY && inheritedVelocity != null
-        && mVelocity.has(id)) {
-      mVelocity.get(id).velocity.set(inheritedVelocity);
-    }
   }
 
   private int createFlightVisual(Missiles.Entry source, String childName,

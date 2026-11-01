@@ -1222,6 +1222,7 @@ sourceSets {
     java.srcDir 'src/test/java'
     java.setIncludes((sourceSets.fingerMageTest.java.includes + [
         'com/riiablo/presentation/PlagueJavelinPresentationLifecycleTest.java',
+        'com/riiablo/engine/client/MissileLifetimeSnapshotTest.java',
         'com/riiablo/engine/server/AmazonSkillSpecializationTest.java',
         'com/riiablo/engine/server/PlagueJavelinGoldenDamageTest.java',
         'com/riiablo/engine/server/PrimePoisonNovaIntegrationTest.java',
@@ -1254,6 +1255,7 @@ task plagueJavelinRegression(type: Test) {
        'com.riiablo.engine.server.PlagueJavelinGoldenDamageTest',
        'com.riiablo.engine.server.PrimePoisonNovaIntegrationTest',
        'com.riiablo.engine.replay.MissileRuntimeCheckpointTest',
+       'com.riiablo.engine.client.MissileLifetimeSnapshotTest',
        'com.riiablo.engine.server.PoisonJavelinGoldenDamageTest',
        'com.riiablo.engine.server.AmazonSkillSpecializationTest.poisonJavelinCreatesPersistentPoisonCloud',
        'com.riiablo.engine.server.AmazonSkillSpecializationTest.corpsePoisonCloudUsesSharedPersistentAreaLifecycle',

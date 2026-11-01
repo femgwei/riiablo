@@ -19,6 +19,26 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 
 class MissileRuntimeCheckpointTest extends RiiabloTest {
+  @Test void versionOneWithoutBirthSeedStillLoads() {
+    try (Fixture source = new Fixture(1); Fixture target = new Fixture(1)) {
+      source.get(0).presentationSeed = 123;
+      source.get(0).presentationSeedKnown = true;
+      byte[] v2 = source.capture().get(0).bytes();
+      // Header(version,row) + range,owner,baalWave,rngState = 24 bytes.
+      byte[] v1 = new byte[v2.length - 5];
+      System.arraycopy(v2, 0, v1, 0, 24);
+      System.arraycopy(v2, 29, v1, 24, v2.length - 29);
+      v1[3] = 1;
+      Map<Integer, MissileRuntimeCheckpoint> old = Collections.singletonMap(0,
+          MissileRuntimeCheckpoint.fromBytes(v1));
+      MissileRuntimeCheckpoint.restore(target.world, old);
+      assertFalse(target.get(0).presentationSeedKnown);
+      assertEquals(0, target.get(0).presentationSeed);
+      assertEquals(source.get(0).rngState, target.get(0).rngState);
+      assertEquals(source.get(0).nativeLifetimeFrames, target.get(0).nativeLifetimeFrames);
+    }
+  }
+
   @Test void schemaCoversEveryMissileFieldExplicitly() {
     Set<String> fields = new HashSet<>();
     for (Field field : Missile.class.getDeclaredFields()) {
@@ -101,15 +121,24 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       source.get(0).clientSeed = new D2Seed(123, 456);
       source.get(0).clientPathX = 91;
       source.get(0).clientPathY = -27;
+      source.get(0).clientSnapshotKnown = true;
+      source.get(0).clientSampleFrame = 81;
+      source.get(0).clientSamplePosition.set(7, 9);
       Map<Integer, MissileRuntimeCheckpoint> snapshots = source.capture();
       assertArrayEquals(before, snapshots.get(0).bytes(), "local caches cannot affect server replay hashes");
       target.get(0).clientSeed = new D2Seed(789, 10);
       target.get(0).clientPathX = 88;
       target.get(0).clientPathY = -99;
+      target.get(0).clientSnapshotKnown = true;
+      target.get(0).clientSampleFrame = 55;
+      target.get(0).clientSamplePosition.set(8, 10);
       MissileRuntimeCheckpoint.restore(target.world, snapshots);
       assertNull(target.get(0).clientSeed);
       assertEquals(0, target.get(0).clientPathX);
       assertEquals(0, target.get(0).clientPathY);
+      assertFalse(target.get(0).clientSnapshotKnown);
+      assertEquals(-1, target.get(0).clientSampleFrame);
+      assertTrue(target.get(0).clientSamplePosition.isZero());
       assertArrayEquals(before, target.capture().get(0).bytes());
     }
   }
@@ -159,7 +188,7 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       assertThrows(IllegalArgumentException.class, () -> MissileRuntimeCheckpoint.fromBytes(invalid));
       byte[] nan = bytes.clone(); java.nio.ByteBuffer.wrap(nan).putFloat(8, Float.NaN);
       assertThrows(IllegalArgumentException.class, () -> MissileRuntimeCheckpoint.fromBytes(nan));
-      byte[] version = bytes.clone(); version[3] = 2;
+      byte[] version = bytes.clone(); version[3] = 3;
       assertThrows(IllegalArgumentException.class, () -> MissileRuntimeCheckpoint.fromBytes(version));
       assertThrows(IllegalArgumentException.class, () -> MissileRuntimeCheckpoint.fromBytes(Arrays.copyOf(bytes, bytes.length - 1)));
       assertThrows(IllegalArgumentException.class, () -> MissileRuntimeCheckpoint.fromBytes(Arrays.copyOf(bytes, bytes.length + 1)));

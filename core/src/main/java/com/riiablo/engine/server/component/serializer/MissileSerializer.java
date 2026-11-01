@@ -20,7 +20,8 @@ public class MissileSerializer implements FlatBuffersSerializer<Missile, Missile
     int missileId = component.missile == null ? 0 : component.missile.Id;
     return MissileP.createMissileP(builder, missileId, component.ownerId, component.range,
         component.skillId, (short) Math.max(0, Math.min(255, component.damageLevel)),
-        Math.max(0, component.nativeFrame), Math.max(0, component.nativeLifetimeFrames));
+        Math.max(0, component.nativeFrame), Math.max(0, component.nativeLifetimeFrames),
+        component.presentationSeed, component.presentationSeedKnown);
   }
 
   @Override

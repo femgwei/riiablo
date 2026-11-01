@@ -799,9 +799,21 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
         assertEquals(87, cloud.nativeLifetimeFrames, "loops extend the creation clock");
         assertTrue(cloud.persistent, "moving clouds apply poison without waiting for a target arrival");
         assertTrue(cloud.damageSnapshot);
-        assertEquals(cloudIndex < 8 ? 1.171875f : 2.34375f,
-            world.getMapper(Velocity.class).get(factory.createdIds.get(i)).velocity.len(), .00001f,
-            "Param<<7, native 75/100 scaling, 16.16 path velocity and 25-Hz conversion");
+        Vector2 offset = new Vector2(cloud.poisonCloudTarget).sub(cloud.start);
+        Vector2 actualVelocity = world.getMapper(Velocity.class).get(factory.createdIds.get(i)).velocity;
+        int speed = cloudIndex < 8 ? 192 : 384;
+        // Independent 128-entry native LUT oracle: quantize ratio BEFORE normalization.
+        double major = Math.max(Math.abs(offset.x), Math.abs(offset.y));
+        int tangent = (int) (127 * Math.min(Math.abs(offset.x), Math.abs(offset.y)) / major);
+        double length = Math.sqrt(127 * 127 + tangent * tangent);
+        int minorVector = (int) Math.floor(4096 * tangent / length);
+        int majorVector = (int) Math.floor(4096 * 127 / length);
+        int vx = Math.abs(offset.x) > Math.abs(offset.y) ? majorVector : minorVector;
+        int vy = Math.abs(offset.x) > Math.abs(offset.y) ? minorVector : majorVector;
+        if (offset.x < 0) vx = -vx;
+        if (offset.y < 0) vy = -vy;
+        assertEquals(((vx * speed) >> 8) * (25f / 65536f), actualVelocity.x);
+        assertEquals(((vy * speed) >> 8) * (25f / 65536f), actualVelocity.y);
         if (cloudIndex >= 8 && cloud.poisonCloudTarget.equals(new Vector2(cloud.start).add(2, 0))) {
           outerCardinalCloud = factory.createdIds.get(i);
         }

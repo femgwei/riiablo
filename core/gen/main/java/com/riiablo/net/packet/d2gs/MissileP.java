@@ -22,6 +22,8 @@ public final class MissileP extends Table {
   public int damageLevel() { int o = __offset(12); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
   public int nativeFrame() { int o = __offset(14); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
   public int nativeLifetimeFrames() { int o = __offset(16); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
+  public int presentationSeed() { int o = __offset(18); return o != 0 ? bb.getInt(o + bb_pos) : 0; }
+  public boolean presentationSeedKnown() { int o = __offset(20); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
 
   public static int createMissileP(FlatBufferBuilder builder,
       int missileId,
@@ -30,19 +32,23 @@ public final class MissileP extends Table {
       int skillId,
       int damageLevel,
       int nativeFrame,
-      int nativeLifetimeFrames) {
-    builder.startTable(7);
+      int nativeLifetimeFrames,
+      int presentationSeed,
+      boolean presentationSeedKnown) {
+    builder.startTable(9);
+    MissileP.addPresentationSeed(builder, presentationSeed);
     MissileP.addNativeLifetimeFrames(builder, nativeLifetimeFrames);
     MissileP.addNativeFrame(builder, nativeFrame);
     MissileP.addSkillId(builder, skillId);
     MissileP.addRange(builder, range);
     MissileP.addOwnerId(builder, ownerId);
     MissileP.addMissileId(builder, missileId);
+    MissileP.addPresentationSeedKnown(builder, presentationSeedKnown);
     MissileP.addDamageLevel(builder, damageLevel);
     return MissileP.endMissileP(builder);
   }
 
-  public static void startMissileP(FlatBufferBuilder builder) { builder.startTable(7); }
+  public static void startMissileP(FlatBufferBuilder builder) { builder.startTable(9); }
   public static void addMissileId(FlatBufferBuilder builder, int missileId) { builder.addShort(0, (short)missileId, (short)0); }
   public static void addOwnerId(FlatBufferBuilder builder, int ownerId) { builder.addInt(1, ownerId, 0); }
   public static void addRange(FlatBufferBuilder builder, float range) { builder.addFloat(2, range, 0.0f); }
@@ -50,6 +56,8 @@ public final class MissileP extends Table {
   public static void addDamageLevel(FlatBufferBuilder builder, int damageLevel) { builder.addByte(4, (byte)damageLevel, (byte)0); }
   public static void addNativeFrame(FlatBufferBuilder builder, int nativeFrame) { builder.addInt(5, nativeFrame, -1); }
   public static void addNativeLifetimeFrames(FlatBufferBuilder builder, int nativeLifetimeFrames) { builder.addInt(6, nativeLifetimeFrames, -1); }
+  public static void addPresentationSeed(FlatBufferBuilder builder, int presentationSeed) { builder.addInt(7, presentationSeed, 0); }
+  public static void addPresentationSeedKnown(FlatBufferBuilder builder, boolean presentationSeedKnown) { builder.addBoolean(8, presentationSeedKnown, false); }
   public static int endMissileP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;
