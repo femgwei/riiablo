@@ -227,7 +227,8 @@ public final class ClientSimulationAssembly {
         .with(SimulationSystemGroups.objectCollision())
         // Apply state-driven transforms after COF/layer systems have finished
         // their frame. Otherwise a late layer refresh can overwrite cblu.
-        .with(new StateOverlaySystem(), new HydraPresentationSystem());
+        .with(new StateOverlaySystem(), new ProgressiveChargePresentationSystem(),
+            new HydraPresentationSystem());
     // Local portal replacement/consumption deletes entities too. Retire their
     // physics bodies in every client mode so invisible obstacles cannot remain.
     builder.with(new Box2DDisposer());

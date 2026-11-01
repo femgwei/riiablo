@@ -2340,6 +2340,22 @@ public class ServerSkillSystem extends PassiveSystem {
       duration = base + skillLevel * step;
     }
     duration = Math.max(1, duration);
+    // SrvDo047 first applies the skill's own aura state.  The old path only
+    // applied Dim Vision to targets, which made the cast look like a no-op to
+    // clients and also prevented the native state from being refreshed.
+    int selfStateId = stateId(skill.aurastate);
+    if (selfStateId >= 0) {
+      UnitStates selfStates = mUnitStates.has(event.entityId)
+          ? mUnitStates.get(event.entityId) : mUnitStates.create(event.entityId);
+      if (selfStates.stateList == null) selfStates.init(world, event.entityId);
+      UnitState self = selfStates.stateList.addState(selfStateId, duration,
+          Math.max(1, skillLevel), event.entityId);
+      if (self != null) {
+        self.skillId = event.skillId;
+        self.sourceEntityId = event.entityId;
+        self.needsSync = true;
+      }
+    }
     int range = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
     if (range <= 0) {
       int base = firstParam(skill, 1, 30);
@@ -2348,6 +2364,8 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     range = Math.max(1, Math.min(128, range));
     int defenseReduction = -AssassinSkills.calculateCloakOfShadowsDefenseReduce(skillLevel);
+    int targetStateId = stateId(skill.auratargetstate);
+    if (targetStateId < 0) targetStateId = StateId.DIMVISION;
     int affected = 0;
     IntBag entities = world.getAspectSubscriptionManager()
         .get(Aspect.all(Position.class)).getEntities();
@@ -2362,7 +2380,7 @@ public class ServerSkillSystem extends PassiveSystem {
       if (states.stateList == null) states.init(world, targetId);
       UnitState state = states.stateList.applyCurseState(
           files() != null ? files().States : null,
-          StateId.DIMVISION, duration, skillLevel, event.entityId, event.skillId,
+          targetStateId, duration, skillLevel, event.entityId, event.skillId,
           Math.abs(defenseReduction), Stat.item_armor_percent, defenseReduction,
           NativeStatResolver.Operation.ADD);
       if (state != null) {

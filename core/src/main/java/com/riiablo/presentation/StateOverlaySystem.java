@@ -56,6 +56,11 @@ public class StateOverlaySystem extends IteratingSystem {
     for (UnitState state : states.stateList.getStates()) {
       if (state.expired) continue;
       int id = state.stateId;
+      // Progressive Assassin charges are rendered as one layer per charge by
+      // ProgressiveChargePresentationSystem. Do not install the aggregate
+      // States.txt overlay here (it would add an extra fourth visual).
+      if (id >= StateId.PROGRESSIVE_DAMAGE && id <= StateId.PROGRESSIVE_LIGHTNING)
+        continue;
       active.add(id);
       States.Entry definition = clientContext.files() == null || clientContext.files().States == null
           ? null : clientContext.files().States.get(id);
