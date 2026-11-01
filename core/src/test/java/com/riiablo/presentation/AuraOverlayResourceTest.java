@@ -17,6 +17,30 @@ import com.riiablo.codec.util.BBox;
 import com.riiablo.graphics.BlendMode;
 
 class AuraOverlayResourceTest extends RiiabloTest {
+  @Test void savedRightHandAuraIsRestoredWithoutSkillSelectionEvent() {
+    com.riiablo.engine.server.AuraEcsSystem auras = new com.riiablo.engine.server.AuraEcsSystem();
+    World world = new World(new WorldConfigurationBuilder().with(auras).build());
+    try {
+      int entity = world.create();
+      com.riiablo.save.CharData data = mock(com.riiablo.save.CharData.class);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(entity).data = data;
+      when(data.getAction(com.badlogic.gdx.Input.Buttons.RIGHT)).thenReturn(98); // Might
+      when(data.getSkill(98)).thenReturn(1);
+      assertTrue(auras.restoreSelectedAura(entity));
+      assertTrue(auras.manager().hasActiveAura(entity));
+      Object active = auras.manager().getActiveAura(entity);
+      assertTrue(auras.restoreSelectedAura(entity));
+      assertSame(active, auras.manager().getActiveAura(entity), "restore must not restart the aura");
+      int other = world.create();
+      com.riiablo.save.CharData attack = mock(com.riiablo.save.CharData.class);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(other).data = attack;
+      assertFalse(auras.restoreSelectedAura(other), "ordinary Attack is not an aura");
+      assertFalse(auras.manager().hasActiveAura(other));
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test void realManagerInstallsNativeAuraRateBlendAndPreservesOtherOverlays() {
     AssetManager saved = Riiablo.assets;
     com.riiablo.Colors savedColors = Riiablo.colors;

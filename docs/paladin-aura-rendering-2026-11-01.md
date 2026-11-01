@@ -55,3 +55,12 @@ OverlayManager + mock DCC/AssetManager 验证生产加载路径，测试不创�
 仍需另一台电脑实机确认：力量环与脚底对齐，祈祷/反抗播放速度，信念前后层，
 明暗地面上的颜色叠加。没有运行原版与 riiablo 的逐帧截图对照，不能声称
 所有调色板、后端及光照条件下已通过逐像素验收。
+
+## 入场恢复修正
+
+玩家创建原来只恢复 CharData 的右手技能，未像 SpellsQuickPanel 切换技能那样调用
+AuraEcsSystem.selectAura，导致首次入场没有权威 aura state。现在 ServerEntityFactory
+完成属性、状态、位置初始化后调用 restoreSelectedAura，首个正常 aura pulse 即发布状态，
+由现有 StateOverlaySystem 显示。网络纯表现世界未安装该权威系统，不自行创建状态。
+新增存档右手 Might 恢复、重复恢复不重启、普通 Attack 不激活光环的回归断言。
+本次是小范围初始化补漏，按约定未编译或执行测试，仅做差异及调用接口检查。

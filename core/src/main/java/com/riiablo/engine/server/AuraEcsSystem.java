@@ -110,6 +110,16 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     return activated;
   }
 
+  /** Restore the saved right-hand aura once the authoritative player is initialized. */
+  public boolean restoreSelectedAura(int entityId) {
+    if (!mPlayer.has(entityId)) return false;
+    Player player = mPlayer.get(entityId);
+    if (player.data == null || Riiablo.files == null || Riiablo.files.skills == null) return false;
+    int skillId = player.data.getAction(com.badlogic.gdx.Input.Buttons.RIGHT);
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    return skill != null && skill.aura && selectAura(entityId, skillId);
+  }
+
   /** Native monster AI aura selection (monsters do not have Player data). */
   public boolean selectAuraForMonster(int entityId, int skillId, int skillLevel) {
     int level = Math.max(1, skillLevel);

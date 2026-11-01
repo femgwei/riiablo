@@ -210,6 +210,8 @@ public class ServerEntityFactory extends EntityFactory {
     if (slots != null) slots.registerPlayer(id);
     DynamicUnitCollisionSystem spawnCollision = world.getSystem(DynamicUnitCollisionSystem.class);
     if (spawnCollision != null) spawnCollision.reservePlayerSpawn(id);
+    AuraEcsSystem auras = world.getSystem(AuraEcsSystem.class);
+    if (auras != null) auras.restoreSelectedAura(id);
     return id;
   }
 
