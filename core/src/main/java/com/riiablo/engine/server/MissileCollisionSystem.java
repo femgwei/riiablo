@@ -397,7 +397,8 @@ public class MissileCollisionSystem extends IteratingSystem {
           && ("plaguejavcloud".equalsIgnoreCase(missile.missile.Missile)
               || "poisonjavcloud".equalsIgnoreCase(missile.missile.Missile));
       int nextPrecisionX = 0, nextPrecisionY = 0;
-      if (fixedPoisonPath) {
+      boolean rawPoisonPath = fixedPoisonPath && position.hasNativePrecision();
+      if (rawPoisonPath) {
         int frames = Math.max(1, Math.round(world.delta * 25f));
         nextPrecisionX = (position.hasNativePrecision() ? position.nativePrecisionX()
             : NativePoisonMissileMotion.precision(position.position.x))
@@ -408,6 +409,11 @@ public class MissileCollisionSystem extends IteratingSystem {
         next.set((float) (Integer.toUnsignedLong(nextPrecisionX) / 65536.0 - 0.5),
             (float) (Integer.toUnsignedLong(nextPrecisionY) / 65536.0 - 0.5));
         moveDistance = position.position.dst(next);
+      } else if (fixedPoisonPath) {
+        int frames = Math.max(1, Math.round(world.delta * 25f));
+        next.set(NativePoisonMissileMotion.advanceLegacy(position.position.x, velocity.velocity.x, frames),
+            NativePoisonMissileMotion.advanceLegacy(position.position.y, velocity.velocity.y, frames));
+        moveDistance = position.position.dst(next);
       }
       if (missile.wakeMaker && position.position.dst2(missile.wakeTargetX,
           missile.wakeTargetY) <= moveDistance * moveDistance) {
@@ -415,7 +421,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         moveDistance = position.position.dst(next);
       }
       if (checkNativeMapCollision(entityId, missile, position.position, next)) return;
-      if (fixedPoisonPath) position.setNativePrecision(nextPrecisionX, nextPrecisionY);
+      if (rawPoisonPath) position.setNativePrecision(nextPrecisionX, nextPrecisionY);
       else {
         position.invalidateNativePrecision();
         position.position.set(next);

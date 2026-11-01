@@ -24,21 +24,21 @@ import org.junit.jupiter.api.Test;
  */
 class PoisonCloudPresentationTest extends RiiabloTest {
   @Test
-  void poisonAndPlagueTransOneUseNativeAdditiveNotScreen() {
+  void poisonAndPlagueKeepTheVisuallyVerifiedScreenPolicy() {
     for (String name : new String[] {
         "poisonjav", "plaguejavelin", "poisonjavcloud", "plaguejavcloud", "poisonpuff"
     }) {
       Missiles.Entry entry = row(name);
-      assertEquals(entry.Trans == 1 ? BlendMode.ADDITIVE : BlendMode.ID,
+      assertEquals(entry.Trans == 1 ? BlendMode.SCREEN : BlendMode.ID,
           MissileLoader.nativeBlendMode(entry), name);
     }
-    // Element/skill/name must not override the native Trans selector.
+    // Only Trans=1 selects the poison compatibility path.
     Missiles.Entry synthetic = new Missiles.Entry();
     synthetic.Missile = "plaguejavelin";
     synthetic.Skill = "Poison Javelin";
     synthetic.EType = "pois";
     synthetic.Trans = 1;
-    assertEquals(BlendMode.ADDITIVE, MissileLoader.nativeBlendMode(synthetic));
+    assertEquals(BlendMode.SCREEN, MissileLoader.nativeBlendMode(synthetic));
     synthetic.Trans = 0;
     assertEquals(BlendMode.ID, MissileLoader.nativeBlendMode(synthetic));
   }

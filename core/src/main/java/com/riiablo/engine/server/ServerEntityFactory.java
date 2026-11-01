@@ -80,6 +80,17 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 public class ServerEntityFactory extends EntityFactory {
   private java.util.function.IntSupplier checkpointAllocation;
   private int checkpointAllocatedId = Engine.INVALID_ENTITY;
+  private com.d2moo.common.drlg.D2Seed missilePresentationAllocationSeed;
+  private int missilePresentationGameSeed;
+
+  /** Independent birth stream: recycled ECS ids must not replay the same smoke. */
+  int nextMissilePresentationSeed(int gameSeed) {
+    if (missilePresentationAllocationSeed == null || missilePresentationGameSeed != gameSeed) {
+      missilePresentationGameSeed = gameSeed;
+      missilePresentationAllocationSeed = new com.d2moo.common.drlg.D2Seed(gameSeed, 666);
+    }
+    return (int) com.d2moo.common.seed.Seed.rollRandomNumber(missilePresentationAllocationSeed);
+  }
 
   /** Assemble exactly one native entity using a checkpoint-scoped allocator. */
   public final int createCheckpointEntity(java.util.function.IntSupplier allocation,
@@ -1543,8 +1554,9 @@ public class ServerEntityFactory extends EntityFactory {
               damageLevel);
     }
     missileComponent.rngState = NativeRng.forUnit(gameSeed(), id).state();
-    missileComponent.presentationSeed = missileComponent.rngState;
-    missileComponent.presentationSeedKnown = true;
+    // Restores receive their persisted birth seed; do not consume a new birth.
+    missileComponent.presentationSeed = restoring ? 0 : nextMissilePresentationSeed(gameSeed());
+    missileComponent.presentationSeedKnown = !restoring;
 
     if (!restoring) {
       Attributes ownerAttrs = ownerId >= 0 && mAttributesWrapper.has(ownerId)

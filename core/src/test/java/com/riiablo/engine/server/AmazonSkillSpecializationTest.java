@@ -855,6 +855,20 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     }
   }
 
+  @Test void poisonPresentationBirthsUseAFreshIndependentAllocationStream() {
+    ServerEntityFactory first = new ServerEntityFactory();
+    ServerEntityFactory second = new ServerEntityFactory();
+    com.d2moo.common.drlg.D2Seed oracle = new com.d2moo.common.drlg.D2Seed(1234, 666);
+    java.util.Set<Integer> seeds = new java.util.HashSet<>();
+    // No entity id input: recycling the same slot cannot repeat a birth seed.
+    for (int i = 0; i < 128; i++) {
+      int seed = first.nextMissilePresentationSeed(1234);
+      assertEquals((int) com.d2moo.common.seed.Seed.rollRandomNumber(oracle), seed);
+      assertEquals(seed, second.nextMissilePresentationSeed(1234));
+      assertTrue(seeds.add(seed));
+    }
+  }
+
   @Test
   void auditNativeAmazonSpecialRows() {
     String[] names = {"Magic Arrow", "Fire Arrow", "Inner Sight", "Critical Strike", "Jab",

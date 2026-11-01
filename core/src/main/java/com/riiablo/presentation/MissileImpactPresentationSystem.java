@@ -257,13 +257,16 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     boolean networkClock = !visual.authoritative && !visual.presentationOnly
         && visual.clientSnapshotKnown;
     int previous = visual.clientFrame;
-    int end = networkClock ? visual.nativeFrame
-        : previous + Math.max(1, Math.round(delta * 25f));
+    int localEnd = previous + Math.max(1, Math.round(delta * 25f));
+    // The local 25-Hz presentation clock keeps running between packets.
+    // Accepted snapshots can catch it up, never pause or rewind it. Some
+    // transports/older servers repeat the birth frame on position updates.
+    int end = networkClock ? Math.max(visual.nativeFrame, localEnd) : localEnd;
     // Network history cannot contain callbacks beyond the missile's lifetime.
     // Also bound malformed/legacy snapshots whose lifetime is unavailable.
     if (networkClock) end = Math.min(end, visual.nativeLifetimeFrames > 0
         ? visual.nativeLifetimeFrames : Math.max(1, source.Range));
-    if (end <= previous) return; // Repeated snapshots must not emit/RNG-roll twice.
+    if (end <= previous) return;
     Vector2 current = mPosition.get(entityId).position;
     // Linear poison missiles can reconstruct missed native ticks from two
     // accepted snapshots. Never emit once for every crossed grid boundary:
@@ -303,10 +306,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
             ? 2 * Math.max(0, visual.damageLevel - 1) : 0;
         cloud.nativeLifetimeFrames = Math.max(1, cloud.missile.Range
             + cloud.poisonCloudLoops * Math.max(0, cloud.missile.SubStop - cloud.missile.SubStart));
-        // 0x6FB302E0 zeroes D2MissileStrc; flags&4 reads its nVelocity at
-        // +0x28, which remains ZERO. 0x8000 is a range override, not velocity
-        // inheritance. The moving layer is poisonpuff, not this callback carrier.
-        mVelocity.get(id).velocity.setZero();
+        // Restore the previously validated moving presentation carrier.
+        // This is an ECS visual compatibility policy, NOT a claim that the
+        // native 0x8005 creation flag means velocity inheritance. Its base
+        // DCC remains hidden; only its smoke emitter follows this motion.
+        mVelocity.get(id).velocity.set(velocity);
         seedFlightChild(visual, cloud, frame);
         agePoisonVisual(id, age);
         continue;
@@ -359,8 +363,17 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       child.presentationOnly = false;
       child.clientSnapshotKnown = true;
       child.nativeFrame = Math.min(age, child.nativeLifetimeFrames);
+      Vector2 birth = new Vector2(mPosition.get(id).position);
+      Vector2 velocity = mVelocity.get(id).velocity;
+      // Local carriers emit BEFORE moving. Replay that phase, not the
+      // server replica's post-movement phase, then place the carrier at age.
+      child.clientSampleFrame = 0;
+      child.clientSamplePosition.set(birth).mulAdd(velocity, -1f / 25f);
+      mPosition.get(id).position.set(birth).mulAdd(velocity,
+          (child.nativeFrame - 1f) / 25f);
       processPoisonFlight(id, child, child.missile, mVelocity.get(id).velocity,
           1f / 25f, Math.max(0, age - child.nativeFrame));
+      mPosition.get(id).position.set(birth).mulAdd(velocity, age / 25f);
       child.presentationOnly = true;
     } else {
       NativePoisonMissileMotion.advance(mPosition.get(id), mVelocity.get(id).velocity, age);

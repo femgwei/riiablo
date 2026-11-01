@@ -37,9 +37,21 @@ public final class NativePoisonMissileMotion {
 
   /** PATHTYPE_MISSILE never clamps or stops at the direction-reference target. */
   public static void advance(Position position, Vector2 velocity, int frames) {
-    int x = position.hasNativePrecision() ? position.nativePrecisionX() : precision(position.position.x);
-    int y = position.hasNativePrecision() ? position.nativePrecisionY() : precision(position.position.y);
+    if (!position.hasNativePrecision()) {
+      // Legacy map coordinates can be negative. They are NOT raw uint32
+      // native coordinates: converting them into Position's unsigned adapter
+      // teleports smoke to the opposite map edge and makes it disappear.
+      position.position.set(advanceLegacy(position.position.x, velocity.x, frames),
+          advanceLegacy(position.position.y, velocity.y, frames));
+      return;
+    }
+    int x = position.nativePrecisionX();
+    int y = position.nativePrecisionY();
     position.setNativePrecision(x + frameStep(velocity.x) * frames,
         y + frameStep(velocity.y) * frames);
+  }
+
+  public static float advanceLegacy(float world, float perSecond, int frames) {
+    return (float) ((Math.round(world * 65536.0) + (long) frameStep(perSecond) * frames) / 65536.0);
   }
 }

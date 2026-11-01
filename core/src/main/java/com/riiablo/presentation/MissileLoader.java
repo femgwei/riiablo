@@ -207,12 +207,24 @@ public class MissileLoader extends IteratingSystem {
 
   static int nativeBlendMode(Missiles.Entry entry) {
     if (entry == null || entry.Trans != 1) return BlendMode.ID;
-    // D2Client 1.10f 0x6FB5B011..0x6FB5B025 maps missile Trans=1
-    // to draw mode 3, without an element/name exception for poison clouds.
-    // D2Glide implements that mode as ONE + ONE. Screen attenuates the
-    // destination instead, changing both smoke density and overlap colour.
-    // Keep the independently configured ground-fire mask unchanged here.
+    // Restore the visually verified indexed-renderer policy. A native draw
+    // mode number alone does not establish equivalence with this shader's
+    // palette, tint and alpha handling. Do not replace it without GPU QA.
+    if (isPoisonMissile(entry)) return BlendMode.SCREEN;
+    // Other Trans=1 rows retain the existing additive/ground-fire policy.
     return isGroundFire(entry) ? BlendMode.LUMINOSITY : BlendMode.ADDITIVE;
+  }
+
+  static boolean isPoisonMissile(Missiles.Entry entry) {
+    if (entry == null) return false;
+    return "pois".equalsIgnoreCase(entry.EType) || "poison".equalsIgnoreCase(entry.EType)
+        || containsPoison(entry.Missile) || containsPoison(entry.Skill);
+  }
+
+  private static boolean containsPoison(String value) {
+    if (value == null) return false;
+    String lower = value.toLowerCase(java.util.Locale.ROOT);
+    return lower.contains("poison") || lower.contains("plague");
   }
 
   /** Stable world-cell phase, so neighbouring fire cells do not animate in lockstep. */

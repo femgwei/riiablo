@@ -34,13 +34,46 @@ class PlagueJavelinPresentationLifecycleTest extends RiiabloTest {
         from, new Vector2(8, 18), 192, velocity);
     assertEquals(-2172, com.riiablo.engine.server.missile.NativePoisonMissileMotion.frameStep(velocity.x));
     Position split = new Position(), batch = new Position();
-    split.position.set(from); batch.position.set(from);
+    split.initializeNativeCell(10, 20); batch.initializeNativeCell(10, 20);
     for (int i = 0; i < 86; i++)
       com.riiablo.engine.server.missile.NativePoisonMissileMotion.advance(split, velocity, 1);
     com.riiablo.engine.server.missile.NativePoisonMissileMotion.advance(batch, velocity, 86);
     assertEquals((10 << 16) + 32768 - 2172 * 86, batch.nativePrecisionX());
     assertEquals(batch.nativePrecisionX(), split.nativePrecisionX());
     assertEquals(batch.nativePrecisionY(), split.nativePrecisionY());
+  }
+
+  @Test void legacySmokeCanExpandAcrossNegativeMapCoordinatesWithoutUnsignedTeleport() {
+    Position position = new Position();
+    position.position.set(-2, -3);
+    com.riiablo.engine.server.missile.NativePoisonMissileMotion.advance(
+        position, new Vector2(-25, 25), 3);
+    assertEquals(new Vector2(-5, 0), position.position);
+    assertFalse(position.hasNativePrecision());
+    position.position.set(0, 0);
+    com.riiablo.engine.server.missile.NativePoisonMissileMotion.advance(
+        position, new Vector2(-25, -25), 3);
+    assertEquals(new Vector2(-3, -3), position.position);
+  }
+
+  @Test void zeroOrStaleNetworkClockCannotFreezeCloudSmoke() {
+    for (String name : new String[] {"poisonjavcloud", "plaguejavcloud"}) {
+      try (Fixture f = new Fixture(false)) {
+        Missiles.Entry row = new Missiles.Entry();
+        row.Missile = name;
+        row.pCltDoFunc = 4;
+        row.CltSubMissile = new String[] {"poisonpuff"};
+        row.CltParam = new int[] {1, 1, 6};
+        int id = f.parent(row, false);
+        f.missile(id).clientSnapshotKnown = true;
+        f.missile(id).nativeFrame = 0;
+        for (int frame = 1; frame <= 12; frame++) {
+          f.step();
+          assertEquals(frame, f.children.size(), name + " local frame " + frame);
+          assertEquals(frame, f.missile(id).clientFrame);
+        }
+      }
+    }
   }
 
   @Test void coldSmokeAnimationUsesAgeButNewSmokeStillStartsAtZero() {
@@ -53,7 +86,7 @@ class PlagueJavelinPresentationLifecycleTest extends RiiabloTest {
     assertEquals(24, MissileLoader.poisonSmokeFrame(puff, 25));
   }
 
-  @Test void sparseSnapshotsReplayTheSameTicksAndDoNotRollTwice() {
+  @Test void sparseSnapshotsCatchUpAndLocalSmokeKeepsRunningBetweenPackets() {
     try (Fixture dense = new Fixture(false); Fixture sparse = new Fixture(false)) {
       int a = dense.cloud(1, false);
       sparse.parent(new Missiles.Entry(), false); // Deliberately different local ECS id.
@@ -83,14 +116,14 @@ class PlagueJavelinPresentationLifecycleTest extends RiiabloTest {
             sparse.world.getMapper(Position.class).get(y).position);
       }
       int low = sparse.missile(b).clientSeed.getNLowSeed();
-      sparse.step();
-      assertEquals(12, sparse.children.size());
-      assertEquals(low, sparse.missile(b).clientSeed.getNLowSeed());
       assertEquals(dense.missile(a).clientSeed.getNLowSeed(), low);
+      sparse.step();
+      assertEquals(13, sparse.children.size());
+      assertNotEquals(low, sparse.missile(b).clientSeed.getNLowSeed());
     }
   }
 
-  @Test void networkPlagueTrailBackfillsTicksWithStationaryCarriers() {
+  @Test void networkPlagueTrailBackfillsTicksAndRetainsValidatedCarrierMotion() {
     try (Fixture f = new Fixture(false)) {
       int parent = f.parent(Riiablo.files.Missiles.get("plaguejavelin"), false);
       Missile root = f.missile(parent);
@@ -105,7 +138,7 @@ class PlagueJavelinPresentationLifecycleTest extends RiiabloTest {
       for (int i = 0; i < f.children.size(); i++) {
         if (!"plaguejavcloud".equals(f.names.get(i))) continue;
         int id = f.children.get(i);
-        assertTrue(f.world.getMapper(Velocity.class).get(id).velocity.isZero());
+        assertEquals(new Vector2(25, 0), f.world.getMapper(Velocity.class).get(id).velocity);
         assertTrue(f.missile(id).presentationSeedKnown);
       }
       long count = f.cloudCount();

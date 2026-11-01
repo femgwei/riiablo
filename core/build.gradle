@@ -1259,7 +1259,8 @@ task plagueJavelinRegression(type: Test) {
        'com.riiablo.engine.server.PoisonJavelinGoldenDamageTest',
        'com.riiablo.engine.server.AmazonSkillSpecializationTest.poisonJavelinCreatesPersistentPoisonCloud',
        'com.riiablo.engine.server.AmazonSkillSpecializationTest.corpsePoisonCloudUsesSharedPersistentAreaLifecycle',
-       'com.riiablo.engine.server.AmazonSkillSpecializationTest.plagueJavelinHitFansOutNativePoisonCloudRing'
+       'com.riiablo.engine.server.AmazonSkillSpecializationTest.plagueJavelinHitFansOutNativePoisonCloudRing',
+       'com.riiablo.engine.server.AmazonSkillSpecializationTest.poisonPresentationBirthsUseAFreshIndependentAllocationStream'
       ].each { includeTestsMatching it }
     }
   }
