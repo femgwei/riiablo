@@ -43,10 +43,12 @@ public class AnimationStepper extends IntervalIteratingSystem {
       if (mMissile.has(entityId)) {
         Missile missile = mMissile.get(entityId);
         if (NativeGroundFirePresentation.handles(missile)) {
-          NativeGroundFirePresentation.adjustFrame(missile, wrapper.animation,
-              missile.presentationOnly
-                  ? Math.max(0, missile.nativeLifetimeFrames - missile.nativeFrame)
-                  : missile.remainingFrames);
+          NativeGroundFirePresentation.update(missile, wrapper.animation,
+              missile.authoritative && !missile.presentationOnly && missile.persistent
+                  ? missile.remainingFrames
+                  : Math.max(0, missile.nativeLifetimeFrames - missile.nativeFrame),
+              SimulationClock.STEP_SECONDS);
+          return;
         }
       }
       wrapper.animation.update(SimulationClock.STEP_SECONDS);

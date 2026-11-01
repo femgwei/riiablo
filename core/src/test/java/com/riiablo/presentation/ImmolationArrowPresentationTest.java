@@ -68,6 +68,92 @@ class ImmolationArrowPresentationTest extends RiiabloTest {
     assertFalse(NativeGroundFirePresentation.handles(null));
   }
 
+  @Test void allFourFireLayersAccumulateInsteadOfOccludingTheirNeighbours() {
+    for (String name : new String[] {"immolationfire", "firewall", "firesmall", "firemedium"}) {
+      Missiles.Entry row = Riiablo.files.Missiles.get(name);
+      assertEquals(1, row.Trans);
+      assertEquals(com.riiablo.graphics.BlendMode.ADDITIVE,
+          MissileLoader.nativeBlendMode(row), name);
+    }
+  }
+
+  @Test void realImpactKeepsTheCircularLayoutLifetimeAndEachChildsBirthSeed() {
+    com.artemis.World[] worlds = new com.artemis.World[1];
+    java.util.List<Integer> created = new java.util.ArrayList<>();
+    com.riiablo.engine.EntityFactory factory = mock(com.riiablo.engine.EntityFactory.class,
+        CALLS_REAL_METHODS);
+    doAnswer(call -> {
+      com.artemis.World world = worlds[0];
+      int id = world.create();
+      Missiles.Entry row = Riiablo.files.Missiles.get((Integer) call.getArgument(0));
+      Missile child = world.getMapper(Missile.class).create(id);
+      child.set(row, call.getArgument(2), row.Range);
+      child.presentationSeedKnown = true;
+      child.presentationSeed = 1000 + created.size();
+      world.getMapper(com.riiablo.engine.server.component.Position.class).create(id)
+          .position.set((com.badlogic.gdx.math.Vector2) call.getArgument(2));
+      world.getMapper(com.riiablo.engine.server.component.Velocity.class).create(id);
+      created.add(id);
+      return id;
+    }).when(factory).createMissile(anyInt(), any(com.badlogic.gdx.math.Vector2.class),
+        any(com.badlogic.gdx.math.Vector2.class), anyInt());
+    MissileImpactPresentationSystem system = new MissileImpactPresentationSystem();
+    com.artemis.World world = worlds[0] = new com.artemis.World(
+        new com.artemis.WorldConfigurationBuilder().with(
+            new net.mostlyoriginal.api.event.common.EventSystem(), system,
+            new OverlayManager(), factory).build()
+            .register("factory", factory)
+            .register("map", new com.riiablo.map.Map(0, 0))
+            .register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int sourceId = world.create();
+      Missile source = world.getMapper(Missile.class).create(sourceId);
+      source.missile = Riiablo.files.Missiles.get("immolationarrow");
+      source.skillId = 27;
+      source.damageLevel = 7;
+      source.presentationSeedKnown = true;
+      source.presentationSeed = 0x12345678;
+      source.nativeSeed = new D2Seed(42, 666);
+      com.riiablo.engine.server.event.MissileImpactEvent event =
+          com.riiablo.engine.server.event.MissileImpactEvent.obtain(sourceId,
+              source.missile.Id, -1, -1, new com.badlogic.gdx.math.Vector2(10.75f, 20.25f));
+      system.onMissileImpact(event);
+      long low = Integer.toUnsignedLong(source.presentationSeed), high = 666;
+      int accepted = 0;
+      for (int x = -2; x <= 2; x++) for (int y = -2; y <= 2; y++) {
+        if (x * x + y * y > 4) continue;
+        long bits = low * 0x6AC690C5L + high;
+        low = bits & 0xffffffffL; high = bits >>> 32;
+        int ttl = 63 + (int) (low % 25);
+        bits = low * 0x6AC690C5L + high;
+        low = bits & 0xffffffffL; high = bits >>> 32;
+        int childType = (int) (low % 3);
+        bits = low * 0x6AC690C5L + high;
+        low = bits & 0xffffffffL; high = bits >>> 32;
+        if (low % 100 >= 75) continue;
+        int id = created.get(accepted);
+        Missile fire = world.getMapper(Missile.class).get(id);
+        assertEquals(source.missile.CltHitSubMissile[childType], fire.missile.Missile);
+        assertEquals(ttl, fire.nativeLifetimeFrames);
+        assertEquals(1000 + accepted, fire.presentationSeed,
+            "the impact must not replace the child's distinct allocation seed");
+        assertTrue(fire.presentationOnly);
+        assertFalse(fire.authoritative);
+        assertEquals(27, fire.skillId);
+        assertEquals(7, fire.damageLevel);
+        com.badlogic.gdx.math.Vector2 position = world.getMapper(
+            com.riiablo.engine.server.component.Position.class).get(id).position;
+        assertEquals(10 + x, position.x, .0001f);
+        assertEquals(20 + y, position.y, .0001f);
+        accepted++;
+      }
+      assertEquals(accepted, created.size());
+      assertTrue(accepted > 3);
+      assertEquals(42, source.nativeSeed.getNLowSeed());
+      assertEquals(666, source.nativeSeed.getNHighSeed());
+    } finally { world.dispose(); }
+  }
+
   @Test void groundFireRandomPhaseUsesClientSeedWithoutConsumingDamageSeed() {
     Missile fire = groundFire();
     fire.nativeSeed = new D2Seed(0x12345678, 666);

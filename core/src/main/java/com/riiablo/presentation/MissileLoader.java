@@ -206,8 +206,10 @@ public class MissileLoader extends IteratingSystem {
     // mode number alone does not establish equivalence with this shader's
     // palette, tint and alpha handling. Do not replace it without GPU QA.
     if (isPoisonMissile(entry)) return BlendMode.SCREEN;
-    // Other Trans=1 rows retain the existing additive/ground-fire policy.
-    return isGroundFire(entry) ? BlendMode.LUMINOSITY : BlendMode.ADDITIVE;
+    // D2Client 1.10f 0x6FB5B011..25 selects draw mode 3 for Trans=1.
+    // There is no ground-fire exception. Alpha-over makes each big flame
+    // cover its neighbours instead of accumulating their bright fire core.
+    return BlendMode.ADDITIVE;
   }
 
   static boolean isPoisonMissile(Missiles.Entry entry) {

@@ -478,6 +478,23 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     if (frame == endIndex - 1) notifyAnimationFinished();
   }
 
+  /** Native missile sub-loop: wrap at stop on the first pass, preserving fractions. */
+  public void updateSubLoop(float delta, int loopStart, int loopStop) {
+    Validate.isTrue(0 <= loopStart && loopStart < loopStop && loopStop <= numFrames,
+        "Invalid native sub-loop: %s..%s", loopStart, loopStop);
+    if (frameDuration == Float.POSITIVE_INFINITY) return;
+    elapsedTime += delta;
+    int preciseFrame = (int) (elapsedTime / frameDuration);
+    if (preciseFrame >= loopStop) {
+      int cycles = (preciseFrame - loopStop) / (loopStop - loopStart) + 1;
+      elapsedTime -= cycles * (loopStop - loopStart) * frameDuration;
+      preciseFrame -= cycles * (loopStop - loopStart);
+    }
+    frame = Math.max(0, Math.min(numFrames - 1, preciseFrame));
+    notifyListeners(frame);
+    if (frame == endIndex - 1) notifyAnimationFinished();
+  }
+
   public void drawDebug(ShapeRenderer shapes, float x, float y) {
     if (DEBUG_MODE == 0) {
       return;

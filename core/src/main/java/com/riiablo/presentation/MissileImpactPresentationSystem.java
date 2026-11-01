@@ -835,10 +835,9 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     if (parent != null) {
       visual.skillId = parent.skillId;
       visual.damageLevel = parent.damageLevel;
-      visual.presentationSeedKnown = parent.presentationSeedKnown;
-      visual.presentationSeed = parent.presentationSeed;
-      visual.nativeSeed = parent.nativeSeed == null ? null
-          : new D2Seed(parent.nativeSeed.getNLowSeed(), parent.nativeSeed.getNHighSeed());
+      // Keep the child's own allocation seed. Copying the same parent seed
+      // into every cell makes CltDo5 select an identical animation phase
+      // across the field, defeating its native per-missile randomization.
     }
     if ("explodingarrowexp".equalsIgnoreCase(childName)
         && child.TravelSound != null && !child.TravelSound.isEmpty()

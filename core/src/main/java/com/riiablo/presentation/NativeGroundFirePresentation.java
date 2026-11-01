@@ -21,6 +21,20 @@ public final class NativeGroundFirePresentation {
         && missile.missile.pCltDoFunc == 5;
   }
 
+  /** CltDo5 plus 0x6FB3DB1E / D2Common#10375's first-pass sub-loop. */
+  public static void update(Missile missile, Animation animation, int remainingFrames,
+      float delta) {
+    adjustFrame(missile, animation, remainingFrames);
+    Missiles.Entry row = missile.missile;
+    if (row.LoopAnim > 0 && row.SubLoop > 0 && row.SubStart < row.SubStop
+        && row.SubStop <= animation.getNumFramesPerDir()
+        && remainingFrames > row.AnimLen - row.SubStop + 1) {
+      animation.updateSubLoop(delta, row.SubStart, row.SubStop);
+    } else {
+      animation.update(delta);
+    }
+  }
+
   /**
    * Applies one 1.10f CltDo5 frame correction before normal animation update.
    * The original callback uses the native missile frame for the first branch,

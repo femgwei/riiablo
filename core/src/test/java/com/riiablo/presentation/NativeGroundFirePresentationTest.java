@@ -46,6 +46,27 @@ class NativeGroundFirePresentationTest extends com.riiablo.RiiabloTest {
     verify(ending).setFrame(8);
   }
 
+  @Test void nativeSubLoopWrapsOnFirstPassAndRetainsFractionalFrames() {
+    com.riiablo.codec.DCC dcc = mock(com.riiablo.codec.DCC.class);
+    when(dcc.getNumDirections()).thenReturn(1);
+    when(dcc.getNumFramesPerDir()).thenReturn(37);
+    when(dcc.getBox(anyInt())).thenReturn(new com.riiablo.codec.util.BBox());
+    Animation animation = Animation.newAnimation();
+    animation.edit().layer(dcc).build();
+    animation.setMode(Animation.Mode.LOOP);
+    animation.setSubLoop(12, 36);
+    animation.setFrameDelta(128);
+    animation.setFrame(35);
+    animation.updateSubLoop(.04f, 12, 36);
+    assertEquals(35, animation.getFrame());
+    animation.updateSubLoop(.04f, 12, 36);
+    assertEquals(12, animation.getFrame());
+    animation.updateSubLoop(.04f, 12, 36);
+    assertEquals(12, animation.getFrame());
+    animation.updateSubLoop(.04f, 12, 36);
+    assertEquals(13, animation.getFrame());
+  }
+
   private static Missile missile(int callback, int subStart, int subStop) {
     Missile missile = new Missile();
     missile.missile = new Missiles.Entry();
