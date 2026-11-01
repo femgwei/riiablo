@@ -257,6 +257,8 @@ public class SkillCastHandler extends PassiveSystem {
         && (event.srvdofunc == 12 || skill.srvdofunc == 12);
     boolean localStreamServer = localServer
         && (event.srvdofunc == 19 || skill.srvdofunc == 19);
+    boolean localDoubleThrowServer = localServer
+        && (event.srvdofunc == 74 || skill.srvdofunc == 74);
     // Lightning Strike's shipped cltDoFunc is shared with Nova/Frost Nova in
     // some table exports.  When the local server owns SrvDo014, dispatching
     // that callback would incorrectly fan the LightningStrike missile in all
@@ -276,6 +278,11 @@ public class SkillCastHandler extends PassiveSystem {
     if (authoritativeThrow && (networkClient || localServer)) {
       log.info("[SKILL_PRESENTATION] phase=reuse_server_throw entity={} skill={} networkClient={} localServer={}",
           event.entityId, event.skillId, networkClient, localServer);
+      return;
+    }
+    if (localDoubleThrowServer || (networkClient && (event.srvdofunc == 74 || skill.srvdofunc == 74))) {
+      log.info("[SKILL_PRESENTATION] phase=reuse_server_double_throw entity={} skill={}",
+          event.entityId, skill.skill);
       return;
     }
     if (localAmazonBowServer || localAmazonElementalMissileServer) {
@@ -380,6 +387,11 @@ public class SkillCastHandler extends PassiveSystem {
         break;
 
       case 9: // Frenzy - dual weapon sounds
+        playSound("weapon_1hs_small_1");
+        playSound("weapon_1hs_small_1");
+        break;
+
+      case 39: // Double Swing/Frenzy native dual-hit callback
         playSound("weapon_1hs_small_1");
         playSound("weapon_1hs_small_1");
         break;
@@ -944,6 +956,8 @@ public class SkillCastHandler extends PassiveSystem {
       default: return false;
     }
   }
+
+  static boolean isDoubleThrow(int skillId) { return skillId == 140; }
 
   // First quadrant of D2Client's 64 target offsets at 6FB6E2E0/6FB6E3E0.
   // These are integer target vectors, not uniformly spaced floating angles.

@@ -54,6 +54,25 @@ class WarCryVisualResourceTest extends RiiabloTest {
       }
     }
   }
+
+  @Test void inspectWeaponSkillClientCallbacks() {
+    for (int id : new int[] {133, 140, 147, 151, 152}) {
+      com.riiablo.codec.excel.NativeSkills.Entry row = Riiablo.files.NativeSkills.get(id);
+      assertNotNull(row);
+      System.out.println("BARB_WEAPON " + id + " skill=" + row.string("skill")
+          + " cltst=" + row.string("cltstfunc") + " cltdo=" + row.string("cltdofunc")
+          + " clta=" + row.string("cltmissilea") + " cltb=" + row.string("cltmissileb")
+          + " cast=" + row.string("castoverlay") + " srv=" + row.string("srvoverlay"));
+    }
+  }
+
+  @Test void doubleThrowAndDualSwingUseDistinctNativeCallbacks() {
+    assertEquals("39", Riiablo.files.NativeSkills.get(133).string("cltdofunc"));
+    assertEquals("42", Riiablo.files.NativeSkills.get(140).string("cltdofunc"));
+    assertEquals("39", Riiablo.files.NativeSkills.get(147).string("cltdofunc"));
+    assertTrue(SkillCastHandler.isDoubleThrow(140));
+    assertFalse(SkillCastHandler.isDoubleThrow(133));
+  }
   @Test void waveDirectionsUseNativeIntegerTargets() {
     com.badlogic.gdx.math.Vector2 direction = new com.badlogic.gdx.math.Vector2();
     assertEquals(new com.badlogic.gdx.math.Vector2(29, 2).nor(),
