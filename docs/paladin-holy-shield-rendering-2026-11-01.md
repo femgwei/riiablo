@@ -62,6 +62,20 @@ equipment component. Asset loading is mocked; no GPU pixel parity is claimed.
 state lifecycle (ordinary block, Holy Shield block, removal, ordinary attack).
 `CofModeTransitionTest` guards existing composite reload behavior.
 
+Final verification: 16 tests across those four classes, zero failures/errors/
+skips. Module-boundary validation also passed. The final run used independent
+build output under `.gradle/holyshield-verification` because concurrent skill
+audits were replacing classes in the normal shared build directory. A prior
+shared-output run failed with missing presentation classes; that run is not
+counted as a successful gate.
+
+To repeat without concurrent builds, set `JAVA_HOME` to JDK 17 and `D2_HOME`
+to the 1.10f installation, then run:
+
+```text
+gradlew.bat :core:test --tests com.riiablo.engine.server.AnimDataResolverTest --tests com.riiablo.engine.server.NativeHolyShieldDataTest --tests com.riiablo.presentation.HolyShieldPresentationTest --tests com.riiablo.presentation.CofModeTransitionTest --console=plain
+```
+
 This pass covers Holy Shield's shield selection and block animation rate.
 Its cast overlay/compositing and the remaining Paladin skills are not yet
 certified as original-client-equivalent.
