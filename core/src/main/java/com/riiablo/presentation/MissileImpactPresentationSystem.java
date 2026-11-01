@@ -435,9 +435,9 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     return offset / (float) Tile.SUBTILE_WIDTH50;
   }
 
-  private void createFlightVisual(Missiles.Entry source, String childName,
+  private int createFlightVisual(Missiles.Entry source, String childName,
       Vector2 position, float angle) {
-    createFlightVisual(source, childName, position, angle, 0f, 0f);
+    return createFlightVisual(source, childName, position, angle, 0f, 0f);
   }
 
   private void createFlightVisual(Missiles.Entry source, String childName,
