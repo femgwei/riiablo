@@ -36,6 +36,7 @@ public class MissileLoader extends IteratingSystem {
     DCC celFile = clientContext.assets().get(missile.missileDescriptor);
 
     Missiles.Entry entry = missile.missile;
+    if (ClientEntityFactory.isHiddenPlagueJavelinRoot(entry)) return;
     // One-shot impact DCCs are created and rendered in the same simulation
     // tick.  Preload their sole direction here instead of relying on the
     // lazy Layer.draw path, which can otherwise submit a region before the

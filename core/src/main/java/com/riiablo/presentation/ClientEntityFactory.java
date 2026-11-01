@@ -671,7 +671,14 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // NetworkIdManager or it will alias every local projectile.
     if (mNetworked.has(id)) mNetworked.remove(id);
     Missile missileWrapper = mMissile.get(id);
-    clientContext.assets().load(missileWrapper.missileDescriptor);
+    // Retail Plague Javelin presents the projectile through its CltDo3 cloud
+    // trail. Loading plaguejavelin's base jav1 DCC adds a second white spear
+    // sprite at the head of the trail, which is not present in the native
+    // effect. Keep the authoritative missile alive for collision and callback
+    // processing, but leave only its cloud presentation visible.
+    if (!isHiddenPlagueJavelinRoot(missileWrapper.missile)) {
+      clientContext.assets().load(missileWrapper.missileDescriptor);
+    }
     mBox2DBody.create(id);
 
     Missiles.Entry missile = mMissile.get(id).missile;
@@ -686,6 +693,10 @@ public class ClientEntityFactory extends ServerEntityFactory {
     }
 
     return id;
+  }
+
+  static boolean isHiddenPlagueJavelinRoot(Missiles.Entry missile) {
+    return missile != null && "plaguejavelin".equalsIgnoreCase(missile.Missile);
   }
 
   /** Creates a local-only hit child without replaying its TravelSound. */
