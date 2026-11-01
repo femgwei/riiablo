@@ -64,3 +64,46 @@ AuraEcsSystem.selectAura，导致首次入场没有权威 aura state。现在 Se
 由现有 StateOverlaySystem 显示。网络纯表现世界未安装该权威系统，不自行创建状态。
 新增存档右手 Might 恢复、重复恢复不重启、普通 Attack 不激活光环的回归断言。
 本次是小范围初始化补漏，按约定未编译或执行测试，仅做差异及调用接口检查。
+
+## 装备光环与队友宠物补全
+
+后续扩展回归已包含上述入场恢复测试。装备自动光环与谜团的主动传送
+（item_nonclassskill）是两条不同链路，不能通过恢复右键技能代替。
+
+原版依据（本地 `F:\3rd_src\D2MOO`）：
+
+- `source/D2Game/src/ITEMS/ItemMode.cpp:269`：item_aura 属性变更调用
+  SKILLITEM_ActivateAura / SKILLITEM_DeactivateAura。
+- `source/D2Game/src/SKILLS/SkillItem.cpp:959`：每个装备来源单独注册
+  PERIODICSTATS；只有 Skills.txt Immediate 的行才立即执行。
+- `source/D2Game/src/SKILLS/Skills.cpp:2809`：装备周期事件读取按技能编号
+  汇总的 STAT_ITEM_AURA 等级，不读取右键技能等级或额外 +skills。
+- `source/D2Game/src/UNIT/SUnit.cpp:2120`：SUNIT_AreUnitsAligned 先解析
+  双方 minion owner，再判断玩家队伍；队友雇佣兵和召唤物也属于友方。
+- `source/D2Game/src/MISSILES/MissMode.cpp:2996`：增益战吼命中同样使用
+  SUNIT_AreUnitsAligned；`SkillBar.cpp:249` 仍创建有到期帧的限时状态，
+  不应在登录时凭当前技能选择无条件重施。
+- `source/D2Game/src/UNIT/SUnitMsg.cpp:178`：初次同步发送单位当前状态集合。
+
+修正内容：
+
+- 权威 AuraEcsSystem 每帧对齐已提交的装备属性及实际启用的装备槽。
+  玩家与雇佣兵入场无需切技能即可重新建立装备光环调度。
+- AuraManager 将选中技能与各装备来源分开调度；同类装备读取合计等级，
+  不与主动技能等级相加。多件装备保留各自的周期来源，伤害脉冲不被
+  简单折叠为一个来源；目标状态仍通过原有最高等级仲裁，避免增益重复叠加。
+- 换右键技能只取消主动流；卸装、破损、切副手和死亡会撤销对应装备流。
+  撤销时清理来源自身状态，队友保留的末次短状态按原有期限消失。
+- 属性合并允许相同非零参数层求和，修复双装备同技能合并时的断言错误。
+- 三种德鲁伊灵的友方筛选补上队友的雇佣兵与召唤物。
+- 继续沿用状态快照和原生 Overlay 绘制，不在客户端伪造永久光环。
+
+验收仍需另一台电脑实机检查：携带光环装备直接入场、雇佣兵携带无限/眼光、
+右键光环与装备光环并存、双梦境、换副手、卸装，以及队友宠物首次进入视野。
+自动测试覆盖权威状态与首次快照表现，不等同于 GPU 逐帧原版对照。
+
+本轮 JDK 17 + 本地 1.10f MPQ 执行 `:core:auraRenderRegression`：
+10 类共 75 项，失败/错误/跳过均为 0，生产代码编译与模块边界检查通过。
+包括 20 种已注册圣骑士光环的装备激活/撤销、真实装备列表的双同类光环
+合计与来源数量、武器切换/破损/卸装、三种灵对队友宠物的覆盖与撤销，
+以及原有战吼、抗性/辅助/特殊光环回归。

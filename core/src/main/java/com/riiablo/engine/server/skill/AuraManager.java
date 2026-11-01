@@ -5,6 +5,7 @@ import java.util.Arrays;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.IntIntMap;
 import com.badlogic.gdx.utils.LongMap;
 
 import com.riiablo.Riiablo;
@@ -91,6 +92,7 @@ public class AuraManager {
     public float lastUpdateTime;
     public float manaCostAccumulator;
     public boolean active;
+    public boolean equipment;
     boolean pulseFunded;
     boolean pulseUseful;
     long nextPulseFrame;
@@ -150,7 +152,8 @@ public class AuraManager {
   }
 
   private final IntMap<AuraDefinition> auraDefinitions = new IntMap<>();
-  private final IntMap<ActiveAura> activeAuras = new IntMap<>();
+  // Stream 0 is the selected skill; item streams are independently keyed by skill.
+  private final LongMap<ActiveAura> activeAuras = new LongMap<>();
   private final IntMap<Array<AuraEffect>> entityAuraEffects = new IntMap<>();
   private final LongMap<Candidate> winners = new LongMap<>();
   private AuraCallback callback;
@@ -162,15 +165,56 @@ public class AuraManager {
   }
 
   public boolean activateAura(int casterId, int skillId, int skillLevel) {
+    return activateAura(casterId, skillId, skillLevel, 0);
+  }
+
+  private static long streamKey(int casterId, int stream) {
+    return ((long) casterId << 32) | (stream & 0xffffffffL);
+  }
+
+  /** Reconciles the equipped aggregate, not inventory items or +skill bonuses. */
+  public void synchronizeEquipmentAuras(int casterId, IntIntMap levels) {
+    IntIntMap sources = new IntIntMap();
+    for (IntIntMap.Entry entry : levels) sources.put(entry.key + 1, entry.key);
+    synchronizeEquipmentAuras(casterId, levels, sources);
+  }
+
+  /** Each equipped source owns its PERIODICSTATS event; pulses read summed levels. */
+  public void synchronizeEquipmentAuras(int casterId, IntIntMap levels, IntIntMap sources) {
+    Array<Long> removed = new Array<>();
+    for (LongMap.Entry<ActiveAura> entry : activeAuras) {
+      ActiveAura aura = entry.value;
+      if (aura.casterId == casterId && aura.equipment
+          && (!sources.containsKey((int) entry.key)
+              || levels.get(aura.definition.skillId, 0) <= 0)) removed.add(entry.key);
+    }
+    for (long key : removed) deactivateStream(key);
+    for (IntIntMap.Entry entry : sources) {
+      int level = levels.get(entry.value, 0);
+      if (level > 0) activateAura(casterId, entry.value, level, entry.key);
+    }
+  }
+
+  private boolean activateAura(int casterId, int skillId, int skillLevel, int stream) {
+    boolean equipment = stream != 0;
     AuraDefinition definition = auraDefinitions.get(skillId);
     if (definition == null || skillLevel <= 0) {
       log.debug("Aura {} not found or has invalid level {}", skillId, skillLevel);
       return false;
     }
-    ActiveAura existing = activeAuras.get(casterId);
+    long key = streamKey(casterId, stream);
+    ActiveAura existing = activeAuras.get(key);
     if (existing != null) {
       if (existing.definition.skillId == skillId && existing.skillLevel == skillLevel) return true;
-      deactivateAura(casterId);
+      if (equipment && existing.definition.skillId == skillId) {
+        // Other equipped sources changed the aggregate. Existing item events
+        // keep their cadence and read the new combined level on the next pulse.
+        existing.skillLevel = skillLevel;
+        existing.range = calculateAuraRange(definition, skillLevel);
+        calculateAuraStats(existing);
+        return true;
+      }
+      deactivateStream(key);
     }
     ActiveAura aura = new ActiveAura();
     aura.definition = definition;
@@ -179,18 +223,31 @@ public class AuraManager {
     aura.range = calculateAuraRange(definition, aura.skillLevel);
     calculateAuraStats(aura);
     aura.active = true;
-    // Selection executes the aura once immediately; later executions use the
-    // native perdelay cadence in 25 Hz simulation frames.
-    aura.nextPulseFrame = gameFrame + 1;
-    activeAuras.put(casterId, aura);
+    aura.equipment = equipment;
+    // Item activation only executes immediately for Skills.txt Immediate;
+    // other item auras begin on their first PERIODICSTATS event.
+    aura.nextPulseFrame = gameFrame + (equipment && definition.nativeSkill != null
+        && !definition.nativeSkill.immediate ? Math.max(5, definition.perDelayFrames) : 1);
+    activeAuras.put(key, aura);
     if (callback != null) callback.onAuraActivated(casterId, skillId, aura.skillLevel);
     return true;
   }
 
   public void deactivateAura(int casterId) {
-    ActiveAura aura = activeAuras.remove(casterId);
+    deactivateStream(streamKey(casterId, 0));
+  }
+
+  private void deactivateStream(long key) {
+    ActiveAura aura = activeAuras.remove(key);
     if (aura == null) return;
+    int casterId = aura.casterId;
     aura.active = false;
+    Candidate self = winners.get(effectKey(casterId, aura.definition.selfStateId));
+    if (aura.equipment && callback != null && self != null && self.aura == aura) {
+      // SKILLITEM_DeactivateAura removes the owner's list immediately; remote
+      // recipients retain their last short-lived list until its native expiry.
+      callback.removeState(casterId, self.stateId, casterId, aura.definition.skillId);
+    }
     for (int targetId : aura.affectedEntities) {
       if (callback != null) {
         callback.onEntityLeaveAura(targetId, casterId, aura.definition.skillId);
@@ -202,11 +259,30 @@ public class AuraManager {
   }
 
   public boolean hasActiveAura(int casterId) {
-    return activeAuras.containsKey(casterId);
+    return getActiveAura(casterId) != null;
   }
 
   public ActiveAura getActiveAura(int casterId) {
-    return activeAuras.get(casterId);
+    return activeAuras.get(streamKey(casterId, 0));
+  }
+
+  public ActiveAura getEquipmentAura(int casterId, int skillId) {
+    for (LongMap.Entry<ActiveAura> entry : activeAuras) {
+      ActiveAura aura = entry.value;
+      if (aura.casterId == casterId && aura.equipment && aura.definition.skillId == skillId) {
+        return aura;
+      }
+    }
+    return null;
+  }
+
+  public int getEquipmentAuraCount(int casterId, int skillId) {
+    int count = 0;
+    for (LongMap.Entry<ActiveAura> entry : activeAuras) {
+      ActiveAura aura = entry.value;
+      if (aura.casterId == casterId && aura.equipment && aura.definition.skillId == skillId) count++;
+    }
+    return count;
   }
 
   /** Re-publishes currently winning layers for an entity entering a fresh ECS
@@ -214,7 +290,7 @@ public class AuraManager {
    * snapshot; the source may already have an affected-entity entry from before
    * the reconnect, so a normal perdelay pulse is not sufficient here. */
   public void refreshEntity(int targetId) {
-    for (IntMap.Entry<ActiveAura> entry : activeAuras) {
+    for (LongMap.Entry<ActiveAura> entry : activeAuras) {
       ActiveAura aura = entry.value;
       if (!aura.active || callback == null) continue;
       if (!aura.affectedEntities.contains(targetId, false)) {
@@ -236,25 +312,25 @@ public class AuraManager {
       aura.pulsed = true;
     }
     reconcileWinners();
-    for (IntMap.Entry<ActiveAura> entry : activeAuras) entry.value.pulsed = false;
+    for (LongMap.Entry<ActiveAura> entry : activeAuras) entry.value.pulsed = false;
   }
 
   /** Advances exactly one authoritative simulation frame. */
   public void update(float ignoredDeltaTime) {
     gameFrame++;
-    Array<Integer> invalidCasters = new Array<>();
+    Array<Long> invalidStreams = new Array<>();
     boolean reconcile = false;
-    for (IntMap.Entry<ActiveAura> entry : activeAuras) {
+    for (LongMap.Entry<ActiveAura> entry : activeAuras) {
       ActiveAura aura = entry.value;
       aura.pulsed = false;
-      if (callback == null || callback.getEntityPosition(entry.key) == null) {
-        invalidCasters.add(entry.key);
+      if (callback == null || callback.getEntityPosition(aura.casterId) == null) {
+        invalidStreams.add(entry.key);
         continue;
       }
       if (gameFrame >= aura.nextPulseFrame) {
         pulse(aura);
         if (!aura.active) {
-          invalidCasters.add(entry.key);
+          invalidStreams.add(entry.key);
           continue;
         }
         aura.nextPulseFrame = gameFrame + Math.max(5, aura.definition.perDelayFrames);
@@ -262,8 +338,8 @@ public class AuraManager {
         reconcile = true;
       }
     }
-    for (int casterId : invalidCasters) {
-      deactivateAura(casterId);
+    for (long key : invalidStreams) {
+      deactivateStream(key);
       reconcile = true;
     }
     if (reconcile) {
@@ -345,7 +421,7 @@ public class AuraManager {
 
   private void reconcileWinners() {
     LongMap<Array<Candidate>> candidates = new LongMap<>();
-    for (IntMap.Entry<ActiveAura> entry : activeAuras) {
+    for (LongMap.Entry<ActiveAura> entry : activeAuras) {
       ActiveAura aura = entry.value;
       if (!aura.active) continue;
       AuraDefinition definition = aura.definition;
@@ -452,7 +528,7 @@ public class AuraManager {
   }
 
   private void settlePulseMana() {
-    for (IntMap.Entry<ActiveAura> entry : activeAuras) {
+    for (LongMap.Entry<ActiveAura> entry : activeAuras) {
       ActiveAura aura = entry.value;
       if (!aura.active || !aura.pulsed) continue;
       float manaCost = nativeManaCost(aura.definition, aura.skillLevel);
@@ -823,7 +899,11 @@ public class AuraManager {
   }
 
   public void removeEntity(int entityId) {
-    deactivateAura(entityId);
+    Array<Long> removed = new Array<>();
+    for (LongMap.Entry<ActiveAura> entry : activeAuras) {
+      if (entry.value.casterId == entityId) removed.add(entry.key);
+    }
+    for (long key : removed) deactivateStream(key);
     entityAuraEffects.remove(entityId);
   }
 }

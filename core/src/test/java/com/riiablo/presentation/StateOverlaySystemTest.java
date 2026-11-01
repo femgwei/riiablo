@@ -21,6 +21,33 @@ import org.junit.jupiter.api.Test;
 /** Client presentation recovered entirely from authoritative StateP data. */
 class StateOverlaySystemTest extends RiiabloTest {
   @Test
+  void existingItemAndSpiritAuraSnapshotsDisplayOnFirstClientTick() {
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int entity = world.create();
+      UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
+      states.snapshotOnly = true;
+      int[] ids = {StateId.FANATICISM, StateId.CONVICTION, StateId.MEDITATION,
+          StateId.OAKSAGE, StateId.WOLVERINE, StateId.BARBS};
+      for (int state : ids) states.stateList.addStateLayer(state, 50, 9, 123, state);
+      world.process();
+      for (int state : ids) {
+        com.riiablo.codec.excel.States.Entry row = Riiablo.files.States.get(state);
+        assertTrue(row.overlays != null && row.overlays.length > 0);
+        assertTrue(overlays.overlays.containsKey(state), "first snapshot state " + row.state);
+      }
+      for (int state : ids) states.stateList.removeState(state);
+      world.process();
+      for (int state : ids) assertFalse(overlays.overlays.containsKey(state));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void bladeShieldOverlayAndVenomHandTransformFollowStates() {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();

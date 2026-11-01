@@ -44,6 +44,199 @@ import org.junit.jupiter.api.Test;
 /** Headless authoritative ECS coverage for native aura targeting and lifecycle. */
 class AuraEcsScenarioTest extends RiiabloTest {
   @Test
+  void equipmentAurasInitializeWithoutSelectionAndCoexistWithSelectedAura() {
+    try (Harness test = new Harness()) {
+      int caster = player(test.world, 0, 0);
+      int ally = player(test.world, 1, 0);
+      int allyPet = summon(test.world, ally, 2, 0);
+      int outsider = player(test.world, 2, 1);
+      int enemy = monster(test.world, 3, 0);
+      party(test.parties, caster, ally);
+      equipmentAura(test.world, caster, SkillId.FANATICISM, 9);
+      equipmentAura(test.world, caster, SkillId.CONVICTION, 12);
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.MIGHT, 3));
+      test.ticks(51);
+      assertTrue(states(test.world, caster).hasState(StateId.FANATICISM));
+      assertTrue(states(test.world, ally).hasState(StateId.FANATICISM));
+      assertTrue(states(test.world, allyPet).hasState(StateId.FANATICISM));
+      assertFalse(states(test.world, outsider).hasState(StateId.FANATICISM));
+      assertTrue(states(test.world, enemy).hasState(StateId.CONVICTION));
+      assertTrue(states(test.world, ally).hasState(StateId.MIGHT));
+
+      // Selecting or clearing a different skill must not cancel item streams.
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.DEFIANCE, 2));
+      test.tick();
+      test.auras.clearAura(caster);
+      test.ticks(55);
+      assertTrue(states(test.world, allyPet).hasState(StateId.FANATICISM));
+      assertTrue(states(test.world, enemy).hasState(StateId.CONVICTION));
+      assertFalse(states(test.world, ally).hasState(StateId.MIGHT));
+      assertFalse(states(test.world, ally).hasState(StateId.DEFIANCE));
+
+      equipmentStats(test.world, caster).clear();
+      test.ticks(55);
+      assertFalse(states(test.world, caster).hasState(StateId.FANATICISM));
+      assertFalse(states(test.world, allyPet).hasState(StateId.FANATICISM));
+      assertFalse(states(test.world, enemy).hasState(StateId.CONVICTION));
+      assertTrue(test.auras.manager().getEquipmentAura(caster, SkillId.FANATICISM) == null);
+    }
+  }
+
+  @Test
+  void mercenaryEquipmentAuraRestoresAndStopsOnDeathOrUnequip() {
+    try (Harness test = new Harness()) {
+      int owner = player(test.world, 0, 0);
+      int merc = mercenary(test.world, owner, 1, 0);
+      equipmentAura(test.world, merc, SkillId.MEDITATION, 17);
+      test.ticks(51);
+      assertTrue(states(test.world, owner).hasState(StateId.MEDITATION));
+      assertEquals(17, test.auras.manager().getEquipmentAura(merc, SkillId.MEDITATION).skillLevel);
+      life(test.world, merc, 0);
+      test.ticks(55);
+      assertFalse(states(test.world, owner).hasState(StateId.MEDITATION));
+      life(test.world, merc, 100);
+      test.ticks(51);
+      assertTrue(states(test.world, owner).hasState(StateId.MEDITATION));
+      equipmentStats(test.world, merc).clear();
+      test.ticks(55);
+      assertFalse(states(test.world, owner).hasState(StateId.MEDITATION));
+    }
+  }
+
+  @Test
+  void sameItemAuraLevelsSumButDoNotAddToSelectedSkillLevel() {
+    try (Harness test = new Harness()) {
+      int caster = player(test.world, 0, 0);
+      int ally = player(test.world, 1, 0);
+      party(test.parties, caster, ally);
+      // AttributesUpdater merges two equipped item_aura layers with the same
+      // skill parameter. Ordinary +skills must not increase this item level.
+      com.riiablo.attributes.StatListRef item = Attributes.obtainStandard().buildList();
+      equipmentStats(test.world, caster).add(item.putEncoded(Stat.item_aura, SkillId.MIGHT, 7));
+      equipmentStats(test.world, caster).add(item.putEncoded(Stat.item_aura, SkillId.MIGHT, 8));
+      equipmentStats(test.world, caster).put(Stat.item_allskills, 5);
+      assertTrue(test.auras.manager().activateAura(caster, SkillId.MIGHT, 20));
+      test.tick();
+      assertEquals(15, test.auras.manager().getEquipmentAura(caster, SkillId.MIGHT).skillLevel);
+      assertEquals(20, states(test.world, ally).getState(StateId.MIGHT).level);
+      test.auras.clearAura(caster);
+      test.ticks(51);
+      assertEquals(15, states(test.world, ally).getState(StateId.MIGHT).level);
+      equipmentAura(test.world, caster, SkillId.MIGHT, 7);
+      test.ticks(51);
+      assertEquals(7, states(test.world, ally).getState(StateId.MIGHT).level);
+    }
+  }
+
+  @Test
+  void replicatedEquipmentNeverStartsAuthoritativeAuraScheduler() {
+    try (Harness test = new Harness()) {
+      int replica = player(test.world, 0, 0);
+      test.world.getMapper(UnitStates.class).get(replica).snapshotOnly = true;
+      equipmentAura(test.world, replica, SkillId.FANATICISM, 9);
+      test.ticks(55);
+      assertTrue(test.auras.manager().getEquipmentAura(replica, SkillId.FANATICISM) == null);
+      assertFalse(states(test.world, replica).hasState(StateId.FANATICISM));
+    }
+  }
+
+  @Test
+  void equippedItemListsRespectWeaponSwitchBrokenAndInventoryBoundaries() {
+    try (Harness test = new Harness()) {
+      int caster = player(test.world, 0, 0);
+      CharData data = CharData.obtain().clear().set(
+          Riiablo.NORMAL, false, "item-aura", Riiablo.PALADIN);
+      data.getStats().base().put(Stat.hitpoints, 100f);
+      data.getStats().base().put(Stat.maxhp, 100f);
+      data.getStats().reset();
+      test.world.getMapper(Player.class).get(caster).data = data;
+      test.world.getMapper(AttributesWrapper.class).get(caster).attrs = data.getStats();
+      Item first = auraItem("cap", SkillId.HOLY_SHOCK, 15);
+      Item second = auraItem("buc", SkillId.HOLY_SHOCK, 15);
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.HEAD, data.getItems().add(first));
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM, data.getItems().add(second));
+      test.ticks(51);
+      assertNotNull(test.auras.manager().getEquipmentAura(caster, SkillId.HOLY_SHOCK));
+      assertEquals(30, test.auras.manager().getEquipmentAura(caster, SkillId.HOLY_SHOCK).skillLevel);
+      assertEquals(2, test.auras.manager().getEquipmentAuraCount(caster, SkillId.HOLY_SHOCK));
+      assertTrue(states(test.world, caster).hasState(StateId.HOLYSHOCK));
+
+      data.getItems().setAlternate(1);
+      test.ticks(51);
+      assertEquals(15, test.auras.manager().getEquipmentAura(caster, SkillId.HOLY_SHOCK).skillLevel);
+      assertEquals(1, test.auras.manager().getEquipmentAuraCount(caster, SkillId.HOLY_SHOCK));
+      data.getItems().setAlternate(0);
+      test.ticks(51);
+      assertEquals(30, test.auras.manager().getEquipmentAura(caster, SkillId.HOLY_SHOCK).skillLevel);
+      assertEquals(2, test.auras.manager().getEquipmentAuraCount(caster, SkillId.HOLY_SHOCK));
+
+      data.getItems().unequipItem(com.riiablo.item.BodyLoc.LARM);
+      test.ticks(51);
+      assertEquals(15, test.auras.manager().getEquipmentAura(caster, SkillId.HOLY_SHOCK).skillLevel);
+      assertEquals(1, test.auras.manager().getEquipmentAuraCount(caster, SkillId.HOLY_SHOCK));
+      // The unequipped item remains owned; its old EQUIPPED location is not
+      // sufficient to retain an event after removal from the actual slot map.
+      data.getItems().setAlternate(1);
+      test.ticks(51);
+      assertEquals(15, test.auras.manager().getEquipmentAura(caster, SkillId.HOLY_SHOCK).skillLevel);
+      first.flags |= Item.ITEMFLAG_BROKEN;
+      data.getItems().updateStats();
+      test.ticks(55);
+      assertTrue(test.auras.manager().getEquipmentAura(caster, SkillId.HOLY_SHOCK) == null);
+      first.flags &= ~Item.ITEMFLAG_BROKEN;
+      data.getItems().updateStats();
+      test.ticks(51);
+      assertNotNull(test.auras.manager().getEquipmentAura(caster, SkillId.HOLY_SHOCK));
+      data.getItems().unequipItem(com.riiablo.item.BodyLoc.HEAD);
+      test.ticks(55);
+      assertTrue(test.auras.manager().getEquipmentAura(caster, SkillId.HOLY_SHOCK) == null);
+      assertFalse(states(test.world, caster).hasState(StateId.HOLYSHOCK));
+    }
+  }
+
+  private static Item auraItem(String code, int skill, int level) {
+    Item item = new Item();
+    item.reset();
+    if (Riiablo.files.armor.get(code) != null) item.setBase(Riiablo.files.armor.get(code));
+    else item.setBase(Riiablo.files.weapons.get(code));
+    item.attrs.buildList().putEncoded(Stat.item_aura, skill, level);
+    item.aggFlags = com.riiablo.attributes.StatListFlags.FLAG_MAGIC;
+    return item;
+  }
+
+  @Test
+  void everyRegisteredNativePaladinAuraCanBeProvidedByEquipment() {
+    int[] skills = {SkillId.MIGHT, SkillId.PRAYER, SkillId.RESIST_FIRE,
+        SkillId.RESIST_COLD, SkillId.RESIST_LIGHTNING, SkillId.HOLY_FIRE,
+        SkillId.THORNS, SkillId.DEFIANCE, SkillId.BLESSED_AIM,
+        SkillId.CONCENTRATION, SkillId.VIGOR, SkillId.HOLY_FREEZE,
+        SkillId.HOLY_SHOCK, SkillId.SANCTUARY, SkillId.FANATICISM,
+        SkillId.CONVICTION, SkillId.SALVATION, SkillId.CLEANSING,
+        SkillId.MEDITATION, SkillId.REDEMPTION};
+    for (int skill : skills) {
+      try (Harness test = new Harness()) {
+        int caster = player(test.world, 0, 0);
+        equipmentAura(test.world, caster, skill, 5);
+        test.ticks(51);
+        assertNotNull(test.auras.manager().getEquipmentAura(caster, skill), "skill=" + skill);
+        int state = Riiablo.files.States.get(Riiablo.files.skills.get(skill).aurastate).id;
+        assertTrue(states(test.world, caster).hasState(state), "skill=" + skill);
+        equipmentStats(test.world, caster).clear();
+        test.ticks(55);
+        assertFalse(states(test.world, caster).hasState(state), "removed skill=" + skill);
+      }
+    }
+  }
+
+  private static com.riiablo.attributes.StatListRef equipmentStats(World world, int entity) {
+    return world.getMapper(AttributesWrapper.class).get(entity).attrs.remaining();
+  }
+
+  private static void equipmentAura(World world, int entity, int skill, int level) {
+    equipmentStats(world, entity).putEncoded(Stat.item_aura, skill, level);
+  }
+
+  @Test
   void mightBuffsOnlyPartyAndConvictionTargetsHostiles() {
     try (Harness test = new Harness()) {
       int caster = player(test.world, 0, 0);

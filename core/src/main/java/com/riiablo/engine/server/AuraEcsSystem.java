@@ -10,6 +10,7 @@ import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.IntIntMap;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Skills;
@@ -91,7 +92,74 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     // This system is part of the fixed 25 Hz authoritative world. One Artemis
     // process call is one native game frame; render delta is intentionally not
     // used for aura cadence.
+    synchronizeEquipmentAuras();
     auras.update(world.delta);
+  }
+
+  private void synchronizeEquipmentAuras() {
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class, UnitStates.class)).getEntities();
+    IntIntMap levels = new IntIntMap();
+    IntIntMap sources = new IntIntMap();
+    for (int i = 0; i < entities.size(); i++) {
+      int entityId = entities.get(i);
+      if (mUnitStates.get(entityId).snapshotOnly) continue;
+      levels.clear();
+      sources.clear();
+      Attributes attrs = mAttributes.get(entityId).attrs;
+      if (attrs != null && isAlive(entityId)) {
+        collectEquipmentAuras(attrs.aggregate(), levels);
+        collectEquipmentAuras(attrs.remaining(), levels);
+        com.riiablo.save.ItemData items = equippedItems(entityId);
+        if (items != null) {
+          for (com.riiablo.item.Item item : items.getItems()) {
+            if (item == null || item.attrs == null || item.type == null
+                || item.location != com.riiablo.item.Location.EQUIPPED
+                || item.bodyLoc == null || items.getSlot(item.bodyLoc) != item
+                || !items.isActive(item)) continue;
+            collectEquipmentSources(item.attrs.aggregate(), item.bodyLoc.ordinal() + 1, sources);
+            collectEquipmentSources(item.attrs.remaining(), item.bodyLoc.ordinal() + 1, sources);
+          }
+        } else {
+          // Detached authoritative units (including item-created summons) can
+          // expose only their committed attribute image, without ItemData.
+          for (IntIntMap.Entry entry : levels) sources.put(entry.key + 1, entry.key);
+        }
+      }
+      auras.synchronizeEquipmentAuras(entityId, levels, sources);
+    }
+  }
+
+  private com.riiablo.save.ItemData equippedItems(int entityId) {
+    if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+      return mPlayer.get(entityId).data.getItems();
+    }
+    if (mMercenary.has(entityId)) {
+      int owner = mMercenary.get(entityId).ownerId;
+      if (mPlayer.has(owner) && mPlayer.get(owner).data != null) {
+        return mPlayer.get(owner).data.getMerc().getItems();
+      }
+    }
+    return null;
+  }
+
+  private static void collectEquipmentSources(
+      Iterable<StatRef> stats, int slot, IntIntMap sources) {
+    for (StatRef stat : stats) {
+      if (stat.id() != Stat.item_aura || stat.asInt() <= 0) continue;
+      int skillId = stat.encodedParams();
+      sources.put((slot << 16) | (skillId + 1), skillId);
+    }
+  }
+
+  private static void collectEquipmentAuras(Iterable<StatRef> stats, IntIntMap levels) {
+    if (Riiablo.files == null || Riiablo.files.skills == null) return;
+    for (StatRef stat : stats) {
+      if (stat.id() != Stat.item_aura || stat.asInt() <= 0) continue;
+      int skillId = stat.encodedParams();
+      Skills.Entry skill = Riiablo.files.skills.get(skillId);
+      if (skill != null && skill.aura) levels.getAndIncrement(skillId, 0, stat.asInt());
+    }
   }
 
   public boolean selectAura(int entityId, int skillId) {

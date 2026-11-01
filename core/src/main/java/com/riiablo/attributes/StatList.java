@@ -355,7 +355,8 @@ public final class StatList {
     assert encoding(index) <= 2 : "#addEncoded() unsupported for encoding(" + encoding(index) + ")";
     final short stat = ids[index];
     assertSimple(stat);
-    assert equalsEncoded(index, stat, 0);
+    // The caller has already resolved the exact parameterized layer. Item
+    // auras (skill id in params), oskills, etc. are not restricted to layer 0.
     if (log.traceEnabled()) log.tracefEntry(
         "addEncoded(stat: %d (%s), encodedValues: %d (0x%3$x))",
         stat, entry(index), encodedValues);

@@ -108,6 +108,7 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public String  passiveevent;
     @Column public int     passiveeventfunc;
     @Column public boolean aura;
+    @Column public boolean immediate;
     @Column public boolean periodic;
     @Column public String  perdelay;
     /** Native Skills.txt ammunition flags used by bow/crossbow attacks. */

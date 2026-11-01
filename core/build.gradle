@@ -1285,6 +1285,15 @@ sourceSets {
     runtimeClasspath += sourceSets.main.output
   }
 }
+
+// Equipment streams and party minions share the native aura lifecycle gate.
+sourceSets.auraRenderTest.java.include(
+    'com/riiablo/engine/server/AuraEcsScenarioTest.java',
+    'com/riiablo/engine/server/DruidSummonIntegrationTest.java',
+    'com/riiablo/engine/server/BarbarianWarCryTest.java',
+    'com/riiablo/engine/server/PaladinSupportAuraIntegrationTest.java',
+    'com/riiablo/engine/server/PaladinSpecialAuraIntegrationTest.java',
+    'com/riiablo/engine/server/PaladinResistanceAuraIntegrationTest.java')
 configurations {
   auraRenderTestImplementation.extendsFrom testImplementation
   auraRenderTestRuntimeOnly.extendsFrom testRuntimeOnly

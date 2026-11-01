@@ -1010,11 +1010,14 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   }
 
   private boolean druidAuraAlly(int ownerId, int targetId) {
-    if (targetId == ownerId) return true;
-    if (mMercenary.has(targetId) && mMercenary.get(targetId).ownerId == ownerId) return true;
-    if (mSummonedPet.has(targetId) && mSummonedPet.get(targetId).ownerId == ownerId) return true;
-    if (mPlayer.has(ownerId) && mPlayer.has(targetId) && partyManager != null) {
-      return partyManager.areInSameParty(ownerId, targetId);
+    // D2MOO SUNIT_AreUnitsAligned resolves the target minion's owner before
+    // comparing party ids, including another party member's hirelings/pets.
+    int targetOwner = targetId;
+    if (mMercenary.has(targetId)) targetOwner = mMercenary.get(targetId).ownerId;
+    else if (mSummonedPet.has(targetId)) targetOwner = mSummonedPet.get(targetId).ownerId;
+    if (targetOwner == ownerId) return true;
+    if (mPlayer.has(ownerId) && mPlayer.has(targetOwner) && partyManager != null) {
+      return partyManager.areInSameParty(ownerId, targetOwner);
     }
     return false;
   }

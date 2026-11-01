@@ -280,6 +280,8 @@ class DruidSummonIntegrationTest extends RiiabloTest {
       int ownerMerc = createMercenary(world, owner, 13, 10);
       int ownerSummon = createSummon(world, owner, 14, 10);
       int outsiderSummon = createSummon(world, outsider, 15, 10);
+      int partyMerc = createMercenary(world, partyAlly, 11, 11);
+      int partySummon = createSummon(world, partyAlly, 12, 11);
       short party = parties.createParty(owner);
       assertTrue(party >= 0 && parties.joinParty(party, partyAlly));
 
@@ -297,6 +299,8 @@ class DruidSummonIntegrationTest extends RiiabloTest {
       assertAuraLayer(world, partyAlly, source, true);
       assertAuraLayer(world, ownerMerc, source, true);
       assertAuraLayer(world, ownerSummon, source, true);
+      assertAuraLayer(world, partyMerc, source, true);
+      assertAuraLayer(world, partySummon, source, true);
       assertAuraLayer(world, outsider, source, false);
       assertAuraLayer(world, outsiderSummon, source, false);
 
@@ -306,6 +310,8 @@ class DruidSummonIntegrationTest extends RiiabloTest {
       assertAuraLayer(world, partyAlly, source, false);
       assertAuraLayer(world, ownerMerc, source, false);
       assertAuraLayer(world, ownerSummon, source, false);
+      assertAuraLayer(world, partyMerc, source, false);
+      assertAuraLayer(world, partySummon, source, false);
     } finally {
       world.dispose();
     }
@@ -342,6 +348,49 @@ class DruidSummonIntegrationTest extends RiiabloTest {
     assertTrue(restoredFirst != null && restoredSecond != null);
     assertEquals(65, restoredFirst.maxLifeModifier);
     assertEquals(35, restoredSecond.maxLifeModifier);
+  }
+
+  @Test
+  void allThreeSpiritsReachPartyHirelingsAndPetsButNotOutsiders() {
+    RecordingFactory factory = new RecordingFactory();
+    PartyManager parties = new PartyManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)).register("partyManager", parties));
+    try {
+      int owner = createPlayer(world, "spirits-owner", 10, 10);
+      int ally = createPlayer(world, "spirits-ally", 11, 10);
+      int outsider = createPlayer(world, "spirits-outsider", 12, 10);
+      int merc = createMercenary(world, ally, 11, 11);
+      int pet = createSummon(world, ally, 12, 11);
+      int excluded = createSummon(world, outsider, 12, 12);
+      assertTrue(parties.joinParty(parties.createParty(owner), ally));
+      int[] skills = {SkillId.OAK_SAGE, SkillId.HEART_OF_WOLVERINE, SkillId.SPIRIT_OF_BARBS};
+      int[] states = {StateId.OAKSAGE, StateId.WOLVERINE, StateId.BARBS};
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < skills.length; i++) {
+        world.getMapper(Player.class).get(owner).data.setSkillLevel(skills[i], 8);
+        com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skills[i]);
+        world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+            owner, skills[i], Engine.INVALID_ENTITY, new Vector2(10, 10),
+            skill.srvdofunc, skill.cltdofunc));
+        int source = factory.lastEntity;
+        world.process();
+        for (int target : new int[] {ally, merc, pet}) {
+          assertTrue(world.getMapper(UnitStates.class).get(target).stateList
+              .getStateLayer(states[i], source, skills[i]) != null);
+        }
+        assertTrue(world.getMapper(UnitStates.class).get(excluded).stateList
+            .getStateLayer(states[i], source, skills[i]) == null);
+        world.delete(source);
+        world.process();
+        assertTrue(world.getMapper(UnitStates.class).get(pet).stateList
+            .getStateLayer(states[i], source, skills[i]) == null);
+      }
+    } finally {
+      world.dispose();
+    }
   }
 
   @Test
