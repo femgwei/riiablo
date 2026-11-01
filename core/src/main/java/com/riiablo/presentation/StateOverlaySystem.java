@@ -214,6 +214,15 @@ public class StateOverlaySystem extends IteratingSystem {
       }
       applied[i] = desired;
       flags |= cofs.setTransform(entityId, hand, desired);
+      // COF transform changes are asynchronous.  Apply the same packed
+      // transform to the resident weapon layer immediately; otherwise the
+      // current frame remains uncoloured until a later COF rebuild (and may
+      // be overwritten by the next equipment snapshot).
+      if (enchant && desired != CofTransforms.TRANSFORM_NULL
+          && mAnimationWrapper.has(entityId)) {
+        Animation.Layer layer = mAnimationWrapper.get(entityId).animation.getLayer(hand);
+        if (layer != null) layer.setTransform(desired);
+      }
     }
     cofs.updateTransform(entityId, flags);
     if (!venom && !enchant) {

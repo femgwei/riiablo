@@ -81,7 +81,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // Audited CltDo3/4/15 and poisonpuff clocks are simulation clocks, not
     // animation clocks. A cold DCC must not pause their movement/emission/TTL.
     boolean callbackClock = visual.missile != null
-        && (visual.missile.pCltDoFunc == 17 || visual.missile.pCltDoFunc == 18
+        && (visual.missile.pCltDoFunc == 9 || visual.missile.pCltDoFunc == 13
+            || visual.missile.pCltDoFunc == 17 || visual.missile.pCltDoFunc == 18
             || visual.missile.pCltDoFunc == 15 || visual.missile.pCltDoFunc == 3
             || visual.missile.pCltDoFunc == 4 || MissileLoader.isPoisonSmokePuff(visual.missile));
     if (!mAnimationWrapper.has(entityId) && !callbackClock) return;
