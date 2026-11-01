@@ -68,6 +68,35 @@ class AmazonArrowPresentationTest extends RiiabloTest {
   }
 
   @Test
+  void genericClientCallbackDoesNotFireColdArmorRetaliationOnCast() {
+    RecordingFactory factory = new RecordingFactory();
+    Audio previousAudio = Riiablo.audio;
+    Riiablo.audio = new SilentAudio();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new SkillCastHandler(), new OverlayManager(), factory)
+        .build().register("factory", factory)
+        .register("clientContext", ClientGameplayContext.fromGlobals())
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int sorceress = world.create();
+      world.getMapper(Position.class).create(sorceress).position.set(2, 3);
+      for (String name : new String[] {"Frozen Armor", "Shiver Armor", "Chilling Armor"}) {
+        Skills.Entry skill = Riiablo.files.skills.get(name);
+        assertNotNull(skill, name);
+        assertEquals(0, skill.cltdofunc, name + ": generic client callback");
+        factory.lastMissile = null;
+        world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+            sorceress, skill.Id, Engine.INVALID_ENTITY, new Vector2(12, 3),
+            skill.srvdofunc, skill.cltdofunc));
+        assertNull(factory.lastMissile, name + ": casting must only install the armor");
+      }
+    } finally {
+      world.dispose();
+      Riiablo.audio = previousAudio;
+    }
+  }
+
+  @Test
   void fireArrowImpactUsesNativeHitSoundAndExplosionWiring() {
     Missiles.Entry fireArrow = Riiablo.files.Missiles.get("firearrow");
     assertNotNull(fireArrow);

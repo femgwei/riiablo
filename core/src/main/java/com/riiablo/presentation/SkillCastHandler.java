@@ -19,6 +19,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.SorceressSkills;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Angle;
@@ -853,6 +854,10 @@ public class SkillCastHandler extends PassiveSystem {
   /** Skills.txt/CltMissile path used by Fire/Cold/Ice/Freezing Arrow. */
   private void cltDoGenericMissile(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || position == null) return;
+    // SrvDo018 only installs the armor state/event handlers. Chilling Armor's
+    // missile A is a retaliation parameter (D2MOO EventFunc01), not a cast
+    // projectile. StateUpdater emits the owned return bolt on hitbymissile.
+    if (SorceressSkills.isDefensiveArmor(skill)) return;
     String missileName = hasText(skill.cltmissile) ? skill.cltmissile
         : hasText(skill.cltmissilea) ? skill.cltmissilea : null;
     if (!hasText(missileName)) return;
