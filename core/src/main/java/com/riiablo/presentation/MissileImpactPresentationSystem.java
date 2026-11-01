@@ -250,7 +250,12 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       // Our local/network paths expose positions rather than that native flag.
       if (!poisonTrailCellChanged(visual, at)) return;
       float angle = velocity.isZero() ? 0f : MathUtils.atan2(velocity.y, velocity.x);
-      createFlightVisual(source, child, at, angle);
+      // CltDo3 calls the generic client missile creator with flags 0x8005:
+      // the child inherits the parent's current custom velocity even though
+      // plaguejavcloud.Vel is zero. Leaving that velocity at zero turns the
+      // whole trail into a stationary pile of PoisonSparks instead of the
+      // moving, exhaust-like plume seen in the retail client.
+      createFlightVisual(source, child, at, angle, velocity);
       return;
     }
     int interval = source.CltParam != null && source.CltParam.length > 0
@@ -436,20 +441,29 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   }
 
   private void createFlightVisual(Missiles.Entry source, String childName,
+      Vector2 position, float angle, Vector2 inheritedVelocity) {
+    int id = createFlightVisual(source, childName, position, angle);
+    if (id != com.riiablo.engine.Engine.INVALID_ENTITY && inheritedVelocity != null
+        && mVelocity.has(id)) {
+      mVelocity.get(id).velocity.set(inheritedVelocity);
+    }
+  }
+
+  private int createFlightVisual(Missiles.Entry source, String childName,
       Vector2 position, float angle, float offsetX, float offsetY) {
     direction.set(MathUtils.cos(angle), MathUtils.sin(angle));
     Vector2 visualPosition = offsetX == 0f && offsetY == 0f
         ? position : new Vector2(position.x + offsetX, position.y + offsetY);
-    createFlightVisual(source, childName, visualPosition, direction);
+    return createFlightVisual(source, childName, visualPosition, direction);
   }
 
-  private void createFlightVisual(Missiles.Entry source, String childName,
+  private int createFlightVisual(Missiles.Entry source, String childName,
       Vector2 position, Vector2 facing) {
     Missiles.Entry child = clientContext.files().Missiles.get(childName);
     if (child == null) {
       log.warn("[MISSILE_FLIGHT] source={} missing CltSubMissile={}",
           source.Missile, childName);
-      return;
+      return com.riiablo.engine.Engine.INVALID_ENTITY;
     }
     int id;
     if (factory instanceof ClientEntityFactory) {
@@ -457,7 +471,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     } else {
       id = factory.createMissile(child, facing, position, -1);
     }
-    if (id == com.riiablo.engine.Engine.INVALID_ENTITY || !mMissile.has(id)) return;
+    if (id == com.riiablo.engine.Engine.INVALID_ENTITY || !mMissile.has(id)) return id;
     Missile visual = mMissile.get(id);
     visual.authoritative = false;
     visual.presentationOnly = true;
@@ -467,6 +481,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     log.debug("[MISSILE_FLIGHT] source={} child={} entity={} pos=({}, {}) interval={}",
         source.Missile, childName, id, position.x, position.y,
         cltParam(source, 0, 1));
+    return id;
   }
 
   @Subscribe
