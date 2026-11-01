@@ -1011,6 +1011,43 @@ public final class AssassinSkills {
     return 0.4f + (skillLevel - 1) * 0.2f;
   }
 
+  public static boolean isSpeedOrFade(Skills.Entry skill) {
+    if (skill == null || skill.srvdofunc != 18) return false;
+    String state = normalizeState(skill.aurastate);
+    return "quickness".equals(state) || "fade".equals(state);
+  }
+
+  /** D2MOO SrvDo018: group-2 replacement and table-driven aura/passive stats. */
+  public static UnitState applySpeedOrFade(StateList states, Skills.Entry skill,
+      int skillLevel, int sourceEntityId) {
+    if (states == null || !isSpeedOrFade(skill)) return null;
+    int level = Math.max(1, skillLevel);
+    int duration = SkillFormula.evaluate(skill.auralencalc, skill, level);
+    if (duration <= 0) return null;
+    states.removeState(StateId.QUICKNESS);
+    states.removeState(StateId.FADE);
+    int id = "fade".equals(normalizeState(skill.aurastate)) ? StateId.FADE : StateId.QUICKNESS;
+    UnitState state = states.addStateLayer(id, duration, level, sourceEntityId, skill.Id);
+    if (state == null) return null;
+    applyBuffStats(state, skill, level, skill.aurastat, skill.aurastatcalc);
+    applyBuffStats(state, skill, level, skill.passivestat, skill.passivecalc);
+    state.needsSync = true;
+    return state;
+  }
+
+  private static void applyBuffStats(UnitState state, Skills.Entry skill, int level,
+      String[] stats, String[] calculations) {
+    if (stats == null || calculations == null) return;
+    for (int i = 0; i < Math.min(stats.length, calculations.length); i++) {
+      if (!hasText(stats[i])) continue;
+      int stat = Stat.index(stats[i]);
+      if (stat < 0) continue;
+      state.setStatContribution(stat, 0,
+          com.riiablo.attributes.NativeStatResolver.Operation.ADD,
+          SkillFormula.evaluate(calculations[i], skill, level));
+    }
+  }
+
   /** D2MOO SrvDo018: build Venom's three AuraStat entries on the caster. */
   public static UnitState applyVenomState(StateList states, Skills.Entry skill,
       int skillLevel, int sourceEntityId) {

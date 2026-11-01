@@ -244,6 +244,7 @@ public final class ClientSimulationAssembly {
         .with(mode.createVelocityModeChanger())
 
         .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
+        .with(new AssassinShadowPresentationSystem())
         .with(new ExperienceManager(simulationSession.partyManager()))
         .with(new PlayerCorpseRetrievalSystem())
 

@@ -1284,6 +1284,13 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     if (event.srvdofunc == 18 || skill.srvdofunc == 18) {
+      if (AssassinSkills.isSpeedOrFade(skill)) {
+        if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(world, event.entityId);
+        UnitStates states = mUnitStates.get(event.entityId);
+        if (states.stateList == null) states.init(world, event.entityId);
+        AssassinSkills.applySpeedOrFade(states.stateList, skill, skillLevel, event.entityId);
+        return;
+      }
       if (SorceressSkills.isDefensiveArmor(skill)) {
         applySorceressDefensiveArmor(event, skill, skillLevel);
         return;

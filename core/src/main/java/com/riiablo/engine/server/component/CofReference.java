@@ -99,6 +99,8 @@ public class CofReference extends Component {
     }
     if (logicalType == Class.Type.MON && visualType == Class.Type.PLR
         && mode >= 0 && mode < MONSTER_TO_PLAYER_MODE.length) {
+      // D2Common ConvertMode special-cases Assassin monster A1 as kick.
+      if ("AI".equals(visualToken) && mode == Engine.Monster.MODE_A1) return 12;
       return MONSTER_TO_PLAYER_MODE[mode];
     }
     return mode;
