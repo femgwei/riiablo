@@ -20,6 +20,33 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class SpatialAudioTest {
+  @Test void poisonCloudsTransferOneLoopWithoutRestartingOrStoppingIt() {
+    try (Fixture fixture = new Fixture()) {
+      Audio.Instance playback = mock(Audio.Instance.class);
+      when(fixture.audio.play("object_poison_loop", true)).thenReturn(playback);
+      int previous = -1;
+      for (int i = 0; i < 25; i++) {
+        int cloud = fixture.world.create();
+        fixture.position(cloud, i * 0.1f);
+        com.riiablo.engine.server.component.Missile missile = fixture.world
+            .getMapper(com.riiablo.engine.server.component.Missile.class).create(cloud);
+        missile.ownerId = fixture.source;
+        missile.missile = new com.riiablo.codec.excel.Missiles.Entry();
+        missile.missile.Missile = "poisonjavcloud";
+        MissileTravelAudio.play(fixture.world, fixture.context, cloud, "object_poison_loop");
+        assertSame(playback, fixture.world.getMapper(SoundEmitter.class).get(cloud).sound);
+        if (previous >= 0) {
+          assertFalse(fixture.world.getMapper(SoundEmitter.class).has(previous));
+          fixture.world.delete(previous);
+        }
+        fixture.world.process();
+        verify(playback, never()).stop();
+        previous = cloud;
+      }
+      verify(fixture.audio, times(1)).play("object_poison_loop", true);
+    }
+  }
+
   @Test void playbackUsesTheOwningWorldAndLiveListenerDespiteOtherGlobals() {
     World oldWorld = Riiablo.engine;
     Audio oldAudio = Riiablo.audio;
