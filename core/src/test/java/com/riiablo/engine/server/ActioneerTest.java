@@ -37,6 +37,11 @@ class ActioneerTest extends RiiabloTest {
 
   @Test
   void nativeResurrectSkillMayExecuteAgainstDeadTarget() {
+    for (int callback : new int[] {31, 55, 58, 63, 69, 72, 75}) {
+      Skills.Entry corpseTool = new Skills.Entry();
+      corpseTool.srvdofunc = callback;
+      assertTrue(Actioneer.allowsDeadTarget(corpseTool));
+    }
     Skills.Entry resurrect = new Skills.Entry();
     resurrect.srvdofunc = 97;
     assertTrue(Actioneer.allowsDeadTarget(resurrect));

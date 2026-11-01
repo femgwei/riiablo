@@ -31,6 +31,31 @@ import org.junit.jupiter.api.Test;
 
 class SummonedPetSystemTest {
   @Test
+  void clayAndBloodGolemCorpsesOutlivePetListRemovalAndCannotBeConsumed() {
+    for (int skillId : new int[] {
+        com.riiablo.engine.server.skill.SkillId.CLAY_GOLEM,
+        com.riiablo.engine.server.skill.SkillId.BLOOD_GOLEM}) {
+      World world = new World(new WorldConfigurationBuilder()
+          .with(new SummonedPetSystem()).build());
+      try {
+        int owner = world.create();
+        world.getMapper(Player.class).create(owner);
+        int pet = world.create();
+        world.getMapper(SummonedPet.class).create(pet)
+            .set(owner, "golem", skillId, 1, false, 0);
+        com.riiablo.engine.server.component.Corpse corpse = world.getMapper(
+            com.riiablo.engine.server.component.Corpse.class).create(pet);
+        world.setDelta(2f);
+        world.process();
+        world.process();
+        assertTrue(world.getEntityManager().isActive(pet));
+        assertFalse(world.getMapper(SummonedPet.class).has(pet));
+        assertFalse(corpse.usable);
+        assertEquals(Float.POSITIVE_INFINITY, corpse.timeRemaining);
+      } finally { world.dispose(); }
+    }
+  }
+  @Test
   void wolvesReserveSeparateLandingFootprintsDuringWarpAndRegroup() {
     for (boolean crossingZone : new boolean[] {true, false}) {
       DynamicUnitCollisionSystem collision = new DynamicUnitCollisionSystem();

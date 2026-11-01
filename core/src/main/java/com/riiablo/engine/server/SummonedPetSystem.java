@@ -89,6 +89,17 @@ public class SummonedPetSystem extends IteratingSystem {
   protected void process(int entityId) {
     SummonedPet pet = mSummonedPet.get(entityId);
     if (pet == null) return;
+    // SUnitDmg -> sub_6FC7D470 removes a killed summon from PLAYERPETS;
+    // it does not remove the monster unit. Clay/Blood golems have visible DD
+    // art, which must survive the pet-list cleanup like other room corpses.
+    if (mCorpse.has(entityId) && leavesGolemCorpse(pet.skillId)) {
+      Corpse corpse = mCorpse.get(entityId);
+      corpse.usable = false;
+      corpse.timeRemaining = Corpse.DEFAULT_DURATION;
+      pet.detachNativeTargetNode();
+      mSummonedPet.remove(entityId);
+      return;
+    }
     // Once a native pet-list removal has begun, keep the unit alive until the
     // normal monster DT -> DD presentation reaches its short corpse window.
     // This is shared by explicit Unsummon, quota eviction and duration expiry.
@@ -223,6 +234,11 @@ public class SummonedPetSystem extends IteratingSystem {
       // rows keep their native hard removal semantics.
       world.delete(entityId);
     }
+  }
+
+  static boolean leavesGolemCorpse(int skillId) {
+    return skillId == com.riiablo.engine.server.skill.SkillId.CLAY_GOLEM
+        || skillId == com.riiablo.engine.server.skill.SkillId.BLOOD_GOLEM;
   }
 
   /**

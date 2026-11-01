@@ -5,6 +5,7 @@ import com.artemis.Aspect;
 import com.artemis.BaseSystem;
 import com.artemis.EntitySubscription;
 import com.artemis.annotations.All;
+import com.artemis.annotations.One;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.artemis.utils.IntBag;
@@ -19,10 +20,17 @@ import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.skill.CorpseConsumption;
+import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import net.mostlyoriginal.api.event.common.Subscribe;
 
-@All({Selectable.class, Position.class})
+@All(Position.class)
+@One({Selectable.class, Corpse.class})
 public class HoveredManager extends IteratingSystem {
   static final float INTERACTABLE_PADDING_X = 8f;
   static final float INTERACTABLE_PADDING_Y = 6f;
@@ -35,6 +43,12 @@ public class HoveredManager extends IteratingSystem {
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<Selectable> mSelectable;
+  protected ComponentMapper<Corpse> mCorpse;
+  protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<AttributesWrapper> mAttributes;
+  protected ComponentMapper<UnitStates> mStates;
+  @Wire(name="clientActionInput", failOnNull = false)
+  protected ClientActionInputPort actionInput;
 
   @Wire(name="iso")
   protected IsometricCamera iso;
@@ -63,7 +77,7 @@ public class HoveredManager extends IteratingSystem {
       }
     }
     selectableSubscriber = world.getAspectSubscriptionManager().get(
-        Aspect.all(Selectable.class, Position.class));
+        Aspect.all(Position.class).one(Selectable.class, Corpse.class));
   }
 
   @Override
@@ -77,7 +91,7 @@ public class HoveredManager extends IteratingSystem {
     selectedHoverEntity = Engine.INVALID_ENTITY;
     if (Riiablo.game != null && Riiablo.game.player >= 0) {
       selectedHoverEntity = getHoveredAt(
-          Riiablo.game.player, Gdx.input.getX(), Gdx.input.getY());
+          Riiablo.game.player, Gdx.input.getX(), Gdx.input.getY(), corpseToolSelected());
     }
   }
 
@@ -101,14 +115,17 @@ public class HoveredManager extends IteratingSystem {
     iso.toScreen(tmpVec2.set(position));
     boolean b = containsScreenPoint(box, tmpVec2, coords,
         hitPaddingX(entityId), hitPaddingY(entityId));
-    if (selectedHoverEntity != Engine.INVALID_ENTITY) {
-      b = b && entityId == selectedHoverEntity;
-    }
+    b = b && entityId == selectedHoverEntity;
     setHovered(entityId, b);
   }
 
   /** Performs the same hit test used for hover at a captured pointer position. */
   public int getHoveredAt(int sourceId, float screenX, float screenY) {
+    return getHoveredAt(sourceId, screenX, screenY, false);
+  }
+
+  /** Corpse tools hit-test DD sprites even though ordinary selection was removed at death. */
+  public int getHoveredAt(int sourceId, float screenX, float screenY, boolean corpseSkill) {
     hitCoords.set(screenX, screenY);
     iso.unproject(hitCoords);
 
@@ -121,6 +138,12 @@ public class HoveredManager extends IteratingSystem {
     for (int i = 0, size = selectable.size(); i < size; i++) {
       int candidate = selectable.get(i);
       if (candidate == sourceId) continue;
+      if (corpseSkill) {
+        AttributesWrapper attrs = mAttributes.get(candidate);
+        UnitStates states = mStates.get(candidate);
+        if (!CorpseConsumption.selectable(mCorpse.get(candidate), mMonster.get(candidate),
+            attrs == null ? null : attrs.attrs, states == null ? null : states.stateList)) continue;
+      } else if (!mSelectable.has(candidate) || mCorpse.has(candidate)) continue;
       if (mSummonedPet.has(candidate) && !isUnsummonSelected()) continue;
       Position candidatePosition = mPosition.get(candidate);
       if (candidatePosition == null) continue;
@@ -197,6 +220,14 @@ public class HoveredManager extends IteratingSystem {
 
   private boolean isUnsummonSelected() {
     return hoverPresentation != null && hoverPresentation.isUnsummonSelected();
+  }
+
+  private boolean corpseToolSelected() {
+    return actionInput != null
+        && (NativeSkillResolver.requiresCorpse(actionInput.skill(
+            actionInput.action(com.badlogic.gdx.Input.Buttons.RIGHT)))
+            || NativeSkillResolver.requiresCorpse(actionInput.skill(
+                actionInput.action(com.badlogic.gdx.Input.Buttons.LEFT))));
   }
 
   static boolean shouldReplaceTarget(boolean candidateInteractable, float candidateDst2,

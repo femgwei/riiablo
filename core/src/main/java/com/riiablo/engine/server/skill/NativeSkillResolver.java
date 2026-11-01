@@ -23,6 +23,15 @@ public final class NativeSkillResolver {
 
   private NativeSkillResolver() {}
 
+  /** Native corpse-consuming callbacks; dead targets are intentional for these skills. */
+  public static boolean requiresCorpse(Skills.Entry skill) {
+    if (skill == null) return false;
+    switch (skill.srvdofunc) {
+      case 31: case 55: case 58: case 63: case 69: case 72: case 75: return true;
+      default: return false;
+    }
+  }
+
   /** Returns the class id encoded by a Skills.txt charclass cell, or -1. */
   public static int classId(Skills.Entry skill) {
     if (skill == null || skill.charclass == null || skill.charclass.trim().isEmpty()) return -1;

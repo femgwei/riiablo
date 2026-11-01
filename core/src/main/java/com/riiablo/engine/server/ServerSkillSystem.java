@@ -595,10 +595,7 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.targetId, event.skillId);
       return;
     }
-    boolean corpseSkill = skill.srvdofunc == 31 || skill.srvdofunc == 55
-        || skill.srvdofunc == 58 || skill.srvdofunc == 63
-        || skill.srvdofunc == 69 || skill.srvdofunc == 72
-        || skill.srvdofunc == 75;
+    boolean corpseSkill = NativeSkillResolver.requiresCorpse(skill);
     if (!unsummonSkill && event.targetId >= 0 && mMonster.has(event.targetId) && !corpseSkill
         && mNativeUnitFlags.has(event.targetId)
         && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(event.targetId))) {

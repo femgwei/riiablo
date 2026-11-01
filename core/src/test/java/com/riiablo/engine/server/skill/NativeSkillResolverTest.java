@@ -12,6 +12,18 @@ import org.junit.jupiter.api.Test;
 /** Regression coverage for the data-driven seven-class skill gate. */
 public class NativeSkillResolverTest {
   @Test
+  void corpseToolsShareTheSameClientAndServerTargetContract() {
+    for (int callback : new int[] {31, 55, 58, 63, 69, 72, 75}) {
+      Skills.Entry skill = new Skills.Entry();
+      skill.srvdofunc = callback;
+      assertTrue(NativeSkillResolver.requiresCorpse(skill));
+    }
+    Skills.Entry prison = new Skills.Entry();
+    prison.srvdofunc = 62;
+    assertFalse(NativeSkillResolver.requiresCorpse(prison));
+    assertFalse(NativeSkillResolver.requiresCorpse(null));
+  }
+  @Test
   public void classOwnershipComesFromCharclassCell() {
     Skills.Entry amazon = new Skills.Entry();
     amazon.charclass = "ama";

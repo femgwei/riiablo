@@ -143,12 +143,13 @@ public class CursorMovementSystem extends BaseSystem {
     final boolean rightPressed = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
     final boolean shiftDown = pointerUi != null && pointerUi.shiftDown();
     if ((leftPressed && shiftDown) || rightPressed) {
-      final int targetId = getHovered(playerId);
-      if (targetId != Engine.INVALID_ENTITY && (isTargetDead(targetId) || actioneer.didLastAttackTargetDie(playerId))) {
+      final int skillId = actionInput == null ? Engine.INVALID_ENTITY : actionInput.action(
+          leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
+      final int targetId = getSkillTargetAt(playerId, Gdx.input.getX(), Gdx.input.getY(), skillId);
+      if (!NativeSkillResolver.requiresCorpse(skillEntry(skillId))
+          && targetId != Engine.INVALID_ENTITY && isTargetDead(targetId)) {
         stopTargeting(playerId);
       } else {
-        final int skillId = actionInput == null ? Engine.INVALID_ENTITY : actionInput.action(
-            leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
         iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
         if (!isSkillAllowedForInput(playerId, skillId)) {
           stopTargeting(playerId);
@@ -338,14 +339,14 @@ public class CursorMovementSystem extends BaseSystem {
       return false;
     }
 
-    int targetId = getHoveredAt(src, click.screenX, click.screenY);
+    int skillId = actionInput == null ? Engine.INVALID_ENTITY
+        : actionInput.action(Input.Buttons.RIGHT);
+    int targetId = getSkillTargetAt(src, click.screenX, click.screenY, skillId);
     if (targetId != Engine.INVALID_ENTITY
-        && (isTargetDead(targetId) || actioneer.didLastAttackTargetDie(src))) {
+        && !NativeSkillResolver.requiresCorpse(skillEntry(skillId)) && isTargetDead(targetId)) {
       stopTargeting(src);
       return true;
     }
-    int skillId = actionInput == null ? Engine.INVALID_ENTITY
-        : actionInput.action(Input.Buttons.RIGHT);
     if (!isSkillAllowedForInput(src, skillId)) {
       stopTargeting(src);
       return true;
@@ -689,6 +690,11 @@ public class CursorMovementSystem extends BaseSystem {
     return hoveredManager.getHoveredAt(src, screenX, screenY);
   }
 
+  private int getSkillTargetAt(int src, float screenX, float screenY, int skillId) {
+    return hoveredManager.getHoveredAt(src, screenX, screenY,
+        NativeSkillResolver.requiresCorpse(skillEntry(skillId)));
+  }
+
   private boolean touchDown(int src) {
     return touchDown(src, Gdx.input.getX(), Gdx.input.getY());
   }
@@ -871,7 +877,7 @@ public class CursorMovementSystem extends BaseSystem {
     // server correctly rejects the distant melee hit while the client has
     // already cleared movement, leaving the player standing still.
     return (skillId == SkillCodes.attack && !isRangedNormalAttack(skillId))
-        || isAmazonMeleeSkill(skillId);
+        || skillId == SkillId.POISON_DAGGER || isAmazonMeleeSkill(skillId);
   }
 
   static boolean isAmazonMeleeSkill(int skillId) {
