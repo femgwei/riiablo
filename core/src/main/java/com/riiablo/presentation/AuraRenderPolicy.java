@@ -8,6 +8,13 @@ import com.riiablo.graphics.BlendMode;
 public final class AuraRenderPolicy {
   private AuraRenderPolicy() {}
 
+  /** Verified 1.10f warcry cast/target overlays, including shared fear/stun effects. */
+  public static boolean isWarCryOverlay(String name) {
+    return "warcry".equalsIgnoreCase(name) || "curseterror".equalsIgnoreCase(name)
+        || "curse_hit".equalsIgnoreCase(name) || "taunt".equalsIgnoreCase(name)
+        || "battlecry".equalsIgnoreCase(name) || "stun".equalsIgnoreCase(name);
+  }
+
   // D2Client 6FB5BE13: AnimRate << 4; frames have eight fractional bits.
   public static float frameDuration(int animRate) {
     return animRate <= 0 ? Float.POSITIVE_INFINITY

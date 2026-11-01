@@ -1277,6 +1277,7 @@ sourceSets {
     java.setIncludes([
         'com/riiablo/RiiabloTest.java',
         'com/riiablo/presentation/AuraRenderPolicyTest.java',
+        'com/riiablo/presentation/WarCryVisualResourceTest.java',
         'com/riiablo/presentation/AuraOverlayResourceTest.java',
         'com/riiablo/presentation/StateOverlaySystemTest.java'
     ] as Set)

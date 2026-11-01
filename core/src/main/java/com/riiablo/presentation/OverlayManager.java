@@ -78,10 +78,10 @@ public class OverlayManager extends IteratingSystem {
       boolean loadedBefore = overlay.isLoaded;
       if (!loadedBefore) {
         DC dc = assets.get(overlay.assetDescriptor);
-        animation.edit().layer(dc, overlay.nativeAura
+        animation.edit().layer(dc, overlay.usesNativeRendering()
             ? AuraRenderPolicy.blendMode(overlay.entry.Trans)
             : overlay.entry.Trans == 3 ? BlendMode.LUMINOSITY : BlendMode.ID).build();
-        if (overlay.nativeAura) {
+        if (overlay.usesNativeRendering()) {
           animation.setFrameDuration(AuraRenderPolicy.frameDuration(overlay.entry.AnimRate));
           animation.getLayer(0).setAlpha(AuraRenderPolicy.alpha(overlay.entry.Trans));
         } else if (overlay.entry.AnimRate > 0) {

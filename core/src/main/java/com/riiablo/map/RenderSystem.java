@@ -1377,7 +1377,7 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   private void drawOverlayLayer(int entity, Overlay overlay, float x, float y) {
-    if (overlay.nativeAura) {
+    if (overlay.usesNativeRendering()) {
       int heightClass = 0;
       Class unitClass = mClass.get(entity);
       if (unitClass != null && unitClass.type == Class.Type.PLR) {

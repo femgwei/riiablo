@@ -220,6 +220,9 @@ public class SkillCastHandler extends PassiveSystem {
     // ServerSkillSystem (Blessed Hammer is now one such authoritative path).
     boolean networkClient = world.getSystem(ClientNetworkReceiver.class) != null;
     boolean localServer = world.getSystem(ServerSkillSystem.class) != null;
+    // SrvDo022/068 already emit the complete authoritative 64-way warcry
+    // ring in local games. NumDirections is the DCC layout, not ring size.
+    if (localServer && isWarCryWave(skill)) return;
     // Local single-player worlds use the monsters-only server adapter to keep
     // player projectiles compatible with the legacy presentation path. Amazon
     // bow skills are the exception: their cold/fire/impact packet must be
@@ -740,10 +743,11 @@ public class SkillCastHandler extends PassiveSystem {
     Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
-    int numMissiles = nativeDirectionCount(missile, 64);
+    int numMissiles = isWarCryWave(skill) ? 64 : nativeDirectionCount(missile, 64);
     for (int i = 0; i < numMissiles; i++) {
       Vector2 angle = new Vector2(Vector2.X);
-      angle.setAngleRad(Direction.directionToRadians(i, numMissiles));
+      if (isWarCryWave(skill)) warCryDirection(i, angle);
+      else angle.setAngleRad(Direction.directionToRadians(i, numMissiles));
       factory.createMissile(missile, angle, position);
     }
   }
@@ -931,5 +935,30 @@ public class SkillCastHandler extends PassiveSystem {
 
   private static boolean hasText(String value) {
     return value != null && !value.isEmpty();
+  }
+
+  static boolean isWarCryWave(Skills.Entry skill) {
+    if (skill == null) return false;
+    switch (skill.Id) {
+      case 130: case 138: case 146: case 149: case 154: case 155: return true;
+      default: return false;
+    }
+  }
+
+  // First quadrant of D2Client's 64 target offsets at 6FB6E2E0/6FB6E3E0.
+  // These are integer target vectors, not uniformly spaced floating angles.
+  private static final int[] WAR_CRY_QUARTER =
+      {30, 29, 29, 28, 27, 26, 24, 23, 21, 19, 16, 14, 11, 8, 5, 2, 0};
+
+  static Vector2 warCryDirection(int index, Vector2 out) {
+    int lane = Math.floorMod(index, 64);
+    int offset = lane % 16;
+    int x = WAR_CRY_QUARTER[offset], y = WAR_CRY_QUARTER[16 - offset];
+    switch (lane / 16) {
+      case 0: return out.set(x, y).nor();
+      case 1: return out.set(-y, x).nor();
+      case 2: return out.set(-x, -y).nor();
+      default: return out.set(y, -x).nor();
+    }
   }
 }

@@ -28,6 +28,11 @@ public class Overlay extends PooledComponent {
   /** State id that owns a persistent overlay, or -1 for cast visuals. */
   public int stateId = -1;
 
+  public boolean usesNativeRendering() {
+    return nativeAura || entry != null
+        && com.riiablo.presentation.AuraRenderPolicy.isWarCryOverlay(entry.overlay);
+  }
+
   public Overlay set(com.riiablo.codec.excel.Overlay.Entry overlay) {
     this.entry = overlay;
     this.assetDescriptor = new AssetDescriptor<>("data\\global\\overlays\\" + overlay.Filename + ".dcc", DCC.class);
