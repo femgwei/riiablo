@@ -40,6 +40,15 @@ public class AnimationStepper extends IntervalIteratingSystem {
     // markers belong to composite units only; allowing them to gate a flippy
     // can leave a dropped coin permanently on an intermediate bounce frame.
     if (mItem.has(entityId) || mMissile.has(entityId)) {
+      if (mMissile.has(entityId)) {
+        Missile missile = mMissile.get(entityId);
+        if (NativeGroundFirePresentation.handles(missile)) {
+          NativeGroundFirePresentation.adjustFrame(missile, wrapper.animation,
+              missile.presentationOnly
+                  ? Math.max(0, missile.nativeLifetimeFrames - missile.nativeFrame)
+                  : missile.remainingFrames);
+        }
+      }
       wrapper.animation.update(SimulationClock.STEP_SECONDS);
       return;
     }

@@ -100,11 +100,6 @@ public class MissileLoader extends IteratingSystem {
       animation.setSubLoop(entry.SubStart, entry.SubStop);
     }
     int initialFrame = entry.RandStart;
-    // poisonpuff has RandStart=0. Do not invent a seed/entity-based phase;
-    // native cloud callback randomness belongs to its target, not its animation.
-    if (isGroundFire(entry) && animation.getNumFramesPerDir() > 0) {
-      initialFrame += groundFirePhase(missile, animation.getNumFramesPerDir());
-    }
     if (animation.getNumFramesPerDir() > 0) {
       animation.setFrame(isPoisonSmokePuff(entry)
           ? poisonSmokeFrame(missile, animation.getNumFramesPerDir())
@@ -227,13 +222,5 @@ public class MissileLoader extends IteratingSystem {
     return lower.contains("poison") || lower.contains("plague");
   }
 
-  /** Stable world-cell phase, so neighbouring fire cells do not animate in lockstep. */
-  static int groundFirePhase(Missile missile, int frameCount) {
-    if (frameCount <= 0 || missile == null) return 0;
-    int x = Math.round(missile.start.x);
-    int y = Math.round(missile.start.y);
-    int hash = x * 0x45D9F3B ^ y * 0x27D4EB2D;
-    return Math.floorMod(hash, frameCount);
-  }
 }
 

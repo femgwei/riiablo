@@ -14,6 +14,7 @@ import com.riiablo.engine.server.missile.NativePoisonMissileMotion;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.audio.MonsterAudio;
 import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.event.MissileImpactEvent;
@@ -502,7 +503,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     return interval <= 0 || (visual != null && nextClientRandom(visual, interval) == 0);
   }
 
-  private static int nextClientRandom(Missile visual, int bound) {
+  static int nextClientRandom(Missile visual, int bound) {
     if (visual.clientSeed == null) {
       // Snapshot once, never alias or write the authoritative pSeed/mirror.
       visual.clientSeed = visual.presentationSeedKnown ? new D2Seed(visual.presentationSeed, 666)
@@ -695,8 +696,66 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       }
       return;
     }
+    // D2Client CltHit12 (Immolation Arrow) lays out a sparse circular field:
+    // each integer cell gets one randomly selected visual child, subject to
+    // cHitPar2's percentage gate.  The authoritative server creates the
+    // damage-bearing immolationfire cells separately; these are render-only.
+    if (source.pCltHitFunc == 12) {
+      processImmolationArrowHit(source, event, children);
+      return;
+    }
     float baseAngle = MathUtils.atan2(event.dy, event.dx);
     for (String child : children) createVisual(source, child, event, baseAngle);
+  }
+
+  private void processImmolationArrowHit(Missiles.Entry source,
+      MissileImpactEvent event, String[] children) {
+    if (children == null || children.length == 0 || event == null) return;
+    java.util.ArrayList<String> validChildren = new java.util.ArrayList<>(children.length);
+    for (String child : children) if (child != null && !child.isEmpty()) validChildren.add(child);
+    if (validChildren.isEmpty()) return;
+    Missile parent = event.missileEntityId >= 0 && mMissile.has(event.missileEntityId)
+        ? mMissile.get(event.missileEntityId) : null;
+    if (parent == null) parent = new Missile();
+    int level = Math.max(1, parent.damageLevel);
+    int radius = source.cHitPar != null && source.cHitPar.length > 0 && source.cHitPar[0] > 0
+        ? source.cHitPar[0] : 1;
+    if ((source.cHitPar == null || source.cHitPar.length == 0 || source.cHitPar[0] <= 0)
+        && clientContext.files() != null && clientContext.files().skills != null) {
+      com.riiablo.codec.excel.Skills.Entry skill = parent.skillId >= 0
+          ? clientContext.files().skills.get(parent.skillId)
+          : clientContext.files().skills.get("Immolation Arrow");
+      if (skill != null) radius = Math.max(1,
+          SkillFormula.evaluate(skill.calc1, skill, level));
+    }
+    int chance = source.cHitPar != null && source.cHitPar.length > 1
+        ? Math.max(0, Math.min(100, source.cHitPar[1])) : 100;
+    int lifetimeBase = nativeImmolationHitLifetime(source, parent, level);
+    int centerX = MathUtils.floor(event.x), centerY = MathUtils.floor(event.y);
+    for (int x = -radius; x <= radius; x++) {
+      for (int y = -radius; y <= radius; y++) {
+        if (x * x + y * y > radius * radius) continue;
+        int lifetime = lifetimeBase;
+        if (lifetimeBase > 0 && parent != null) lifetime += nextClientRandom(parent, 25) - 12;
+        int childIndex = nextClientRandom(parent, validChildren.size());
+        if (nextClientRandom(parent, 100) >= chance) continue;
+        String child = validChildren.get(childIndex);
+        createVisual(source, child, event, 0f, centerX + x - event.x, centerY + y - event.y,
+            lifetimeBase > 0 ? Math.max(1, lifetime) : 0, parent);
+      }
+    }
+  }
+
+  static int nativeImmolationHitLifetime(Missiles.Entry source, Missile parent, int level) {
+    if (source == null) return 0;
+    if (source.SHitCalc1 != null && !source.SHitCalc1.isEmpty()
+        && parent != null) {
+      // SHitCalc1 is the value read by the native CltHit12 caller (row+0x88),
+      // with Range+LevRange as its documented fallback.
+      try { return Math.max(0, Integer.parseInt(source.SHitCalc1.trim())); }
+      catch (NumberFormatException ignored) { /* formula handled by caller data */ }
+    }
+    return source.Range > 0 ? source.Range + Math.max(0, level - 1) * source.LevRange : 0;
   }
 
   /** Plays impact audio through the same listener/zone attenuation as monster sounds. */
@@ -734,11 +793,17 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   private void createVisual(Missiles.Entry source, String childName,
       MissileImpactEvent event, float angle) {
-    createVisual(source, childName, event, angle, 0f, 0f);
+    createVisual(source, childName, event, angle, 0f, 0f, 0, null);
   }
 
   private void createVisual(Missiles.Entry source, String childName,
       MissileImpactEvent event, float angle, float offsetX, float offsetY) {
+    createVisual(source, childName, event, angle, offsetX, offsetY, 0, null);
+  }
+
+  private void createVisual(Missiles.Entry source, String childName,
+      MissileImpactEvent event, float angle, float offsetX, float offsetY,
+      int lifetimeOverride, Missile parent) {
     if (childName == null || childName.isEmpty()) return;
     Missiles.Entry child = clientContext.files().Missiles.get(childName);
     if (child == null) {
@@ -765,7 +830,16 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // for zero-velocity one-shot effects. Treating both forms as a frame
     // lifetime makes slow directional hit missiles disappear before they
     // reach their native endpoint.
-    visual.nativeLifetimeFrames = nativePresentationLifetimeFrames(child);
+    visual.nativeLifetimeFrames = lifetimeOverride > 0
+        ? lifetimeOverride : nativePresentationLifetimeFrames(child);
+    if (parent != null) {
+      visual.skillId = parent.skillId;
+      visual.damageLevel = parent.damageLevel;
+      visual.presentationSeedKnown = parent.presentationSeedKnown;
+      visual.presentationSeed = parent.presentationSeed;
+      visual.nativeSeed = parent.nativeSeed == null ? null
+          : new D2Seed(parent.nativeSeed.getNLowSeed(), parent.nativeSeed.getNHighSeed());
+    }
     if ("explodingarrowexp".equalsIgnoreCase(childName)
         && child.TravelSound != null && !child.TravelSound.isEmpty()
         && clientContext.audio() != null) {
