@@ -214,6 +214,21 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       processPoisonFlight(entityId, visual, source, velocity, delta);
       return;
     }
+    // Blizzard's native CltDo13 is a presentation-only rain emitter.  The
+    // server owns the damage-bearing blizzard1 missiles; the client callback
+    // independently alternates the two shipped fall DCCs, so this must never
+    // create an authoritative missile or an impact event.
+    if (function == 13) {
+      processBlizzardVisual(entityId, visual, source, delta);
+      return;
+    }
+    // Meteor's CltDo9 draws the falling rock and its tail above the target
+    // indicator.  The center remains authoritative and damage is resolved by
+    // MissileCollisionSystem; these children are render-only.
+    if (function == 9) {
+      processMeteorVisual(entityId, visual, source);
+      return;
+    }
     // Keep the unaudited callback 8/49 fallback separate from poison's
     // native target coordinates and two-word client random stream.
     if (!isClientFlightFunction(function)) return;
@@ -241,6 +256,33 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         createFlightVisual(source, childName, at, angle, offsetX, offsetY);
       }
     }
+  }
+
+  private void processBlizzardVisual(int entityId, Missile visual,
+      Missiles.Entry source, float delta) {
+    if (factory == null || source.CltSubMissile == null
+        || source.CltSubMissile.length == 0) return;
+    int previous = advanceClientFrame(visual, Math.max(1, Math.round(delta * 25f)));
+    int interval = Math.max(1, cltParam(source, 0, 1));
+    for (int frame = previous + 1; frame <= visual.clientFrame; frame++) {
+      if (!rollClientSpawn(visual, interval)) continue;
+      int n = Math.min(2, source.CltSubMissile.length);
+      String child = first(source.CltSubMissile, nextClientRandom(visual, n));
+      if (child != null) createFlightVisual(source, child,
+          mPosition.get(entityId).position, 0f);
+    }
+  }
+
+  private void processMeteorVisual(int entityId, Missile visual,
+      Missiles.Entry source) {
+    if (factory == null || source.CltSubMissile == null) return;
+    Vector2 at = mPosition.get(entityId).position;
+    String rock = first(source.CltSubMissile, 0);
+    String tail = first(source.CltSubMissile, 1);
+    // World Y is the vertical screen axis in the isometric renderer.
+    if (rock != null) createFlightVisual(source, rock, at, 0f, 0f, -6f);
+    if (tail != null) createFlightVisual(source, tail, at, 0f, 0f, -6f);
+    visual.clientFlightInitialized = true;
   }
 
   private void processPoisonFlight(int entityId, Missile visual, Missiles.Entry source,
@@ -399,8 +441,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   }
 
   static boolean isClientFlightFunction(int function) {
-    return function == 3 || function == 4 || function == 8 || function == 49
-        || function == 51 || function == 15;
+    return function == 3 || function == 4 || function == 8 || function == 9
+        || function == 13 || function == 49 || function == 51 || function == 15;
   }
 
   /** D2Client 1.10f 0x6FB31DD0: moving head plus stationary, finite trail cells. */

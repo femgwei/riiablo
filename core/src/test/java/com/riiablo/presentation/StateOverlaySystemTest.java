@@ -84,6 +84,60 @@ class StateOverlaySystemTest extends RiiabloTest {
   }
 
   @Test
+  void enchantHandTransformFollowsStateAndEquipmentColorChanges() {
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int entity = world.create();
+      CofTransforms transforms = world.getMapper(CofTransforms.class).create(entity);
+      transforms.transform[COF.Component.RH] = 3;
+      transforms.transform[COF.Component.LH] = 5;
+      UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
+      states.stateList.addState(StateId.ENCHANT, 500, 1, entity);
+      world.process();
+      byte red = (byte) (Riiablo.files.colors.index("cred") + 1);
+      assertEquals(red, transforms.transform[COF.Component.RH]);
+      transforms.transform[COF.Component.RH] = 7;
+      world.process();
+      assertEquals(red, transforms.transform[COF.Component.RH]);
+      states.stateList.removeState(StateId.ENCHANT);
+      world.process();
+      assertEquals(7, transforms.transform[COF.Component.RH]);
+      assertEquals(5, transforms.transform[COF.Component.LH]);
+    } finally { world.dispose(); }
+  }
+
+  @Test
+  void enchantAndVenomShareWeaponBaseWithoutColorDrift() {
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int entity = world.create();
+      CofTransforms transforms = world.getMapper(CofTransforms.class).create(entity);
+      transforms.transform[COF.Component.RH] = 3;
+      transforms.transform[COF.Component.LH] = 5;
+      UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
+      states.stateList.addState(StateId.VENOMCLAWS, 500, 1, entity);
+      states.stateList.addState(StateId.ENCHANT, 500, 1, entity);
+      world.process();
+      byte red = (byte) (Riiablo.files.colors.index("cred") + 1);
+      assertEquals(red, transforms.transform[COF.Component.RH]);
+      states.stateList.removeState(StateId.ENCHANT);
+      world.process();
+      byte green = StateOverlaySystem.venomPackedTransform(ClientGameplayContext.fromGlobals());
+      assertEquals(green, transforms.transform[COF.Component.RH]);
+      states.stateList.removeState(StateId.VENOMCLAWS);
+      world.process();
+      assertEquals(3, transforms.transform[COF.Component.RH]);
+      assertEquals(5, transforms.transform[COF.Component.LH]);
+    } finally { world.dispose(); }
+  }
+
+  @Test
   void bladeShieldOverlayAndVenomHandTransformFollowStates() {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     ClientGameplayContext clientContext = ClientGameplayContext.fromGlobals();

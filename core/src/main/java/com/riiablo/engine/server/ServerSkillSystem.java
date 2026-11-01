@@ -1156,6 +1156,8 @@ public class ServerSkillSystem extends PassiveSystem {
         // the same authoritative root missile as dedicated servers.
         && event.srvdofunc != 11 && event.srvdofunc != 14
         && event.srvdofunc != 19
+        // Charged Bolt / Chain Lightning need their native owned missiles.
+        && event.srvdofunc != 17 && event.srvdofunc != 26
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 25
         && skill.srvdofunc != 44 && skill.srvdofunc != 45
@@ -1185,6 +1187,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 10 && skill.srvdofunc != 12
         && skill.srvdofunc != 11 && skill.srvdofunc != 14
         && skill.srvdofunc != 19
+        && skill.srvdofunc != 17 && skill.srvdofunc != 26
         && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
         && !PaladinSkills.isHolyBolt(skill)) {
       consumeRangedAmmoForSkill(event, skill);
@@ -3782,8 +3785,11 @@ public class ServerSkillSystem extends PassiveSystem {
     Missile projectile = mMissile.get(missileId);
     projectile.skillId = skill.Id;
     projectile.damageLevel = Math.max(1, skillLevel);
-    projectile.range = Math.max(1, SkillFormula.evaluate(
+    // D2MOO SKILLS_DoInferno passes 0x8020: calc1 overrides TotalFrames,
+    // not path distance. The client normalizes its DCC rate to this clock.
+    projectile.nativeLifetimeFrames = Math.max(1, SkillFormula.evaluate(
         skill.calc1, skill, skillLevel, name -> getBaseSkillLevel(event.entityId, name)));
+    projectile.range = 0f;
     Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
         ? mAttributesWrapper.get(event.entityId).attrs : null;
     MissileDamageResolver.initializeSorceressFireArea(files(),
@@ -4101,7 +4107,10 @@ public class ServerSkillSystem extends PassiveSystem {
     final int[] offsetY = {-1, 0, -1};
     int created = 0;
     for (int i = 0; i < offsetX.length; i++) {
-      int petId = factory.createSummonedPet(event.entityId, summon, petType,
+      // D2MOO SrvDo144 selects consecutive hydra1/2/3 monster rows.
+      MonStats.Entry variant = files().monstats.get(summon.hcIdx + i);
+      if (variant == null) variant = summon;
+      int petId = factory.createSummonedPet(event.entityId, variant, petType,
           event.skillId, skillLevel, petMax, false, duration,
           target.x + offsetX[i], target.y + offsetY[i]);
       if (petId != Engine.INVALID_ENTITY) created++;

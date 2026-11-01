@@ -31,6 +31,7 @@ class MonsterAiPolicyTest {
     assertSame(AI.IDLE, MonsterAiPolicy.create(12, "Idle"));
     assertTrue(MonsterAiPolicy.create(12, "7TIllusion") instanceof SevenTIllusion);
     assertTrue(MonsterAiPolicy.create(12, "Trap-LeftArrow") instanceof TrapLeftArrow);
+    assertTrue(MonsterAiPolicy.create(12, "Hydra") instanceof Hydra);
   }
 
   @Test

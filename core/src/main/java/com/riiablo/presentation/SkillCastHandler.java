@@ -270,6 +270,20 @@ public class SkillCastHandler extends PassiveSystem {
           event.entityId, skill.skill);
       return;
     }
+    // Native SrvDo022 (Nova) and SrvDo026 (Chain Lightning) create the
+    // complete authoritative missile(s) in the local server.  Their client
+    // callbacks (22 and 27) are only packet-side presentation hooks; running
+    // them here would add an unowned duplicate (or a second nova ring).
+    if (localServer && (event.srvdofunc == 22 || skill.srvdofunc == 22
+        || event.srvdofunc == 26 || skill.srvdofunc == 26
+        || event.skillId == SkillId.CHAIN_LIGHTNING)) {
+      log.info("[SKILL_PRESENTATION] phase=reuse_server_missile entity={} skill={} srvDoFunc={}",
+          event.entityId, skill.skill, event.srvdofunc);
+      return;
+    }
+    // Blaze's missile is a parameter for the server's movement-triggered
+    // ground-fire trail, not a projectile released when the buff is cast.
+    if (skill.Id == SkillId.BLAZE) return;
     boolean authoritativeThrow = event.skillId == SkillCodes.throw_
         || event.skillId == SkillCodes.left_hand_throw;
     // Throwing weapons are created by ServerSkillSystem (including the local

@@ -148,6 +148,7 @@ public final class AiRuntimeState {
       case "GenericSpawner": return new GenericSpawner(id);
       case "GreaterMummy": return new GreaterMummy(id);
       case "HighPriest": return new HighPriest(id);
+      case "Hydra": return new Hydra(id);
       case "InvisoSpawner": return new InvisoSpawner(id);
       case "Izual": return new Izual(id);
       case "MaggotEgg": return new MaggotEgg(id);

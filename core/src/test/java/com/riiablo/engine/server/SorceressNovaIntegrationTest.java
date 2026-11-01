@@ -345,6 +345,56 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void localPresentationReusesAllSixtyFourNovaMissiles() {
+    assertLocalPresentationMissiles(SkillId.NOVA, 22, 64);
+  }
+
+  @Test
+  void localPlayerChargedBoltReachesNativeCountInsteadOfBeingFiltered() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.CHARGED_BOLT);
+    assertLocalPresentationMissiles(skill.Id, skill.srvdofunc,
+        ServerSkillSystem.chargedBoltCount(skill, 1));
+  }
+
+  @Test
+  void localPlayerChainLightningCreatesOneAuthoritativeRoot() {
+    assertLocalPresentationMissiles(SkillId.CHAIN_LIGHTNING, 26, 1);
+    // The adapter also accepts the table callback when the event omits it.
+    assertLocalPresentationMissiles(SkillId.CHAIN_LIGHTNING, 0, 1);
+  }
+
+  @Test
+  void blazeCastCreatesNoClientProjectileBeforeMovement() {
+    assertLocalPresentationMissiles(SkillId.BLAZE, 23, 0);
+  }
+
+  private void assertLocalPresentationMissiles(int skillId, int serverFunction, int count) {
+    RecordingFactory factory = new RecordingFactory();
+    com.riiablo.audio.Audio previous = Riiablo.audio;
+    Riiablo.audio = org.mockito.Mockito.mock(com.riiablo.audio.Audio.class);
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true),
+            new com.riiablo.presentation.SkillCastHandler(),
+            new com.riiablo.presentation.OverlayManager(), factory)
+        .build().register("factory", factory)
+        .register("clientContext", com.riiablo.presentation.ClientGameplayContext.fromGlobals())
+        .register("map", new Map(0, 0)));
+    try {
+      int caster = player(world, 1);
+      world.getMapper(Player.class).get(caster).data.setSkillLevel(skillId, 1);
+      Skills.Entry skill = Riiablo.files.skills.get(skillId);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          caster, skill.Id, Engine.INVALID_ENTITY, new Vector2(10, 0),
+          serverFunction, skill.cltdofunc));
+      assertEquals(count, factory.created.size(), "skill=" + skillId);
+      for (Missile missile : factory.created) assertEquals(caster, missile.ownerId);
+    } finally {
+      world.dispose();
+      Riiablo.audio = previous;
+    }
+  }
+
+  @Test
   void lethalCardinalPathDoesNotStopOtherNovaPaths() {
     RecordingFactory factory = new RecordingFactory();
     DeathProbe probe = new DeathProbe();

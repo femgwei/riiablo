@@ -36,14 +36,15 @@ public class StateOverlaySystem extends IteratingSystem {
   protected ComponentMapper<CofTransforms> mCofTransforms;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Monster> mMonster;
+  protected ComponentMapper<com.riiablo.engine.server.component.Player> mPlayer;
   @Wire protected OverlayManager overlays;
   @Wire protected CofManager cofs;
   @Wire(name = "clientContext")
   protected ClientGameplayContext clientContext ;
 
   private final IntSet missingOverlayLogged = new IntSet();
-  private final IntSet venomTransformActive = new IntSet();
-  private final IntMap<byte[]> venomOriginalTransforms = new IntMap<>();
+  private final IntMap<byte[]> weaponBaseTransforms = new IntMap<>();
+  private final IntMap<byte[]> weaponAppliedTransforms = new IntMap<>();
   private final IntSet coldTransformActive = new IntSet();
   private final IntMap<IntSet> overlayStates = new IntMap<>();
 
@@ -94,8 +95,7 @@ public class StateOverlaySystem extends IteratingSystem {
     if (states == null || states.stateList == null) return;
 
     reconcileStateOverlays(entityId, states);
-    reconcileVenomTransform(entityId,
-        states.stateList.getState(StateId.VENOMCLAWS));
+    reconcileWeaponTransforms(entityId, states);
     reconcileColdTransform(entityId, elementalColorShift(states));
   }
 
@@ -178,45 +178,46 @@ public class StateOverlaySystem extends IteratingSystem {
   }
 
   /** States.txt venomclaws itemtrans=cgrn, applied to both weapon layers. */
-  private void reconcileVenomTransform(int entityId, UnitState venom) {
+  private void reconcileWeaponTransforms(int entityId, UnitStates states) {
     if (!mCofTransforms.has(entityId)) return;
-    CofTransforms transforms = mCofTransforms.get(entityId);
-    if (venom == null) {
-      if (!venomTransformActive.remove(entityId)) return;
-      byte[] original = venomOriginalTransforms.remove(entityId);
-      if (original == null) return;
-      int flags = Dirty.NONE;
-      flags |= cofs.setTransform(entityId, COF.Component.RH, original[0]);
-      flags |= cofs.setTransform(entityId, COF.Component.LH, original[1]);
-      cofs.updateTransform(entityId, flags);
-      return;
-    }
-
-    byte venomTransform = venomPackedTransform(clientContext);
-    if (venomTransform == CofTransforms.TRANSFORM_NULL) return;
-    byte[] original = venomOriginalTransforms.get(entityId);
+    boolean venom = states.stateList.getState(StateId.VENOMCLAWS) != null;
+    boolean enchant = states.stateList.getState(StateId.ENCHANT) != null;
+    byte[] current = mCofTransforms.get(entityId).transform;
+    byte[] original = weaponBaseTransforms.get(entityId);
+    byte[] applied = weaponAppliedTransforms.get(entityId);
+    int[] hands = {COF.Component.RH, COF.Component.LH};
     if (original == null) {
-      original = new byte[] {
-          transforms.transform[COF.Component.RH],
-          transforms.transform[COF.Component.LH]
-      };
-      venomOriginalTransforms.put(entityId, original);
-    } else {
-      // An equipment update may legitimately replace a hand transform while
-      // Venom is active. Preserve that new base color before reapplying cgrn.
-      if (transforms.transform[COF.Component.RH] != venomTransform) {
-        original[0] = transforms.transform[COF.Component.RH];
-      }
-      if (transforms.transform[COF.Component.LH] != venomTransform) {
-        original[1] = transforms.transform[COF.Component.LH];
-      }
+      if (!venom && !enchant) return;
+      original = new byte[] {current[hands[0]], current[hands[1]]};
+      applied = original.clone();
+      weaponBaseTransforms.put(entityId, original);
+      weaponAppliedTransforms.put(entityId, applied);
     }
-    venomTransformActive.add(entityId);
     int flags = Dirty.NONE;
-    flags |= cofs.setTransform(entityId, COF.Component.RH, venomTransform);
-    flags |= cofs.setTransform(entityId, COF.Component.LH, venomTransform);
+    for (int i = 0; i < hands.length; i++) {
+      int hand = hands[i];
+      if (current[hand] != applied[i]) original[i] = current[hand];
+      byte desired = original[i];
+      if (venom) desired = venomPackedTransform(clientContext);
+      if (enchant) {
+        boolean weapon = true;
+        if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+          com.riiablo.item.Item item = mPlayer.get(entityId).data.getItems().getEquipped(
+              i == 0 ? com.riiablo.item.BodyLoc.RARM : com.riiablo.item.BodyLoc.LARM);
+          weapon = item != null && item.isBase(com.riiablo.codec.excel.Weapons.Entry.class);
+        }
+        if (weapon) desired = packedTransform(clientContext, "cred");
+      }
+      applied[i] = desired;
+      flags |= cofs.setTransform(entityId, hand, desired);
+    }
     cofs.updateTransform(entityId, flags);
+    if (!venom && !enchant) {
+      weaponBaseTransforms.remove(entityId);
+      weaponAppliedTransforms.remove(entityId);
+    }
   }
+
 
   static byte venomPackedTransform(ClientGameplayContext context) {
     if (context == null || context.files() == null || context.files().colors == null) {
@@ -227,6 +228,14 @@ public class StateOverlaySystem extends IteratingSystem {
         ? (byte) color : CofTransforms.TRANSFORM_NULL;
   }
 
+
+  private static byte packedTransform(ClientGameplayContext context, String name) {
+    if (context == null || context.files() == null || context.files().colors == null)
+      return CofTransforms.TRANSFORM_NULL;
+    int color = context.files().colors.index(name) + 1;
+    return color > 0 && color < 32 ? (byte) color : CofTransforms.TRANSFORM_NULL;
+  }
+
   @Override
   protected void removed(int entityId) {
     IntSet previous = overlayStates.remove(entityId);
@@ -234,8 +243,8 @@ public class StateOverlaySystem extends IteratingSystem {
       for (IntSet.IntSetIterator it = previous.iterator(); it.hasNext;)
         overlays.clearPersistent(entityId, it.next());
     }
-    venomTransformActive.remove(entityId);
-    venomOriginalTransforms.remove(entityId);
+    weaponBaseTransforms.remove(entityId);
+    weaponAppliedTransforms.remove(entityId);
     coldTransformActive.remove(entityId);
   }
 

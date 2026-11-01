@@ -36,6 +36,22 @@ public final class NativeGroundFirePresentation {
   }
 
   /**
+   * Returns the native remaining clock for a replica.  Older snapshot packets
+   * legitimately carry a zero TotalFrames value for persistent ground fire;
+   * the client-created missile still has the row's Range and must not enter
+   * the extinguish branch immediately.  Once a server lifetime is available,
+   * it remains authoritative (some skills extend the sub-loop beyond Range).
+   */
+  static int remainingFrames(Missile missile) {
+    if (missile == null || missile.missile == null) return 0;
+    if (missile.nativeLifetimeFrames > 0) {
+      return Math.max(0, missile.nativeLifetimeFrames - missile.nativeFrame);
+    }
+    int rowLifetime = Missile.nativeRangeFrames(missile.missile, missile.damageLevel);
+    return Math.max(0, rowLifetime - missile.nativeFrame);
+  }
+
+  /**
    * Applies one 1.10f CltDo5 frame correction before normal animation update.
    * The original callback uses the native missile frame for the first branch,
    * then the remaining lifetime for the two rewind branches.

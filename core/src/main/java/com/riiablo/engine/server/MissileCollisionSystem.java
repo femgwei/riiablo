@@ -939,6 +939,10 @@ public class MissileCollisionSystem extends IteratingSystem {
       impacted++;
     }
     int fields = spawnMeteorFireFields(center, position.position, skill, level);
+    // Native CltHit18 runs once when the center expires and supplies the rock
+    // impact visuals.  Damage-bearing meteor fire fields above remain the
+    // only server children; this event is consumed by the presentation layer.
+    emitImpactPresentation(entityId, center, Engine.INVALID_ENTITY, position.position);
     log.info("[SORCERESS_METEOR] phase=impact source={} center={} radius={} impacted={} "
             + "fields={} level={}", center.ownerId, entityId, radius, impacted, fields, level);
     world.delete(entityId);

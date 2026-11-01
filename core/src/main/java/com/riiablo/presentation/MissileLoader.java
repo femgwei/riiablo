@@ -32,10 +32,22 @@ public class MissileLoader extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Missile missile = mMissile.get(entityId);
+    Missiles.Entry visualRow = infernoVisualRow(clientContext, missile);
+    if (visualRow != missile.missile && visualRow != null) {
+      String path = com.riiablo.engine.server.component.Class.Type.MIS.PATH
+          + '\\' + visualRow.CelFile + ".dcc";
+      if (!path.equals(missile.missileDescriptor.fileName)) {
+        missile.missileDescriptor = new com.badlogic.gdx.assets.AssetDescriptor<>(path, DCC.class);
+      }
+      if (clientContext.assets() != null
+          && !clientContext.assets().contains(path)) {
+        clientContext.assets().load(missile.missileDescriptor);
+      }
+    }
     if (clientContext.assets() == null || !clientContext.assets().isLoaded(missile.missileDescriptor)) return;
     DCC celFile = clientContext.assets().get(missile.missileDescriptor);
 
-    Missiles.Entry entry = missile.missile;
+    Missiles.Entry entry = visualRow;
     // CltDo3's presentation-only plaguejavcloud is a callback carrier: its
     // PoisonSparks base layer is the extra spear-like sprite seen travelling
     // with the javelin. Keep the entity alive so MissileImpactPresentationSystem
@@ -134,12 +146,29 @@ public class MissileLoader extends IteratingSystem {
     }
     // SKILLS_UpdateInfernoAnimationParameters replaces the ordinary missile
     // animation rate along with TotalFrames, not just its travel distance.
-    if ((missile.skillId == 178 || missile.skillId == 319 || missile.skillId == 317
+    if ((missile.skillId == 41 || missile.skillId == 178 || missile.skillId == 319 || missile.skillId == 317
         || missile.skillId == 193)
         && missile.nativeLifetimeFrames > 0) {
       return (missile.missile.AnimLen << 8) / missile.nativeLifetimeFrames;
     }
     return missile.missile.animrate > 0 ? missile.missile.animrate >> 2 : 256;
+  }
+
+  /** 1.10f CltDo24 (6FACA1D0) selects A OR B; it does not double damage. */
+  static Missiles.Entry infernoVisualRow(ClientGameplayContext context, Missile missile) {
+    if (missile == null || missile.skillId != 41 || missile.missile == null
+        || !"infernoflame1".equalsIgnoreCase(missile.missile.Missile)
+        || context == null || context.files() == null) {
+      return missile == null ? null : missile.missile;
+    }
+    // Immutable allocation seed keeps retries during asynchronous DCC loading
+    // stable and never consumes the server's damage stream.
+    int seed = missile.presentationSeedKnown ? missile.presentationSeed : missile.rngState;
+    com.d2moo.common.drlg.D2Seed visualSeed = new com.d2moo.common.drlg.D2Seed(seed, 666);
+    if (com.d2moo.common.seed.Seed.rollLimitedRandomNumber(visualSeed, 2) == 0)
+      return missile.missile;
+    Missiles.Entry alternate = context.files().Missiles.get("infernoflame2");
+    return alternate != null ? alternate : missile.missile;
   }
 
   /**

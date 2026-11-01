@@ -57,7 +57,9 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
       assertTrue(stream.fixedElementalRate);
       assertEquals(128, stream.elementalMinRateFixed);
       assertEquals(256, stream.elementalMaxRateFixed);
-      assertEquals(Math.max(1, SkillFormula.evaluate(skill.calc1, skill, 1)), stream.range);
+      assertEquals(Math.max(1, SkillFormula.evaluate(skill.calc1, skill, 1)),
+          stream.nativeLifetimeFrames);
+      assertEquals(0f, stream.range, "Inferno calc1 is a frame clock, not path distance");
 
       float before = life(world, target);
       world.setDelta(1f / 25f);
