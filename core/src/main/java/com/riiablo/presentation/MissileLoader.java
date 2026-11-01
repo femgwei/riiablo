@@ -36,7 +36,6 @@ public class MissileLoader extends IteratingSystem {
     DCC celFile = clientContext.assets().get(missile.missileDescriptor);
 
     Missiles.Entry entry = missile.missile;
-    if (ClientEntityFactory.isHiddenPlagueJavelinRoot(entry)) return;
     // CltDo3's presentation-only plaguejavcloud is a callback carrier: its
     // PoisonSparks base layer is the extra spear-like sprite seen travelling
     // with the javelin. Keep the entity alive so MissileImpactPresentationSystem
