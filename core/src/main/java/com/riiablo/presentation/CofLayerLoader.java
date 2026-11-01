@@ -30,7 +30,7 @@ import com.riiablo.codec.Animation;
 import net.mostlyoriginal.api.event.common.Subscribe;
 
 @All({
-    CofDirtyComponents.class, CofWrapper.class, CofReference.class, Class.class,
+    CofWrapper.class, CofReference.class, Class.class,
     CofComponents.class, CofComponentDescriptors.class
 })
 public class CofLayerLoader extends IteratingSystem {
@@ -50,12 +50,15 @@ public class CofLayerLoader extends IteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<com.riiablo.engine.server.component.UnitStates> mUnitStates;
+  protected ComponentMapper<com.riiablo.engine.server.component.AttributesWrapper> mAttributes;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
   @com.artemis.annotations.Wire(name = "clientContext")
   protected ClientGameplayContext clientContext ;
 
   @Override
   protected void process(int entityId) {
+    reconcileHolyShield(entityId);
     // Dirty requests may be coalesced while a COF is removed/recreated in
     // one ECS pass. Drain them here as well as on subscription insertion.
     // Waiting only for inserted() can leave the previous mode resident.
@@ -66,7 +69,35 @@ public class CofLayerLoader extends IteratingSystem {
   @Override
   protected void inserted(int entityId) {
     if (DEBUG_EVENTS) Gdx.app.debug(TAG, "inserted");
+    reconcileHolyShield(entityId);
     loadDirtyLayers(entityId);
+  }
+
+  private void reconcileHolyShield(int entityId) {
+    CofReference reference = mCofReference.get(entityId);
+    com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(entityId);
+    boolean active = usesHolyShield(mClass.get(entityId).type, reference,
+        mCofComponents.get(entityId).component[COF.Component.SH], states);
+    // Local equipment authority also excludes broken/no-equip shields, as
+    // INVENTORY_GetEquippedShield does. Remote replicas retain the SH snapshot
+    // as their equipment evidence when that runtime context is unavailable.
+    com.riiablo.engine.server.component.AttributesWrapper attributes = mAttributes.get(entityId);
+    if (attributes != null && attributes.attrs != null
+        && attributes.attrs.hasCombatShieldContext() && !attributes.attrs.combatHasShield()) {
+      active = false;
+    }
+    CofComponentDescriptors descriptors = mCofComponentDescriptors.get(entityId);
+    if (descriptors.holyShield == active) return;
+    descriptors.holyShield = active;
+    mCofDirtyComponents.create(entityId).flags |= 1 << COF.Component.SH;
+  }
+
+  static boolean usesHolyShield(Class.Type logicalType, CofReference reference,
+      int shieldComponent, com.riiablo.engine.server.component.UnitStates states) {
+    return reference.effectiveType(logicalType) == Class.Type.PLR
+        && shieldComponent > CofComponents.COMPONENT_NIL
+        && states != null && states.stateList != null
+        && states.stateList.hasState(com.riiablo.engine.server.state.StateId.HOLYSHIELD);
   }
 
   private void loadDirtyLayers(int entityId) {
@@ -243,7 +274,9 @@ public class CofLayerLoader extends IteratingSystem {
       builder
           .replace(start     , start +  2, composite)
           .replace(start +  5, start +  7, composite)
-          .replace(start +  7, start + 10, type.COMP[component[c]])
+          .replace(start +  7, start + 10,
+              c == COF.Component.SH && mCofComponentDescriptors.get(entityId).holyShield
+                  ? "HSH" : type.COMP[component[c]])
           .replace(start + 12, start + 15, layer.weaponClass);
 
       AssetDescriptor<? extends DC> descriptor = descriptors[c];

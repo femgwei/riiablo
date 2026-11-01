@@ -507,7 +507,16 @@ public class SkillCastHandler extends PassiveSystem {
         }
         break;
 
+      case 38: // Find Potion corpse action; Skills.txt do sound is the visual cue.
+      case 40: // Find Item corpse action; corpse state is server-authoritative.
+      case 41: // Grim Ward; the synchronized ward missile owns its DCC.
+        break;
+
       case 43: // Native Leap movement uses the server-synchronized unit position
+        break;
+
+      case 44: // Leap Attack landing hit; dust is emitted by onLeapLand.
+        playSound("weapon_1hs_large_1");
         break;
 
       case 45: // Whirlwind uses the synchronized SQ animation and position
@@ -540,7 +549,7 @@ public class SkillCastHandler extends PassiveSystem {
         cltDoSingleMissile(event, skill, position);
         break;
 
-      case 74: // Double Throw
+      case 42: // Double Throw native client callback
         cltDoDoubleThrowMissiles(event, skill, position);
         break;
 
@@ -814,7 +823,14 @@ public class SkillCastHandler extends PassiveSystem {
   }
 
   private void cltDoDoubleThrowMissiles(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
-    if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
+    if (position == null) return;
+    if (skill == null || skill.cltmissilea.isEmpty()) {
+      // Retail Skills.txt leaves Double Throw's missile columns empty: the
+      // client resolves the equipped throwing weapon just like Throw.
+      cltDoThrowMissile(event, skill, position);
+      cltDoThrowMissile(event, skill, position);
+      return;
+    }
     Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 

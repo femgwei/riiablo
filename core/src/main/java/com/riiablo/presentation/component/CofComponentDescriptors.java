@@ -12,6 +12,8 @@ import java.util.Arrays;
 @Transient
 @PooledWeaver
 public class CofComponentDescriptors extends PooledComponent {
+  /** Presentation override only; never replace the synchronized equipment component code. */
+  public boolean holyShield;
   public final com.badlogic.gdx.utils.Array<AssetDescriptor<? extends DC>> retired =
       new com.badlogic.gdx.utils.Array<>();
   @SuppressWarnings("unchecked")
@@ -19,6 +21,7 @@ public class CofComponentDescriptors extends PooledComponent {
 
   @Override
   protected void reset() {
+    holyShield = false;
     retired.clear();
     Arrays.fill(descriptors, null);
   }

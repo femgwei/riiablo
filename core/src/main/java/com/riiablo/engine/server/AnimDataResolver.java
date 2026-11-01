@@ -4,11 +4,16 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.badlogic.gdx.Gdx;
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.codec.D2;
 import com.riiablo.logger.LogManager;
@@ -28,6 +33,8 @@ public class AnimDataResolver extends PassiveSystem {
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<AttributesWrapper> mAttributes;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   @Subscribe
   public void onCofChanged(CofChangeEvent event) {
@@ -120,6 +127,23 @@ public class AnimDataResolver extends PassiveSystem {
             entry.data != null ? entry.data.length : 0, attackKeyframes);
       }
     }
+    if ((t == Class.Type.PLR || t == Class.Type.MON) && "BL".equals(modeStr)) {
+      AttributesWrapper wrapper = mAttributes.get(entityId);
+      StatRef rate = wrapper == null || wrapper.attrs == null ? null
+          : wrapper.attrs.get(Stat.item_fasterblockrate, StatRef.obtain());
+      UnitStates states = mUnitStates.get(entityId);
+      boolean holyShield = states != null && states.stateList != null
+          && states.stateList.hasState(StateId.HOLYSHIELD);
+      animData.speed = blockAnimationSpeed(animData.speed, rate == null ? 0 : rate.asInt(), holyShield);
+    }
+  }
+
+  /** D2Common UNITS_UpdateBlockAnimRateAndVelocity (1.10f). */
+  static int blockAnimationSpeed(int baseSpeed, int fasterBlockRate, boolean holyShield) {
+    int effectiveRate = fasterBlockRate == 0 ? 0
+        : (int) (120L * fasterBlockRate / (fasterBlockRate + 120L));
+    long speed = (long) baseSpeed * ((holyShield ? 100 : 50) + effectiveRate) / 100;
+    return (int) Math.max(1, Math.min(0x7fff, speed));
   }
 
   /** Ordered local fallbacks for presentation-only monster modes. */
