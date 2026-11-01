@@ -37,6 +37,12 @@ public class MissileLoader extends IteratingSystem {
 
     Missiles.Entry entry = missile.missile;
     if (ClientEntityFactory.isHiddenPlagueJavelinRoot(entry)) return;
+    // CltDo3's presentation-only plaguejavcloud is a callback carrier: its
+    // PoisonSparks base layer is the extra spear-like sprite seen travelling
+    // with the javelin. Keep the entity alive so MissileImpactPresentationSystem
+    // can run CltDo4 and emit PoisonSmokePuff, but do not attach this base DCC.
+    if (missile.presentationOnly && entry != null
+        && "plaguejavcloud".equalsIgnoreCase(entry.Missile)) return;
     // One-shot impact DCCs are created and rendered in the same simulation
     // tick.  Preload their sole direction here instead of relying on the
     // lazy Layer.draw path, which can otherwise submit a region before the
