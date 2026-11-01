@@ -78,9 +78,15 @@ public class OverlayManager extends IteratingSystem {
       boolean loadedBefore = overlay.isLoaded;
       if (!loadedBefore) {
         DC dc = assets.get(overlay.assetDescriptor);
-        animation.edit().layer(dc, overlay.entry.Trans == 3
-            ? BlendMode.LUMINOSITY : BlendMode.ID).build();
-        if (overlay.entry.AnimRate > 0) animation.setFrameDuration(1f / overlay.entry.AnimRate);
+        animation.edit().layer(dc, overlay.nativeAura
+            ? AuraRenderPolicy.blendMode(overlay.entry.Trans)
+            : overlay.entry.Trans == 3 ? BlendMode.LUMINOSITY : BlendMode.ID).build();
+        if (overlay.nativeAura) {
+          animation.setFrameDuration(AuraRenderPolicy.frameDuration(overlay.entry.AnimRate));
+          animation.getLayer(0).setAlpha(AuraRenderPolicy.alpha(overlay.entry.Trans));
+        } else if (overlay.entry.AnimRate > 0) {
+          animation.setFrameDuration(1f / overlay.entry.AnimRate);
+        }
         animation.setMode(overlay.persistent ? Animation.Mode.LOOP : Animation.Mode.CLAMP);
         overlay.isLoaded = true;
       }
@@ -212,6 +218,9 @@ public class OverlayManager extends IteratingSystem {
     component.set(entry);
     component.persistent = persistent;
     component.stateId = stateId;
+    com.riiablo.codec.excel.States.Entry state = clientContext.files() == null
+        || clientContext.files().States == null ? null : clientContext.files().States.get(stateId);
+    component.nativeAura = state != null && state.aura;
     if (component != root) root.layers.add(component);
     AssetReferenceScope references = new AssetReferenceScope(assets);
     try {

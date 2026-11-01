@@ -1269,3 +1269,37 @@ task plagueJavelinRegression(type: Test) {
   systemProperty 'gdx.test.headless', 'true'
   testLogging { events 'failed'; exceptionFormat 'full' }
 }
+
+// Aura drawing gate excludes unrelated legacy UI tests.
+sourceSets {
+  auraRenderTest {
+    java.srcDir 'src/test/java'
+    java.setIncludes([
+        'com/riiablo/RiiabloTest.java',
+        'com/riiablo/presentation/AuraRenderPolicyTest.java',
+        'com/riiablo/presentation/AuraOverlayResourceTest.java',
+        'com/riiablo/presentation/StateOverlaySystemTest.java'
+    ] as Set)
+    compileClasspath += sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output
+  }
+}
+configurations {
+  auraRenderTestImplementation.extendsFrom testImplementation
+  auraRenderTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+task auraRenderRegression(type: Test) {
+  group = 'verification'
+  description = 'Native aura draw parameters, actual MPQ resources and state overlay lifecycle.'
+  dependsOn auraRenderTestClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.auraRenderTest.output.classesDirs
+  classpath = sourceSets.auraRenderTest.runtimeClasspath
+  useJUnitPlatform()
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}

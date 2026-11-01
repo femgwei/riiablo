@@ -1331,7 +1331,7 @@ public class RenderSystem extends BaseEntitySystem {
       Vector2 tmp = iso.toScreen(tmpVec2.set(pos));
 
       Overlay overlay = mOverlay.get(entity);
-      drawOverlayLayers(overlay, tmp.x, tmp.y, true);
+      drawOverlayLayers(entity, overlay, tmp.x, tmp.y, true);
 
       Animation animation = mAnimationWrapper.get(entity).animation;
       if (isIceExplosion(entity)) {
@@ -1363,17 +1363,32 @@ public class RenderSystem extends BaseEntitySystem {
         if (animation.getNumDirections() > 0) animation.setDirection(originalDirection);
       }
 
-      drawOverlayLayers(overlay, tmp.x, tmp.y, false);
+      drawOverlayLayers(entity, overlay, tmp.x, tmp.y, false);
   }
 
-  private void drawOverlayLayers(Overlay root, float x, float y, boolean preDraw) {
+  private void drawOverlayLayers(int entity, Overlay root, float x, float y, boolean preDraw) {
     if (root == null) return;
     if (root.entry != null && root.isLoaded && root.entry.PreDraw == preDraw)
-      root.animation.draw(batch, x, y);
+      drawOverlayLayer(entity, root, x, y);
     for (Overlay layer : root.layers) {
       if (layer.entry != null && layer.isLoaded && layer.entry.PreDraw == preDraw)
-        layer.animation.draw(batch, x, y);
+        drawOverlayLayer(entity, layer, x, y);
     }
+  }
+
+  private void drawOverlayLayer(int entity, Overlay overlay, float x, float y) {
+    if (overlay.nativeAura) {
+      int heightClass = 0;
+      Class unitClass = mClass.get(entity);
+      if (unitClass != null && unitClass.type == Class.Type.PLR) {
+        heightClass = 1;
+      } else if (mMonster.has(entity) && mMonster.get(entity).monstats2 != null) {
+        heightClass = mMonster.get(entity).monstats2.OverlayHeight - 1;
+      }
+      x += overlay.entry.Xoffset;
+      y += com.riiablo.presentation.AuraRenderPolicy.offsetY(overlay.entry, heightClass);
+    }
+    overlay.animation.draw(batch, x, y);
   }
 
   private boolean isPresentationMissile(int entity) {

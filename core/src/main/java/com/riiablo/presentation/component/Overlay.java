@@ -23,6 +23,8 @@ public class Overlay extends PooledComponent {
   public int minimumDisplayFrames;
   /** True when this overlay is driven by a synchronized unit state. */
   public boolean persistent;
+  /** Native aura-specific drawing; other overlay consumers retain their existing policy. */
+  public boolean nativeAura;
   /** State id that owns a persistent overlay, or -1 for cast visuals. */
   public int stateId = -1;
 
@@ -32,6 +34,7 @@ public class Overlay extends PooledComponent {
     this.isLoaded = false;
     this.minimumDisplayFrames = 3;
     this.persistent = false;
+    this.nativeAura = false;
     this.stateId = -1;
     return this;
   }
@@ -51,6 +54,7 @@ public class Overlay extends PooledComponent {
     isLoaded = false;
     minimumDisplayFrames = 0;
     persistent = false;
+    nativeAura = false;
     stateId = -1;
   }
 }
