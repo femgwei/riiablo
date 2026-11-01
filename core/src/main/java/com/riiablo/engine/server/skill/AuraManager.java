@@ -243,8 +243,8 @@ public class AuraManager {
     int casterId = aura.casterId;
     aura.active = false;
     Candidate self = winners.get(effectKey(casterId, aura.definition.selfStateId));
-    if (aura.equipment && callback != null && self != null && self.aura == aura) {
-      // SKILLITEM_DeactivateAura removes the owner's list immediately; remote
+    if (callback != null && self != null && self.aura == aura) {
+      // AssignSkill and SKILLITEM_DeactivateAura remove the owner's list immediately; remote
       // recipients retain their last short-lived list until its native expiry.
       callback.removeState(casterId, self.stateId, casterId, aura.definition.skillId);
     }

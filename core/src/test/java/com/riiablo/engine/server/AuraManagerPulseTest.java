@@ -13,6 +13,38 @@ import org.junit.jupiter.api.Test;
 /** Focused pulse-transaction contracts extracted from D2MOO SkillPal.cpp. */
 class AuraManagerPulseTest {
   @Test
+  void switchingSelectedAuraRemovesOnlyOwnerStateImmediately() {
+    AuraManager manager = new AuraManager();
+    AuraManager.AuraDefinition first = definition(9001, 500);
+    first.affectsSelf = true;
+    first.selfStateId = 500;
+    AuraManager.AuraDefinition second = definition(9002, 501);
+    second.affectsSelf = true;
+    second.selfStateId = 501;
+    manager.registerAuraDefinition(first);
+    manager.registerAuraDefinition(second);
+    RedemptionCallback callback = new RedemptionCallback();
+    callback.includeCaster = true;
+    callback.rangeTarget = 9;
+    manager.setCallback(callback);
+    assertTrue(manager.activateAura(7, first.skillId, 1));
+    manager.update(0f);
+    assertEquals(2, callback.appliedStates);
+    assertTrue(manager.activateAura(7, second.skillId, 1));
+    assertEquals(1, callback.removedStates);
+    assertEquals(7, callback.removedTarget);
+    assertEquals(500, callback.removedState);
+    manager.update(0f);
+    assertEquals(4, callback.appliedStates);
+    assertTrue(manager.activateAura(7, second.skillId, 1));
+    assertEquals(1, callback.removedStates, "same selection must not restart the state");
+    manager.deactivateAura(7);
+    assertEquals(2, callback.removedStates);
+    assertEquals(7, callback.removedTarget);
+    assertEquals(501, callback.removedState);
+  }
+
+  @Test
   void redemptionConsumesManaOnlyAfterACorpseIsActuallyConsumed() {
     AuraManager manager = new AuraManager();
     AuraManager.AuraDefinition definition = new AuraManager.AuraDefinition();
@@ -270,6 +302,9 @@ class AuraManagerPulseTest {
   }
 
   private static final class RedemptionCallback implements AuraManager.AuraCallback {
+    int removedStates;
+    int removedTarget;
+    int removedState;
     float mana = 10f;
     boolean redemptionSucceeds;
     int rangeTarget = 7;
@@ -321,7 +356,11 @@ class AuraManagerPulseTest {
       lastSkillId = skillId;
       lastStateId = stateId;
     }
-    @Override public void removeState(int targetId, int stateId, int sourceEntityId, int skillId) {}
+    @Override public void removeState(int targetId, int stateId, int sourceEntityId, int skillId) {
+      removedStates++;
+      removedTarget = targetId;
+      removedState = stateId;
+    }
     @Override public boolean applyDirectStat(int targetId, int statId, int fixedValue,
         int sourceEntityId, int skillId) { return false; }
     @Override public void applyPeriodicDamage(int casterId, int targetId, int skillId,

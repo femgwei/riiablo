@@ -60,6 +60,9 @@ public class StateOverlaySystem extends IteratingSystem {
           ? null : clientContext.files().States.get(id);
       boolean mapped = false;
       if (definition != null) {
+        if (definition.aura && !previous.contains(id)) {
+          SpatialAudio.play(world, clientContext, entity, definition.onSound, true);
+        }
         for (String overlay : definition.overlays) {
           if (overlay == null || overlay.isEmpty()) continue;
           overlays.setPersistent(entity, id, overlay);

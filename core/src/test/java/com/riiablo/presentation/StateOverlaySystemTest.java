@@ -21,6 +21,42 @@ import org.junit.jupiter.api.Test;
 /** Client presentation recovered entirely from authoritative StateP data. */
 class StateOverlaySystemTest extends RiiabloTest {
   @Test
+  void auraTransitionPlaysNativeStateSoundOnceNotOnRefresh() {
+    com.riiablo.audio.Audio audio = org.mockito.Mockito.mock(com.riiablo.audio.Audio.class);
+    java.util.concurrent.atomic.AtomicInteger listener = new java.util.concurrent.atomic.AtomicInteger(-1);
+    ClientGameplayContext context = new ClientGameplayContext(null, listener::get, () -> null,
+        null, Riiablo.assets, audio, null, Riiablo.files, null, null, null, null, null, null);
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
+        .build().register("clientContext", context));
+    try {
+      int entity = world.create();
+      listener.set(entity);
+      world.getMapper(com.riiablo.engine.server.component.Position.class).create(entity);
+      UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
+      String might = Riiablo.files.States.get(StateId.MIGHT).onSound;
+      String prayer = Riiablo.files.States.get(StateId.PRAYER).onSound;
+      assertEquals("paladin_aura_might", might);
+      assertEquals("paladin_aura_prayer", prayer);
+      states.stateList.addStateLayer(StateId.MIGHT, 50, 1, entity, 98);
+      world.process();
+      world.process();
+      org.mockito.Mockito.verify(audio).play(might, true);
+      states.stateList.removeState(StateId.MIGHT);
+      states.stateList.addStateLayer(StateId.PRAYER, 50, 1, entity, 99);
+      world.process();
+      world.process();
+      org.mockito.Mockito.verify(audio).play(prayer, true);
+      assertFalse(overlays.overlays.containsKey(StateId.MIGHT));
+      assertTrue(overlays.overlays.containsKey(StateId.PRAYER));
+      org.mockito.Mockito.verifyNoMoreInteractions(audio);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void existingItemAndSpiritAuraSnapshotsDisplayOnFirstClientTick() {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()
