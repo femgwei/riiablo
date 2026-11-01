@@ -24,6 +24,10 @@ import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
@@ -41,6 +45,9 @@ public class SkillCastHandler extends PassiveSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Angle> mAngle;
+  protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   protected OverlayManager overlays;
 
@@ -212,6 +219,13 @@ public class SkillCastHandler extends PassiveSystem {
     }
     playSound(skill.dosound);
 
+    // Necromancer curses use the native client area carrier (CltDo30). It is
+    // a cast-range presentation, not a target state overlay.
+    if (event.cltdofunc == 30 || skill.cltdofunc == 30) {
+      cltDoCurseArea(event, skill);
+      return;
+    }
+
     Vector2 position = mPosition.has(event.entityId) ? mPosition.get(event.entityId).position : null;
 
     // Network clients receive the authoritative D2GS missile entity shortly
@@ -355,6 +369,10 @@ public class SkillCastHandler extends PassiveSystem {
 
     switch (event.cltdofunc) {
       case 0:
+        // Blaze (cltDoFunc=0) is a movement trail.  Its server-side
+        // StateUpdater emits ground missiles only after movement; the cast
+        // callback must not place a static flame under the caster.
+        if ("Blaze".equalsIgnoreCase(skill.skill) || event.srvdofunc == 23) break;
         cltDoGenericMissile(event, skill, position);
         break;
 
@@ -501,6 +519,7 @@ public class SkillCastHandler extends PassiveSystem {
       case 30: // Curse visual
         // Affected-unit overlays follow authoritative States.txt rows in
         // StateOverlaySystem, including curses which deal no damage.
+        cltDoCurseArea(event, skill);
         break;
 
       case 31: // Raise Skeleton visual
@@ -790,6 +809,11 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoFireWallMissiles(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
+    // SrvDo24 already creates the authoritative maker/segment missiles.  The
+    // client callback is not an additional projectile emitter; doing so draws
+    // the unwanted single "launching" flame at the cast point (and duplicates
+    // damage in local games).
+    if (event.srvdofunc == 24 || "Fire Wall".equalsIgnoreCase(skill.skill)) return;
     Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
     if (missile == null) return;
 
@@ -820,7 +844,59 @@ public class SkillCastHandler extends PassiveSystem {
     // Explosion at target corpse location
     Vector2 target = event.targetId >= 0 && mPosition.has(event.targetId)
         ? mPosition.get(event.targetId).position : event.targetVec;
-    if (target != null) factory.createMissile(missile, Vector2.Zero, target);
+    if (target != null) createPresentationMissile(missile, Vector2.Zero, target);
+  }
+
+  private void cltDoCurseArea(SkillDoEvent event, Skills.Entry skill) {
+    if (!hasText(skill.cltmissilea) || factory == null) return;
+    Missiles.Entry child = clientContext.files().Missiles.get(skill.cltmissilea);
+    Missiles.Entry center = clientContext.files().Missiles.get("cursecenter");
+    if (child == null || center == null) return;
+    Vector2 at = event.targetId >= 0 && mPosition.has(event.targetId)
+        ? mPosition.get(event.targetId).position : event.targetVec;
+    if (at == null) return;
+    int level = mPlayer.has(event.entityId) && mPlayer.get(event.entityId).data != null
+        ? mPlayer.get(event.entityId).data.getSkill(skill.Id) : 1;
+    if (mUnitStates.has(event.entityId) && mUnitStates.get(event.entityId).stateList != null)
+      level += mUnitStates.get(event.entityId).stateList.getTotalSkillModifier();
+    // cursecenter has no CelFile: allocate a callback carrier without asking
+    // ClientEntityFactory to load the nonexistent null.dcc.
+    int id = world.create();
+    mPosition.create(id).position.set(at);
+    world.getMapper(com.riiablo.engine.server.component.Velocity.class).create(id);
+    Missile visual = mMissile.create(id);
+    visual.missile = center;
+    visual.authoritative = false;
+    visual.presentationOnly = true;
+    visual.ownerId = -1;
+    visual.nativeLifetimeFrames = center.Range;
+    // CltDo17 uses native TargetX/TargetY as radius and visual missile ID.
+    // These presentation-local path slots are not used by callback 17 movement.
+    visual.clientPathX = curseVisualRadius(skill, Math.max(1, level));
+    visual.clientPathY = child.Id;
+    visual.skillId = skill.Id;
+    visual.damageLevel = Math.max(1, level);
+  }
+
+  static int curseVisualRadius(Skills.Entry skill, int level) {
+    // D2Client 6FAC8083..97 subtracts three and clamps to two.
+    return Math.max(2, SkillFormula.evaluate(skill.aurarangecalc, skill, level) - 3);
+  }
+
+  /** Client cast effects never participate in authoritative damage or collision. */
+  private int createPresentationMissile(Missiles.Entry row, Vector2 facing, Vector2 at) {
+    int id = factory instanceof ClientEntityFactory
+        ? ((ClientEntityFactory) factory).createMissilePresentation(row, facing, new Vector2(at))
+        : factory.createMissile(row, facing, new Vector2(at), -1);
+    if (id >= 0 && mMissile.has(id)) {
+      Missile effect = mMissile.get(id);
+      effect.presentationOnly = true;
+      effect.authoritative = false;
+      effect.ownerId = -1;
+      effect.persistent = false;
+      effect.nativeLifetimeFrames = MissileImpactPresentationSystem.nativePresentationLifetimeFrames(row);
+    }
+    return id;
   }
 
   private void cltDoAuraPulse(SkillDoEvent event, Skills.Entry skill, Vector2 position) {

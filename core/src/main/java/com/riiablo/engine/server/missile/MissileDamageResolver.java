@@ -219,7 +219,12 @@ public final class MissileDamageResolver {
     projectile.damageLevel = level;
 
     boolean skillDamage = hasText(row.Skill) || row.MissileSkill;
-    if (skillDamage) {
+    // Monster skill-linked missiles (notably HydraMissile) use a Skills.txt
+    // row only to select the cast, while their actual elemental packet lives
+    // in Missiles.txt.  Treating the Skill link as player-owned damage makes
+    // the generic resolver return without installing the missile's native
+    // fire damage, leaving a visible but harmless Hydra bolt.
+    if (skillDamage && !nativeMonsterDamage) {
       // Skill-owned rows are normally initialized by initializeSkill.  If a
       // caller repeats generic initialization after a table-owned snapshot
       // was already captured, leave that authoritative packet intact.

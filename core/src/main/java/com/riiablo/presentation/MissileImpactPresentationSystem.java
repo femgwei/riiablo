@@ -81,7 +81,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // Audited CltDo3/4/15 and poisonpuff clocks are simulation clocks, not
     // animation clocks. A cold DCC must not pause their movement/emission/TTL.
     boolean callbackClock = visual.missile != null
-        && (visual.missile.pCltDoFunc == 15 || visual.missile.pCltDoFunc == 3
+        && (visual.missile.pCltDoFunc == 17 || visual.missile.pCltDoFunc == 18
+            || visual.missile.pCltDoFunc == 15 || visual.missile.pCltDoFunc == 3
             || visual.missile.pCltDoFunc == 4 || MissileLoader.isPoisonSmokePuff(visual.missile));
     if (!mAnimationWrapper.has(entityId) && !callbackClock) return;
     float delta = Math.max(0f, world.delta);
@@ -199,6 +200,14 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     Missiles.Entry source = visual.missile;
     if (source == null) return;
     int function = source.pCltDoFunc;
+    if (function == 17) {
+      processCurseCenter(entityId, visual, source, delta);
+      return;
+    }
+    if (function == 18) {
+      processBoneSpearTrail(entityId, visual, source, velocity, delta);
+      return;
+    }
     if (function == 15) {
       processFingerMageFlight(entityId, visual, source, velocity, delta);
       return;
@@ -258,6 +267,47 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     }
   }
 
+  /** 1.10f 6FB32470: one stationary directional trail cell per client update. */
+  private void processBoneSpearTrail(int entityId, Missile visual, Missiles.Entry source,
+      Vector2 velocity, float delta) {
+    if (factory == null) return;
+    int previous = advanceClientFrame(visual, Math.max(1, Math.round(delta * 25f)));
+    int lifetime = visual.nativeLifetimeFrames > 0 ? visual.nativeLifetimeFrames : source.Range;
+    for (int frame = previous; frame < visual.clientFrame; frame++) {
+      if (lifetime - frame < source.InitSteps) continue;
+      int id = createFlightVisual(source, first(source.CltSubMissile, 0),
+          mPosition.get(entityId).position, velocity.isZero() ? Vector2.X : velocity);
+      if (id >= 0 && mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
+    }
+  }
+
+  /** 1.10f 6FB32310 + 6FB35D10: three late sparse circular curse-area pulses. */
+  private void processCurseCenter(int entityId, Missile visual, Missiles.Entry source, float delta) {
+    int previous = advanceClientFrame(visual, Math.max(1, Math.round(delta * 25f)));
+    int radius = visual.clientPathX;
+    if (radius <= 0 || factory == null) return;
+    Missiles.Entry child = clientContext.files().Missiles.get(visual.clientPathY);
+    if (child == null) return;
+    int lifetime = visual.nativeLifetimeFrames > 0 ? visual.nativeLifetimeFrames : source.Range;
+    Vector2 at = mPosition.get(entityId).position;
+    for (int frame = previous; frame < visual.clientFrame; frame++) {
+      if (!cursePulseFrame(lifetime - frame, cltParam(source, 0, 7))) continue;
+      int step = radius > 4 ? 2 : 1;
+      int chance = radius > 4 ? radius / 2 : radius;
+      for (int x = -radius; x <= radius; x += step) {
+        for (int y = -radius; y <= radius; y += step) {
+          if (x * x + y * y > radius * radius || !rollClientSpawn(visual, chance)) continue;
+          createFlightVisual(source, child.Missile,
+              new Vector2(MathUtils.floor(at.x) + x, MathUtils.floor(at.y) + y), Vector2.X);
+        }
+      }
+    }
+  }
+
+  static boolean cursePulseFrame(int remaining, int threshold) {
+    return remaining >= 0 && remaining < threshold && remaining % 3 == 0;
+  }
+
   private void processBlizzardVisual(int entityId, Missile visual,
       Missiles.Entry source, float delta) {
     if (factory == null || source.CltSubMissile == null
@@ -268,21 +318,54 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       if (!rollClientSpawn(visual, interval)) continue;
       int n = Math.min(2, source.CltSubMissile.length);
       String child = first(source.CltSubMissile, nextClientRandom(visual, n));
-      if (child != null) createFlightVisual(source, child,
-          mPosition.get(entityId).position, 0f);
+      if (child != null) {
+        int id = createFlightVisual(source, child,
+            mPosition.get(entityId).position, 0f);
+        // CltDo13 starts both Blizzard fall DCCs at frame zero and lets the
+        // animation run to completion.  The client row has a non-zero Vel,
+        // so the generic presentation lifetime intentionally returns zero;
+        // retain the DCC's own frame count here so a replica cannot be
+        // retired before the second (8-frame Blizzard) variant is visible.
+        if (id != com.riiablo.engine.Engine.INVALID_ENTITY && mMissile.has(id)) {
+          Missiles.Entry fall = clientContext.files().Missiles.get(child);
+          if (fall != null) mMissile.get(id).nativeLifetimeFrames =
+              Math.max(1, fall.AnimLen);
+        }
+      }
     }
   }
 
   private void processMeteorVisual(int entityId, Missile visual,
       Missiles.Entry source) {
-    if (factory == null || source.CltSubMissile == null) return;
+    // CltDo9 is invoked once when the meteor center is initialized.  The
+    // center itself remains alive for the 59-frame countdown; re-running this
+    // branch every tick would stack a new rock and tail on the target and
+    // make the result look like a frozen sprite.
+    if (visual.clientFlightInitialized || factory == null
+        || source.CltSubMissile == null) return;
     Vector2 at = mPosition.get(entityId).position;
     String rock = first(source.CltSubMissile, 0);
     String tail = first(source.CltSubMissile, 1);
     // World Y is the vertical screen axis in the isometric renderer.
-    if (rock != null) createFlightVisual(source, rock, at, 0f, 0f, -6f);
-    if (tail != null) createFlightVisual(source, tail, at, 0f, 0f, -6f);
+    createMeteorVisual(source, rock, at);
+    createMeteorVisual(source, tail, at);
     visual.clientFlightInitialized = true;
+  }
+
+  /** Creates the rock/tail pair and gives them the native 59-frame descent. */
+  private void createMeteorVisual(Missiles.Entry source, String childName,
+      Vector2 target) {
+    if (childName == null) return;
+    int id = createFlightVisual(source, childName, target, 0f, 0f, -6f);
+    if (id == com.riiablo.engine.Engine.INVALID_ENTITY || !mMissile.has(id)) return;
+    Missile child = mMissile.get(id);
+    child.nativeLifetimeFrames = Math.max(1, cltParam(source, 0, 59));
+    // Meteor's CltDo9 moves the visual down from the fall row to the target;
+    // keep authoritative damage at the center and animate only this replica.
+    if (mVelocity.has(id)) {
+      float frames = child.nativeLifetimeFrames;
+      mVelocity.get(id).velocity.set(0f, 6f * 25f / frames);
+    }
   }
 
   private void processPoisonFlight(int entityId, Missile visual, Missiles.Entry source,
@@ -442,7 +525,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   static boolean isClientFlightFunction(int function) {
     return function == 3 || function == 4 || function == 8 || function == 9
-        || function == 13 || function == 49 || function == 51 || function == 15;
+        || function == 13 || function == 49 || function == 51 || function == 15
+        || function == 17 || function == 18;
   }
 
   /** D2Client 1.10f 0x6FB31DD0: moving head plus stationary, finite trail cells. */

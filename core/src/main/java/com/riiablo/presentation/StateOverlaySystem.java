@@ -204,7 +204,11 @@ public class StateOverlaySystem extends IteratingSystem {
         if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
           com.riiablo.item.Item item = mPlayer.get(entityId).data.getItems().getEquipped(
               i == 0 ? com.riiablo.item.BodyLoc.RARM : com.riiablo.item.BodyLoc.LARM);
-          weapon = item != null && item.isBase(com.riiablo.codec.excel.Weapons.Entry.class);
+          // A late network snapshot can expose the player before its item
+          // container is populated.  States.txt's itemtype=weap is rendered
+          // on the weapon layers; do not silently suppress Enchant while the
+          // equipment snapshot is still empty.
+          weapon = item == null || item.isBase(com.riiablo.codec.excel.Weapons.Entry.class);
         }
         if (weapon) desired = packedTransform(clientContext, "cred");
       }
