@@ -24,6 +24,11 @@ public final class AuraRenderPolicy {
         || "bash".equalsIgnoreCase(name) || "doubledamage1".equalsIgnoreCase(name);
   }
 
+  /** Paladin target overlays using the same verified native Overlay draw path. */
+  public static boolean isPaladinTargetOverlay(String name) {
+    return "handofgod".equalsIgnoreCase(name) || "healing".equalsIgnoreCase(name);
+  }
+
   // D2Client 6FB5BE13: AnimRate << 4; frames have eight fractional bits.
   public static float frameDuration(int animRate) {
     return animRate <= 0 ? Float.POSITIVE_INFINITY
