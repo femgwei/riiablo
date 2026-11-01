@@ -308,7 +308,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // Some native NPC rows expose interaction without setting MonStats2.isSel.
     // They still need a client Selectable component so hover/click can reach
     // the NPC interactor and open its menu or quest dialog.
-    if (monstats2.isSel || (monstats.npc && monstats.interact)) mSelectable.create(id);
+    if (!monstats.npc || monstats.interact || monstats2.isSel) mSelectable.create(id);
 
     AI ai = mAIWrapper.get(id).ai;
     // ServerEntityFactory intentionally uses the shared IDLE AI for native

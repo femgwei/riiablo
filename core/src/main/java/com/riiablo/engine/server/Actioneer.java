@@ -1740,12 +1740,19 @@ public class Actioneer extends PassiveSystem {
         break;
       }
       case 41: // Leap Attack reserves its landing at the first MonSeq action.
-      case 40: // native Leap validates and reserves its landing point on skill start
-        log.info("[MONSTER_LEAP] phase=start_check entity={} target={} requested=({}, {})",
-            entityId, targetId,
+      case 40: { // native Leap validates and reserves its landing point on skill start
+        boolean player = mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
+        if (player) {
+          startLeap(entityId, targetId, targetVec, false);
+          Casting cast = mCasting.get(entityId);
+          if (cast != null) cast.monsterLeapStarted = mLeap.has(entityId);
+        }
+        log.info("[LEAP] phase=start_check entity={} player={} target={} requested=({}, {})",
+            entityId, player, targetId,
             targetVec != null ? targetVec.x : Float.NaN,
             targetVec != null ? targetVec.y : Float.NaN);
         break;
+      }
       default:
         log.warn("Unsupported srvstfunc({}) for {}", srvstfunc, entityId);
         // TODO: default case will log an error when all valid cases are enumerated

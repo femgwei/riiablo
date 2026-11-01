@@ -26,6 +26,7 @@ public class AnimStepper extends IntervalIteratingSystem {
 
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<com.riiablo.engine.server.component.Leap> mLeap;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Player> mPlayer;
@@ -67,6 +68,15 @@ public class AnimStepper extends IntervalIteratingSystem {
     }
     Sequence sequence = mSequence.get(entityId);
     Casting casting = mCasting.get(entityId);
+    com.riiablo.codec.excel.Skills.Entry leapSkill = casting == null ? null : files().skills.get(casting.skillId);
+    if (mLeap.has(entityId) && leapSkill != null && sequence != null && sequence.started
+        && (leapSkill.srvstfunc == 40 || leapSkill.srvstfunc == 41
+            || leapSkill.srvdofunc == 77 || leapSkill.srvdofunc == 78)) {
+      // SQ is a native jump sequence; do not advance the A1 fallback while
+      // the authoritative airborne path is active.
+      animData.frame = Math.min(8, Math.max(0, animData.numFrames - 1)) << 8;
+      return;
+    }
     if (casting != null && casting.diabRun != null && sequence != null && sequence.started) {
       NativeDiabRun run = casting.diabRun;
       if (run.remaining <= 0) {
