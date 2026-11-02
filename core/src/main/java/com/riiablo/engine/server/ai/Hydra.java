@@ -16,7 +16,9 @@ public final class Hydra extends NativeDecisionAI {
     }
     // Native Fn086 uses target-distance < 25 and a 60% roll, then idles 10 frames.
     if (targetId != Engine.INVALID_ENTITY && distance < 25f && rollAiPercentage() < 60
-        && hasSkill(0) && useMonsterSkill(0, targetId, null, Engine.INVALID_MODE)) return;
+        && hasSkill(0) && mPosition.has(targetId)
+        && useMonsterSkill(0, targetId, mPosition.get(targetId).position,
+            Engine.INVALID_MODE)) return;
     idle(10);
   }
 }
