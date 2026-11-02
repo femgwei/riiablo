@@ -24,9 +24,34 @@ public final class ShadowWarrior extends GenericMonster {
     int right = mPlayer.get(pet.ownerId).data.getAction(com.badlogic.gdx.Input.Buttons.RIGHT);
     int selected = aiRandomBoolean() ? left : right;
     if (selected < 0 || files().skills.get(selected) == null) selected = selected == left ? right : left;
+    if (!isUsableAssassinSkill(selected)) {
+      int other = selected == left ? right : left;
+      selected = isUsableAssassinSkill(other) ? other : -1;
+    }
     if (selected < 0 || files().skills.get(selected) == null) return -1;
     selectedSkillId = selected;
     return 0;
+  }
+
+  /** Mirrors AITHINK_ShadowWarriorCheckUseSkill's class/target-state gates. */
+  private boolean isUsableAssassinSkill(int id) {
+    com.riiablo.codec.excel.Skills.Entry skill = id >= 0 ? files().skills.get(id) : null;
+    if (skill == null || skill.charclass == null
+        || com.riiablo.codec.excel.Skills.getClassId(skill.charclass)
+            != com.riiablo.CharacterClass.ASSASSIN.id) return false;
+    // Native AI does not cast an aura that is already active, and does not
+    // build a progressive charge after the third stage.
+    int progressiveState = com.riiablo.engine.server.skill.AssassinSkills.progressiveStateId(skill);
+    if (skill.prgstack && progressiveState >= 0 && hasThreeCharges(progressiveState)) return false;
+    return true;
+  }
+
+  private boolean hasThreeCharges(int stateId) {
+    if (!mUnitStates.has(entityId)) return false;
+    com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(entityId);
+    com.riiablo.engine.server.state.UnitState state = states.stateList == null
+        ? null : states.stateList.getState(stateId);
+    return state != null && com.riiablo.engine.server.skill.AssassinSkills.progressiveCharges(state) >= 3;
   }
 
   @Override
