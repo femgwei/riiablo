@@ -877,7 +877,9 @@ public class CursorMovementSystem extends BaseSystem {
     // server correctly rejects the distant melee hit while the client has
     // already cleared movement, leaving the player standing still.
     return (skillId == SkillCodes.attack && !isRangedNormalAttack(skillId))
-        || skillId == SkillId.POISON_DAGGER || isAmazonMeleeSkill(skillId);
+        || skillId == SkillId.POISON_DAGGER
+        || isAmazonMeleeSkill(skillId)
+        || isPaladinMeleeSkill(skillId);
   }
 
   static boolean isAmazonMeleeSkill(int skillId) {
@@ -887,6 +889,16 @@ public class CursorMovementSystem extends BaseSystem {
         || skillId == SkillId.CHARGED_STRIKE
         || skillId == SkillId.FEND
         || skillId == SkillId.LIGHTNING_STRIKE;
+  }
+
+  /** Paladin skills whose server callback is a point-blank weapon hit. */
+  static boolean isPaladinMeleeSkill(int skillId) {
+    return skillId == SkillId.SACRIFICE
+        || skillId == SkillId.SMITE
+        || skillId == SkillId.ZEAL
+        || skillId == SkillId.CHARGE
+        || skillId == SkillId.VENGEANCE
+        || skillId == SkillId.CONVERSION;
   }
 
   private void traceAttackRange(int src, int targetId, int skillId, float distance,
