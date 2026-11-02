@@ -43,6 +43,12 @@ public final class ShadowWarrior extends GenericMonster {
     // build a progressive charge after the third stage.
     int progressiveState = com.riiablo.engine.server.skill.AssassinSkills.progressiveStateId(skill);
     if (skill.prgstack && progressiveState >= 0 && hasThreeCharges(progressiveState)) return false;
+    if (mAttributesWrapper.has(entityId) && mAttributesWrapper.get(entityId).attrs != null) {
+      int level = Math.max(1, resolveMonsterSkillLevel(0));
+      float cost = com.riiablo.engine.server.skill.NativeSkillResolver.manaCost(skill, level);
+      com.riiablo.attributes.StatRef mana = mAttributesWrapper.get(entityId).attrs.get(com.riiablo.attributes.Stat.mana);
+      if (mana != null && mana.asFixed() < cost) return false;
+    }
     return true;
   }
 
