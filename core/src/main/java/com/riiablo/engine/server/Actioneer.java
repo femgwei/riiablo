@@ -1281,6 +1281,13 @@ public class Actioneer extends PassiveSystem {
       case 13: // SKILLS_SrvSt13_ThunderStorm: Param1/Param2 are owned by the aura path
         log.debug("[SORCERESS_THUNDER_STORM] phase=start entity={} target={}", entityId, targetId);
         break;
+      case 15: // Raise Skeleton/Mage: ServerSkillSystem owns corpse validation and spawn.
+      case 17: // Poison Explosion/Corpse Explosion: server callback owns reservation.
+      case 18: // Attract: native start callback is a successful no-op.
+      case 19: // Bone Prison: ServerSkillSystem owns target and town validation.
+      case 20: // Iron Golem: ServerSkillSystem owns item validation.
+      case 21: // Revive: ServerSkillSystem owns corpse validation.
+        break;
       case 16: { // SKILLS_SrvSt16_PoisonDagger
         preparePoisonDagger(entityId, targetId);
         break;

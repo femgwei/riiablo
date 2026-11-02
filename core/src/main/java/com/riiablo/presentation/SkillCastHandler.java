@@ -99,6 +99,13 @@ public class SkillCastHandler extends PassiveSystem {
       case 6: // left hand swing
       case 12: // Telekinesis / Dragon Flight target validation is server-authoritative
         break;
+      case 15: // Raise Skeleton/Mage is created by the authoritative server path.
+      case 17: // Corpse skills reserve and consume corpses server-side.
+      case 18: // Native Attract start callback is a successful no-op.
+      case 19: // Bone Prison validation is server-authoritative.
+      case 20: // Iron Golem validation is server-authoritative.
+      case 21: // Revive validation is server-authoritative.
+        break;
       case 11: // Arctic Blast channel setup is driven by the server missile.
         break;
       case 65: // Throw skill (skillId=2) - same as case 3
