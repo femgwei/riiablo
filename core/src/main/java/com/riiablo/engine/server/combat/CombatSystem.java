@@ -1278,6 +1278,21 @@ public class CombatSystem {
       int physicalConversionPercent, int physicalConversionType,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving, StateList.WeaponMasteryBonus mastery, NativeCombatContext context) {
+    return calculatePrecomputedMeleeAttackWithContext(attacker, defender, attackerPlayer, defenderPlayer,
+        attackMinDamage, attackMaxDamage, attackRating, physicalConversionPercent,
+        physicalConversionType, attackerStates, defenderStates, defenderMoving, mastery, false, context);
+  }
+
+  /** Native skill attacks such as Paladin Smite can explicitly bypass the
+   * normal attack-rating roll while retaining the precomputed weapon damage. */
+  public CombatResult calculatePrecomputedMeleeAttackWithContext(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int attackMinDamage, int attackMaxDamage, int attackRating,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      boolean alwaysHit, NativeCombatContext context) {
     CombatSnapshotFactory.Request request = new CombatSnapshotFactory.Request(
         attacker, defender, attackerPlayer, defenderPlayer, context);
     request.attackerStates = attackerStates;
@@ -1287,6 +1302,7 @@ public class CombatSystem {
     request.profile(NativeSkillAttackProfile.precomputed(
         attackMinDamage, attackMaxDamage, attackRating, physicalConversionPercent,
         physicalConversionType));
+    request.alwaysHit = alwaysHit;
     return resolveSnapshot(request);
   }
 

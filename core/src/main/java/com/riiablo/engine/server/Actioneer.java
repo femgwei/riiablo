@@ -6263,8 +6263,8 @@ public class Actioneer extends PassiveSystem {
     max = (int) ((long) max * (100L + smiteBonus) / 100L);
     CombatSystem.CombatResult combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
         attacker, defender, true, isPlayerEntity(targetId), min, max,
-        statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),
-        isEntityMoving(targetId), nativeDifficultyContext());
+        statInt(attacker, Stat.tohit), 0, 0, stateList(entityId), stateList(targetId),
+        isEntityMoving(targetId), null, true, nativeDifficultyContext());
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       log.info("[PALADIN_SMITE] phase=result source={} target={} result={} chance={}",
