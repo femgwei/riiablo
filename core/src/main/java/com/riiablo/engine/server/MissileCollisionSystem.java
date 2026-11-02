@@ -2311,6 +2311,14 @@ public class MissileCollisionSystem extends IteratingSystem {
       return;
     }
 
+    // The native maker callback is cadence-driven (Vel=12 in vanilla), not
+    // one segment on every simulation tick.  Keep the maker alive and emit
+    // at the same three-frame cadence used by the client callback; otherwise
+    // Firewall becomes a solid wall of overlapping damage missiles.
+    int interval = Math.max(1, maker.missile.Vel / 4);
+    if (maker.nativeFrame < maker.fireWallNextFrame) return;
+    maker.fireWallNextFrame = maker.nativeFrame + interval;
+
     Vector2 origin = new Vector2(position.position);
     int owner = maker.damageOwnerId >= 0 ? maker.damageOwnerId : maker.ownerId;
     int level = Math.max(1, maker.damageLevel);

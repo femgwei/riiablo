@@ -107,6 +107,8 @@ public class Missile extends PooledComponent {
 
   /** Native SrvDo06 control missile; it emits SubMissile1 while moving. */
   public boolean fireWallMaker;
+  /** Next native CltDo6/SrvDo06 ground-fire segment emission frame. */
+  public int fireWallNextFrame;
   public int fireWallSegmentsCreated;
   /** Native SrvDo12 emits only after an integer-tile movement on the prior step. */
   public boolean diabWallMaker;
@@ -334,6 +336,7 @@ public class Missile extends PooledComponent {
     elementalDamageRate = 0;
     elementalAttackerPlayer = false;
     fireWallMaker = false;
+    fireWallNextFrame = 0;
     fireWallSegmentsCreated = 0;
     diabWallMaker = false;
     diabWallMoved = false;
