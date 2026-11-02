@@ -482,6 +482,19 @@ public class Pathfinder extends IteratingSystem {
     return findNativePath(src, targetId, budget, clockwise ? 2 : -2);
   }
 
+  /**
+   * Install the native type-12 BackupTurn search used by retreating monster
+   * modes.  Unlike orbit/toward this is deliberately a one-shot bounded route:
+   * the native dispatcher tries -4, -2 and (only when needed) +2, then leaves
+   * the resulting points for the normal movement consumer.
+   */
+  public boolean findNativeBackupTurn(int src, int targetId, int budget) {
+    if (!mPosition.has(targetId)) return false;
+    Boolean nativeResult = NativePathRuntime.request(world, src, map, dynamicCollision,
+        mPosition.get(targetId).position, targetId, 12, budget, -4);
+    return nativeResult != null && nativeResult;
+  }
+
   public boolean findNativePath(int src, int targetId, int budget, int directionOffset) {
     boolean accepted = findNativePathRequest(src, targetId, budget, directionOffset);
     if (directionOffset == 0) {
