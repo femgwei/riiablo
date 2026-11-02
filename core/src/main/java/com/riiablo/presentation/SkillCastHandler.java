@@ -272,6 +272,16 @@ public class SkillCastHandler extends PassiveSystem {
         && (event.srvdofunc == 12 || skill.srvdofunc == 12);
     boolean localStreamServer = localServer
         && (event.srvdofunc == 19 || skill.srvdofunc == 19);
+    // Meteor/Blizzard use SrvDo28 to create a resident centre controller.
+    // Their CltDo28 callback is only the retail client-side packet hook; in a
+    // local server world the controller already owns the delayed visual and
+    // the impact clock. Creating cltmissilea here adds a second frozen centre
+    // sprite at the target (and makes the falling children appear duplicated).
+    boolean localDelayedAreaServer = localServer
+        && (event.srvdofunc == 28 || skill.srvdofunc == 28)
+        && (skill.Id == SkillId.METEOR || skill.Id == SkillId.BLIZZARD
+            || "Meteor".equalsIgnoreCase(skill.skill)
+            || "Blizzard".equalsIgnoreCase(skill.skill));
     boolean localDoubleThrowServer = localServer
         && (event.srvdofunc == 74 || skill.srvdofunc == 74);
     // Lightning Strike's shipped cltDoFunc is shared with Nova/Frost Nova in
@@ -288,7 +298,8 @@ public class SkillCastHandler extends PassiveSystem {
     // complete authoritative missile(s) in the local server.  Their client
     // callbacks (22 and 27) are only packet-side presentation hooks; running
     // them here would add an unowned duplicate (or a second nova ring).
-    if (localServer && (event.srvdofunc == 22 || skill.srvdofunc == 22
+    if (localDelayedAreaServer
+        || localServer && (event.srvdofunc == 22 || skill.srvdofunc == 22
         || event.srvdofunc == 26 || skill.srvdofunc == 26
         || event.skillId == SkillId.CHAIN_LIGHTNING)) {
       log.info("[SKILL_PRESENTATION] phase=reuse_server_missile entity={} skill={} srvDoFunc={}",

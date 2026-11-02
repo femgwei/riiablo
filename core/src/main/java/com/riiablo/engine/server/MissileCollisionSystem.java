@@ -2311,13 +2311,13 @@ public class MissileCollisionSystem extends IteratingSystem {
       return;
     }
 
-    // The native maker callback is cadence-driven (Vel=12 in vanilla), not
-    // one segment on every simulation tick.  Keep the maker alive and emit
-    // at the same three-frame cadence used by the client callback; otherwise
-    // Firewall becomes a solid wall of overlapping damage missiles.
-    int interval = Math.max(1, maker.missile.Vel / 4);
-    if (maker.nativeFrame < maker.fireWallNextFrame) return;
-    maker.fireWallNextFrame = maker.nativeFrame + interval;
+    // MISSMODE_SrvDo06 is invoked before the path step and lays one field at
+    // each callback position.  Vel is the maker's path speed, not a callback
+    // interval; deriving a frame cadence from it skips native wall cells and
+    // makes the wall visibly shorter (and breaks the 1.10f pre-step layout).
+    // Keep the field for checkpoint compatibility, but do not use it as a
+    // second clock.
+    maker.fireWallNextFrame = maker.nativeFrame + 1;
 
     Vector2 origin = new Vector2(position.position);
     int owner = maker.damageOwnerId >= 0 ? maker.damageOwnerId : maker.ownerId;
