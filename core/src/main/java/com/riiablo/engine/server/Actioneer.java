@@ -2809,6 +2809,14 @@ public class Actioneer extends PassiveSystem {
       case 119: // Druid summon is resolved by ServerSkillSystem
       case 130: // Druid Vine Attack missile is resolved by ServerSkillSystem
       case 136: // DeathMaul target-position missile is resolved by ServerSkillSystem
+      case 56:  // Golem creation is resolved by ServerSkillSystem.
+      case 57:  // Iron Golem creation is resolved by ServerSkillSystem.
+      case 58:  // Revive is resolved by ServerSkillSystem.
+      case 59:  // Necromancer curse state is resolved by ServerSkillSystem.
+      case 60:  // Bone Wall creation is resolved by ServerSkillSystem.
+      case 61:  // Necromancer curse state is resolved by ServerSkillSystem.
+      case 62:  // Bone Prison creation is resolved by ServerSkillSystem.
+      case 63:  // Poison Explosion is resolved by ServerSkillSystem.
         break;
       case 97: { // native monster Resurrect
         boolean restored = targetId != Engine.INVALID_ENTITY
