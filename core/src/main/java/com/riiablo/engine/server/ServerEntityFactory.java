@@ -1569,7 +1569,12 @@ public class ServerEntityFactory extends EntityFactory {
           ownerMode, Math.max(1, damageLevel), map == null ? 0 : map.getDifficulty(),
           ownerId >= 0 && mUnitStates.has(ownerId) ? mUnitStates.get(ownerId).stateList : null,
           // Weapon-owned creation is initialized explicitly below.
-          ownerId < 0 || !world.getMapper(Mercenary.class).has(ownerId));
+          // Native monster missiles (Hydra included) use Missiles.txt damage
+          // even when their Skills.txt row is only a cast selector.  The old
+          // player/mercenary predicate passed false for all monster owners,
+          // causing HydraMissile to be treated as a skill-owned visual-only
+          // projectile.
+          ownerMonster != null || ownerId < 0 || !world.getMapper(Mercenary.class).has(ownerId));
 
       int dispatchSkill = ownerId >= 0 && mCasting.has(ownerId)
           ? mCasting.get(ownerId).skillId : com.riiablo.skill.SkillCodes.attack;
