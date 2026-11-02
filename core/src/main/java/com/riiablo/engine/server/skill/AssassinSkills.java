@@ -735,6 +735,7 @@ public final class AssassinSkills {
    * @return 火焰伤害
    */
   public static int calculateFireBlastDamage(int skillLevel) {
+    skillLevel = Math.max(1, skillLevel);
     // 基础 3-6，每级 +3-4
     int minDamage = 3 + (skillLevel - 1) * 3;
     int maxDamage = 6 + (skillLevel - 1) * 4;
@@ -748,6 +749,7 @@ public final class AssassinSkills {
    * @return 闪电伤害
    */
   public static int calculateShockWebDamage(int skillLevel) {
+    skillLevel = Math.max(1, skillLevel);
     // 基础 6-10，每级 +4-5
     int minDamage = 6 + (skillLevel - 1) * 4;
     int maxDamage = 10 + (skillLevel - 1) * 5;
@@ -761,6 +763,7 @@ public final class AssassinSkills {
    * @return 物理伤害
    */
   public static int calculateBladeSentinelDamage(int skillLevel) {
+    skillLevel = Math.max(1, skillLevel);
     // 基础 6-10，每级 +3-4
     int minDamage = 6 + (skillLevel - 1) * 3;
     int maxDamage = 10 + (skillLevel - 1) * 4;
@@ -774,6 +777,7 @@ public final class AssassinSkills {
    * @return 闪电伤害
    */
   public static int calculateChargedBoltSentryDamage(int skillLevel) {
+    skillLevel = Math.max(1, skillLevel);
     // 基础 10-20，每级 +5-8
     int minDamage = 10 + (skillLevel - 1) * 5;
     int maxDamage = 20 + (skillLevel - 1) * 8;
@@ -787,6 +791,7 @@ public final class AssassinSkills {
    * @return 火焰伤害
    */
   public static int calculateWakeOfFireDamage(int skillLevel) {
+    skillLevel = Math.max(1, skillLevel);
     // 基础 12-22，每级 +8-10
     int minDamage = 12 + (skillLevel - 1) * 8;
     int maxDamage = 22 + (skillLevel - 1) * 10;
@@ -800,6 +805,7 @@ public final class AssassinSkills {
    * @return 伤害百分比（武器伤害的）
    */
   public static int getBladeFuryDamagePercent(int skillLevel) {
+    skillLevel = Math.max(1, skillLevel);
     // 基础 75%，每级 +6%
     return 75 + (skillLevel - 1) * 6;
   }
@@ -811,6 +817,7 @@ public final class AssassinSkills {
    * @return 闪电伤害
    */
   public static int calculateLightningSentryDamage(int skillLevel) {
+    skillLevel = Math.max(1, skillLevel);
     // 基础 10-30，每级 +5-12
     int minDamage = 10 + (skillLevel - 1) * 5;
     int maxDamage = 30 + (skillLevel - 1) * 12;
@@ -824,6 +831,7 @@ public final class AssassinSkills {
    * @return 火焰伤害
    */
   public static int calculateWakeOfInfernoDamage(int skillLevel) {
+    skillLevel = Math.max(1, skillLevel);
     // 基础 40-70，每级 +15-20
     int minDamage = 40 + (skillLevel - 1) * 15;
     int maxDamage = 70 + (skillLevel - 1) * 20;
@@ -837,6 +845,7 @@ public final class AssassinSkills {
    * @return 尸体爆炸伤害百分比
    */
   public static int getDeathSentryCorpseExplosionPercent(int skillLevel) {
+    skillLevel = Math.max(1, skillLevel);
     // 40-80% 尸体生命
     return 40 + (skillLevel - 1) * 4;
   }
