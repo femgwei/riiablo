@@ -677,7 +677,7 @@ public abstract class AI implements Interactable.Interactor {
   protected boolean useMonsterSkill(
       int skillIndex, int targetId, Vector2 targetVec, int sequenceMode) {
     if (monster == null || monster.monstats == null) return false;
-    String skillName = monsterSkillName(monster.monstats, skillIndex);
+    String skillName = resolveMonsterSkillName(skillIndex);
     if (skillName == null || skillName.isEmpty()) return false;
     Skills.Entry skill = files().skills.get(skillName);
     if (skill == null) {
@@ -709,9 +709,19 @@ public abstract class AI implements Interactable.Interactor {
     log.info("[MONSTER_SKILL] phase=cast entity={} monster={} slot={} skillId={} skill={} "
             + "level={} mode={} configuredMode={} sequenceOverride={} target={}",
         entityId, monster.monstats.Id, skillIndex + 1, skill.Id, skill.skill,
-        monsterSkillLevel(monster.monstats, skillIndex), mode, configuredMode,
+        resolveMonsterSkillLevel(skillIndex), mode, configuredMode,
         sequenceMode, targetId);
     return true;
+  }
+
+  /** Allows summon AIs to resolve a dynamic skill source (e.g. Shadow Warrior). */
+  protected String resolveMonsterSkillName(int index) {
+    return monsterSkillName(monster.monstats, index);
+  }
+
+  /** Dynamic counterpart to the MonStats skill level lookup. */
+  protected int resolveMonsterSkillLevel(int index) {
+    return monsterSkillLevel(monster.monstats, index);
   }
 
   /** Native fixed-ID skills (e.g. Baal Nova) need not occupy a MonStats slot. */

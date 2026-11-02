@@ -158,7 +158,7 @@ public class GenericMonster extends AI {
    * a target/state-specific implementation. Projectile skills, however, can
    * use the same Actioneer -> ServerSkillSystem chain as specialized AIs.
    */
-  private int resolveProjectileSkillSlot() {
+  protected int resolveProjectileSkillSlot() {
     if (monster == null || monster.monstats == null) return -1;
     String[] names = {
         monster.monstats.Skill1, monster.monstats.Skill2,
@@ -200,7 +200,7 @@ public class GenericMonster extends AI {
     return range > 0f ? Math.max(2f, range - 2f) : 12f;
   }
 
-  private String monsterSkillName(int index) {
+  protected String monsterSkillName(int index) {
     switch (index) {
       case 0: return monster.monstats.Skill1;
       case 1: return monster.monstats.Skill2;
