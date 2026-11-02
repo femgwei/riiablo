@@ -116,6 +116,14 @@ public class MissileLoader extends IteratingSystem {
       animation.setSubLoop(entry.SubStart, entry.SubStop);
     }
     int initialFrame = entry.RandStart;
+    // D2Client's ground-fire maker allocates each segment with an independent
+    // client seed.  Starting every Firewall/Blaze segment at frame zero makes
+    // the wall march in lockstep; use the presentation seed only for the
+    // visual phase, never the authoritative damage RNG.
+    if (isGroundFire(entry) && animation.getNumFramesPerDir() > 1) {
+      initialFrame += MissileImpactPresentationSystem.nextClientRandom(missile,
+          animation.getNumFramesPerDir());
+    }
     if (animation.getNumFramesPerDir() > 0) {
       animation.setFrame(isPoisonSmokePuff(entry)
           ? poisonSmokeFrame(missile, animation.getNumFramesPerDir())
