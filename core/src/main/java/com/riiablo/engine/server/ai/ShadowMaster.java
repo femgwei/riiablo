@@ -3,6 +3,7 @@ package com.riiablo.engine.server.ai;
 /** Assassin Shadow Master AI entry point. */
 public final class ShadowMaster extends GenericMonster {
   private int selectedSlot = -1;
+  private int selectedSkillId = -1;
   public ShadowMaster(int entityId) {
     super(entityId, "ShadowMaster");
   }
@@ -30,6 +31,88 @@ public final class ShadowMaster extends GenericMonster {
     for (int i = 0; i < count; i++) if (scores[i] == best) candidates[bestCount++] = candidates[i];
     selectedSlot = candidates[aiRandom(bestCount)];
     return selectedSlot;
+  }
+
+  @Override
+  protected boolean isValidAiTarget(int targetId) {
+    if (!mSummonedPet.has(entityId) || !mPosition.has(targetId)) return true;
+    com.riiablo.engine.server.component.SummonedPet pet = mSummonedPet.get(entityId);
+    if (pet == null || pet.ownerId < 0 || !mPosition.has(pet.ownerId)) return true;
+    // D2MOO uses a 144-square boss leash for the Master.  Once outside it,
+    // the normal GenericMonster loop follows the owner instead of attacking.
+    return mPosition.get(entityId).position.dst2(mPosition.get(pet.ownerId).position) <= 144f;
+  }
+
+  @Override
+  protected int resolveProjectileSkillSlot(int targetId) {
+    if (monster == null || monster.monstats == null) return -1;
+    int bestScore = Integer.MIN_VALUE;
+    int[] best = new int[8];
+    int count = 0;
+    int slot = 0;
+    for (com.riiablo.codec.excel.Skills.Entry skill : files().skills) {
+      if (!isMasterSkill(skill) || !isTargetCompatible(skill, targetId)) continue;
+      int score = masterSkillScore(skill, targetId);
+      if (score > bestScore) { bestScore = score; count = 0; }
+      if (score == bestScore && count < best.length) best[count++] = skill.Id;
+      slot++;
+    }
+    if (count == 0) return resolveProjectileSkillSlot();
+    selectedSkillId = best[aiRandom(count)];
+    selectedSlot = 0;
+    return 0;
+  }
+
+  @Override
+  protected String resolveMonsterSkillName(int index) {
+    if (index == 0 && selectedSkillId >= 0) {
+      com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(selectedSkillId);
+      if (skill != null) return skill.skill;
+    }
+    return super.resolveMonsterSkillName(index);
+  }
+
+  @Override
+  protected int resolveMonsterSkillLevel(int index) {
+    if (index == 0 && selectedSkillId >= 0) {
+      int summonLevel = mSummonedPet.has(entityId) ? mSummonedPet.get(entityId).skillLevel : 1;
+      int ownerLevel = 0;
+      if (mSummonedPet.has(entityId) && mPlayer.has(mSummonedPet.get(entityId).ownerId)
+          && mPlayer.get(mSummonedPet.get(entityId).ownerId).data != null) {
+        ownerLevel = mPlayer.get(mSummonedPet.get(entityId).ownerId).data.getSkill(selectedSkillId);
+      }
+      return Math.max(1, Math.min(24, summonLevel / 2 + ownerLevel / 2));
+    }
+    return super.resolveMonsterSkillLevel(index);
+  }
+
+  private boolean isTargetCompatible(com.riiablo.codec.excel.Skills.Entry skill, int targetId) {
+    if (skill == null || targetId < 0 || !mAttributesWrapper.has(targetId)) return true;
+    // Summon skills must not re-summon the same class as the current target.
+    if (skill.summon != null && !skill.summon.isEmpty() && mMonster.has(targetId)
+        && mMonster.get(targetId).monstats != null
+        && skill.summon.equalsIgnoreCase(mMonster.get(targetId).monstats.Id)) return false;
+    return true;
+  }
+
+  private int masterSkillScore(com.riiablo.codec.excel.Skills.Entry skill, int targetId) {
+    int score = masterSkillScore(skill);
+    if (mAttributesWrapper.has(targetId) && mAttributesWrapper.get(targetId).attrs != null) {
+      short resist = resistanceStat(skill, targetId);
+      score += Math.max(-20, Math.min(20, -resist / 5));
+    }
+    return score;
+  }
+
+  private short resistanceStat(com.riiablo.codec.excel.Skills.Entry skill, int targetId) {
+    String type = skill.EType == null ? "" : skill.EType.toLowerCase(java.util.Locale.ROOT);
+    short stat = com.riiablo.attributes.Stat.damageresist;
+    if (type.contains("fire")) stat = com.riiablo.attributes.Stat.fireresist;
+    else if (type.contains("ltng") || type.contains("light")) stat = com.riiablo.attributes.Stat.lightresist;
+    else if (type.contains("cold") || type.contains("freeze")) stat = com.riiablo.attributes.Stat.coldresist;
+    else if (type.contains("pois")) stat = com.riiablo.attributes.Stat.poisonresist;
+    else if (type.contains("magic")) stat = com.riiablo.attributes.Stat.magicresist;
+    return (short) mAttributesWrapper.get(targetId).attrs.getValue(stat, 0);
   }
 
   private int masterSkillScore(com.riiablo.codec.excel.Skills.Entry skill) {

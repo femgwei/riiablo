@@ -79,7 +79,7 @@ public class GenericMonster extends AI {
 
     float[] outDistance = { Float.MAX_VALUE };
     int targetId = findNearestLiveTarget(outDistance);
-    if (targetId == Engine.INVALID_ENTITY) {
+    if (targetId == Engine.INVALID_ENTITY || !isValidAiTarget(targetId)) {
       state = "IDLE";
       if (followSummonOwner(6f)) state = "FOLLOW";
       else stopMovement();
@@ -88,7 +88,7 @@ public class GenericMonster extends AI {
 
     Vector2 target = mPosition.get(targetId).position;
     float distance = outDistance[0];
-    int skillSlot = resolveProjectileSkillSlot();
+    int skillSlot = resolveProjectileSkillSlot(targetId);
     // Navi's native row is a stationary NPC, but its AI is still allowed to
     // defend the Blood Moor border.  Do not return before the melee branch
     // can fire when an evil monster is already within attack distance.
@@ -181,8 +181,18 @@ public class GenericMonster extends AI {
     return -1;
   }
 
-  private float resolveSkillRange(int skillSlot) {
-    String name = monsterSkillName(skillSlot);
+  /** Target-aware skill hook used by summon AIs with native target scoring. */
+  protected int resolveProjectileSkillSlot(int targetId) {
+    return resolveProjectileSkillSlot();
+  }
+
+  /** Native AI target leash/type gate. */
+  protected boolean isValidAiTarget(int targetId) {
+    return true;
+  }
+
+  protected float resolveSkillRange(int skillSlot) {
+    String name = resolveMonsterSkillName(skillSlot);
     if (name == null || name.isEmpty()) return 0f;
     com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(name);
     if (skill == null) return 0f;
