@@ -40,7 +40,7 @@ public final class ShadowMaster extends GenericMonster {
     if (pet == null || pet.ownerId < 0 || !mPosition.has(pet.ownerId)) return true;
     // D2MOO uses a 144-square boss leash for the Master.  Once outside it,
     // the normal GenericMonster loop follows the owner instead of attacking.
-    return mPosition.get(entityId).position.dst2(mPosition.get(pet.ownerId).position) <= 144f;
+    return mPosition.get(entityId).position.dst2(mPosition.get(pet.ownerId).position) <= 144f * 144f;
   }
 
   @Override
