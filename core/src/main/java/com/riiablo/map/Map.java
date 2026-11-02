@@ -2978,9 +2978,20 @@ public class Map implements Disposable {
     private int populationSeed;
     private int populationSeedHigh = 666;
     private com.d2moo.common.drlg.D2DrlgRoom runtimeSeedSource;
+    private NativeMonsterPopulationRegion[] populationRegions;
+
+    NativeMonsterPopulationRegion[] populationRegions() {
+      if (populationRegions == null) {
+        // Compatibility/synthetic rooms have no native coordinate lists.
+        populationRegions = new NativeMonsterPopulationRegion[] {
+            NativeMonsterPopulationRegion.wholeRoom(this)};
+      }
+      return populationRegions;
+    }
 
     public void setNativePopulationMetadata(com.d2moo.common.drlg.D2DrlgRoom room) {
       runtimeSeedSource = room;
+      populationRegions = NativeMonsterPopulationRegion.capture(room, x, y);
       // Local room IDs restart at zero in each Zone. Preserve the level as
       // well so native pRoomsNear links survive cross-level seam projection.
       com.d2moo.common.drlg.D2DrlgRoom[] near = room.getPpRoomsNear();

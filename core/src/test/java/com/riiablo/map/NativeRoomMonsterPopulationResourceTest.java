@@ -8,6 +8,53 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativeRoomMonsterPopulationResourceTest extends RiiabloTest {
+  @Test void nativeRegionsConstrainLeaderAndNormalFollowers() {
+    Map.Zone zone = zone();
+    Map.RoomEx room = zone.getRoomsEx().first();
+    room.setNativePopulationMetadata(NativeMonsterPopulationRegionTest.splitRoom());
+    MonStats.Entry template = Riiablo.files.monstats.get("skeleton1");
+    MonStats.Entry monster = new MonStats.Entry();
+    monster.Id = template.Id; monster.MonStatsEx = template.MonStatsEx; monster.hcIdx = template.hcIdx;
+    monster.PartyMin = monster.PartyMax = 1; monster.minion1 = "skeleton1";
+    // Leader (14,14); reject follower (15,15), which is a different index
+    // inside the same bounding box, then accept (13,14).
+    assertEquals(4, NativeRoomMonsterPopulation.addGroup(zone, room, monster, 2, 4,
+        rolls(3, 3, 4, 4, 2, 3, 0, 3, 2, 0, 2, 3)));
+    assertEquals(14, room.getPendingMonsterSpawns().get(0).x);
+    assertEquals(13, room.getPendingMonsterSpawns().get(1).x);
+    for (Map.MonsterSpawn spawn : room.getPendingMonsterSpawns()) {
+      assertTrue(room.populationRegions()[0].contains(Math.round(spawn.x), Math.round(spawn.y)));
+      assertEquals(4, spawn.packId);
+    }
+  }
+
+  @Test void attachedPartyMinionsUseNativeNearbySearchWithoutCoordinateList() {
+    Map.Zone zone = zone();
+    Map.RoomEx room = zone.getRoomsEx().first();
+    room.setNativePopulationMetadata(NativeMonsterPopulationRegionTest.splitRoom());
+    MonStats.Entry template = Riiablo.files.monstats.get("skeleton1");
+    MonStats.Entry monster = new MonStats.Entry();
+    monster.Id = template.Id; monster.MonStatsEx = template.MonStatsEx; monster.hcIdx = template.hcIdx;
+    monster.PartyMin = monster.PartyMax = 1; monster.minion1 = "skeleton1";
+    assertEquals(2, NativeRoomMonsterPopulation.addGroup(zone, room, monster, 1, 4,
+        rolls(3, 3, 0, 4, 4)));
+    Map.MonsterSpawn minion = room.getPendingMonsterSpawns().get(1);
+    assertTrue(minion.minion);
+    assertEquals(15, minion.x); assertEquals(15, minion.y);
+    assertFalse(room.populationRegions()[0].contains(15, 15));
+  }
+
+  @Test void noNativeListsRejectNormalPopulationButKeepPresetGroups() {
+    Map.Zone zone = zone();
+    Map.RoomEx room = zone.getRoomsEx().first();
+    com.d2moo.common.drlg.D2DrlgRoom nativeRoom = NativeMonsterPopulationRegionTest.splitRoom();
+    nativeRoom.setLogicalRoomInfo(null);
+    room.setNativePopulationMetadata(nativeRoom);
+    MonStats.Entry monster = Riiablo.files.monstats.get("skeleton1");
+    assertEquals(0, NativeRoomMonsterPopulation.addGroup(zone, room, monster, 1, 1, new Random(1)));
+    assertEquals(1, NativeRoomMonsterPopulation.addGroupAt(zone, room, monster, 1, 2, new Random(1), 10, 10));
+  }
+
   @Test void nativeActTwoThroughFiveBridgesRetainWarpRoomCentersAfterDrlgRelease() throws Exception {
     java.lang.reflect.Field metadata = Map.Zone.class.getDeclaredField("nativeMonsterSpawnExclusion");
     metadata.setAccessible(true);
@@ -23,6 +70,11 @@ class NativeRoomMonsterPopulationResourceTest extends RiiabloTest {
         if (zone.isTown() || zone.nativeTileGrid() == null || !zone.hasNativeRoomTopology()) continue;
         nativeZones++;
         assertNotNull(metadata.get(zone), "missing metadata act=" + act + " level=" + zone.levelId());
+        if (zone.levelId() == 74) {
+          int regions = 0;
+          for (Map.RoomEx room : zone.getRoomsEx()) regions += room.populationRegions().length;
+          assertTrue(regions > 0, "Arcane lists must be captured after native tile activation");
+        }
         int originalWarpDist = zone.level.WarpDist;
         // Some original levels disable the filter (WarpDist=0). A one-cell
         // fixture still verifies that their bridge retained the native data.

@@ -62,7 +62,6 @@ public final class Act2ArcaneD2MOOLayoutBridge {
       DrlgDrlg.initLevel(level);
       if (level.getFirstRoomEx() == null || level.getLevelCoords() == null) return false;
 
-      projectRooms(level, zone);
       D2MooTileApplier applier = new D2MooTileApplier();
       TileGrid grid = new TileGrid(level.getLevelCoords().getNWidth(),
           level.getLevelCoords().getNHeight());
@@ -72,6 +71,8 @@ public final class Act2ArcaneD2MOOLayoutBridge {
       int dt1Mask = com.d2moo.common.drlg.DrlgExport.collectLevelDt1Mask(
           drlg, LEVEL_ARCANE);
       if (exportedFloors > 0) zone.setNativeTileGrid(grid, dt1Mask);
+      // Coordinate lists are created while exporting/activating native tiles.
+      projectRooms(level, zone);
       com.riiablo.map.NativeMonsterSpawnExclusion.capture(level, zone);
       com.badlogic.gdx.utils.Array<Map.NativeMonster> exportedMonsters =
           new com.badlogic.gdx.utils.Array<>();

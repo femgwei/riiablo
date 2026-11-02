@@ -409,9 +409,10 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
         for (Map.RoomEx room : zone.getRoomsEx()) {
           if ((room.populationFlags() & com.d2moo.common.drlg.D2DrlgRoomFlags.POPULATION_ZERO) != 0) continue;
           visitedRooms++;
-          // D2GAME_PopulateRoom samples one population cell per 3x3 subtiles.
-          for (int y = room.y + 1; y < room.y + room.height - 1; y += 3) {
-            for (int x = room.x + 1; x < room.x + room.width - 1; x += 3) {
+          // Native density budgets and pack searches belong to each eligible
+          // coordinate list, not to the entire RoomEx rectangle.
+          for (NativeMonsterPopulationRegion region : room.populationRegions()) {
+            for (int attempt = region.densityAttempts(); attempt > 0; attempt--) {
               if (!NativeMonsterRegion.densityRoll(NativeMonsterRegion.density(zone.level, zone.diff),
                   rng.nextInt(100000))) continue;
               MonStats.Entry monster = replacePlaceSpawn(zone, monsters[rng.nextInt(monsters.length)], 20, rng);
@@ -419,7 +420,7 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
                   uniqueCount, bossMin, bossMax, visitedRooms, populationRooms, rng)) {
                 MonStats.Entry boss = chooseElite(zone, rng);
                 if (boss != null) uniqueCount += NativeRoomMonsterPopulation.addElite(
-                    zone, room, boss, packId++, rng, elites);
+                    zone, room, boss, packId++, rng, elites, region);
                 continue;
               }
               if (monster == null || !NativeMonsterRegion.sparsePopulationRoll(
@@ -427,7 +428,7 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
               int min = MapDataPort.minGroup(monster), max = MapDataPort.maxGroup(monster);
               if (NativeMonsterRegion.isSingleMemberNormalGroup(monster.BaseId, monster.Id)) min = max = 1;
               int count = min == max ? max : min + rng.nextInt(max - min + 1);
-              NativeRoomMonsterPopulation.addGroup(zone, room, monster, count, packId++, rng);
+              NativeRoomMonsterPopulation.addGroup(zone, room, monster, count, packId++, rng, region);
             }
           }
         }

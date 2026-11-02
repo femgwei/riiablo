@@ -10,6 +10,25 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativeMonsterElitePopulationResourceTest extends RiiabloTest {
+  @Test void nativeRegionConstrainsBothChampionPeersAndUniqueServants() {
+    NativeMonsterEliteRules rules = NativeMonsterEliteRules.load(Riiablo.mpqs);
+    for (boolean champion : new boolean[] {true, false}) {
+      Map.Zone zone = emptyZone();
+      Map.RoomEx room = zone.getRoomsEx().first();
+      room.setNativePopulationMetadata(NativeMonsterPopulationRegionTest.splitRoom());
+      Random random = new Random(3) {
+        @Override public int nextInt(int bound) {
+          return bound == 100 ? (champion ? 19 : 20) : super.nextInt(bound);
+        }
+      };
+      assertTrue(NativeRoomMonsterPopulation.addElite(zone, room,
+          Riiablo.files.monstats.get("unraveler1"), 12, random, rules) > 0);
+      assertTrue(room.getPendingMonsterSpawns().size > 1);
+      for (Map.MonsterSpawn spawn : room.getPendingMonsterSpawns())
+        assertTrue(room.populationRegions()[0].contains(Math.round(spawn.x), Math.round(spawn.y)));
+    }
+  }
+
   @Test void originalTablesProduceChampionPeersAndUniqueServantsWithoutNormalPartyExpansion() {
     NativeMonsterEliteRules rules = NativeMonsterEliteRules.load(Riiablo.mpqs);
     boolean sawTwo = false, sawFour = false, sawThree = false, sawSix = false;
