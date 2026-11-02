@@ -82,6 +82,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     // animation clocks. A cold DCC must not pause their movement/emission/TTL.
     boolean callbackClock = visual.missile != null
         && (visual.missile.pCltDoFunc == 9 || visual.missile.pCltDoFunc == 13
+            || visual.missile.pCltDoFunc == 24
             || visual.missile.pCltDoFunc == 17 || visual.missile.pCltDoFunc == 18
             || visual.missile.pCltDoFunc == 15 || visual.missile.pCltDoFunc == 3
             || visual.missile.pCltDoFunc == 4 || MissileLoader.isPoisonSmokePuff(visual.missile));
@@ -201,6 +202,17 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     Missiles.Entry source = visual.missile;
     if (source == null) return;
     int function = source.pCltDoFunc;
+    if (function == 24) {
+      // Sorceress Inferno's CltDo24 mutates the resident flame DCC (A/B
+      // selection and animation-rate setup); it does not emit another damage
+      // missile.  MissileLoader performs the DCC selection, while this route
+      // keeps network replicas on the native callback clock.
+      if (visual.nativeLifetimeFrames <= 0) {
+        visual.nativeLifetimeFrames = Math.max(1, source.Range);
+      }
+      visual.clientFlightInitialized = true;
+      return;
+    }
     if (function == 17) {
       processCurseCenter(entityId, visual, source, delta);
       return;
@@ -535,7 +547,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   static boolean isClientFlightFunction(int function) {
     return function == 3 || function == 4 || function == 8 || function == 9
         || function == 13 || function == 49 || function == 51 || function == 15
-        || function == 17 || function == 18;
+        || function == 17 || function == 18 || function == 24;
   }
 
   /** D2Client 1.10f 0x6FB31DD0: moving head plus stationary, finite trail cells. */
