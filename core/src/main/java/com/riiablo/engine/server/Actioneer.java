@@ -1048,6 +1048,13 @@ public class Actioneer extends PassiveSystem {
           event.entityId, casting.skillId);
       return;
     }
+    // Charge's velocity bonus belongs only to the active charge attempt.  If
+    // the impact callback was skipped (for example a blocked/missed keyframe),
+    // the normal animation cleanup still has to remove it before retiring the
+    // cast; otherwise the player keeps the Charge movement speed permanently.
+    if (casting.chargeInitialized && mVelocity.has(event.entityId)) {
+      mVelocity.get(event.entityId).clearModeSpeedBonus();
+    }
     mCasting.remove(event.entityId);
     
     if (targetDead && mSequence.has(event.entityId)) {
