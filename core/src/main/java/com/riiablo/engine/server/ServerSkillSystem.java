@@ -2214,7 +2214,9 @@ public class ServerSkillSystem extends PassiveSystem {
     for (int index = 0; index < NecromancerSkills.getBonePrisonSegmentCount(); index++) {
       NecromancerSkills.getBonePrisonOffset(index, offset);
       Vector2 position = new Vector2(center.x + offset[0], center.y + offset[1]);
-      int segment = createBoneWallSegment(event.entityId, summon, skill, skillLevel,
+      MonStats.Entry variant = files().monstats.get(summon.hcIdx + (index % 4));
+      if (variant == null) variant = summon;
+      int segment = createBonePrisonSegment(event.entityId, variant, skill, skillLevel,
           duration, position, center, controller);
       if (segment == Engine.INVALID_ENTITY) continue;
       if (controller == Engine.INVALID_ENTITY) {
@@ -2284,6 +2286,20 @@ public class ServerSkillSystem extends PassiveSystem {
       if (direction.isZero(0.0001f)) direction.set(1f, 0f);
       direction.nor();
     }
+    return entity;
+  }
+
+  private int createBonePrisonSegment(int owner, MonStats.Entry summon, Skills.Entry skill,
+      int skillLevel, int duration, Vector2 position, Vector2 facing, int controller) {
+    int entity = factory.createBonePrisonSegment(
+        owner, summon, skill.Id, skillLevel, duration, position.x, position.y);
+    if (entity == Engine.INVALID_ENTITY) return entity;
+    if (mSummonedPet.has(entity)) {
+      SummonedPet pet = mSummonedPet.get(entity);
+      pet.boneWall = false;
+      pet.controllerId = controller == Engine.INVALID_ENTITY ? entity : controller;
+    }
+    applySummonSkillStats(owner, entity, skill, skillLevel, true);
     return entity;
   }
 

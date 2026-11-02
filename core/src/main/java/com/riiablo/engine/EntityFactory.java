@@ -169,6 +169,13 @@ public abstract class EntityFactory extends PassiveSystem implements com.riiablo
         Integer.MAX_VALUE, true, durationFrames, x, y);
   }
 
+  /** Creates one exact-position Necromancer Bone Prison segment. */
+  public int createBonePrisonSegment(int ownerId, MonStats.Entry summon,
+      int skillId, int skillLevel, int durationFrames, float x, float y) {
+    return createSummonedPet(ownerId, summon, "boneprison", skillId, skillLevel,
+        Integer.MAX_VALUE, true, durationFrames, x, y);
+  }
+
   /** MonsterSpawn Do104: exact placement, ordinary monster stats, no player pet. */
   public int createDiabPrisonSegment(int monsterId, int x, int y) {
     return Engine.INVALID_ENTITY;

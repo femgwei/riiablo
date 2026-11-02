@@ -951,6 +951,29 @@ public class ServerEntityFactory extends EntityFactory {
     return entityId;
   }
 
+  @Override
+  public int createBonePrisonSegment(int ownerId, MonStats.Entry summon,
+      int skillId, int skillLevel, int durationFrames, float x, float y) {
+    if (ownerId < 0 || summon == null || !mPlayer.has(ownerId) || map == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    MonStats.Entry variant = files().monstats.get(summon.hcIdx);
+    if (variant == null) variant = summon;
+    MonStats2.Entry stats2 = files().monstats2.get(variant.MonStatsEx);
+    Map.Zone zone = map.getZone(x, y);
+    int footprint = stats2 != null ? Math.max(1, stats2.SizeX) : 1;
+    if (zone == null || zone.isTown() || !isStaticFootprintFree(zone, x, y, footprint)) {
+      return Engine.INVALID_ENTITY;
+    }
+    int entityId = createMonster(variant.hcIdx, MathUtils.round(x), MathUtils.round(y));
+    if (entityId == Engine.INVALID_ENTITY) return entityId;
+    mSummonedPet.create(entityId).bindNativeTargetNode(NativeTargetNodes.get(world, entityId))
+        .set(ownerId, "boneprison", skillId, skillLevel, true, durationFrames).boneWall = false;
+    mNativeUnitFlags.get(entityId).reset().set(NativeUnitFlags.PLAYER_SUMMON);
+    if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
+    return entityId;
+  }
+
   /** Unit overlap is legal for the native wall rings; only terrain is tested here. */
   static boolean isStaticFootprintFree(Map.Zone zone, float x, float y, int unitSize) {
     if (zone == null) return false;
