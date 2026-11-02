@@ -36,6 +36,14 @@ public class MissileLoader extends IteratingSystem {
     // Its CltDo17 child pulses create the actual rendered curse-area cells.
     if (missile.missile == null || missile.missile.CelFile == null
         || missile.missile.CelFile.isEmpty()) return;
+    // Network and replay reconstruction can restore the native missile row
+    // without the transient AssetDescriptor. Recreate it before consulting
+    // AssetManager; otherwise isLoaded(null) crashes the render thread.
+    if (missile.missileDescriptor == null) {
+      missile.missileDescriptor = new com.badlogic.gdx.assets.AssetDescriptor<>(
+          com.riiablo.engine.server.component.Class.Type.MIS.PATH
+              + '\\' + missile.missile.CelFile + ".dcc", DCC.class);
+    }
     Missiles.Entry visualRow = infernoVisualRow(clientContext, missile);
     if (visualRow != missile.missile && visualRow != null) {
       String path = com.riiablo.engine.server.component.Class.Type.MIS.PATH
