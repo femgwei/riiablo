@@ -516,6 +516,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
         .get(Aspect.all(Corpse.class, Monster.class, Position.class, AttributesWrapper.class))
         .getEntities();
     Vector2 origin = mPosition.get(casterId).position;
+    boolean consumedAny = false;
     for (int i = 0; i < candidates.size(); i++) {
       int corpseId = candidates.get(i);
       if (!mCorpse.has(corpseId) || !mMonster.has(corpseId)
@@ -542,11 +543,11 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
       heal(casterId, Stat.hitpoints, hpGain);
       heal(casterId, Stat.mana, manaGain);
       corpseStates.addState(StateId.REDEEMED, 0, skillLevel, casterId).needsSync = true;
+      consumedAny = true;
       log.info("[REDEMPTION] phase=consume caster={} corpse={} chance={} roll={} hp={} mana={}",
           casterId, corpseId, chance, roll, hpGain, manaGain);
-      return true;
     }
-    return false;
+    return consumedAny;
   }
 
   private void heal(int entityId, short statId, int amount) {
