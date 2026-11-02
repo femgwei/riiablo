@@ -126,8 +126,7 @@ public class SkillCastHandler extends PassiveSystem {
         break;
       case 1: // attack
         break;
-      case 68: // shouts
-        playSound("barbarian_circle_1");
+      case 68: // shouts: vocal bank is played from Skills.txt stsoundclass
         break;
       default:
         // Server-side functions don't need client handling for most cases
@@ -153,12 +152,17 @@ public class SkillCastHandler extends PassiveSystem {
             + "stsound={} castoverlay={} srvstfunc={} cltstfunc={}",
         presentationMarker, event.entityId, event.skillId, skill.skill,
         skill.stsound, skill.castoverlay, event.srvstfunc, event.cltstfunc);
-    if (skill.stsound == null || skill.stsound.isEmpty()) {
+    String startSound = skill.stsound != null && !skill.stsound.isEmpty()
+        ? skill.stsound : skill.stsoundclass;
+    if (startSound == null || startSound.isEmpty()) {
       log.debug("{} phase=sound_skipped entity={} skill={} reason=empty_stsound",
           presentationMarker,
           event.entityId, skill.skill);
     } else {
-      playSound(skill.stsound);
+      // Barbarian warcries store their vocal cast bank in stsoundclass
+      // (e.g. barbarian_howl_1), while stsound/dosound are empty in 1.10f.
+      // D2Client resolves this class bank at the skill-start callback.
+      playSound(startSound);
     }
 
     if (skill.castoverlay != null && !skill.castoverlay.isEmpty()) {
@@ -582,7 +586,6 @@ public class SkillCastHandler extends PassiveSystem {
         break;
 
       case 68: // Shout - barbarian war cry
-        playSound("barbarian_circle_1");
         break;
 
       case 70: // Double Swing

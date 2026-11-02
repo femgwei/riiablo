@@ -8,6 +8,8 @@ import com.badlogic.gdx.files.FileHandle;
 import com.riiablo.mpq.MPQFileHandleResolver;
 import java.io.File;
 import java.util.Locale;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -56,6 +58,32 @@ class NativeBarbarianSoundProbeTest {
           + " cltstfunc=" + skill.cltstfunc + " cltdofunc=" + skill.cltdofunc);
       printSound(sounds, skill.stsound);
       printSound(sounds, skill.dosound);
+      printSound(sounds, skill.stsoundclass);
+    }
+  }
+
+  @Test
+  void nativeWarCrySoundClassesResolveToSkillBanks() {
+    Skills skills = Excel.load(Skills.class,
+        resolver.resolve("data\\global\\excel\\Skills.txt"));
+    Sounds sounds = Excel.load(Sounds.class,
+        resolver.resolve("data\\global\\excel\\Sounds.txt"));
+    Map<String, String> expected = new LinkedHashMap<>();
+    expected.put("Howl", "skill\\barbarian\\howl1.wav");
+    expected.put("Taunt", "skill\\barbarian\\taunt1.wav");
+    expected.put("Shout", "skill\\barbarian\\shout1.wav");
+    expected.put("Battle Cry", "skill\\barbarian\\battlecry1.wav");
+    expected.put("Battle Orders", "skill\\barbarian\\order1.wav");
+    expected.put("War Cry", "skill\\barbarian\\warcry1.wav");
+    expected.put("Battle Command", "skill\\barbarian\\command1.wav");
+    for (Map.Entry<String, String> item : expected.entrySet()) {
+      Skills.Entry skill = skills.get(item.getKey());
+      assertNotNull(skill, item.getKey());
+      assertNotNull(skill.stsoundclass, item.getKey() + " stsoundclass");
+      Sounds.Entry sound = sounds.get(skill.stsoundclass);
+      assertNotNull(sound, skill.stsoundclass);
+      org.junit.jupiter.api.Assertions.assertEquals(item.getValue(), sound.FileName,
+          item.getKey() + " native sound bank");
     }
   }
 
