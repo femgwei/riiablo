@@ -134,7 +134,7 @@ public class MissileLoader extends IteratingSystem {
     // Animation.setFrameDelta uses the same 8.8 fixed-point unit, so keeping
     // the table value here preserves per-missile impact/child timing instead
     // of forcing every DCC to 25 frames per second.
-    int nativeFrameDelta = nativeFrameDelta(clientContext, missile);
+    int nativeFrameDelta = nativeFrameDelta(clientContext, missile, visualRow);
     animation.setFrameDelta(Math.max(1, nativeFrameDelta));
     
     // Set direction based on Angle component if available
@@ -150,6 +150,11 @@ public class MissileLoader extends IteratingSystem {
   }
 
   static int nativeFrameDelta(ClientGameplayContext context, Missile missile) {
+    return nativeFrameDelta(context, missile, missile == null ? null : missile.missile);
+  }
+
+  static int nativeFrameDelta(ClientGameplayContext context, Missile missile,
+      Missiles.Entry visualRow) {
     if (missile.skillId == 308 && missile.missile.Id == 502) {
       if (context == null || context.files() == null || context.files().skills == null) return 256;
       int speed = com.riiablo.engine.server.skill.SkillFormula.evaluate(
@@ -161,7 +166,9 @@ public class MissileLoader extends IteratingSystem {
     if ((missile.skillId == 41 || missile.skillId == 178 || missile.skillId == 319 || missile.skillId == 317
         || missile.skillId == 193)
         && missile.nativeLifetimeFrames > 0) {
-      return (missile.missile.AnimLen << 8) / missile.nativeLifetimeFrames;
+        int animLen = visualRow != null && visualRow.AnimLen > 0
+            ? visualRow.AnimLen : missile.missile.AnimLen;
+        return (animLen << 8) / missile.nativeLifetimeFrames;
     }
     return missile.missile.animrate > 0 ? missile.missile.animrate >> 2 : 256;
   }
