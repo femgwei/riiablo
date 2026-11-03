@@ -241,6 +241,13 @@ public final class NativePathRuntime implements D2PathTick.Effects {
     D2PathRequest.State request = new D2PathRequest.State(result,target,room,
         metadata.ownerCanBeInTown(),0,metadata.sizeX,collision.nativePathPattern(id),moveMask,0,ownerSeed);
     int count = collision.computeNativePath(request,id,targetId);
+    if (ownerSeed != null) {
+      // NativeUnitRandom uses this low-word mirror to decide whether the live
+      // D2Seed is still authoritative.  IDA consumes the shared seed in place;
+      // leave the mirror synchronized or the next AI roll would rebuild it and
+      // lose the high-word continuation state.
+      world.getMapper(Monster.class).get(id).rngState = ownerSeed.getNLowSeed();
+    }
     searchRevision++;
     publishCache();
     return count;
