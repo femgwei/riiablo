@@ -2244,7 +2244,8 @@ public class Actioneer extends PassiveSystem {
           combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId), attackRating,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+              nativeDifficultyContext());
         } else if (dragonTail) {
           if (activeCasting == null || activeSkill == null) break;
           if (dragonTailCombat == null) {
@@ -2274,7 +2275,9 @@ public class Actioneer extends PassiveSystem {
           combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               kickDamage[0], kickDamage[1], attackRating,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
+              0, CombatSystem.DAMAGE_PHYSICAL,
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+              null, true, nativeDifficultyContext());
           log.info("[ASSASSIN_DRAGON_TALON] phase=kick entity={} target={} index={} remaining={} "
                   + "damageRange={}..{} attackRating={} last={}",
               entityId, targetId, activeCasting.dragonTalonSuccessfulKicks + 1,
@@ -2301,7 +2304,9 @@ public class Actioneer extends PassiveSystem {
           combat = combatSystemResolver.calculatePrecomputedMeleeAttackWithContext(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               clawDamage[0], clawDamage[1], attackRating,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId), nativeDifficultyContext());
+              0, CombatSystem.DAMAGE_PHYSICAL,
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+              null, true, nativeDifficultyContext());
           log.info("[ASSASSIN_DRAGON_CLAW] phase=strike entity={} target={} index={} hand={} "
                   + "weapon={} damageRange={}..{} attackRating={} remaining={}",
               entityId, targetId, dragonClawStrike + 1,

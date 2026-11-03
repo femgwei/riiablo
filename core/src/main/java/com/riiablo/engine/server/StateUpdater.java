@@ -1761,7 +1761,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         targetStates = targetUnitStates.stateList;
       }
       int toHitPercent = skill.ToHit + Math.max(0, level - 1) * skill.LevToHit;
-      boolean alwaysHit = (skill.ResultFlags & 1) != 0;
+      // SrvDo142 applies the aura pulse to each valid unit in range; ToHit
+      // columns do not add a second random miss roll to this pulse.
+      boolean alwaysHit = true;
       CombatSystem.CombatResult combat = combatSystemResolver.calculateBladeShieldAttackWithContext(
           source, target, isPlayerAligned(entityId), isPlayerAligned(targetId),
           skillDamage[0], skillDamage[1], skill.SrcDam, toHitPercent, alwaysHit,
