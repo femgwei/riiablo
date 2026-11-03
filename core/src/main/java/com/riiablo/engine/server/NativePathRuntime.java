@@ -229,8 +229,17 @@ public final class NativePathRuntime implements D2PathTick.Effects {
     // Continuation may call again after a failed type13 search; retain its mutations.
     observeTarget();
     if (room == null) return D2PathResult.reject(result);
+    // Type16's native IDA stream consumes the live unit seed on every advance;
+    // do not silently substitute a host RNG or a copied snapshot.  Ordinary
+    // path types retain the legacy constructor with no seed.
+    com.d2moo.common.drlg.D2Seed ownerSeed = null;
+    if (result.path.pathType == 16) {
+      Monster owner = world.getMapper(Monster.class).get(id);
+      if (owner == null || owner.nativeSeed == null) return D2PathResult.reject(result);
+      ownerSeed = owner.nativeSeed;
+    }
     D2PathRequest.State request = new D2PathRequest.State(result,target,room,
-        metadata.ownerCanBeInTown(),0,metadata.sizeX,collision.nativePathPattern(id),moveMask,0);
+        metadata.ownerCanBeInTown(),0,metadata.sizeX,collision.nativePathPattern(id),moveMask,0,ownerSeed);
     int count = collision.computeNativePath(request,id,targetId);
     searchRevision++;
     publishCache();
