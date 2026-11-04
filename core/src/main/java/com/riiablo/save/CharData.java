@@ -1052,7 +1052,7 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 //  @Override
   public void beltToCursor(int i) {
     if (DEBUG_ITEMS) Gdx.app.log(TAG, "beltToCursor");
-    itemToCursor(i);
+    itemData.pickupBelt(i);
   }
 
 //  @Override

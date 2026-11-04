@@ -1337,6 +1337,23 @@ public class ItemData implements com.riiablo.engine.server.quest.QuestInventory 
     setLocation(item, Location.CURSOR);
   }
 
+  /** Native belt-to-cursor removal compacts only the removed item's column. */
+  void pickupBelt(int i) {
+    assert cursor == INVALID_ITEM;
+    Item item = itemData.get(i);
+    if (item.location == Location.BELT) {
+      int column = item.gridX;
+      int row = item.gridY;
+      for (Item other : itemData) {
+        if (other != null && other != item && other.location == Location.BELT
+            && other.gridX == column && other.gridY > row) {
+          other.gridY--;
+        }
+      }
+    }
+    pickup(i);
+  }
+
   void storeCursor(StoreLoc storeLoc, int x, int y) {
     assert cursor != INVALID_ITEM;
     store(storeLoc, cursor, x, y);

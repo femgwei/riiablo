@@ -228,6 +228,22 @@ class CharDataBeltResizeTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void beltToCursorCompactsOnlyTheRemovedColumn() {
+    CharData character = character();
+    equipBelt(character);
+    List<Item> potions = fillBelt(character);
+
+    character.beltToCursor(character.getItems().indexOf(potions.get(1)));
+
+    assertSame(potions.get(1), character.getItems().getCursor());
+    assertEquals(0, potions.get(5).gridY);
+    assertEquals(1, potions.get(9).gridY);
+    assertEquals(2, potions.get(13).gridY);
+    assertEquals(0, potions.get(2).gridY);
+    assertEquals(16 - 1, character.getItems().getLocation(Location.BELT).size);
+  }
+
   private static CharData character() {
     return CharData.obtain().set(Riiablo.NORMAL, false, "BeltResizeHero", Riiablo.AMAZON);
   }
