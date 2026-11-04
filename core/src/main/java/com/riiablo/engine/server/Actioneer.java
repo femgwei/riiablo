@@ -6301,7 +6301,7 @@ public class Actioneer extends PassiveSystem {
     int stunFrames = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, level));
     if (stunFrames > 0) StatusEffectApplier.forWorld(world).applyStun(targetId, stunFrames);
     if (mPosition.has(entityId) && mPosition.has(targetId)) {
-      StatusEffectApplier.forWorld(world).applyKnockback(targetId,
+      StatusEffectApplier.forWorld(world).applyKnockback(entityId, targetId,
           mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
           mPosition.get(targetId).position.x, mPosition.get(targetId).position.y);
     }

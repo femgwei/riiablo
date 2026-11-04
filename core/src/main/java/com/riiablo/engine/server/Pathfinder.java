@@ -495,6 +495,14 @@ public class Pathfinder extends IteratingSystem {
     return nativeResult != null && nativeResult;
   }
 
+  /** Server knockback: the victim owns the path and the attacker supplies raw target coordinates. */
+  public boolean findNativeKnockbackServer(int victimId, int attackerId, int budget) {
+    if (!mPosition.has(victimId) || !mPosition.has(attackerId)) return false;
+    Boolean nativeResult = NativePathRuntime.request(world, victimId, map, dynamicCollision,
+        mPosition.get(attackerId).position, attackerId, 8, budget, 0);
+    return nativeResult != null && nativeResult;
+  }
+
   public boolean findNativePath(int src, int targetId, int budget, int directionOffset) {
     boolean accepted = findNativePathRequest(src, targetId, budget, directionOffset);
     if (directionOffset == 0) {

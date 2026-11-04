@@ -34,6 +34,10 @@ public class StatusEffectApplier {
     com.riiablo.engine.server.DynamicUnitCollisionSystem collision =
         world.getSystem(com.riiablo.engine.server.DynamicUnitCollisionSystem.class);
     applier.setMovementSink(collision == null ? null : collision::tryMove);
+    com.riiablo.engine.server.Pathfinder pathfinder =
+        world.getSystem(com.riiablo.engine.server.Pathfinder.class);
+    applier.setKnockbackSink(pathfinder == null ? null
+        : (attacker, target) -> pathfinder.findNativeKnockbackServer(target, attacker, 5));
     return applier;
   }
 
@@ -58,10 +62,20 @@ public class StatusEffectApplier {
     boolean tryMove(int entityId, float x, float y);
   }
 
+  @FunctionalInterface
+  public interface KnockbackSink {
+    boolean tryKnockback(int attackerEntityId, int targetEntityId);
+  }
+
   private MovementSink movementSink;
+  private KnockbackSink knockbackSink;
 
   public void setMovementSink(MovementSink movementSink) {
     this.movementSink = movementSink;
+  }
+
+  public void setKnockbackSink(KnockbackSink knockbackSink) {
+    this.knockbackSink = knockbackSink;
   }
 
   private StateSink stateSink;
@@ -234,6 +248,11 @@ public class StatusEffectApplier {
    */
   public void applyKnockback(int targetEntityId, float attackerX, float attackerY,
       float targetX, float targetY) {
+    applyKnockback(-1, targetEntityId, attackerX, attackerY, targetX, targetY);
+  }
+
+  public void applyKnockback(int attackerEntityId, int targetEntityId,
+      float attackerX, float attackerY, float targetX, float targetY) {
     
     // 计算击退方向
     float dx = targetX - attackerX;
@@ -252,7 +271,9 @@ public class StatusEffectApplier {
     float knockbackX = targetX + dx * KNOCKBACK_DISTANCE;
     float knockbackY = targetY + dy * KNOCKBACK_DISTANCE;
 
-    boolean moved = movementSink != null
+    boolean moved = attackerEntityId >= 0 && knockbackSink != null
+        && knockbackSink.tryKnockback(attackerEntityId, targetEntityId);
+    if (!moved) moved = movementSink != null
         && movementSink.tryMove(targetEntityId, knockbackX, knockbackY);
     log.debug("Applied knockback: target={}, to=({}, {}), moved={}",
         targetEntityId, knockbackX, knockbackY, moved);
@@ -300,7 +321,7 @@ public class StatusEffectApplier {
 
     // 击退效果
     if (result.hasKnockback()) {
-      applyKnockback(targetEntityId, attackerX, attackerY, targetX, targetY);
+      applyKnockback(attackerEntityId, targetEntityId, attackerX, attackerY, targetX, targetY);
     }
   }
 

@@ -53,6 +53,7 @@ public final class NativePathRuntime implements D2PathTick.Effects {
     Velocity velocity = world.getMapper(Velocity.class).get(id);
     MapWrapper wrapper = world.getMapper(MapWrapper.class).get(id);
     Monster monster = world.getMapper(Monster.class).get(id);
+    boolean knockback = type == 8 || type == 11;
     // Skill-owned motion has a distinct authoritative owner.  Reject it here
     // instead of returning null, which Pathfinder interprets as permission to
     // fall back to the host planner and silently steal the movement state.
@@ -60,8 +61,9 @@ public final class NativePathRuntime implements D2PathTick.Effects {
     if ((casting != null && casting.diabRun == null)
         || world.getMapper(Leap.class).has(id)
         || world.getMapper(WhirlwindRuntime.class).has(id)) return false;
-    if (map == null || collision == null || monster == null || position == null || !position.hasNativePrecision()
-        || velocity == null || velocity.nativeMonsterBaseVelocity < 0 || velocity.stateSpeedMultiplier != 1f
+    if (map == null || collision == null || position == null || !position.hasNativePrecision()
+        || velocity == null || (!knockback && (monster == null || velocity.nativeMonsterBaseVelocity < 0))
+        || velocity.stateSpeedMultiplier != 1f
         || wrapper == null || wrapper.zone == null || !map.usesNativeCollision(wrapper.zone)
         || !wrapper.zone.hasNativeRoomTopology()) return null;
     if (targetId < 0 && (destination.x != (int) destination.x || destination.y != (int) destination.y
@@ -80,7 +82,7 @@ public final class NativePathRuntime implements D2PathTick.Effects {
         if (targetType != 0 && targetType != 1) return null;
       }
     } catch (IllegalArgumentException unknown) { return null; }
-    int mask = monster.vultureAirborne ? 0 : allocation.moveMask;
+    int mask = monster != null && monster.vultureAirborne ? 0 : allocation.moveMask;
     Pathfind existing = world.getMapper(Pathfind.class).get(id);
     NativePathRuntime runtime = existing == null ? null : existing.nativeRuntime;
     if (runtime == null || runtime.map != map || runtime.moveMask != mask) {
@@ -97,9 +99,9 @@ public final class NativePathRuntime implements D2PathTick.Effects {
     runtime.result.path.directionOffset = directionOffset;
     runtime.result.path.setNewDistance(budget);
     // MonsterMode walk mode installs a 20-point continuation budget.
-    runtime.result.path.setDistance(20);
+    if (!knockback) runtime.result.path.setDistance(20);
     runtime.result.path.targetPoint = new D2Path.Point((int)destination.x,(int)destination.y);
-    runtime.result.velocity = velocity.nativeMonsterVelocity();
+    runtime.result.velocity = knockback ? 256 : velocity.nativeMonsterVelocity();
     int count = runtime.search(runtime.result.path);
     if (count == 0 && (type == 2 || type == 7 || type == 9 || type == 13)) {
       // MonsterMode.cpp sub_6FC65680: initial mode search has its own type15 fallback.
@@ -150,7 +152,8 @@ public final class NativePathRuntime implements D2PathTick.Effects {
     if (gridChanged()) rebuildRooms();
     if (room == null) { stop(); return; }
     collision.refreshNow();
-    result.velocity = velocity.nativeMonsterVelocity();
+    result.velocity = result.path.pathType == 8 || result.path.pathType == 11
+        ? 256 : velocity.nativeMonsterVelocity();
     observeTarget();
     Position position = world.getMapper(Position.class).get(id);
     float oldX = position.position.x, oldY = position.position.y;
