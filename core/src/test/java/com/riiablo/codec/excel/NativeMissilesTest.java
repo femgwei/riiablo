@@ -25,4 +25,18 @@ class NativeMissilesTest {
     assertEquals("(param1)", entry.string("SrvCalc1"));
     assertEquals("frostnova", entry.string("SubMissile1"));
   }
+
+  @Test
+  void preservesSignedHitParametersAndSentinelSubMissileCells() throws Exception {
+    NativeMissiles missiles = NativeMissiles.parse(
+        ("Missile\tsHitPar1\tsHitPar2\tcHitPar1\tHitSubMissile1\n"
+            + "sentinel\t-1\t-2147483648\t-7\t-1\n")
+            .getBytes(StandardCharsets.ISO_8859_1));
+
+    NativeMissiles.Entry entry = missiles.get("sentinel");
+    assertEquals(-1, entry.nativeInteger("sHitPar1"));
+    assertEquals(Integer.MIN_VALUE, entry.nativeInteger("sHitPar2"));
+    assertEquals(-7, entry.nativeInteger("cHitPar1"));
+    assertEquals("-1", entry.string("HitSubMissile1"));
+  }
 }
