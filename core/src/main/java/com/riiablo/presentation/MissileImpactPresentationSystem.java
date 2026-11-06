@@ -362,15 +362,28 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         || source.CltSubMissile == null) return;
     Vector2 at = mPosition.get(entityId).position;
     int spread = Math.max(1, cltParam(source, 1, 25) - 1);
-    Vector2 impact = new Vector2(
-        MathUtils.floor(at.x) + cltParam(source, 0, 59) - nextClientRandom(visual, spread * 2),
-        MathUtils.floor(at.y) + cltParam(source, 0, 59) - nextClientRandom(visual, spread * 2));
+    // World coordinates use an isometric projection with screenY = -(x + y).
+    // The old code added the fall distance to both axes, which put the rock
+    // below the impact point on screen and made it appear to rise.  Native
+    // CltDo9 starts above the target and advances toward it, so mirror the
+    // offset in world space here.  Keep the client random stream and spread
+    // unchanged; only the descent direction is corrected.
+    Vector2 impact = meteorVisualStart(at, cltParam(source, 0, 59),
+        nextClientRandom(visual, spread * 2), nextClientRandom(visual, spread * 2),
+        new Vector2());
     String rock = first(source.CltSubMissile, 0);
     String tail = first(source.CltSubMissile, 1);
-    // World Y is the vertical screen axis in the isometric renderer.
     createMeteorVisual(source, rock, impact, at);
     createMeteorVisual(source, tail, impact, at);
     visual.clientFlightInitialized = true;
+  }
+
+  /** Converts the native CltDo9 fall offset into the host's isometric world axes. */
+  static Vector2 meteorVisualStart(Vector2 target, int fallDistance,
+      int randomX, int randomY, Vector2 out) {
+    int distance = Math.max(0, fallDistance);
+    return out.set(MathUtils.floor(target.x) - distance + randomX,
+        MathUtils.floor(target.y) - distance + randomY);
   }
 
   /** Creates the rock/tail pair and gives them the native 59-frame descent. */

@@ -284,6 +284,18 @@ public class SkillCastHandler extends PassiveSystem {
         && (event.srvdofunc == 12 || skill.srvdofunc == 12);
     boolean localStreamServer = localServer
         && (event.srvdofunc == 19 || skill.srvdofunc == 19);
+
+    // Blessed Hammer's SrvDo073 path is authoritative on both local server
+    // worlds and network replicas.  The generic CltDo73 helper creates a
+    // straight-line presentation missile, which can race the real native
+    // spiral and is the source of the hammer visibly flying away from the
+    // paladin.  Reuse the authoritative missile explicitly before the broad
+    // server-missile predicate below.
+    if (PaladinSkills.isBlessedHammer(skill) && (localServer || networkClient)) {
+      log.info("[BLESSED_HAMMER] phase=reuse_server_missile entity={} networkClient={} localServer={}",
+          event.entityId, networkClient, localServer);
+      return;
+    }
     // Meteor/Blizzard use SrvDo28 to create a resident centre controller.
     // Their CltDo28 callback is only the retail client-side packet hook; in a
     // local server world the controller already owns the delayed visual and
