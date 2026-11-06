@@ -737,12 +737,17 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     Missiles.Entry source = clientContext.files().Missiles.get(event.missileId);
     if (source == null) return;
 
-    // D2Client 1.10f CltHit10 (0x6FB366D0) attaches ProgOverlay to
-    // the struck unit, not a generic elemental explosion at the contact.
-    if (source.pCltHitFunc == 10 && event.targetEntityId >= 0
-        && source.ProgOverlay != null && !source.ProgOverlay.isEmpty()
-        && overlays != null) {
-      overlays.set(event.targetEntityId, source.ProgOverlay);
+    // An authoritative heal supplies its target overlay explicitly. The
+    // row's ProgOverlay alone cannot distinguish Holy Bolt heals from hits.
+    // D2Client CltHit10 still supplies its native struck-unit overlay when
+    // no authoritative override is present.
+    String targetOverlay = event.targetOverlay;
+    if ((targetOverlay == null || targetOverlay.isEmpty()) && source.pCltHitFunc == 10) {
+      targetOverlay = source.ProgOverlay;
+    }
+    if (event.targetEntityId >= 0 && targetOverlay != null
+        && !targetOverlay.isEmpty() && overlays != null) {
+      overlays.set(event.targetEntityId, targetOverlay);
     }
 
     String hitSound = event.impactSound != null ? event.impactSound : source.HitSound;
@@ -765,6 +770,17 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
           source.Missile);
       return;
     }
+
+    // SrvHit26 replaces the Grim Ward start with an authoritative lasting
+    // ward. CltHit29 lists that same child, so emitting it here duplicates
+    // the ward. Keep SrvHit27's CltHit29 child: it is the client-only stop.
+    if (source.pCltHitFunc == 29 && source.pSrvHitFunc == 26) return;
+
+    // SrvHit48 turns Molten Boulder’s emerge controller into the rolling
+    // authoritative child. CltHit53 lists that same child, so replaying it on
+    // the client would create a second damaging-looking boulder. Keep the
+    // separate CltHit52 explosion presentation on the rolling row untouched.
+    if (source.pCltHitFunc == 53 && source.pSrvHitFunc == 48) return;
 
     // Native CltHit2 repeats SrvHit2's ring. Our authoritative children are
     // already replicated (plaguejavcloud.ClientSend=1); rendering an extra

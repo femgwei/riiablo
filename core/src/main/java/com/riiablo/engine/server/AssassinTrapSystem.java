@@ -18,6 +18,8 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
@@ -27,10 +29,12 @@ import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.SoundEvent;
 import com.riiablo.engine.server.combat.DamageSettlement;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
@@ -93,6 +97,9 @@ public class AssassinTrapSystem extends IteratingSystem {
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<Angle> mAngle;
+  protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.AnimData> mAnimData;
   @com.artemis.annotations.Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
@@ -147,6 +154,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     if (corpseSkill != null) {
       int corpseId = findDeathSentryCorpse(entityId, target, trap, corpseSkill);
       if (corpseId >= 0 && explodeCorpse(entityId, corpseId, trap, corpseSkill)) {
+        presentAttack(entityId, monster, corpseSkill, corpseId, true);
         trap.deathLastCorpseId = corpseId;
         trap.shotsFired++;
         trap.attackCooldownFrames = attackInterval(monster);
@@ -167,6 +175,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     }
     if (attackSkill != null && attackSkill.srvdofunc == 17) {
       if (fireChargedBoltSentry(entityId, trap, monster, target, attackSkill)) {
+        presentAttack(entityId, monster, attackSkill, target, false);
         trap.shotsFired++;
         trap.attackCooldownFrames = attackInterval(monster);
         log.info("[CHARGED_BOLT_SENTRY] phase=fire entity={} owner={} target={} "
@@ -204,11 +213,68 @@ public class AssassinTrapSystem extends IteratingSystem {
           name -> resolveOwnerSkillLevel(trap.ownerId, name));
       mMissile.get(missileId).damageOwnerId = trap.ownerId;
     }
+    if (missileId >= 0) presentAttack(entityId, monster, attackSkill, target, false);
     trap.shotsFired++;
     trap.attackCooldownFrames = attackInterval(monster);
     log.info("[ASSASSIN_TRAP] phase=fire entity={} owner={} skill={} target={} missile={} "
             + "shot={}/{}", entityId, trap.ownerId, trap.skillId, target, missileName,
         trap.shotsFired, trap.maxShots);
+  }
+
+  /**
+   * The trap controller already emitted its authoritative attack. Install only
+   * the native animation transaction: no Casting/SkillDoEvent, whose keyframe
+   * would execute the attack a second time (or recursively summon a trap).
+   */
+  void presentAttack(int entityId, Monster monster, Skills.Entry skill, int targetId,
+      boolean corpseAttack) {
+    faceTarget(entityId, targetId);
+    if (mCofReference.has(entityId) && mAnimData.has(entityId)
+        && world.getSystem(SequenceHandler.class) != null) {
+      String configuredMode = null;
+      if (!corpseAttack && monster != null && monster.monstats != null && skill != null) {
+        configuredMode = skill.skill != null && skill.skill.equalsIgnoreCase(monster.monstats.Skill2)
+            ? monster.monstats.Sk2mode : monster.monstats.Sk1mode;
+      }
+      NativeMonsterSequence nativeSequence = NativeMonsterSequence.load(configuredMode, files(),
+          serverContext != null ? serverContext.mpqs() : null);
+      String fallbackMode = skill != null && skill.monanim != null && !skill.monanim.isEmpty()
+          ? skill.monanim : "S2";
+      int mode = corpseAttack ? Engine.Monster.MODE_S2
+          : nativeSequence != null ? nativeSequence.mode
+          : files().MonMode.index(configuredMode != null && !configuredMode.isEmpty()
+              ? configuredMode : fallbackMode);
+      // Skills.monanim=xx is logical SQ, never a drawable XX monster COF.
+      if (mode < 0 || mode == Engine.Monster.MODE_XX) mode = Engine.Monster.MODE_S2;
+      Sequence sequence = mSequence.create(entityId)
+          .sequence((byte) mode, Engine.Monster.MODE_NU);
+      if (nativeSequence != null) {
+        sequence.nativeMonster = nativeSequence;
+        sequence.nativeMonsterName = nativeSequence.name;
+      }
+    }
+    presentSkillSounds(entityId, skill);
+  }
+
+  private void faceTarget(int entityId, int targetId) {
+    if (targetId < 0 || !mAngle.has(entityId) || !mPosition.has(targetId)) return;
+    Vector2 direction = new Vector2(mPosition.get(targetId).position)
+        .sub(mPosition.get(entityId).position);
+    if (!direction.isZero(0.0001f)) mAngle.get(entityId).set(direction.nor());
+  }
+
+  private void presentSkillSounds(int entityId, Skills.Entry skill) {
+    if (events == null || skill == null) return;
+    String start = skill.stsound != null && !skill.stsound.isEmpty()
+        ? skill.stsound : skill.stsoundclass;
+    presentSound(entityId, start);
+    presentSound(entityId, skill.dosound);
+  }
+
+  private void presentSound(int entityId, String sound) {
+    if (sound == null || sound.isEmpty()) return;
+    Vector2 origin = mPosition.get(entityId).position;
+    events.dispatch(SoundEvent.obtain(entityId, sound, true).withPosition(origin.x, origin.y));
   }
 
   /**
@@ -554,6 +620,8 @@ public class AssassinTrapSystem extends IteratingSystem {
 
   /** St53 starts the deadline at sequence entry, before Do95's point-nine action. */
   private void startInfernoSequence(int entityId, SummonedPet trap, Skills.Entry skill, int target) {
+    faceTarget(entityId, target);
+    presentSkillSounds(entityId, skill);
     trap.infernoChanneling = true;
     trap.infernoFrame = 0;
     trap.infernoSequencePoint = 0;
@@ -645,6 +713,12 @@ public class AssassinTrapSystem extends IteratingSystem {
     Missiles.Entry missileRow = missileName != null ? files().Missiles.get(missileName) : null;
     if (attackSkill == null || attackSkill.srvdofunc != 95 || missileRow == null || factory == null) {
       trap.infernoChanneling = false;
+      trap.infernoTargetId = Engine.INVALID_ENTITY;
+      if (states != null && states.stateList != null)
+        states.stateList.removeState(com.riiablo.engine.server.state.StateId.INFERNO);
+      CofManager cofs = world.getSystem(CofManager.class);
+      if (cofs != null && mCofReference.has(entityId))
+        cofs.setMode(entityId, Engine.Monster.MODE_NU);
       trap.attackCooldownFrames = attackInterval(monster);
       log.warn("[INFERNO_SENTRY] phase=channel_stall entity={} owner={} reason=missing_skill_or_missile",
           entityId, trap.ownerId);
@@ -653,6 +727,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     Vector2 origin = mPosition.get(entityId).position;
     Vector2 direction = new Vector2(targetPoint).sub(origin);
     if (direction.isZero(0.0001f)) direction.set(1, 0);
+    faceTarget(entityId, trap.infernoTargetId);
     int missileId = factory.createMissile(missileRow, direction.nor(), origin, entityId,
         Math.max(1, trap.skillLevel));
     if (missileId < 0 || !mMissile.has(missileId)) {

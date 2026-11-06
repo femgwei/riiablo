@@ -1312,16 +1312,17 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       world.getMapper(Position.class).create(assassin).position.set(0, 0);
       world.getMapper(AttributesWrapper.class).create(assassin).attrs = attributes(20, 200);
       int target = monster(world, 4, 0);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10, 100);
 
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           assassin, cloak.Id, Engine.INVALID_ENTITY, new Vector2(4, 0), cloak.srvdofunc, 0));
 
       UnitStates states = world.getMapper(UnitStates.class).get(target);
       assertNotNull(states);
-      assertTrue(states.stateList.hasState(StateId.DIMVISION));
-      UnitState dimVision = states.stateList.getState(StateId.DIMVISION);
+      assertTrue(states.stateList.hasState(StateId.CLOAKED));
+      UnitState dimVision = states.stateList.getState(StateId.CLOAKED);
       assertEquals(1, dimVision.level);
-      assertEquals(-AssassinSkills.calculateCloakOfShadowsDefenseReduce(1),
+      assertEquals(SkillFormula.evaluate(cloak.aurastatcalc[0], cloak, 1),
           dimVision.defenseModifier);
       assertEquals(assassin, dimVision.sourceEntityId);
     } finally {

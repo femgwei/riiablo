@@ -132,11 +132,6 @@ public class MissileLoader extends IteratingSystem {
       initialFrame += MissileImpactPresentationSystem.nextClientRandom(missile,
           animation.getNumFramesPerDir());
     }
-    if (animation.getNumFramesPerDir() > 0) {
-      animation.setFrame(isPoisonSmokePuff(entry)
-          ? poisonSmokeFrame(missile, animation.getNumFramesPerDir())
-          : Math.floorMod(initialFrame, animation.getNumFramesPerDir()));
-    }
     // D2Common initializes missile wAnimSpeed as
     //   (animrate << 8) / 1024.
     // Animation.setFrameDelta uses the same 8.8 fixed-point unit, so keeping
@@ -144,6 +139,7 @@ public class MissileLoader extends IteratingSystem {
     // of forcing every DCC to 25 frames per second.
     int nativeFrameDelta = nativeFrameDelta(clientContext, missile, visualRow);
     animation.setFrameDelta(Math.max(1, nativeFrameDelta));
+    initializePlayback(missile, entry, animation, initialFrame);
     
     // Set direction based on Angle component if available
     if (mAngle.has(entityId)) {
@@ -172,7 +168,7 @@ public class MissileLoader extends IteratingSystem {
     // SKILLS_UpdateInfernoAnimationParameters replaces the ordinary missile
     // animation rate along with TotalFrames, not just its travel distance.
     if ((missile.skillId == 41 || missile.skillId == 178 || missile.skillId == 319 || missile.skillId == 317
-        || missile.skillId == 193)
+        || missile.skillId == 193 || missile.skillId == 230)
         && missile.nativeLifetimeFrames > 0) {
         int animLen = visualRow != null && visualRow.AnimLen > 0
             ? visualRow.AnimLen : missile.missile.AnimLen;
@@ -246,6 +242,22 @@ public class MissileLoader extends IteratingSystem {
   static boolean isPoisonSmokePuff(Missiles.Entry entry) {
     return entry != null && entry.CelFile != null
         && "PoisonSmokePuff".equalsIgnoreCase(entry.CelFile);
+  }
+
+  /** DCC publication must not restart a missile whose simulation already advanced. */
+  static void initializePlayback(Missile missile, Missiles.Entry entry,
+      Animation animation, int initialFrame) {
+    int frames = animation.getNumFramesPerDir();
+    if (frames <= 0) return;
+    int start = Math.floorMod(initialFrame, frames);
+    animation.setFrame(start);
+    // CltDo5 owns its randomized sub-loop and final fade frame selection.
+    // Ordinary missiles, including reconstructed monster projectiles, retain
+    // fractional native animation progress across asynchronous asset loading.
+    if (!isGroundFire(entry) && missile.nativeFrame > 0) {
+      animation.seek(start * animation.getFrameDuration()
+          + missile.nativeFrame / 25f);
+    }
   }
 
   /** Cold-loaded or reconstructed smoke starts at its actual simulation age. */

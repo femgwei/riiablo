@@ -353,9 +353,11 @@ public class NetworkSynchronizer extends BaseEntitySystem {
     int recipients = recipientMask(event.missileEntityId);
     if (recipients == 0) return;
     FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int targetOverlay = event.targetOverlay != null && !event.targetOverlay.isEmpty()
+        ? builder.createString(event.targetOverlay) : 0;
     int impact = MissileImpactP.createMissileImpactP(builder,
         event.missileEntityId, event.missileId, event.ownerId,
-        event.targetEntityId, event.x, event.y, event.dx, event.dy);
+        event.targetEntityId, event.x, event.y, event.dx, event.dy, targetOverlay);
     int root = D2GS.createD2GS(builder, D2GSData.MissileImpactP, impact);
     D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     ByteBuffer bytes = builder.dataBuffer().duplicate();

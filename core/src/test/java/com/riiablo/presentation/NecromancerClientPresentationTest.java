@@ -27,4 +27,20 @@ class NecromancerClientPresentationTest extends RiiabloTest {
         assertTrue(SkillCastHandler.curseVisualRadius(row, 1) >= 2);
       }
   }
+
+  @Test void nativeBoneTrailHasNoSubLoopToExtend() {
+    Missiles.Entry spear = Riiablo.files.Missiles.get("bonespear");
+    Missiles.Entry trail = Riiablo.files.Missiles.get(spear.CltSubMissile[0]);
+    assertEquals(3, spear.CltParam[0]);
+    // D2MOO applies nLoops only to a child with SubLoop enabled. The
+    // native trail has no subloop, so CltParam1 is neither extra lifetime
+    // nor a three-frame emission interval for this row.
+    assertEquals(0, trail.SubLoop);
+    assertEquals(0, trail.SubStart);
+    assertEquals(0, trail.SubStop);
+    assertEquals(0, trail.LoopAnim);
+    assertEquals(9, trail.AnimLen);
+    assertEquals(0, trail.Vel);
+    assertEquals(8, MissileImpactPresentationSystem.nativePresentationLifetimeFrames(trail));
+  }
 }

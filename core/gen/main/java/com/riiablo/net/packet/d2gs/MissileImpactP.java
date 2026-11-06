@@ -23,6 +23,9 @@ public final class MissileImpactP extends Table {
   public float y() { int o = __offset(14); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
   public float dx() { int o = __offset(16); return o != 0 ? bb.getFloat(o + bb_pos) : 1.0f; }
   public float dy() { int o = __offset(18); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
+  public String targetOverlay() { int o = __offset(20); return o != 0 ? __string(o + bb_pos) : null; }
+  public ByteBuffer targetOverlayAsByteBuffer() { return __vector_as_bytebuffer(20, 1); }
+  public ByteBuffer targetOverlayInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 20, 1); }
 
   public static int createMissileImpactP(FlatBufferBuilder builder,
       int missileEntityId,
@@ -32,8 +35,10 @@ public final class MissileImpactP extends Table {
       float x,
       float y,
       float dx,
-      float dy) {
-    builder.startTable(8);
+      float dy,
+      int targetOverlayOffset) {
+    builder.startTable(9);
+    MissileImpactP.addTargetOverlay(builder, targetOverlayOffset);
     MissileImpactP.addDy(builder, dy);
     MissileImpactP.addDx(builder, dx);
     MissileImpactP.addY(builder, y);
@@ -45,7 +50,7 @@ public final class MissileImpactP extends Table {
     return MissileImpactP.endMissileImpactP(builder);
   }
 
-  public static void startMissileImpactP(FlatBufferBuilder builder) { builder.startTable(8); }
+  public static void startMissileImpactP(FlatBufferBuilder builder) { builder.startTable(9); }
   public static void addMissileEntityId(FlatBufferBuilder builder, int missileEntityId) { builder.addInt(0, missileEntityId, 0); }
   public static void addMissileId(FlatBufferBuilder builder, int missileId) { builder.addShort(1, (short)missileId, (short)0); }
   public static void addOwnerId(FlatBufferBuilder builder, int ownerId) { builder.addInt(2, ownerId, 0); }
@@ -54,6 +59,7 @@ public final class MissileImpactP extends Table {
   public static void addY(FlatBufferBuilder builder, float y) { builder.addFloat(5, y, 0.0f); }
   public static void addDx(FlatBufferBuilder builder, float dx) { builder.addFloat(6, dx, 1.0f); }
   public static void addDy(FlatBufferBuilder builder, float dy) { builder.addFloat(7, dy, 0.0f); }
+  public static void addTargetOverlay(FlatBufferBuilder builder, int targetOverlayOffset) { builder.addOffset(8, targetOverlayOffset, 0); }
   public static int endMissileImpactP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

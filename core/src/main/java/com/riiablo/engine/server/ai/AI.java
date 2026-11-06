@@ -428,6 +428,7 @@ public abstract class AI implements Interactable.Interactor {
 
   private boolean updateDimVision(float delta, UnitStates unitStates) {
     UnitState dimVision = unitStates.stateList.getState(StateId.DIMVISION);
+    if (dimVision == null) dimVision = unitStates.stateList.getState(StateId.CLOAKED);
     if (dimVision == null || monster == null || monster.monstats == null
         || !monster.monstats.switchai) {
       nextWarCryThink = 0f;

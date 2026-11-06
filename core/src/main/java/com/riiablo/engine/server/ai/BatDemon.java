@@ -32,6 +32,7 @@ public class BatDemon extends NativeDecisionAI {
     boolean controlled = states != null && states.stateList != null
         && (states.stateList.hasState(com.riiablo.engine.server.state.StateId.TERROR)
             || states.stateList.hasState(com.riiablo.engine.server.state.StateId.TAUNT)
+            || states.stateList.hasState(com.riiablo.engine.server.state.StateId.CLOAKED)
             || states.stateList.hasState(com.riiablo.engine.server.state.StateId.DIMVISION));
     if (controlled && mCofReference.has(entityId)
         && mCofReference.get(entityId).mode == Engine.Monster.MODE_S4) {

@@ -23,6 +23,8 @@ public final class MissileImpactEvent implements Event {
   public String impactDcc;
   public String impactPalette;
   public String impactSound;
+  /** Overlay selected by the authoritative hit branch (e.g. Holy Bolt healing). */
+  public String targetOverlay;
 
   public static MissileImpactEvent obtain(int missileEntityId, int missileId,
       int ownerId, int targetEntityId, Vector2 position) {
@@ -52,6 +54,11 @@ public final class MissileImpactEvent implements Event {
     this.impactDcc = impactDcc;
     this.impactPalette = impactPalette;
     this.impactSound = impactSound;
+    return this;
+  }
+
+  public MissileImpactEvent withTargetOverlay(String targetOverlay) {
+    this.targetOverlay = targetOverlay;
     return this;
   }
 }

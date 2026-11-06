@@ -24,6 +24,14 @@ public final class NativeDirectDamageMath {
   public static void elementalDamage(NativeDamagePacket out, int type, int raw, int pierce,
       boolean defenderPlayer, boolean attackerPlayer, int resistance, int maximum,
       int magicReduction, int absorbPercent, int absorbFlat, boolean nativePacket) {
+    elementalDamage(out, type, raw, pierce, defenderPlayer, attackerPlayer, resistance,
+        maximum, magicReduction, absorbPercent, absorbFlat, nativePacket, 0);
+  }
+
+  public static void elementalDamage(NativeDamagePacket out, int type, int raw, int pierce,
+      boolean defenderPlayer, boolean attackerPlayer, int resistance, int maximum,
+      int magicReduction, int absorbPercent, int absorbFlat, boolean nativePacket,
+      int cycloneArmorFixed) {
     out.reset();
     if (type <= NativeCombatConstants.DAMAGE_PHYSICAL
         || type >= NativeCombatConstants.DAMAGE_TYPE_COUNT || raw <= 0) return;
@@ -33,6 +41,11 @@ public final class NativeDirectDamageMath {
       int adjusted = NativeMitigationMath.resistance(defenderPlayer, false,
           type == NativeCombatConstants.DAMAGE_MAGIC, resistance, maximum, pierce);
       raw = NativeMitigationMath.pvp(raw, attackerPlayer && defenderPlayer, 1);
+      out.cycloneArmorConsumedFixed = NativeCycloneArmor.absorbedFixed(type,
+          NativeMitigationMath.positive((long) raw * 256), cycloneArmorFixed);
+      // This legacy direct API explicitly returns integer HP. Native fixed8
+      // packets use rateDamage and retain the sub-HP remainder end to end.
+      raw = (int) (((long) raw * 256 - out.cycloneArmorConsumedFixed) / 256);
       reduced = immune ? 0 : NativeMitigationMath.reduce(raw, 1, adjusted,
           type == NativeCombatConstants.DAMAGE_POISON ? 0 : magicReduction, 0);
       absorbPercent = type == NativeCombatConstants.DAMAGE_POISON ? 0 : Math.min(40, absorbPercent);
@@ -42,7 +55,7 @@ public final class NativeDirectDamageMath {
           maximum > 0 ? maximum : 75, pierce, type != NativeCombatConstants.DAMAGE_POISON,
           magicReduction, 1);
     }
-    int absorbed = nativePacket ? NativeMitigationMath.absorb(reduced, 1, absorbPercent, absorbFlat)
+    int absorbed = nativePacket ? NativeMitigationMath.absorb(reduced, out.elementalScale, absorbPercent, absorbFlat)
         : NativeCombatMath.elementalAbsorb(reduced, absorbPercent, absorbFlat, 1);
     int damage = reduced - absorbed;
     if (!nativePacket && attackerPlayer && defenderPlayer)
@@ -51,6 +64,6 @@ public final class NativeDirectDamageMath {
     out.hitChance = 100;
     out.elementalDamage[type] = Math.max(0, damage);
     out.absorbedLife = absorbed;
-    out.totalDamage = out.elementalDamage[type];
+    out.totalDamage = out.elementalDamage[type] / out.elementalScale;
   }
 }

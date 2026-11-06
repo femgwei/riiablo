@@ -695,6 +695,28 @@ public final class NecromancerSkills {
     return Math.min(75, 5 * skillLevel);
   }
 
+  /** Native Summon Resist is a permanent owner passive, copied to a pet at creation. */
+  public static UnitState applySummonResist(StateList states, Skills.Entry skill,
+      int level, int ownerId) {
+    if (states == null || skill == null || !skill.passive || level <= 0
+        || !"summonresist".equalsIgnoreCase(skill.passivestate)) return null;
+    UnitState state = states.addStateLayer(StateId.SUMMONRESIST, 0, level, ownerId, skill.Id);
+    state.clearModifiers();
+    state.basicStatList = true;
+    if (skill.passivestat != null && skill.passivecalc != null) {
+      for (int i = 0; i < Math.min(skill.passivestat.length, skill.passivecalc.length); i++) {
+        String name = skill.passivestat[i];
+        if (name == null || name.trim().isEmpty()) continue;
+        int stat = Stat.index(name.trim());
+        if (stat >= 0) state.setStatContribution(stat, 0,
+            com.riiablo.attributes.NativeStatResolver.Operation.ADD,
+            SkillFormula.evaluate(skill.passivecalc[i], skill, level));
+      }
+    }
+    state.needsSync = true;
+    return state;
+  }
+
   /**
    * 钢铁石魔 - 从装备创建石魔
    * 

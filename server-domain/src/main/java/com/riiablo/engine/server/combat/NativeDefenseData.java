@@ -6,6 +6,8 @@ import static com.riiablo.engine.server.combat.NativeCombatConstants.*;
  * Array fields are per-snapshot, and remain mutable for compatibility with host builders.
  */
 public class NativeDefenseData {
+  /** Cyclone Armor's independent raw 8.8 elemental capacity. */
+  public int cycloneArmorFixed;
   /** 实体 ID */
   public int entityId;
 

@@ -751,7 +751,9 @@ public class CombatSystem {
     d.immuneElemental[damageType] = d.isMonster && d.resistances[damageType] >= 100;
     NativeDirectDamageMath.elementalDamage(result, damageType, rawDamage, piercePercent,
         defenderPlayer, attackerPlayer, d.resistances[damageType], d.maxResistances[damageType],
-        d.magicDamageReduced, d.absorbPercent[damageType], d.absorbFlat[damageType], nativePacket);
+        d.magicDamageReduced, d.absorbPercent[damageType], d.absorbFlat[damageType], nativePacket,
+        CycloneArmor.capacity(defenderStates));
+    CycloneArmor.consume(defenderStates, result.cycloneArmorConsumedFixed);
     return result;
   }
 
@@ -879,17 +881,15 @@ public class CombatSystem {
     if (defenderPlayer && damageType != DAMAGE_MAGIC) {
       resistance += NativeDifficultyRules.remainingResistancePenalty(defender, context);
     }
-    if (!defenderPlayer && resistance >= 100) {
-      result.immune = true;
-      return result;
-    }
     NativeFixedElementalMath.rateDamage(result, rawDamageFixed, defenderPlayer, attackerPlayer,
         resistance, statInt(defender, maximumStats[damageType], 0)
             + (defenderStates != null ? defenderStates.getTotalStatContribution(maximumStats[damageType]) : 0),
         damageType == DAMAGE_MAGIC ? 0 : piercePercent,
         damageType == DAMAGE_POISON ? 0 : mitigationStat(defender, defenderStates, Stat.magic_damage_reduction), damageRate,
         absorbPercentStats[damageType] != 0 ? mitigationStat(defender, defenderStates, absorbPercentStats[damageType]) : 0,
-        absorbFlatStats[damageType] != 0 ? mitigationStat(defender, defenderStates, absorbFlatStats[damageType]) : 0);
+        absorbFlatStats[damageType] != 0 ? mitigationStat(defender, defenderStates, absorbFlatStats[damageType]) : 0,
+        CycloneArmor.capacity(defenderStates), damageType);
+    CycloneArmor.consume(defenderStates, result.cycloneArmorConsumedFixed);
     return result;
   }
 
@@ -941,10 +941,6 @@ public class CombatSystem {
     if (defenderPlayer && damageType != DAMAGE_MAGIC) {
       resistance += NativeDifficultyRules.remainingResistancePenalty(defender, context);
     }
-    if (!defenderPlayer && resistance >= 100) {
-      result.immune = true;
-      return result;
-    }
     NativeFixedElementalMath.staticFieldDamage(result, rawDamageFixed, defenderPlayer, attackerPlayer,
         resistance, statInt(defender, maximumStats[damageType], 0)
             + (defenderStates != null ? defenderStates.getTotalStatContribution(maximumStats[damageType]) : 0),
@@ -954,7 +950,9 @@ public class CombatSystem {
         absorbFlatStats[damageType] != 0 ? mitigationStat(defender, defenderStates, absorbFlatStats[damageType]) : 0,
         damageType == DAMAGE_MAGIC ? 0 : piercePercent,
         resistance - (defenderPlayer && damageType != DAMAGE_MAGIC
-            ? NativeDifficultyRules.playerResistancePenalty(context) : 0));
+            ? NativeDifficultyRules.playerResistancePenalty(context) : 0),
+        CycloneArmor.capacity(defenderStates), damageType);
+    CycloneArmor.consume(defenderStates, result.cycloneArmorConsumedFixed);
     return result;
   }
 
@@ -1574,7 +1572,9 @@ public class CombatSystem {
       return result;
     }
     CombatSnapshotFactory.Snapshot snapshot = CombatSnapshotFactory.create(request);
-    return calculateAttack(snapshot.attacker, snapshot.defender);
+    CombatResult result = calculateAttack(snapshot.attacker, snapshot.defender);
+    CycloneArmor.consume(request.defenderStates, result.cycloneArmorConsumedFixed);
+    return result;
   }
 
   /** Six audited melee skills share source construction, not precomputed HP endpoints. */

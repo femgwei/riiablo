@@ -29,6 +29,7 @@ import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.MissileImpactEvent;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.SkillId;
@@ -36,6 +37,7 @@ import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
 import java.util.ArrayList;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
 import org.junit.jupiter.api.Test;
 
 /** Authoritative SrvDo080 and shared SrvHit07 regression coverage. */
@@ -227,6 +229,10 @@ class FistOfHeavensIntegrationTest extends RiiabloTest {
     RecordingFactory factory = new RecordingFactory();
     World world = world(factory, new MissileCollisionSystem());
     try {
+      final ArrayList<MissileImpactEvent> impacts = new ArrayList<>();
+      world.getSystem(EventSystem.class).registerEvents(new Object() {
+        @Subscribe public void onImpact(MissileImpactEvent event) { impacts.add(event); }
+      });
       int paladin = createPlayer(world, 0, 0);
       int pet = createMonster(world, 1, 0, false, false, false);
       world.getMapper(SummonedPet.class).create(pet)
@@ -246,6 +252,9 @@ class FistOfHeavensIntegrationTest extends RiiabloTest {
       world.process();
       assertEquals(100f, life(world, pet), EPSILON);
       assertFalse(world.getEntityManager().isActive(missileId));
+      assertEquals(1, impacts.size());
+      assertEquals(pet, impacts.get(0).targetEntityId);
+      assertEquals(row.ProgOverlay, impacts.get(0).targetOverlay);
     } finally {
       world.dispose();
     }

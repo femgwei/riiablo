@@ -48,17 +48,16 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
   void nativeSpiralHasSeventySevenPointsAndIgnoresClickedDirection() {
     Vector2 origin = new Vector2(10f, 20f);
     Vector2 point = MissileCollisionSystem.blessedHammerPathPoint(origin, 1, new Vector2());
-    assertEquals(9600f / 65536f, point.dst(origin), EPSILON);
-    assertTrue(point.x > origin.x);
-    assertTrue(point.y > origin.y);
+    // The first four spiral iterations quantize to the origin and are
+    // discarded; iteration five supplies the first accepted native cell.
+    assertEquals(new Vector2(10f, 21f), point);
 
     MissileCollisionSystem.blessedHammerPathPoint(origin, 32, point);
-    assertEquals(origin.x + 32f * 9600f / 65536f, point.x, EPSILON);
-    assertEquals(origin.y, point.y, EPSILON);
+    assertEquals(new Vector2(3f, 19f), point);
 
     MissileCollisionSystem.blessedHammerPathPoint(
         origin, MissileCollisionSystem.BLESSED_HAMMER_PATH_POINTS, point);
-    assertEquals(77f * 9600f / 65536f, point.dst(origin), 0.01f);
+    assertEquals(new Vector2(23f, 15f), point);
     // The pure path contract has no target/direction input: casts aimed north
     // or west therefore produce the identical native global-coordinate path.
     assertEquals(77, MissileCollisionSystem.BLESSED_HAMMER_PATH_POINTS);
@@ -249,7 +248,7 @@ class BlessedHammerIntegrationTest extends RiiabloTest {
       // Advance through both path points before taking the shared hit
       // snapshot. The targets are placed on the native spiral itself, so the
       // assertion is independent of a straight-line approximation.
-      for (int i = 0; i < 5; i++) world.process();
+      for (int i = 0; i < 25; i++) world.process();
       float firstAfterHit = life(world, first);
       float secondAfterHit = life(world, second);
       assertTrue(firstAfterHit >= 984f && firstAfterHit <= 988f);

@@ -46,6 +46,7 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
       int caster = player(world, SkillId.INFERNO, 1, 0f, 0f);
       int target = monster(world, 0.4f, 0f);
       Skills.Entry skill = Riiablo.files.skills.get(SkillId.INFERNO);
+      startInferno(world, caster, skill, new Vector2(2f, 0f));
       cast(world, caster, skill, new Vector2(2f, 0f));
 
       assertEquals(1, factory.count("infernoflame1"),
@@ -208,7 +209,9 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
       attrs.get(Stat.hitpoints).set(initial);
       if (delayed) world.getMapper(UnitStates.class).get(target).stateList
           .addState(StateId.DEATH_DELAY, 100, 1, caster);
-      cast(world, caster, Riiablo.files.skills.get(SkillId.INFERNO), new Vector2(2, 0));
+      Skills.Entry inferno = Riiablo.files.skills.get(SkillId.INFERNO);
+      startInferno(world, caster, inferno, new Vector2(2, 0));
+      cast(world, caster, inferno, new Vector2(2, 0));
       Missile missile = factory.first("infernoflame1");
       missile.elementalMinRateFixed = missile.elementalMaxRateFixed = 256;
       world.setDelta(1f / 25f);
@@ -268,6 +271,12 @@ class SorceressFireAreaIntegrationTest extends RiiabloTest {
     attrs.base().put(Stat.maxmana, 1000);
     attrs.reset();
     return attrs;
+  }
+
+  private static void startInferno(World world, int caster, Skills.Entry skill, Vector2 target) {
+    assertTrue(world.getSystem(ServerSkillSystem.class)
+        .startInfernoChannel(caster, skill, Engine.INVALID_ENTITY, target));
+    cast(world, caster, skill, target);
   }
 
   private static void cast(

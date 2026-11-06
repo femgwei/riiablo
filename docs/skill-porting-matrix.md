@@ -1,5 +1,9 @@
 # 技能移植对照表：riiablo ↔ dark-magic
 
+2026-11-06 补充：当前调用链与 APK/D2MOO 的集中补齐见
+[`apk-reference-skill-batch-2026-11-06.md`](apk-reference-skill-batch-2026-11-06.md)。
+下述 100% / 97% 是历史 gate 覆盖率，不能解释为全部原生技能机制已经完成。
+
 更新时间：2026-10-05（当前状态索引；下方保留历史增量记录）
 
 > 当前状态（以 2026-10-05 为准）：非视觉核对清单已完成 **100%**，包括七职业
@@ -899,6 +903,8 @@ Amazon exact-ID 配置。其他 agent 的未提交 Amazon/Assassin/Item 修改�
   由于 D2MOO trail 行没有直接毒素字段，也不把 poison state 作为已验证结果。
 - `plague vines trail` 的 `SrvHit50` 已按 D2MOO 的 `Hit delay=15` 窗口和
   `Range + level*LevRange` 生命周期注册；其 `pSrvDmgFunc=0`，不擅自推断毒素伤害。
+
+本批新增的 Druid 原生闭环：Arctic Blast/Inferno 共享 `SrvSt11` 通道起手、刷新和首回调规则；Twister/Tornado 的 `SrvDo118` 数量、独立种子路径、寿命与命中状态；Cyclone Armor 的独立元素吸收池；Molten Boulder 的出土、滚动、跨格火焰和大体型爆炸；Spirit of Barbs 的实际 `thorns_percent` 投影。对应 `DruidWindStreamIntegrationTest`、`DruidWindCollisionTest`、`CycloneArmorCombatTest`、`MoltenBoulderLifecycleTest` 和 `DruidSummonIntegrationTest`。宿主浮点运动、FOG LUT 尾数和真实窗口逐帧视觉验收仍单独保留。
 
 ## dark-magic 测试用例移植映射
 

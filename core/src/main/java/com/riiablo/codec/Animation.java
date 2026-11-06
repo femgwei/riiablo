@@ -478,6 +478,15 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     if (frame == endIndex - 1) notifyAnimationFinished();
   }
 
+  /** Positions playback without replaying frame or completion callbacks. */
+  public void seek(float stateTime) {
+    Validate.isTrue(Float.isFinite(stateTime) && stateTime >= 0f,
+        "Invalid animation time: %s", stateTime);
+    elapsedTime = stateTime;
+    frame = getFrame(elapsedTime);
+    if (reversed) frame = endIndex - 1 - frame;
+  }
+
   /** Native missile sub-loop: wrap at stop on the first pass, preserving fractions. */
   public void updateSubLoop(float delta, int loopStart, int loopStop) {
     Validate.isTrue(0 <= loopStart && loopStart < loopStop && loopStop <= numFrames,

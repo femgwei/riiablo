@@ -375,7 +375,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
               impact.missileEntityId(),
               impact.missileId(), impact.ownerId(), impact.targetEntityId(),
               new Vector2(impact.x(), impact.y()),
-              new Vector2(impact.dx(), impact.dy())));
+              new Vector2(impact.dx(), impact.dy()))
+                  .withTargetOverlay(impact.targetOverlay()));
         break;
       case D2GSData.SoundP:
         SoundP sound = (SoundP) packet.data(new SoundP());

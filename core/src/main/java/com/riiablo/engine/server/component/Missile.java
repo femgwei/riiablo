@@ -198,6 +198,9 @@ public class Missile extends PooledComponent {
   public boolean blessedHammerPath;
   public final Vector2 blessedHammerOrigin = new Vector2();
   public int blessedHammerPointIndex;
+  /** Last pre-step native cell inspected by SrvDo06's fire-trail callback. */
+  public boolean moltenBoulderCellKnown;
+  public int moltenBoulderCellX, moltenBoulderCellY;
 
   /**
    * Native SrvDo080/SrvHit22 controller. The stationary delay stores the
@@ -388,6 +391,8 @@ public class Missile extends PooledComponent {
     blessedHammerPath = false;
     blessedHammerOrigin.setZero();
     blessedHammerPointIndex = 0;
+    moltenBoulderCellKnown = false;
+    moltenBoulderCellX = moltenBoulderCellY = 0;
     fistOfHeavensDelay = false;
     fistOfHeavensTriggered = false;
     chainHitsRemaining = 0;

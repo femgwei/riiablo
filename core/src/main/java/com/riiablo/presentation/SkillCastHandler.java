@@ -249,6 +249,7 @@ public class SkillCastHandler extends PassiveSystem {
     // SrvDo022/068 already emit the complete authoritative 64-way warcry
     // ring in local games. NumDirections is the DCC layout, not ring size.
     if (localServer && isWarCryWave(skill)) return;
+    if (localServer && (skill.srvdofunc == 118 || skill.Id == SkillId.MOLTEN_BOULDER)) return;
     // Local single-player worlds use the monsters-only server adapter to keep
     // player projectiles compatible with the legacy presentation path. Amazon
     // bow skills are the exception: their cold/fire/impact packet must be

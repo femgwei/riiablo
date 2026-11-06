@@ -40,14 +40,20 @@ import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.combat.NativeCombatRolls;
+import com.riiablo.engine.server.combat.NativeMissilePhysicalDamage;
+import com.riiablo.engine.server.combat.NativeMissileElementalDamage;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.CombatOwnership;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.missile.NativePoisonMissileMotion;
+import com.riiablo.engine.server.missile.NativeBlessedHammerPath;
+import com.riiablo.engine.server.missile.NativeMoltenBoulder;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
+import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.monster.MonsterType;
@@ -107,9 +113,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
   private static final Logger log = LogManager.getLogger(MissileCollisionSystem.class);
   /** D2DynamicPathStrc::MAXPATHLEN - 1, as used by PATHTYPE_BLESSEDHAMMER. */
-  public static final int BLESSED_HAMMER_PATH_POINTS = 77;
-  private static final float BLESSED_HAMMER_ANGLE_STEP = MathUtils.PI2 / 32f;
-  private static final float BLESSED_HAMMER_RADIUS_STEP = 9600f / 65536f;
+  public static final int BLESSED_HAMMER_PATH_POINTS = NativeBlessedHammerPath.POINTS;
   private static final int[] FROZEN_ORB_X = {
       30, 29, 29, 28, 27, 26, 24, 23, 21, 19, 16, 14, 11, 8, 5, 2,
       0, -2, -5, -8, -11, -14, -16, -19, -21, -23, -24, -26, -27, -28, -29, -29,
@@ -211,6 +215,20 @@ public class MissileCollisionSystem extends IteratingSystem {
     int elapsedFrames = Math.max(1, Math.round(Math.max(0f, world.delta) * 25f));
     int callbackFrame = missile.nativeFrame;
     missile.nativeFrame += elapsedFrames;
+
+    if (NativeMoltenBoulder.isRolling(missile.missile)) {
+      processMoltenBoulderTrail(missile, position);
+    }
+    if (missile.missile != null && missile.missile.pSrvDoFunc == 27) {
+      processTornadoAreaPulse(entityId, missile, position.position, callbackFrame);
+    }
+
+    // Ward start/loop rows are stationary callback carriers. Their server
+    // hit functions do not run an ordinary weapon-damage collision packet.
+    if (isGrimWardStage(missile.missile)) {
+      processGrimWardStage(entityId, missile, position.position, callbackFrame);
+      return;
+    }
 
     if (missile.rabiesController) {
       processRabiesController(entityId, missile, position, elapsedFrames);
@@ -538,6 +556,97 @@ public class MissileCollisionSystem extends IteratingSystem {
     return usesFrameLifetime(missile) && missile.nativeFrame >= missile.nativeLifetimeFrames;
   }
 
+  static boolean isGrimWardStage(Missiles.Entry row) {
+    return row != null && (row.pSrvHitFunc == 26
+        || row.pSrvHitFunc == 27 && row.pSrvDoFunc == 14);
+  }
+
+  /** Native SrvHit26 replaces the start with its same-size lasting ward. */
+  private void processGrimWardStage(int entityId, Missile missile, Vector2 position,
+      int callbackFrame) {
+    // SrvDo14 tests the remaining lifetime BEFORE its collision decrement.
+    // Param1 is six frames; Param2 dispatches SrvDo30 (curse).
+    if (missile.missile.pSrvHitFunc == 27 && missile.missile.pSrvDoFunc == 14
+        && arrayValue(missile.missile.Param, 1) == 30
+        && callbackFrame < missile.nativeLifetimeFrames
+        && (missile.nativeLifetimeFrames - callbackFrame)
+            % Math.max(1, arrayValue(missile.missile.Param, 0)) == 0) {
+      applyGrimWardTerror(entityId, missile);
+    }
+    if (!frameLifetimeExpired(missile)) return;
+    if (missile.missile.pSrvHitFunc == 26 && !missile.hitFunctionTriggered) {
+      missile.hitFunctionTriggered = true;
+      String name = firstMissileName(missile.missile.HitSubMissile);
+      Missiles.Entry row = name != null ? files().Missiles.get(name) : null;
+      Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
+      if (factory != null && row != null && skill != null && missile.ownerId >= 0
+          && world.getEntityManager().isActive(missile.ownerId)) {
+        Vector2 facing = mAngle.has(entityId) ? mAngle.get(entityId).target : Vector2.X;
+        int level = Math.max(1, missile.damageLevel);
+        int childId = factory.createMissile(row, facing, position, missile.ownerId, level);
+        if (childId >= 0 && mMissile.has(childId)) {
+          Missile child = mMissile.get(childId);
+          child.skillId = missile.skillId;
+          child.damageLevel = level;
+          child.range = 0f;
+          child.nativeLifetimeFrames = grimWardLifetimeFrames(missile.missile, skill, level);
+          if (mVelocity.has(childId)) mVelocity.get(childId).velocity.setZero();
+        }
+      }
+    }
+    // CltHit29 supplies only the loop's stop DCC. The start's visual child
+    // is suppressed client-side because its loop is server-authoritative.
+    if (missile.missile.AlwaysExplode && !missile.impactPresentationTriggered) {
+      emitImpactPresentation(entityId, missile, Engine.INVALID_ENTITY, position);
+    }
+    world.delete(entityId);
+  }
+
+  /** Native SrvDo14 -> SrvDo30 terror pulse around the ward location. */
+  private void applyGrimWardTerror(int wardId, Missile missile) {
+    Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId)
+        : files().skills.get("Grim Ward");
+    if (skill == null || !mPosition.has(wardId)) return;
+    int level = Math.max(1, missile.damageLevel);
+    int radius = Math.max(0, Math.min(128,
+        SkillFormula.evaluate(skill.aurarangecalc, skill, level)));
+    Array<Integer> targets = getEntitiesInRange(
+        mPosition.get(wardId).position.x, mPosition.get(wardId).position.y, radius);
+    com.riiablo.codec.excel.DifficultyLevels.Entry difficulty = files().DifficultyLevels != null
+        ? files().DifficultyLevels.get(combatDifficulty(missile.ownerId, wardId)) : null;
+    int affected = 0;
+    for (int i = 0; i < targets.size; i++) {
+      int targetId = targets.get(i);
+      if (!mMonster.has(targetId) || mMercenary.has(targetId)
+          || !isAlive(targetId) || !isEnemy(missile.ownerId, targetId)
+          || !canSwitchWarCryAi(targetId)) continue;
+      if (mNativeUnitFlags.has(targetId)
+          && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) continue;
+      if (mMapWrapper.has(missile.ownerId) && mMapWrapper.has(targetId)) {
+        MapWrapper sourceMap = mMapWrapper.get(missile.ownerId);
+        MapWrapper targetMap = mMapWrapper.get(targetId);
+        if (sourceMap.map != null && targetMap.map != null && sourceMap.map != targetMap.map) continue;
+      }
+      UnitStates states = mUnitStates.has(targetId)
+          ? mUnitStates.get(targetId) : mUnitStates.create(targetId).init(world, targetId);
+      if (states.stateList == null) states.init(world, targetId);
+      Attributes attrs = mAttributesWrapper.has(targetId)
+          ? mAttributesWrapper.get(targetId).attrs : null;
+      UnitState state = NecromancerSkills.applyCurse(
+          states.stateList, files().States, skill, level, wardId, difficulty,
+          attrs, false);
+      if (state != null) affected++;
+    }
+    log.debug("[BARBARIAN_GRIM_WARD] phase=terror ward={} owner={} level={} radius={} affected={}",
+        wardId, missile.ownerId, level, radius, affected);
+  }
+
+  static int grimWardLifetimeFrames(Missiles.Entry start, Skills.Entry skill, int level) {
+    int fixed = arrayValue(start != null ? start.sHitPar : null, 0);
+    return fixed > 0 ? fixed : Math.max(5,
+        SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, Math.max(1, level)));
+  }
+
   /**
    * Native Fissure missile mode: the SrvDo028 controller remains at the
    * target point and periodically lays a short-lived fire vent selected from
@@ -709,14 +818,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   /** Returns native spiral point {@code 1..77}; point zero is the origin. */
   static Vector2 blessedHammerPathPoint(Vector2 origin, int pointIndex, Vector2 out) {
-    if (out == null) out = new Vector2();
-    if (origin == null || pointIndex <= 0) {
-      return out.set(origin == null ? Vector2.Zero : origin);
-    }
-    float angle = pointIndex * BLESSED_HAMMER_ANGLE_STEP;
-    float radius = pointIndex * BLESSED_HAMMER_RADIUS_STEP;
-    return out.set(origin.x + MathUtils.cos(angle) * radius,
-        origin.y + MathUtils.sin(angle) * radius);
+    return NativeBlessedHammerPath.point(origin, pointIndex, out);
   }
 
   /** Native {@code MISSMODE_SrvHit22_FistOfTheHeavensDelay}. */
@@ -1538,6 +1640,13 @@ public class MissileCollisionSystem extends IteratingSystem {
   private boolean checkCollisionWithEntity(int missileId, Missile missile,
       Vector2 previousPos, Vector2 missilePos, int targetId, Position targetPos,
       float forcedRadius, boolean suppressSideEffects) {
+    return checkCollisionWithEntity(missileId, missile, previousPos, missilePos,
+        targetId, targetPos, forcedRadius, suppressSideEffects, null);
+  }
+
+  private boolean checkCollisionWithEntity(int missileId, Missile missile,
+      Vector2 previousPos, Vector2 missilePos, int targetId, Position targetPos,
+      float forcedRadius, boolean suppressSideEffects, AreaDamagePacket areaPacket) {
     // Use swept segment collision so fast missiles cannot jump over a target.
     float distance = distanceToSegment(targetPos.position, previousPos, missilePos);
     // A travelling missile may use SrvHit01/SrvHit14 to create an explosion
@@ -1563,7 +1672,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       // radius damage from the null-target expiry path below.  Keep the
       // ordinary unit path fail-closed; the explicit AoE pass uses suppressed
       // side effects so it can reuse the authoritative damage packet.
-      if (hitFunction == 36 || hitFunction == 3 && !suppressSideEffects) {
+      if (hitFunction == 36 || (hitFunction == 3 || hitFunction == 48) && !suppressSideEffects) {
         return false;
       }
       if (hitFunction == 50) {
@@ -1597,7 +1706,8 @@ public class MissileCollisionSystem extends IteratingSystem {
           if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) {
             return false;
           }
-          emitImpactPresentation(missileId, missile, targetId, missilePos);
+          emitImpactPresentation(missileId, missile, targetId, missilePos,
+              missile.missile.ProgOverlay);
           healHolyBoltTarget(missileId, missile, targetId);
           if (!missile.persistent && collidesKill(missile)) world.delete(missileId);
           return true;
@@ -1650,11 +1760,24 @@ public class MissileCollisionSystem extends IteratingSystem {
       // Frozen Orb's SrvHit29 returns 2 while CurrentFrame != 0: no burst
       // or destruction on a live unit. Its root has no direct damage packet.
       if (missile.missile != null && missile.missile.pSrvHitFunc == 29) return false;
-      if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) return false;
+      if (!suppressSideEffects && NativeMoltenBoulder.isRolling(missile.missile)
+          && NativeMoltenBoulder.burstsOnTarget(mPlayer.has(targetId),
+              mMonster.has(targetId) ? mMonster.get(targetId).monstats2 : null)) {
+        burstMoltenBoulder(missileId, missile, missilePos, targetId);
+        emitImpactPresentation(missileId, missile, targetId, missilePos);
+        world.delete(missileId);
+        return true;
+      }
+      // SrvDo27 calls SKILLS_ApplyAreaDamage directly, independently of the
+      // travelling tornado's SrvDmgHitHandler NextHit/NextDelay lookup.
+      boolean independentArea = suppressSideEffects && missile.missile != null
+          && (missile.missile.pSrvDoFunc == 27 || NativeMoltenBoulder.isRolling(missile.missile));
+      if (!independentArea
+          && !claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) return false;
       // Impact presentation is independent from damage.  A blocked, absorbed,
       // or zero-damage hit still consumes the native HitSound/CltHitSubMissile
       // definition exactly once for this projectile/target pair.
-      if (!suppressSideEffects) {
+      if (!suppressSideEffects && !NativeMoltenBoulder.isRolling(missile.missile)) {
         emitImpactPresentation(missileId, missile, targetId, missilePos);
       }
       if (!suppressSideEffects && hitFunction == 19) {
@@ -1735,7 +1858,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       Attributes ownerAttrs = mAttributesWrapper.get(ownerId).attrs;
       ensureFreezeChildSnapshot(missile, ownerAttrs);
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
-      Attributes attackAttrs = missile.damageSnapshot ? missile.damage : ownerAttrs;
+      Attributes attackAttrs = areaPacket != null ? areaPacket.damage
+          : missile.damageSnapshot ? missile.damage : ownerAttrs;
       StatRef targetHitpoints = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
       if (targetHitpoints == null || targetHitpoints.asFixed() <= 0f) {
         // A dead entity may remain in the ECS until its death animation and
@@ -1781,7 +1905,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       int minOverride = missile.damageSnapshot ? 0 : missile.attackMinDamage;
       int maxOverride = missile.damageSnapshot ? 0 : missile.attackMaxDamage;
       int arOverride = missile.damageSnapshot ? 0 : missile.attackRating;
-      boolean alwaysHit = missile.damageSnapshot && missile.missile != null
+      boolean alwaysHit = areaPacket != null || missile.damageSnapshot && missile.missile != null
           && !missile.missile.ToHit && !missile.usesAttackRating;
       boolean ignoreTargetDefenseAllowed = isIgnoreTargetDefenseAllowed(targetId);
       if (mPlayer.has(targetId)) {
@@ -1791,7 +1915,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
       // Factory-audited ordinary missiles own their combat stream. Keep legacy
       // skill/special policies on their existing schedule until audited too.
-      NativeUnitRandom impactRng = missile.nativePhysical != null && missile.nativePhysical.criticalCaptured
+      NativeUnitRandom impactRng = areaPacket != null || missile.nativePhysical != null && missile.nativePhysical.criticalCaptured
           && (missile.ordinaryWeaponSnapshot || !mPlayer.has(ownerId) && !mMercenary.has(ownerId))
           ? NativeUnitRandom.missile(missile, serverContext == null ? 0 : serverContext.gameSeed(), missileId) : null;
       final Monster impactOwner = impactRng != null && !missile.ordinaryWeaponSnapshot
@@ -1818,8 +1942,8 @@ public class MissileCollisionSystem extends IteratingSystem {
           arOverride,
           alwaysHit,
           null, null, 0, 0,
-          missile.ordinaryWeaponSnapshot ? null : stateList(ownerId), stateList(targetId), isEntityMoving(targetId),
-          missile.ordinaryWeaponSnapshot ? null : missileMastery(missile), nativeDifficultyContext(combatDifficulty(ownerId, targetId)),
+          areaPacket != null || missile.ordinaryWeaponSnapshot ? null : stateList(ownerId), stateList(targetId), isEntityMoving(targetId),
+          areaPacket != null || missile.ordinaryWeaponSnapshot ? null : missileMastery(missile), nativeDifficultyContext(combatDifficulty(ownerId, targetId)),
           blessedHammerTargetBonusPercent(
               missile, mMonster.has(targetId) ? mMonster.get(targetId) : null),
           mMonster.has(targetId) && mMonster.get(targetId).monstats != null
@@ -1827,8 +1951,10 @@ public class MissileCollisionSystem extends IteratingSystem {
           mMonster.has(targetId) && isUndead(mMonster.get(targetId)),
           ignoreTargetDefenseAllowed,
           missile.skillId == com.riiablo.engine.server.skill.SkillId.NOVA,
-          missile.ordinaryWeaponSnapshot || !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? impactPhysical : null,
-          missile.ordinaryWeaponSnapshot || !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? missile.nativeElemental : null);
+          areaPacket != null ? areaPacket.physical
+              : missile.ordinaryWeaponSnapshot || !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? impactPhysical : null,
+          areaPacket != null ? areaPacket.elemental
+              : missile.ordinaryWeaponSnapshot || !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? missile.nativeElemental : null);
       if (impactRng != null) missile.rngState = impactRng.state();
       boolean damageHit = combat.hit && !combat.blocked;
       if (damageHit) {
@@ -1987,6 +2113,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
 
       if (damageHit) applyNativeMissileDamageState(missileId, missile, targetId);
+      if (damageHit && areaPacket == null && NativeMoltenBoulder.isRolling(missile.missile)) {
+        applyMoltenBoulderKnockback(missileId, missile, targetId);
+      }
 
       if (damageHit && isChainLightningMissile(missile)) {
         spawnChainLightningContinuation(missile, targetId, targetPos.position);
@@ -1996,6 +2125,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       // A miss/block still consumes the projectile, while a dead target is
       // handled by the normal death path above.
       if (missile.attached) return true;
+      if (NativeMoltenBoulder.isRolling(missile.missile)) return true;
       if (damageHit && consumePierce(missile)) {
         log.info("[MISSILE_PIERCE] phase=continue missileId={} target={} chance={} "
                 + "remaining={} hitCount={}",
@@ -2015,6 +2145,11 @@ public class MissileCollisionSystem extends IteratingSystem {
   /** Emits one native impact presentation per projectile, not once per AoE target. */
   private void emitImpactPresentation(int missileId, Missile missile, int targetId,
       Vector2 position) {
+    emitImpactPresentation(missileId, missile, targetId, position, null);
+  }
+
+  private void emitImpactPresentation(int missileId, Missile missile, int targetId,
+      Vector2 position, String targetOverlay) {
     if (events == null || missile == null || missile.missile == null) return;
     // A native area missile has one visual impact even when its broad-phase
     // resolves several targets.  Pierce is the opposite case: every target
@@ -2033,7 +2168,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     events.dispatch(MissileImpactEvent.obtain(missileId, missile.missile.Id,
         missile.ownerId, targetId, position, facing).withPresentation(
-            missile.impactDcc, missile.impactPalette, missile.impactSound));
+            missile.impactDcc, missile.impactPalette, missile.impactSound)
+            .withTargetOverlay(targetOverlay));
   }
 
   /** Native SrvHit07 pet/ally branch. */
@@ -2237,7 +2373,11 @@ public class MissileCollisionSystem extends IteratingSystem {
         // frame. One-shot elemental impacts retain normal hit feedback.
         .suppressMonsterHitSound(missile.persistent)
         .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
-    if (missile.diabWallFire) { event.fireDamage = damage; event.missileId = missileId; }
+    if (missile.fixedElementalType == CombatSystem.DAMAGE_FIRE) {
+      event.fireDamage = damage;
+      event.missileId = missileId;
+    }
+    if (missile.skillId == 230) { event.coldDamage = damage; event.missileId = missileId; }
     event.absorbedLife = combat.absorbedLifeFixed / 256f;
     DamageSettlement.prepare(world, event);
     float applied = Math.max(0f, event.damage);
@@ -2246,6 +2386,12 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (life.asFixed() <= 0f || (applied > 0f && life.asFixed() < 1f)) {
       life.set(0f);
       DamageSettlement.finishDeath(world, event);
+    } else if (missile.skillId == 230 && missile.onHitStateDuration > 0) {
+      int duration = combatSystemResolver.resolveColdLengthBeforeState(targetAttrs,
+          mPlayer.has(targetId), missile.onHitStateDuration, missile.elementalPiercePercent, stateList(targetId),
+          nativeDifficultyContext(combatDifficulty(missile.ownerId, targetId)));
+      if (duration > 0) StatusEffectApplier.forWorld(world)
+          .applyCold(targetId, duration, missile.ownerId);
     } else if (missile.missile != null && missile.missile.pSrvDmgFunc == 3) {
       // SrvDmg03 requests hit recovery with dParam1 / 128 probability.
       int chance = missile.missile.dParam != null && missile.missile.dParam.length > 0
@@ -2532,15 +2678,19 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   /** Applies post-damage state carried by native missile SrvDmg functions. */
   private void applyNativeMissileDamageState(int missileId, Missile missile, int targetId) {
-    if (missile == null || missile.missile == null || missile.missile.pSrvDmgFunc != 7) return;
+    if (missile == null || missile.missile == null
+        || missile.missile.pSrvDmgFunc != 7 && missile.missile.pSrvDmgFunc != 9) return;
     Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
+    boolean twister = missile.missile.pSrvDmgFunc == 9;
     boolean shockWave = DruidSkills.isShockWave(skill);
-    int duration = shockWave
+    int duration = twister ? (arrayValue(missile.missile.dParam, 0) > 0
+        ? arrayValue(missile.missile.dParam, 0) : arrayValue(skill != null ? skill.Param : null, 1))
+        : shockWave
         ? DruidSkills.getShockWaveStunDuration(
             missile.missile, skill, Math.max(1, missile.damageLevel))
         : BarbarianSkills.getWarCryStunDuration(
             missile.missile, skill, Math.max(1, missile.damageLevel));
-    String tag = shockWave ? "[DRUID_SHOCK_WAVE]" : "[BARBARIAN_WAR_CRY]";
+    String tag = twister ? "[DRUID_TWISTER]" : shockWave ? "[DRUID_SHOCK_WAVE]" : "[BARBARIAN_WAR_CRY]";
     Monster monster = mMonster.has(targetId) ? mMonster.get(targetId) : null;
     int uniqueRoll = monster != null && MonsterRank.isUnique(monster.rank)
         ? rollStun(missile) : 99;
@@ -2929,6 +3079,11 @@ public class MissileCollisionSystem extends IteratingSystem {
   private void triggerNativeNullHit(int sourceId, Missile source, Vector2 origin) {
     if (source == null || source.missile == null || source.presentationOnly || origin == null
         || source.hitFunctionTriggered) return;
+    if (NativeMoltenBoulder.isEmerge(source.missile)) {
+      source.hitFunctionTriggered = true;
+      spawnMoltenBoulderChild(sourceId, source, origin);
+      return;
+    }
     if (source.missile.pSrvHitFunc == 54) {
       source.hitFunctionTriggered = true;
       com.riiablo.engine.server.quest.Act5QuestSystem quests = world.getSystem(
@@ -2973,6 +3128,206 @@ public class MissileCollisionSystem extends IteratingSystem {
     spawnPoisonCloudHitSubmissiles(source, origin);
     log.debug("[AMAZON_PLAGUE_JAVELIN] phase=null_target_hit source={} missile={} origin=({}, {})",
         sourceId, source.missile.Missile, origin.x, origin.y);
+  }
+
+  /** SrvDo27 owns a separate periodic area packet before moving the tornado. */
+  private void processTornadoAreaPulse(int missileId, Missile source, Vector2 origin,
+      int callbackFrame) {
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
+    if (skill == null) return;
+    int level = Math.max(1, source.damageLevel);
+    int interval = arrayValue(source.missile.Param, 0);
+    if (interval <= 0) interval = Math.max(1, SkillFormula.evaluate(skill.calc4, skill, level));
+    if ((source.nativeLifetimeFrames - callbackFrame) % interval != 0) return;
+    int radius = arrayValue(source.missile.Param, 1);
+    if (radius <= 0) radius = Math.max(1, SkillFormula.evaluate(skill.aurarangecalc, skill, level));
+    Array<Integer> targets = getEntitiesInRange(origin.x, origin.y, radius);
+    for (int i = 0; i < targets.size; i++) {
+      int targetId = targets.get(i);
+      if (targetId == source.ownerId || !mAttributesWrapper.has(targetId)
+          || !isAlive(targetId) || !isEnemy(source.ownerId, targetId)) continue;
+      checkCollisionWithEntity(missileId, source, origin, origin, targetId,
+          mPosition.get(targetId), radius, true);
+    }
+  }
+
+  /** SrvDo06 checks the previous path step's native integer-cell movement flag. */
+  private void processMoltenBoulderTrail(Missile source, Position position) {
+    int cellX = MathUtils.floor(position.position.x + 0.5f);
+    int cellY = MathUtils.floor(position.position.y + 0.5f);
+    boolean changed = source.moltenBoulderCellKnown
+        && (source.moltenBoulderCellX != cellX || source.moltenBoulderCellY != cellY);
+    source.moltenBoulderCellKnown = true;
+    source.moltenBoulderCellX = cellX;
+    source.moltenBoulderCellY = cellY;
+    if (!changed) return;
+    String name = firstMissileName(source.missile.SubMissile);
+    Missiles.Entry row = name == null ? null : files().Missiles.get(name);
+    if (row != null) createMoltenBoulderFire(source, row, position.position, row.Range);
+  }
+
+  /** SrvHit48 changes the short emerge missile into the rolling boulder. */
+  private void spawnMoltenBoulderChild(int sourceId, Missile source, Vector2 origin) {
+    if (factory == null || source == null || source.missile == null) return;
+    String name = firstMissileName(source.missile.HitSubMissile);
+    Missiles.Entry row = name == null ? null : files().Missiles.get(name);
+    if (row == null) return;
+    int level = Math.max(1, source.damageLevel);
+    Vector2 direction = mVelocity.has(sourceId)
+        ? new Vector2(mVelocity.get(sourceId).velocity) : new Vector2(Vector2.X);
+    if (direction.isZero(0.0001f)) direction.set(Vector2.X);
+    int id = factory.createMissile(row, direction.nor(), origin, source.ownerId, level);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile child = mMissile.get(id);
+    child.skillId = source.skillId;
+    child.damageLevel = level;
+    child.nativeLifetimeFrames = Missile.nativeRangeFrames(row, level);
+    child.range = 0f;
+    Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
+        ? mAttributesWrapper.get(source.ownerId).attrs : null;
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
+    if (skill != null) MissileDamageResolver.initializeSkill(files(), child, skill, ownerAttrs,
+        level, n -> baseSkillLevel(source.ownerId, n), stateList(source.ownerId));
+  }
+
+  /** Native SrvHit47's large-monster collision: radius packet plus fire field. */
+  private void burstMoltenBoulder(int missileId, Missile source, Vector2 origin, int collisionTarget) {
+    if (source.hitFunctionTriggered) return;
+    source.hitFunctionTriggered = true;
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
+    int level = Math.max(1, source.damageLevel);
+    int configured = arrayValue(source.missile.sHitPar, 0);
+    int radius = configured > 0 ? configured : Math.max(1,
+        SkillFormula.evaluate(skill != null ? skill.aurarangecalc : null, skill, level));
+    // SrvHit47 fills D2DamageStrc once, then copies it to every aura target.
+    // Roll before enumeration: independent target defense must never re-roll
+    // the source packet, including when an earlier target blocks or absorbs it.
+    AreaDamagePacket packet = captureMoltenBoulderAreaPacket(missileId, source, collisionTarget);
+    Array<Integer> targets = getEntitiesInRange(origin.x, origin.y, radius);
+    for (int i = 0; i < targets.size; i++) {
+      int targetId = targets.get(i);
+      if (targetId == source.ownerId || !mAttributesWrapper.has(targetId)
+          || !isAlive(targetId) || !isEnemy(source.ownerId, targetId)) continue;
+      checkCollisionWithEntity(missileId, source, origin, origin, targetId,
+          mPosition.get(targetId), radius, true, packet);
+    }
+    String name = firstMissileName(source.missile.HitSubMissile);
+    Missiles.Entry fire = name == null ? null : files().Missiles.get(name);
+    if (fire == null) return;
+    int step = Math.max(1, arrayValue(source.missile.sHitPar, 1));
+    for (int i = 0; i < NativeMoltenBoulder.FIRE_X.length; i += step) {
+      // MISSMODE_CreateMeteor_MoltenBoulderSubmissiles passes nRange as
+      // the children's lifetime override when positive.
+      createMoltenBoulderFire(source, fire,
+          new Vector2(origin).add(NativeMoltenBoulder.FIRE_X[i], NativeMoltenBoulder.FIRE_Y[i]), radius);
+    }
+  }
+
+  /** One callback-local packet: it must not become persistent missile state. */
+  private static final class AreaDamagePacket {
+    final NativeMissilePhysicalDamage physical;
+    final NativeMissileElementalDamage elemental;
+    final Attributes damage = Attributes.obtainStandard();
+
+    AreaDamagePacket(int physicalFixed, int fireFixed, Attributes source) {
+      physical = NativeMissilePhysicalDamage.restore(physicalFixed, physicalFixed,
+          0, 0, 0, statInt(source, Stat.skill_bypass_undead) > 0,
+          true, false, true, false);
+      elemental = new NativeMissileElementalDamage(
+          CombatSystem.DAMAGE_FIRE, fireFixed, fireFixed, 0);
+      // The already-filled packet carries its owner's pierce, not new weapon
+      // critical/crushing rolls or an additional round of offensive states.
+      damage.base().put(Stat.level, Math.max(1, statInt(source, Stat.level)));
+      damage.base().put(Stat.item_pierce_fire, statInt(source, Stat.item_pierce_fire));
+      damage.base().put(Stat.passive_fire_pierce, statInt(source, Stat.passive_fire_pierce));
+      damage.reset();
+    }
+  }
+
+  private AreaDamagePacket captureMoltenBoulderAreaPacket(int missileId, Missile source,
+      int collisionTarget) {
+    Attributes damage = source.damageSnapshot ? source.damage
+        : mAttributesWrapper.has(source.ownerId) ? mAttributesWrapper.get(source.ownerId).attrs : null;
+    NativeUnitRandom rng = NativeUnitRandom.missile(source,
+        serverContext == null ? 0 : serverContext.gameSeed(), missileId);
+    NativeCombatRolls rolls = new NativeCombatRolls(rng);
+    int physical = rollNativeAreaDamage(rolls,
+        statInt(damage, Stat.mindamage), statInt(damage, Stat.maxdamage));
+    // FillDamageParams receives the original LARGE collision target. Its
+    // target-class percent therefore belongs to the packet copied to ALL
+    // area victims, not each secondary victim's own monster class.
+    int percent = statInt(damage, Stat.damagepercent);
+    Monster collided = mMonster.has(collisionTarget) ? mMonster.get(collisionTarget) : null;
+    if (collided != null && collided.monstats != null && collided.monstats.demon) {
+      percent += statInt(damage, Stat.item_demondamage_percent);
+    }
+    if (collided != null && isUndead(collided)) {
+      percent += statInt(damage, Stat.item_undeaddamage_percent);
+    }
+    percent = Math.max(-90, percent);
+    physical = (int) Math.min(Integer.MAX_VALUE,
+        Math.max(0L, physical + (long) physical * percent / 100));
+    // Here deadlystrike is the missile's already-captured critical flag,
+    // exactly as FillDamageParams reads it, not a new percent roll.
+    if (statInt(damage, Stat.item_deadlystrike) != 0) {
+      physical = (int) Math.min(Integer.MAX_VALUE, (long) physical * 2);
+    }
+    int fire = rollNativeAreaDamage(rolls,
+        statInt(damage, Stat.firemindam), statInt(damage, Stat.firemaxdam));
+    return new AreaDamagePacket(physical, fire, damage);
+  }
+
+  private static int rollNativeAreaDamage(NativeCombatRolls rolls, int minimum, int maximum) {
+    if (minimum <= 0 || maximum <= 0) return 0;
+    int low = (int) Math.min(Integer.MAX_VALUE, (long) Math.min(minimum, maximum) * 256);
+    int high = (int) Math.min(Integer.MAX_VALUE, (long) Math.max(minimum, maximum) * 256);
+    return rolls.physicalFixed(low, high);
+  }
+
+  private void createMoltenBoulderFire(Missile source, Missiles.Entry row,
+      Vector2 origin, int lifetime) {
+    if (factory == null) return;
+    int level = Math.max(1, source.damageLevel);
+    int id = factory.createMissile(row, Vector2.X, origin, source.ownerId, level);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile child = mMissile.get(id);
+    child.skillId = source.skillId;
+    child.damageLevel = level;
+    child.persistent = true;
+    child.range = 0f;
+    child.remainingFrames = Math.max(1, lifetime);
+    child.nativeLifetimeFrames = child.remainingFrames;
+    child.tickInterval = 1;
+    if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
+    Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
+        ? mAttributesWrapper.get(source.ownerId).attrs : null;
+    MissileDamageResolver.initializeImmolationFireArea(files(), child, ownerAttrs,
+        mPlayer.has(source.ownerId), level);
+    // Native firepath has its own Missiles.txt 8.8 rate, plus the listed
+    // EDmgSymPerCalc hard-point synergy; it does not inherit rolling damage.
+    Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
+    if (skill != null && row.EDmgSymPerCalc != null && !row.EDmgSymPerCalc.isEmpty()) {
+      int synergy = Math.max(0, SkillFormula.evaluate(row.EDmgSymPerCalc, skill, level,
+          n -> baseSkillLevel(source.ownerId, n)));
+      child.elementalMinRateFixed += child.elementalMinRateFixed * synergy / 100;
+      child.elementalMaxRateFixed += child.elementalMaxRateFixed * synergy / 100;
+    }
+  }
+
+  private void applyMoltenBoulderKnockback(int missileId, Missile source, int targetId) {
+    if (!mPosition.has(source.ownerId) || !mPosition.has(targetId)) return;
+    Monster monster = mMonster.has(targetId) ? mMonster.get(targetId) : null;
+    int chance = NativeMoltenBoulder.knockbackChance(source.missile, mPlayer.has(targetId),
+        monster != null ? monster.monstats2 : null);
+    if (chance <= 0) return;
+    NativeUnitRandom rng = NativeUnitRandom.missile(source, 0, missileId);
+    boolean knock = rng.nextUnsigned() % 100 < chance;
+    source.rngState = rng.state();
+    if (!knock) return;
+    Vector2 attacker = mPosition.get(source.ownerId).position;
+    Vector2 target = mPosition.get(targetId).position;
+    StatusEffectApplier.forWorld(world).applyKnockback(source.ownerId, targetId,
+        attacker.x, attacker.y, target.x, target.y);
   }
 
   /** SrvHit01 owns an immediate, one-shot radius packet, also for null hits. */

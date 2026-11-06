@@ -659,6 +659,15 @@ public class ServerSkillSystem extends PassiveSystem {
     UnitStates casterStates = mUnitStates.has(event.entityId)
         ? mUnitStates.get(event.entityId) : null;
     StateList casterStateList = casterStates != null ? casterStates.stateList : null;
+    if (skill.srvdofunc == 47 && casterStateList != null
+        && casterStateList.hasState(StateId.CLOAK_OF_SHADOWS)) {
+      reject(event, 2, "Cloak of Shadows is already active");
+      return;
+    }
+    if (skill.srvstfunc == 22 && !validPsychicTarget(event.entityId, event.targetId)) {
+      reject(event, 8, "Psychic Hammer requires a living non-town unit target");
+      return;
+    }
     boolean transformed = casterStateList != null
         && (casterStateList.hasState(StateId.WOLF) || casterStateList.hasState(StateId.BEAR));
     if ((skill.restrict == 2 || transformed)
@@ -785,7 +794,10 @@ public class ServerSkillSystem extends PassiveSystem {
     }
 
     boolean bladeFury = isBladeFurySkill(skill);
-    float manaCost = bladeFury ? 0f : NativeSkillResolver.manaCost(skill, skillLevel);
+    // Inferno/Arctic Blast consume after SrvSt11 succeeds, because StartMana is
+    // tested before that native consume and a refresh executes DoInferno first.
+    float manaCost = bladeFury || isInfernoChannelSkill(skill)
+        ? 0f : NativeSkillResolver.manaCost(skill, skillLevel);
     if (event.targetId == Engine.INVALID_ENTITY
         && NativeSkillResolver.isTargetableOnly(files(), skill)) {
       // Shift-forced target-only attacks retain their presentation animation,
@@ -793,9 +805,9 @@ public class ServerSkillSystem extends PassiveSystem {
       manaCost = 0f;
     }
     event.manaCost = manaCost;
-    if (bladeFury && !bladeFuryStateActive(event.entityId)
+    if ((bladeFury || isInfernoChannelSkill(skill)) && !bladeFuryStateActive(event.entityId)
         && !NativeSkillResolver.hasEnoughMana(mana.asFixed(), Math.max(0, skill.startmana))) {
-      reject(event, 1, "not enough Blade Fury start mana");
+      reject(event, 1, "not enough channel start mana");
       return;
     }
     boolean bloodMana = com.riiablo.engine.server.skill.BloodMana.active(casterStateList);
@@ -837,6 +849,11 @@ public class ServerSkillSystem extends PassiveSystem {
     return skill != null && (skill.Id == SkillId.BLADE_FURY
         || "Blade Fury".equalsIgnoreCase(skill.skill)
         || skill.srvstfunc == 26 && skill.srvdofunc == 48);
+  }
+
+  static boolean isInfernoChannelSkill(Skills.Entry skill) {
+    return skill != null && skill.srvstfunc == 11 && skill.srvdofunc == 19
+        && (skill.Id == SkillId.INFERNO || skill.Id == SkillId.ARCTIC_BLAST);
   }
 
   private boolean bladeFuryStateActive(int entityId) {
@@ -1076,6 +1093,10 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       return;
     }
+    if (skill.srvdofunc == 33 || skill.srvdofunc == 51) {
+      applyAssassinMindSkill(event, skill, getSkillLevel(event.entityId, skill.Id));
+      return;
+    }
     boolean rangedNormalAttack = isPlayerRangedNormalAttack(event.entityId, event.skillId);
     if (mPlayer.has(event.entityId) && mPlayer.get(event.entityId).data != null) {
       ItemData items = mPlayer.get(event.entityId).data.getItems();
@@ -1107,6 +1128,7 @@ public class ServerSkillSystem extends PassiveSystem {
         // Javelin/Lightning Fury) also use SrvDoFunc=0, but their missile
         // damage must be initialized from Skills.txt before collision.
         && !NativeSkillResolver.isAmazonElementalMissileSkill(skill)
+        && skill.Id != SkillId.MOLTEN_BOULDER
         // Normal bow/crossbow Attack has no legacy client projectile. It must
         // reach the authoritative missile path below just like Throw does.
         && !rangedNormalAttack
@@ -1115,6 +1137,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 44 && event.srvdofunc != 45
         && event.srvdofunc != 43
         && event.srvdofunc != 48
+        && event.srvdofunc != 47
         && event.srvdofunc != 22 && event.srvdofunc != 23 && event.srvdofunc != 24
         && event.srvdofunc != 28
         && event.srvdofunc != 49 && event.srvdofunc != 54
@@ -1128,6 +1151,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 29
         && event.srvdofunc != 6
         && event.srvdofunc != 117
+        && event.srvdofunc != 118
         && event.srvdofunc != 123
         && event.srvdofunc != 124
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
@@ -1173,6 +1197,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 29
         && skill.srvdofunc != 6
         && skill.srvdofunc != 117
+        && skill.srvdofunc != 118
         && skill.srvdofunc != 123
         && skill.srvdofunc != 124
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
@@ -1284,6 +1309,14 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     if (event.srvdofunc == 18 || skill.srvdofunc == 18) {
+      if (DruidSkills.isCycloneArmor(skill)) {
+        UnitStates holder = mUnitStates.has(event.entityId) ? mUnitStates.get(event.entityId)
+            : mUnitStates.create(event.entityId).init(world, event.entityId);
+        if (holder.stateList == null) holder.init(world, event.entityId);
+        DruidSkills.applyCycloneArmorState(holder.stateList, skill, skillLevel, event.entityId,
+            name -> getBaseSkillLevel(event.entityId, name));
+        return;
+      }
       if (AssassinSkills.isSpeedOrFade(skill)) {
         if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(world, event.entityId);
         UnitStates states = mUnitStates.get(event.entityId);
@@ -1423,6 +1456,14 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (event.skillId == SkillId.INFERNO || skill.Id == SkillId.INFERNO) {
       spawnSorceressInferno(event, skill, skillLevel, start);
+      return;
+    }
+    if (skill.Id == SkillId.ARCTIC_BLAST && skill.srvdofunc == 19) {
+      spawnArcticBlast(event, skill, skillLevel, start);
+      return;
+    }
+    if (skill.srvdofunc == 118) {
+      spawnDruidTwisterTornado(event, skill, skillLevel, start);
       return;
     }
     if (event.srvdofunc == 15 || skill.srvdofunc == 15) {
@@ -2349,6 +2390,12 @@ public class ServerSkillSystem extends PassiveSystem {
   /** Native SrvDo047: apply DIMVISION and defense reduction to hostile units in range. */
   private void applyCloakOfShadows(SkillDoEvent event, Skills.Entry skill, int skillLevel,
       Vector2 caster) {
+    UnitStates selfStates = mUnitStates.has(event.entityId)
+        ? mUnitStates.get(event.entityId) : mUnitStates.create(event.entityId);
+    if (selfStates.stateList == null) selfStates.init(world, event.entityId);
+    UnitState self = AssassinSkills.applyCloakSelf(
+        selfStates.stateList, skill, Math.max(1, skillLevel), event.entityId);
+    if (self == null) return;
     int duration = SkillFormula.evaluate(skill.auralencalc, skill, skillLevel);
     if (duration <= 0) {
       int base = firstParam(skill, 3, 200);
@@ -2356,22 +2403,6 @@ public class ServerSkillSystem extends PassiveSystem {
       duration = base + skillLevel * step;
     }
     duration = Math.max(1, duration);
-    // SrvDo047 first applies the skill's own aura state.  The old path only
-    // applied Dim Vision to targets, which made the cast look like a no-op to
-    // clients and also prevented the native state from being refreshed.
-    int selfStateId = stateId(skill.aurastate);
-    if (selfStateId >= 0) {
-      UnitStates selfStates = mUnitStates.has(event.entityId)
-          ? mUnitStates.get(event.entityId) : mUnitStates.create(event.entityId);
-      if (selfStates.stateList == null) selfStates.init(world, event.entityId);
-      UnitState self = selfStates.stateList.addState(selfStateId, duration,
-          Math.max(1, skillLevel), event.entityId);
-      if (self != null) {
-        self.skillId = event.skillId;
-        self.sourceEntityId = event.entityId;
-        self.needsSync = true;
-      }
-    }
     int range = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
     if (range <= 0) {
       int base = firstParam(skill, 1, 30);
@@ -2379,7 +2410,10 @@ public class ServerSkillSystem extends PassiveSystem {
       range = base + skillLevel * step;
     }
     range = Math.max(1, Math.min(128, range));
-    int defenseReduction = -AssassinSkills.calculateCloakOfShadowsDefenseReduce(skillLevel);
+    int defenseReduction = skill.aurastatcalc != null && skill.aurastatcalc.length > 0
+        ? SkillFormula.evaluate(skill.aurastatcalc[0], skill, skillLevel) : 0;
+    short defenseStat = skill.aurastat != null && skill.aurastat.length > 0
+        && skill.aurastat[0] != null ? Stat.index(skill.aurastat[0]) : -1;
     int targetStateId = stateId(skill.auratargetstate);
     if (targetStateId < 0) targetStateId = StateId.DIMVISION;
     int affected = 0;
@@ -2389,7 +2423,7 @@ public class ServerSkillSystem extends PassiveSystem {
     for (int i = 0; i < entities.size(); i++) {
       int targetId = entities.get(i);
       if (targetId == event.entityId || !isHostile(event.entityId, targetId)
-          || !mPosition.has(targetId)
+          || !mPosition.has(targetId) || !hasPositiveLife(targetId)
           || caster.dst2(mPosition.get(targetId).position) > range2) continue;
       if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(world, targetId);
       UnitStates states = mUnitStates.get(targetId);
@@ -2397,9 +2431,10 @@ public class ServerSkillSystem extends PassiveSystem {
       UnitState state = states.stateList.applyCurseState(
           files() != null ? files().States : null,
           targetStateId, duration, skillLevel, event.entityId, event.skillId,
-          Math.abs(defenseReduction), Stat.item_armor_percent, defenseReduction,
+          Math.abs(defenseReduction), defenseStat, defenseReduction,
           NativeStatResolver.Operation.ADD);
       if (state != null) {
+        AssassinSkills.applyCloakTargetStats(state, skill, skillLevel);
         state.needsSync = true;
         affected++;
       }
@@ -2540,6 +2575,163 @@ public class ServerSkillSystem extends PassiveSystem {
             + "resolved={} applied={} freezeLength={} resistedLength={} hp={}->{}", source, target,
         skill.Id, level, skill.EType, raw, min, max, result.totalDamage, damage.damage,
         baseLength, length, before, hp.asFixed());
+  }
+
+  private boolean validPsychicTarget(int source, int target) {
+    return target >= 0 && source != target && mPosition.has(source) && mPosition.has(target)
+        && (mPlayer.has(target) || mMonster.has(target) || mMercenary.has(target))
+        && mAttributesWrapper.has(target) && hasPositiveLife(target) && !mCorpse.has(target)
+        && sameZone(source, target) && !isTownUnit(source) && !isTownUnit(target)
+        && isHostile(source, target) && mNativeUnitFlagsValid(target);
+  }
+
+  /** SrvDo033/051 are direct spell packets, resolved once at the cast keyframe. */
+  private void applyAssassinMindSkill(SkillDoEvent event, Skills.Entry skill, int level) {
+    int source = event.entityId;
+    if (isTownUnit(source)) return;
+    if (skill.srvdofunc == 33) {
+      if (validPsychicTarget(source, event.targetId))
+        applyAssassinMindDamage(source, event.targetId, skill, level, false);
+      return;
+    }
+    Vector2 centre = resolveTargetPoint(event, mPosition.get(source).position, new Vector2());
+    int range = Math.max(0, SkillFormula.evaluate(skill.aurarangecalc, skill, level));
+    IntBag targets = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    // Native SrvDo051 rolls a single shared area damage range before iteration.
+    int min = MissileDamageResolver.skillPhysicalDamage(skill, level, true,
+        name -> getBaseSkillLevel(source, name));
+    int max = MissileDamageResolver.skillPhysicalDamage(skill, level, false,
+        name -> getBaseSkillLevel(source, name));
+    int sharedPhysical = rollAssassinDamage(source, min, max);
+    for (int i = 0; i < targets.size(); i++) {
+      int target = targets.get(i);
+      if (!validPsychicTarget(source, target)
+          || centre.dst2(mPosition.get(target).position) > (float) range * range) continue;
+      if (!tryMindBlastConversion(source, target, skill, level))
+        applyAssassinMindDamage(source, target, skill, level, true, sharedPhysical);
+    }
+  }
+
+  private void applyAssassinMindDamage(int source, int target, Skills.Entry skill,
+      int level, boolean blast) {
+    int min = MissileDamageResolver.skillPhysicalDamage(skill, level, true,
+        name -> getBaseSkillLevel(source, name));
+    int max = MissileDamageResolver.skillPhysicalDamage(skill, level, false,
+        name -> getBaseSkillLevel(source, name));
+    applyAssassinMindDamage(source, target, skill, level, blast,
+        rollAssassinDamage(source, min, max));
+  }
+
+  private void applyAssassinMindDamage(int source, int target, Skills.Entry skill,
+      int level, boolean blast, int rawPhysical) {
+    Attributes defender = mAttributesWrapper.get(target).attrs;
+    StateList targetStates = stateList(target);
+    boolean player = mPlayer.has(target), sourcePlayer = mPlayer.has(source);
+    CombatSystem.CombatResult physical = combatSystemResolver.calculateFixedPhysicalDamage(
+        defender, player, sourcePlayer, rawPhysical, targetStates);
+    CombatSystem.CombatResult elemental = null;
+    if (!blast) {
+      int min = MissileDamageResolver.skillElementalDamage(skill, level, true,
+          name -> getBaseSkillLevel(source, name));
+      int max = MissileDamageResolver.skillElementalDamage(skill, level, false,
+          name -> getBaseSkillLevel(source, name));
+      elemental = combatSystemResolver.calculateNativeFixedElementalDamage(defender,
+          player, sourcePlayer, elementalDamageType(skill.EType), rollAssassinDamage(source, min, max),
+          0, targetStates, nativeDifficultyContext(combatDifficulty(source, target)));
+    }
+    float total = physical.totalDamageHp() + (elemental == null ? 0f : elemental.totalDamageHp());
+    DamageEvent damage = DamageEvent.obtainMissile(source, target, total,
+        physical.physicalDamageHp(), null, elemental);
+    damage.suppressLeech = true;
+    DamageSettlement.prepare(world, damage);
+    DamageSettlement.commit(world, damage, true);
+    if (!hasPositiveLife(target)) {
+      DamageSettlement.finishDeath(world, damage);
+      return;
+    }
+    boolean knockback = blast;
+    if (blast) {
+      int length = AssassinSkills.mindBlastStunLength(skill, level);
+      if (mMonster.has(target)) {
+        Monster monster = mMonster.get(target);
+        if (monster.monstats == null || monster.monstats.Velocity == 0
+            || monster.monstats.boss || monster.rank == MonsterRank.BOSS
+            || (monster.rank != MonsterRank.NORMAL && monster.rank != MonsterRank.MINION
+                && NativeUnitRandom.unit(world, gameSeed(), source).nextInt(100) < 90)) length = 0;
+      }
+      length = Math.min(length, mMercenary.has(target) ? 13 : 250);
+      StateUpdater updater = world.getSystem(StateUpdater.class);
+      if (updater != null && length > 0)
+        updater.applyState(target, StateId.STUNNED, length, level, source, 0, 0);
+    } else {
+      Monster monster = mMonster.has(target) ? mMonster.get(target) : null;
+      int category = player || mMercenary.has(target) ? 3
+          : monster != null && (monster.monstats != null && monster.monstats.boss
+              || monster.rank == MonsterRank.BOSS) ? 2
+          : monster != null && monster.rank != MonsterRank.NORMAL ? 1 : 0;
+      String calc = category == 3 ? skill.calc4 : category == 2 ? skill.calc3
+          : category == 1 ? skill.calc2 : skill.calc1;
+      int chance = SkillFormula.evaluate(calc, skill, level);
+      knockback = chance > 0 && NativeUnitRandom.unit(world, gameSeed(), source).nextInt(100) < chance;
+    }
+    if (knockback) {
+      Vector2 from = mPosition.get(source).position, to = mPosition.get(target).position;
+      com.riiablo.engine.server.combat.StatusEffectApplier.forWorld(world)
+          .applyKnockback(source, target, from.x, from.y, to.x, to.y);
+    }
+    Actioneer actioneer = world.getSystem(Actioneer.class);
+    if (actioneer != null) actioneer.queueHitReaction(target, physical);
+  }
+
+  /** Native Mind Blast converts eligible monsters instead of applying its damage packet. */
+  private boolean tryMindBlastConversion(int source, int target, Skills.Entry skill, int level) {
+    if (!mMonster.has(target) || mMercenary.has(target) || mSummonedPet.has(target)) return false;
+    Monster monster = mMonster.get(target);
+    if (monster.monstats == null || monster.monstats.Align != 0 || monster.converted
+        || !BarbarianSkills.canSwitchWarCryAi(monster, stateList(target))) return false;
+    int chance = NecromancerSkills.nativeDiminishingPercent(skill, level, 4, 5);
+    if (NativeUnitRandom.unit(world, gameSeed(), source).nextInt(100) > chance) return false;
+    UnitStates holder = mUnitStates.create(target);
+    if (holder.stateList == null) holder.init(world, target);
+    // Mind Blast's conversion timer is the native 150..249 frame window.
+    // Skills.txt carries small stun/knockback parameters in these slots, so
+    // do not mistake those display values for the conversion lifetime.
+    int duration = 150 + NativeUnitRandom.unit(world, gameSeed(), source).nextInt(100);
+    UnitState conversion = holder.stateList.addState(StateId.CONVERSION, duration, level, source);
+    if (conversion == null) return false;
+    conversion.skillId = skill.Id;
+    conversion.runtimeValue = source;
+    Attributes attrs = mAttributesWrapper.get(target).attrs;
+    Attributes owner = mAttributesWrapper.has(source) ? mAttributesWrapper.get(source).attrs : null;
+    int ownerLevel = Math.max(1, statInt(owner, Stat.level));
+    int targetLevel = Math.max(1, statInt(attrs, Stat.level));
+    if (targetLevel > ownerLevel) {
+      UnitState save = holder.stateList.addPermanentState(StateId.CONVERSION_SAVE);
+      StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
+      StatRef max = attrs.get(Stat.maxhp, StatRef.obtain());
+      if (save != null && hp != null && max != null) {
+        save.conversionOriginalLevel = targetLevel;
+        save.conversionOriginalMaxHpEncoded = max.encodedValues();
+        hp.set(Math.max(1f, hp.asFixed() * ownerLevel / targetLevel));
+        max.set(Math.max(1f, max.asFixed() * ownerLevel / targetLevel));
+        attrs.get(Stat.level, StatRef.obtain()).set(ownerLevel);
+      }
+    }
+    monster.converted = true;
+    monster.conversionOwnerId = source;
+    monster.minionOwnerId = -1;
+    NativeConversionLifecycle.bind(conversion, monster, mAttributesWrapper.get(target));
+    world.getMapper(com.riiablo.engine.server.component.Target.class).remove(target);
+    mCasting.remove(target);
+    world.getMapper(com.riiablo.engine.server.component.Sequence.class).remove(target);
+    conversion.needsSync = true;
+    return true;
+  }
+
+  private int rollAssassinDamage(int source, int minimum, int maximum) {
+    int min = Math.max(0, minimum), max = Math.max(min, maximum);
+    return max - min > 1 ? min + NativeUnitRandom.unit(world, gameSeed(), source).nextInt(max - min) : min;
   }
 
   /** D2MOO SrvDo021: direct unit-target damage without creating a missile entity. */
@@ -2968,6 +3160,24 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId);
       return;
     }
+    if (mAttributesWrapper.has(petId)) {
+      Attributes petAttrs = mAttributesWrapper.get(petId).attrs;
+      Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
+          ? mAttributesWrapper.get(event.entityId).attrs : null;
+      if (petAttrs != null) {
+        petAttrs.base().put(Stat.level, Math.max(1, statInt(ownerAttrs, Stat.level)));
+        if (skillLevel > 1) {
+          int bonus = Math.max(0, firstParam(skill, 0, 15) * (skillLevel - 1));
+          float life = Math.max(1f, statFixed(petAttrs, Stat.maxhp) * (100f + bonus) / 100f);
+          petAttrs.base().put(Stat.maxhp, life);
+          petAttrs.base().put(Stat.hitpoints, life);
+          // Retail SrvDo049 uses the second formula for every valid entry.
+          applyShadowStats(petAttrs, skill, skillLevel, skill.aurastat, skill.aurastatcalc);
+          applyShadowStats(petAttrs, skill, skillLevel, skill.passivestat, skill.passivecalc);
+        }
+        petAttrs.reset();
+      }
+    }
     if (mUnitStates.has(petId)) {
       UnitStates states = mUnitStates.get(petId);
       if (states.stateList == null) states.init(world, petId);
@@ -2981,6 +3191,17 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[ASSASSIN_SHADOW] phase=spawn owner={} entity={} summon={} petType={} level={} max={} "
             + "position=({}, {}) status=PASS",
         event.entityId, petId, summon.Id, petType, skillLevel, petMax, target.x, target.y);
+  }
+
+  private static void applyShadowStats(Attributes attrs, Skills.Entry skill, int level,
+      String[] stats, String[] formulas) {
+    if (stats == null || formulas == null || formulas.length < 2) return;
+    int value = SkillFormula.evaluate(formulas[1], skill, level);
+    for (String name : stats) {
+      if (name == null || name.isEmpty()) continue;
+      short stat = Stat.index(name);
+      if (stat >= 0 && value != 0) attrs.base().add(stat, value);
+    }
   }
 
   /** Native SKILLS_SrvDo044/SrvDo045 summon path (sub_6FCF8610). */
@@ -3802,9 +4023,138 @@ public class ServerSkillSystem extends PassiveSystem {
         event.entityId, event.targetId, next, skillLevel, range, maxJumps, created, missileName);
   }
 
-  /** Native SrvDo019: one skill-linked Inferno stream missile per do callback. */
+  /** SrvSt11: twenty-frame initial state, six-frame refresh and native first tick. */
+  public boolean startArcticBlast(int source, Skills.Entry skill, int target, Vector2 targetVec) {
+    return skill != null && skill.Id == SkillId.ARCTIC_BLAST
+        && startInfernoChannel(source, skill, target, targetVec);
+  }
+
+  public boolean startInfernoChannel(int source, Skills.Entry skill, int target, Vector2 targetVec) {
+    if (!isInfernoChannelSkill(skill) || !mPosition.has(source)
+        || files().Missiles.get(skill.srvmissilea) == null) return false;
+    UnitStates holder = mUnitStates.has(source) ? mUnitStates.get(source)
+        : mUnitStates.create(source).init(world, source);
+    if (holder.stateList == null) holder.init(world, source);
+    UnitState channel = holder.stateList.getState(StateId.INFERNO);
+    boolean refresh = channel != null && channel.skillId == skill.Id;
+    int level = Math.max(1, getSkillLevel(source, skill.Id));
+    Attributes attrs = mAttributesWrapper.has(source) ? mAttributesWrapper.get(source).attrs : null;
+    StatRef mana = attrs != null ? attrs.get(Stat.mana, StatRef.obtain()) : null;
+    float cost = mPlayer.has(source) ? NativeSkillResolver.manaCost(skill, level) : 0f;
+    boolean bloodMana = com.riiablo.engine.server.skill.BloodMana.active(holder.stateList);
+    if (mPlayer.has(source) && (mana == null
+        || !refresh && !NativeSkillResolver.hasEnoughMana(mana.asFixed(), skill.startmana)
+        || !bloodMana && !NativeSkillResolver.hasEnoughMana(mana.asFixed(), cost))) return false;
+    if (!refresh) {
+      if (channel != null) holder.stateList.removeState(StateId.INFERNO);
+      channel = holder.stateList.addState(StateId.INFERNO, 20, level, source);
+      if (channel == null) return false;
+      channel.runtimeValue = 0;
+    } else {
+      channel.duration = 6;
+      channel.initialDuration = 6;
+    }
+    channel.skillId = skill.Id;
+    channel.needsSync = true;
+    if (refresh) {
+      rewindInfernoChannel(source);
+      SkillDoEvent event = SkillDoEvent.obtain(source, skill.Id, target, targetVec,
+          skill.srvdofunc, skill.cltdofunc);
+      if (skill.Id == SkillId.ARCTIC_BLAST) {
+        spawnArcticBlast(event, skill, level, mPosition.get(source).position);
+      } else {
+        spawnSorceressInferno(event, skill, level, mPosition.get(source).position);
+      }
+    }
+    if (cost > 0f) {
+      if (bloodMana) com.riiablo.engine.server.skill.BloodMana.consumeLife(attrs, holder.stateList, cost);
+      else mana.sub(cost);
+    }
+    return true;
+  }
+
+  private void rewindInfernoChannel(int source) {
+    com.riiablo.engine.server.component.AnimData anim = world.getMapper(
+        com.riiablo.engine.server.component.AnimData.class).get(source);
+    if (anim != null && mPlayer.has(source)) {
+      anim.frame = Math.max(0, anim.frame - 256);
+      anim.lastKeyframeIndex = (anim.frame >>> 8) - 1;
+    }
+  }
+
+  /** SrvDo019 skips its first callback, then overrides the stream's TotalFrames. */
+  private boolean beginInfernoChannelTick(SkillDoEvent event, Skills.Entry skill) {
+    StateList states = stateList(event.entityId);
+    UnitState channel = states != null ? states.getState(StateId.INFERNO) : null;
+    if (channel == null || channel.skillId != skill.Id) return false;
+    rewindInfernoChannel(event.entityId);
+    if (channel.runtimeValue == 0) {
+      channel.runtimeValue = 1;
+      channel.needsSync = true;
+      return false;
+    }
+    return true;
+  }
+
+  private void spawnArcticBlast(SkillDoEvent event, Skills.Entry skill, int level, Vector2 start) {
+    if (!beginInfernoChannelTick(event, skill)) return;
+    StateList states = stateList(event.entityId);
+    Missiles.Entry row = files().Missiles.get(skill.srvmissilea);
+    if (row == null) return;
+    Vector2 direction = resolveTargetPoint(event, start, new Vector2()).sub(start);
+    if (direction.isZero()) return;
+    int id = createMissile(row, direction.nor(), start, event.entityId, null, level);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile stream = mMissile.get(id);
+    stream.skillId = skill.Id;
+    stream.damageLevel = level;
+    stream.nativeLifetimeFrames = Math.max(1, SkillFormula.evaluate(skill.calc1, skill, level,
+        name -> getBaseSkillLevel(event.entityId, name)));
+    stream.range = 0f;
+    Attributes owner = mAttributesWrapper.has(event.entityId)
+        ? mAttributesWrapper.get(event.entityId).attrs : null;
+    MissileDamageResolver.initializeArcticBlastRate(files(), stream, skill, owner,
+        mPlayer.has(event.entityId), level,
+        name -> getBaseSkillLevel(event.entityId, name), states);
+  }
+
+  /** SrvDo118 uses the same initializer as Charged Bolt for every child. */
+  private void spawnDruidTwisterTornado(SkillDoEvent event, Skills.Entry skill, int level, Vector2 start) {
+    Missiles.Entry row = files().Missiles.get(skill.srvmissilea);
+    if (row == null) return;
+    int count = SkillFormula.evaluate(skill.calc1, skill, level,
+        name -> getBaseSkillLevel(event.entityId, name));
+    if (count <= 0) return;
+    Vector2 target = resolveTargetPoint(event, start, new Vector2());
+    int x = MathUtils.floor(start.x), y = MathUtils.floor(start.y);
+    int tx = MathUtils.floor(target.x), ty = MathUtils.floor(target.y);
+    int main = AssassinTrapSystem.chargedBoltMainDirection(x, y, tx, ty);
+    for (int i = 0; i < count; i++) {
+      long rolled = AssassinTrapSystem.chargedBoltRoll(x + i, 666);
+      Vector2 direction = AssassinTrapSystem.chargedBoltVector(
+          AssassinTrapSystem.chargedBoltDirection(main, (int) rolled), new Vector2());
+      int id = createMissile(row, direction, new Vector2(x, y), event.entityId, null, level);
+      if (id < 0 || !mMissile.has(id)) continue;
+      Missile child = mMissile.get(id);
+      child.skillId = skill.Id;
+      child.damageLevel = level;
+      child.chargedBoltPath = true;
+      child.chargedBoltMainDirection = main;
+      child.chargedBoltSeedLow = (int) rolled;
+      child.chargedBoltSeedHigh = (int) (rolled >>> 32);
+      child.chargedBoltNextTurnDistance = 2f;
+      child.chargedBoltTargetX = tx;
+      child.chargedBoltTargetY = ty;
+      child.nativeLifetimeFrames = Missile.chargedBoltLifetimeFrames(row, level);
+      child.range = 0f;
+      initializeSkillDamage(id, skill, event.entityId, level);
+    }
+  }
+
+  /** Native SrvDo019: one stream per armed callback, sharing SrvSt11 with Arctic Blast. */
   private void spawnSorceressInferno(
       SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 start) {
+    if (!beginInfernoChannelTick(event, skill)) return;
     String missileName = hasText(skill.srvmissilea) ? skill.srvmissilea : skill.srvmissile;
     Missiles.Entry row = hasText(missileName) ? files().Missiles.get(missileName) : null;
     if (row == null) {
@@ -3999,6 +4349,8 @@ public class ServerSkillSystem extends PassiveSystem {
       int hpPercent = Math.max(1, SkillFormula.evaluate(skill.calc3, skill, skillLevel));
       float ownerMaxHp = statFixed(ownerAttrs, Stat.maxhp);
       float hitpoints = Math.max(1f, ownerMaxHp * hpPercent / 100f);
+      petAttrs.base().put(Stat.hitpoints, hitpoints);
+      petAttrs.base().put(Stat.maxhp, hitpoints);
       StatRef hp = petAttrs.get(Stat.hitpoints, StatRef.obtain());
       StatRef maxHp = petAttrs.get(Stat.maxhp, StatRef.obtain());
       if (hp != null) hp.set(hitpoints);
@@ -4007,6 +4359,13 @@ public class ServerSkillSystem extends PassiveSystem {
       UnitStates states = mUnitStates.get(petId);
       if (states.stateList == null) states.init(world, petId);
       states.stateList.addState(StateId.VALKYRIE, 0, skillLevel, event.entityId);
+    }
+
+    if (petAttrs != null) {
+      applySummonSkillStats(event.entityId, petId, skill, skillLevel, false);
+      petAttrs.base().put(Stat.level, petLevel);
+      petAttrs.reset();
+      applySummonGrantedSkills(event.entityId, petId, skill, skillLevel);
     }
 
     log.info("[AMAZON_{}] phase=spawn owner={} entity={} summon={} petType={} "
@@ -5607,6 +5966,12 @@ public class ServerSkillSystem extends PassiveSystem {
       int grantedLevel = SkillFormula.evaluate(summonSkill.sumskcalc[i], summonSkill,
           summonLevel, skill -> getBaseSkillLevel(source, skill));
       if (grantedLevel <= 0) continue;
+      if (granted.passive && AmazonSkills.getPassiveStateId(granted) != StateId.NONE) {
+        UnitStates holder = mUnitStates.get(petId);
+        if (holder.stateList == null) holder.init(world, petId);
+        AmazonSkills.applyPassiveState(holder.stateList, granted, grantedLevel, petId);
+        continue;
+      }
       int stateId = stateId(granted.aurastate);
       if (stateId == StateId.NONE) continue;
       UnitStates states = mUnitStates.get(petId);
@@ -5822,6 +6187,8 @@ public class ServerSkillSystem extends PassiveSystem {
     switch (name.trim().toLowerCase(java.util.Locale.ROOT)) {
       case "holyfire": return StateId.HOLYFIRE;
       case "thorns": return StateId.THORNS;
+      case "cloak_of_shadows": return StateId.CLOAK_OF_SHADOWS;
+      case "cloaked": return StateId.CLOAKED;
       default: return StateId.NONE;
     }
   }
@@ -5832,6 +6199,9 @@ public class ServerSkillSystem extends PassiveSystem {
     Attributes owner = mAttributesWrapper.get(source).attrs;
     Attributes pet = mAttributesWrapper.get(petId).attrs;
     int resist = statInt(owner, Stat.passive_summon_resist);
+    if (mUnitStates.has(source) && mUnitStates.get(source).stateList != null) {
+      resist += mUnitStates.get(source).stateList.getTotalStatContribution(Stat.passive_summon_resist);
+    }
     if (resist == 0 || pet == null) return;
     if (statInt(pet, Stat.item_absorbfire_percent) <= 0) pet.base().add(Stat.fireresist, resist);
     if (statInt(pet, Stat.item_absorblight_percent) <= 0) pet.base().add(Stat.lightresist, resist);
@@ -5920,6 +6290,11 @@ public class ServerSkillSystem extends PassiveSystem {
     if (missile == null) return;
     int id = createMissile(missile, new Vector2(1, 0), mPosition.get(corpseId).position,
         source, null, level);
+    if (id >= 0 && mMissile.has(id)) {
+      Missile ward = mMissile.get(id);
+      ward.skillId = skill.Id;
+      ward.damageLevel = Math.max(1, level);
+    }
     log.info("[BARBARIAN_GRIM_WARD] source={} corpse={} missile={} entity={}", source, corpseId, missileName, id);
   }
 

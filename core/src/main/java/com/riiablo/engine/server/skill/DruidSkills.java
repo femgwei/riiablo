@@ -96,8 +96,43 @@ public final class DruidSkills {
    * @return 吸收量
    */
   public static int calculateCycloneArmorAbsorb(int skillLevel) {
-    // 基础 40，每级 +20
-    return 40 + (skillLevel - 1) * 20;
+    // Retail Param1=40, Param2=12; authoritative casts evaluate AuraStatCalc.
+    return 40 + (Math.max(1, skillLevel) - 1) * 12;
+  }
+
+  public static boolean isCycloneArmor(Skills.Entry skill) {
+    return skill != null && skill.Id == 235 && skill.srvdofunc == 18
+        && "cyclonearmor".equalsIgnoreCase(skill.aurastate);
+  }
+
+  /** SrvDo018: a permanent, independently owned 8.8 elemental shield list. */
+  public static UnitState applyCycloneArmorState(StateList states, Skills.Entry skill,
+      int skillLevel, int sourceEntityId, ToIntFunction<String> baseSkillLevel) {
+    if (states == null || !isCycloneArmor(skill)) return null;
+    int level = Math.max(1, skillLevel);
+    int current = 0, maximum = 0;
+    int count = Math.min(skill.aurastat != null ? skill.aurastat.length : 0,
+        skill.aurastatcalc != null ? skill.aurastatcalc.length : 0);
+    for (int i = 0; i < count; i++) {
+      int value = Math.max(0,
+          SkillFormula.evaluate(skill.aurastatcalc[i], skill, level, baseSkillLevel));
+      if ("bonearmor".equalsIgnoreCase(skill.aurastat[i])) current = value;
+      if ("bonearmormax".equalsIgnoreCase(skill.aurastat[i])) maximum = value;
+    }
+    if (current <= 0 || maximum <= 0) return null;
+    int duration = Math.max(0,
+        SkillFormula.evaluate(skill.auralencalc, skill, level, baseSkillLevel));
+    states.removeState(StateId.CYCLONEARMOR);
+    UnitState armor = states.addStateLayer(
+        StateId.CYCLONEARMOR, duration, level, sourceEntityId, skill.Id);
+    if (armor == null) return null;
+    armor.setStatContribution(Stat.bonearmor, 0,
+        com.riiablo.attributes.NativeStatResolver.Operation.ADD, current);
+    armor.setStatContribution(Stat.bonearmormax, 0,
+        com.riiablo.attributes.NativeStatResolver.Operation.ADD, maximum);
+    armor.runtimeValue = current;
+    armor.needsSync = true;
+    return armor;
   }
 
   /**
@@ -991,7 +1026,10 @@ public final class DruidSkills {
         case "coldresist": state.coldResistModifier += value; break;
         case "lightresist": state.lightResistModifier += value; break;
         case "poisonresist": state.poisonResistModifier += value; break;
-        case "thorns_percent": state.runtimeValue += value; break;
+        case "thorns_percent":
+          state.runtimeValue += value;
+          state.setNativeModifier(Stat.thorns_percent, state.runtimeValue);
+          break;
         default: log.debug("[DRUID_SUMMON] ignored aura stat={} skill={}", stat, skill.skill);
       }
     }

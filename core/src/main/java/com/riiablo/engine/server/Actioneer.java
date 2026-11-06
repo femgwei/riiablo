@@ -1181,8 +1181,17 @@ public class Actioneer extends PassiveSystem {
         log.debug("[AMAZON_ARROW] phase=start entity={} target={} delegated=keyframe",
             entityId, targetId);
         break;
-      case 11: // Arctic Blast channel setup is consumed by ServerSkillSystem.
+      case 11: { // SKILLS_SrvSt11_Inferno_ArcticBlast
+        Casting cast = mCasting.get(entityId);
+        Skills.Entry skill = cast != null ? files().skills.get(cast.skillId) : null;
+        if (ServerSkillSystem.isInfernoChannelSkill(skill)) {
+          ServerSkillSystem server = world.getSystem(ServerSkillSystem.class);
+          if (server == null || !server.startInfernoChannel(entityId, skill, targetId, targetVec)) {
+            cancelCasting(entityId, "inferno_channel_start_rejected");
+          }
+        }
         break;
+      }
       case 3: { // throw, or native Unsummon SrvSt03
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
@@ -1879,6 +1888,7 @@ public class Actioneer extends PassiveSystem {
       case 16:  // Valkyrie: ServerSkillSystem creates the owned summon.
       case 110: // RogueMissile: ServerSkillSystem creates the authoritative missile.
       case 19:  // Arctic Blast stream: ServerSkillSystem creates the owned missile.
+      case 118: // Twister/Tornado: ServerSkillSystem creates native seeded spread.
         // Actioneer is responsible for the animation keyframe only.  These
         // callbacks are consumed by ServerSkillSystem from the same
         // SkillDoEvent; falling through to the warning path would incorrectly

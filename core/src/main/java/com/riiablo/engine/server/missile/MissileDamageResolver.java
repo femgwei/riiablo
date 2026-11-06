@@ -660,6 +660,33 @@ public final class MissileDamageResolver {
     return true;
   }
 
+  /** Arctic Blast retains HitShift's fractional cold damage for each stream hit. */
+  public static boolean initializeArcticBlastRate(com.riiablo.Files files, Missile projectile,
+      Skills.Entry skill, Attributes owner, boolean player, int level,
+      ToIntFunction<String> levels, StateList states) {
+    if (projectile == null || projectile.missile == null || skill == null
+        || skill.Id != 230 || !"cold".equalsIgnoreCase(skill.EType)) return false;
+    int mastery = statInt(owner, Stat.passive_cold_mastery)
+        + (states != null ? states.getTotalStatContribution(Stat.passive_cold_mastery) : 0);
+    int min = percentage(skillElementalDamageFixed(skill, level, true, levels), 100 + mastery);
+    int max = percentage(skillElementalDamageFixed(skill, level, false, levels), 100 + mastery);
+    projectile.skillId = skill.Id;
+    projectile.damageLevel = level;
+    projectile.damageSnapshot = true;
+    projectile.fixedElementalRate = true;
+    projectile.fixedElementalType = com.riiablo.engine.server.combat.CombatSystem.DAMAGE_COLD;
+    projectile.elementalMinRateFixed = Math.max(0, min);
+    projectile.elementalMaxRateFixed = Math.max(projectile.elementalMinRateFixed, max);
+    projectile.elementalPiercePercent = statInt(owner, Stat.item_pierce_cold)
+        + statInt(owner, Stat.passive_cold_pierce);
+    projectile.elementalDamageRate = Math.max(0, projectile.missile.DamageRate);
+    projectile.elementalAttackerPlayer = player;
+    projectile.onHitStateId = StateId.COLD;
+    projectile.onHitStateDuration = Math.max(0,
+        skill.ELen + damageBonusByLevel(level, skill.ELevLen));
+    return true;
+  }
+
   /** Builds the native magic packet used by Bone Spear and Bone Spirit. */
   public static boolean initializeNecromancerBoneMagic(com.riiablo.Files files, Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, int level,

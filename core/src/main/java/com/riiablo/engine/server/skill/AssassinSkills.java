@@ -898,6 +898,32 @@ public final class AssassinSkills {
   // 暗影技能
   //==========================================================================
 
+  /** D2Common permanent passive list; claw mastery retains the weapon-type predicate. */
+  public static UnitState applyPassiveState(StateList states, Skills.Entry skill,
+      int level, int ownerId, boolean matchingWeapon) {
+    if (states == null || skill == null || !skill.passive || level <= 0) return null;
+    String name = normalizeState(skill.passivestate);
+    int stateId = "clawmastery".equals(name) ? StateId.CLAWMASTERY
+        : "weaponblock".equals(name) ? StateId.WEAPONBLOCK : StateId.NONE;
+    if (stateId == StateId.NONE) return null;
+    UnitState state = states.addStateLayer(stateId, 0, level, ownerId, skill.Id);
+    state.clearModifiers();
+    state.basicStatList = true;
+    state.masteryItemType = skill.passiveitype;
+    state.throwingMastery = false;
+    applyBuffStats(state, skill, level, skill.passivestat, skill.passivecalc);
+    if (stateId == StateId.CLAWMASTERY) {
+      state.masteryAttackRatingModifier = state.getStatContributionValue(Stat.passive_mastery_melee_th);
+      state.masteryDamageModifier = state.getStatContributionValue(Stat.passive_mastery_melee_dmg);
+      state.masteryCriticalChance = state.getStatContributionValue(Stat.passive_mastery_melee_crit);
+    } else if (!matchingWeapon) {
+      state.setStatContribution(Stat.passive_weaponblock, 0,
+          com.riiablo.attributes.NativeStatResolver.Operation.ADD, 0);
+    }
+    state.needsSync = true;
+    return state;
+  }
+
   /**
    * 利爪专精 - 增加利爪伤害和攻击等级
    * 
@@ -1020,6 +1046,17 @@ public final class AssassinSkills {
     return 0.4f + (skillLevel - 1) * 0.2f;
   }
 
+  public static int mindBlastStunLength(Skills.Entry skill, int level) {
+    if (skill == null) return 0;
+    int bonus = 0;
+    for (int n = 2; n <= Math.max(1, level); n++) {
+      int bracket = n <= 8 ? 0 : n <= 16 ? 1 : n <= 22 ? 2 : n <= 28 ? 3 : 4;
+      if (skill.ELevLen != null && skill.ELevLen.length > 0)
+        bonus += skill.ELevLen[Math.min(bracket, skill.ELevLen.length - 1)];
+    }
+    return Math.max(0, skill.ELen + bonus);
+  }
+
   public static boolean isSpeedOrFade(Skills.Entry skill) {
     if (skill == null || skill.srvdofunc != 18) return false;
     String state = normalizeState(skill.aurastate);
@@ -1055,6 +1092,25 @@ public final class AssassinSkills {
           com.riiablo.attributes.NativeStatResolver.Operation.ADD,
           SkillFormula.evaluate(calculations[i], skill, level));
     }
+  }
+
+  /** Native SrvDo047 self list; an active cloak prevents recasting. */
+  public static UnitState applyCloakSelf(StateList states, Skills.Entry skill,
+      int level, int owner) {
+    if (states == null || skill == null || states.hasState(StateId.CLOAK_OF_SHADOWS)) return null;
+    int duration = SkillFormula.evaluate(skill.auralencalc, skill, level);
+    if (duration <= 0) return null;
+    UnitState self = states.addState(StateId.CLOAK_OF_SHADOWS, duration, level, owner);
+    if (self == null) return null;
+    self.skillId = skill.Id;
+    applyBuffStats(self, skill, level, skill.passivestat, skill.passivecalc);
+    self.needsSync = true;
+    return self;
+  }
+
+  /** Native SrvDo047 target list uses AuraStat, independently of the self passive. */
+  public static void applyCloakTargetStats(UnitState target, Skills.Entry skill, int level) {
+    if (target != null) applyBuffStats(target, skill, level, skill.aurastat, skill.aurastatcalc);
   }
 
   /** D2MOO SrvDo018: build Venom's three AuraStat entries on the caster. */

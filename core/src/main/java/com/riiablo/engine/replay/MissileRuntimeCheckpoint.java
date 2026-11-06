@@ -21,7 +21,7 @@ import java.util.*;
  * shared cast hit sets are rebound only after every entity has been assembled.
  */
 public final class MissileRuntimeCheckpoint {
-  private static final int VERSION = 2;
+  private static final int VERSION = 3;
   public static final int MAX_BYTES = 1024 * 1024;
   private static final int MAX_TARGETS = 65536;
   private final byte[] bytes;
@@ -61,6 +61,7 @@ public final class MissileRuntimeCheckpoint {
       "wakeDirectionX", "wakeDirectionY", "damageOwnerId", "chargedBoltPath", "chargedBoltMainDirection",
       "chargedBoltSeedLow", "chargedBoltSeedHigh", "chargedBoltNextTurnDistance", "chargedBoltTargetX", "chargedBoltTargetY",
       "blessedHammerPath", "blessedHammerPointIndex", "fistOfHeavensDelay", "fistOfHeavensTriggered", "chainHitsRemaining",
+      "moltenBoulderCellKnown", "moltenBoulderCellX", "moltenBoulderCellY",
       "blizzardCenter", "blizzardSeed", "frozenOrbController", "frozenOrbTargetPhase", "frozenOrbNova",
       "frozenOrbTargetX", "frozenOrbTargetY", "meteorCenter", "druidFissureController", "druidFissureNextFrame",
       "druidFissureSeed", "druidVolcanoController", "druidVolcanoNextFrame", "druidVolcanoSeed", "thunderStormStrike",
@@ -101,6 +102,9 @@ public final class MissileRuntimeCheckpoint {
         if (missile.sharedHitTargets != null) writeTargets(out, missile.sharedHitTargets);
         out.writeByte(missile.nativeBaalOwnerIdentity == null ? 0
             : missile.nativeBaalOwnerIdentity.isCurrent(world, missile.ownerId) ? 1 : 2);
+        out.writeBoolean(missile.moltenBoulderCellKnown);
+        out.writeInt(missile.moltenBoulderCellX);
+        out.writeInt(missile.moltenBoulderCellY);
         out.flush();
         result.put(id, fromBytes(bytes.toByteArray()));
       } catch (IOException impossible) { throw new IllegalStateException(impossible); }
@@ -353,7 +357,7 @@ public final class MissileRuntimeCheckpoint {
     try {
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
       int version = in.readInt();
-      if (version != 1 && version != VERSION) throw new IllegalArgumentException("missile runtime version");
+      if (version < 1 || version > VERSION) throw new IllegalArgumentException("missile runtime version");
       Decoded d = new Decoded(target == null ? new Missile() : target);
       d.missileId = in.readInt();
       if (d.missileId < 0) throw new IllegalArgumentException("missile row");
@@ -506,6 +510,9 @@ public final class MissileRuntimeCheckpoint {
       if (d.sharedGroup < 0 || d.sharedGroup > 1000000) throw new IllegalArgumentException("shared group");
       d.sharedTargets = d.sharedGroup == 0 ? new int[0] : readTargets(in);
       d.ownerLifetime = in.readUnsignedByte();
+      m.moltenBoulderCellKnown = version >= 3 && presence(in);
+      m.moltenBoulderCellX = version >= 3 ? in.readInt() : 0;
+      m.moltenBoulderCellY = version >= 3 ? in.readInt() : 0;
       if (d.ownerLifetime > 2 || (d.ownerLifetime != 0 && m.ownerId < 0)
           || m.ownerId < -1 || m.nativeFrame < 0 || m.nativeLifetimeFrames < 0) {
         throw new IllegalArgumentException("missile runtime identity/clock");

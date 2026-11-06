@@ -291,6 +291,8 @@ table MissileImpactP {
   // before a client consumes this one-shot presentation event.
   dx:float32 = 1.0;
   dy:float32;
+  // Chosen by the successful server hit branch, rather than guessed by clients.
+  targetOverlay:string;
 }
 
 // One-shot authoritative audio intent. The sound key is resolved by the

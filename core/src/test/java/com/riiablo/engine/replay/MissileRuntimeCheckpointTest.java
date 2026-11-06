@@ -23,7 +23,8 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
     try (Fixture source = new Fixture(1); Fixture target = new Fixture(1)) {
       source.get(0).presentationSeed = 123;
       source.get(0).presentationSeedKnown = true;
-      byte[] v2 = source.capture().get(0).bytes();
+      byte[] v3 = source.capture().get(0).bytes();
+      byte[] v2 = Arrays.copyOf(v3, v3.length - 9);
       // Header(version,row) + range,owner,baalWave,rngState = 24 bytes.
       byte[] v1 = new byte[v2.length - 5];
       System.arraycopy(v2, 0, v1, 0, 24);
@@ -36,6 +37,22 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       assertEquals(0, target.get(0).presentationSeed);
       assertEquals(source.get(0).rngState, target.get(0).rngState);
       assertEquals(source.get(0).nativeLifetimeFrames, target.get(0).nativeLifetimeFrames);
+    }
+  }
+
+  @Test void versionTwoWithoutMoltenCellStateStillLoads() {
+    try (Fixture source = new Fixture(1); Fixture target = new Fixture(1)) {
+      source.get(0).moltenBoulderCellKnown = true;
+      source.get(0).moltenBoulderCellX = 12;
+      source.get(0).moltenBoulderCellY = 34;
+      byte[] v3 = source.capture().get(0).bytes();
+      byte[] v2 = Arrays.copyOf(v3, v3.length - 9);
+      v2[3] = 2;
+      MissileRuntimeCheckpoint.restore(target.world, Collections.singletonMap(0,
+          MissileRuntimeCheckpoint.fromBytes(v2)));
+      assertFalse(target.get(0).moltenBoulderCellKnown);
+      assertEquals(0, target.get(0).moltenBoulderCellX);
+      assertEquals(0, target.get(0).moltenBoulderCellY);
     }
   }
 

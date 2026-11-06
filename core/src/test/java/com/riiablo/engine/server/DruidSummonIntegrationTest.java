@@ -205,6 +205,17 @@ class DruidSummonIntegrationTest extends RiiabloTest {
           "Wolverine must use linked aura damage ln56");
       assertEquals(120, barbs.runtimeValue,
           "Spirit of Barbs must use linked aura thorns ln34");
+      assertEquals(120, barbs.getStatContributionValue(Stat.thorns_percent),
+          "the projected aura must carry the stat consumed by melee reflection");
+
+      int attacker = world.create();
+      world.getMapper(Monster.class).create(attacker);
+      Attributes attackerAttrs = attributes(20, 100);
+      world.getMapper(AttributesWrapper.class).create(attacker).attrs = attackerAttrs;
+      world.getSystem(EventSystem.class).dispatch(
+          com.riiablo.engine.server.event.DamageEvent.obtainMelee(attacker, owner, 10, 10));
+      assertEquals(88f, attackerAttrs.get(Stat.hitpoints).asFixed(), .001f,
+          "native Spirit of Barbs reflects 120% of the physical melee packet exactly once");
 
       world.getMapper(Position.class).get(sources[1]).position.set(100, 100);
       world.process();
@@ -217,6 +228,10 @@ class DruidSummonIntegrationTest extends RiiabloTest {
       assertTrue(ownerStates.stateList.getStateLayer(
           StateId.BARBS, sources[2], SkillId.SPIRIT_OF_BARBS) == null,
           "removing the spirit must revoke its source-owned layer");
+      world.getSystem(EventSystem.class).dispatch(
+          com.riiablo.engine.server.event.DamageEvent.obtainMelee(attacker, owner, 10, 10));
+      assertEquals(88f, attackerAttrs.get(Stat.hitpoints).asFixed(), .001f,
+          "a dismissed spirit must stop reflecting damage");
     } finally {
       world.dispose();
     }

@@ -427,6 +427,7 @@ final class CombatSnapshotFactory {
     }
 
     DefenderData d = new DefenderData();
+    d.cycloneArmorFixed = CycloneArmor.capacity(defenderStates);
     d.isPlayer = defenderPlayer;
     d.isMonster = !defenderPlayer;
     d.ignoreTargetDefenseAllowed = defenderIgnoreTargetDefenseAllowed;
@@ -500,6 +501,10 @@ final class CombatSnapshotFactory {
       d.passiveEvade += defenderStates.getTotalStatContribution(Stat.passive_evade);
     }
     d.passiveWeaponBlock = statInt(defender, Stat.passive_weaponblock, 0);
+    if (defenderStates != null) {
+      d.passiveWeaponBlock = Math.max(d.passiveWeaponBlock,
+          defenderStates.getTotalStatContribution(Stat.passive_weaponblock));
+    }
     d.resistances[DAMAGE_PHYSICAL] = statInt(defender, Stat.damageresist, 0);
     d.resistances[DAMAGE_FIRE] = statInt(defender, Stat.fireresist, 0);
     d.resistances[DAMAGE_LIGHTNING] = statInt(defender, Stat.lightresist, 0);

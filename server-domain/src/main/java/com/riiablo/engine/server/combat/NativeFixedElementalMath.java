@@ -7,18 +7,31 @@ public final class NativeFixedElementalMath {
     public int damageFixed;
     public int absorbedLifeFixed;
     public boolean immune;
-    public void reset() { damageFixed = absorbedLifeFixed = 0; immune = false; }
+    public int cycloneArmorConsumedFixed;
+    public void reset() { damageFixed = absorbedLifeFixed = cycloneArmorConsumedFixed = 0; immune = false; }
   }
 
   public static void rateDamage(Result out, int rawDamageFixed, boolean defenderPlayer,
       boolean attackerPlayer, int resistance, int maximumBonus, int piercePercent,
       int magicReduction, int damageRate, int absorbPercent, int absorbFlat) {
+    rateDamage(out, rawDamageFixed, defenderPlayer, attackerPlayer, resistance, maximumBonus,
+        piercePercent, magicReduction, damageRate, absorbPercent, absorbFlat, 0,
+        NativeCombatConstants.DAMAGE_FIRE);
+  }
+
+  public static void rateDamage(Result out, int rawDamageFixed, boolean defenderPlayer,
+      boolean attackerPlayer, int resistance, int maximumBonus, int piercePercent,
+      int magicReduction, int damageRate, int absorbPercent, int absorbFlat,
+      int cycloneArmorFixed, int damageType) {
     out.reset();
     if (rawDamageFixed <= 0) return;
+    int raw = NativeMitigationMath.pvp(rawDamageFixed, attackerPlayer && defenderPlayer, 256);
+    out.cycloneArmorConsumedFixed = NativeCycloneArmor.absorbedFixed(
+        damageType, raw, cycloneArmorFixed);
+    raw -= out.cycloneArmorConsumedFixed;
     if (!defenderPlayer && resistance >= 100) { out.immune = true; return; }
     resistance = NativeMitigationMath.resistance(defenderPlayer, false, false,
         resistance, 75 + maximumBonus, piercePercent);
-    int raw = NativeMitigationMath.pvp(rawDamageFixed, attackerPlayer && defenderPlayer, 256);
     int reduced = NativeMitigationMath.reduce(raw, 256, resistance, magicReduction, damageRate);
     out.absorbedLifeFixed = NativeMitigationMath.absorb(reduced, 256, absorbPercent, absorbFlat);
     out.damageFixed = reduced - out.absorbedLifeFixed;
@@ -43,12 +56,22 @@ public final class NativeFixedElementalMath {
   public static void staticFieldDamage(Result out, int rawDamageFixed, boolean defenderPlayer,
       boolean attackerPlayer, int resistance, int maximumBonus, boolean poison,
       int magicReduction, int absorbPercent, int absorbFlat, int pierce, int compensationResistance) {
+    staticFieldDamage(out, rawDamageFixed, defenderPlayer, attackerPlayer, resistance,
+        maximumBonus, poison, magicReduction, absorbPercent, absorbFlat, pierce,
+        compensationResistance, 0, NativeCombatConstants.DAMAGE_LIGHTNING);
+  }
+
+  public static void staticFieldDamage(Result out, int rawDamageFixed, boolean defenderPlayer,
+      boolean attackerPlayer, int resistance, int maximumBonus, boolean poison,
+      int magicReduction, int absorbPercent, int absorbFlat, int pierce, int compensationResistance,
+      int cycloneArmorFixed, int damageType) {
     // Compensation uses the raw stat, not the subsequently clamped resistance.
     if (compensationResistance < 0) rawDamageFixed = NativeMitigationMath.positive(
         NativeMitigationMath.ratio(100, rawDamageFixed,
             (int) Math.min(Integer.MAX_VALUE, 100L - compensationResistance)));
     rateDamage(out, rawDamageFixed, defenderPlayer, attackerPlayer, resistance, maximumBonus, pierce,
-        poison ? 0 : magicReduction, 0, poison ? 0 : absorbPercent, poison ? 0 : absorbFlat);
+        poison ? 0 : magicReduction, 0, poison ? 0 : absorbPercent, poison ? 0 : absorbFlat,
+        cycloneArmorFixed, damageType);
   }
 
   /** Lightning writes only its own channel; no second PvP scaling by the caller. */

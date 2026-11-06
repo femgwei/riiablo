@@ -194,6 +194,11 @@ public final class NativeAttackResolver {
         rawElements[type] = saturatingInt((long) rawElements[type] * 2);
     }
     boolean pvp = attacker.isPlayer && defender.isPlayer;
+    for (int type = 1; type < DAMAGE_TYPE_COUNT; type++)
+      rawElements[type] = NativeMitigationMath.pvp(rawElements[type], pvp, result.elementalScale);
+    boolean hasRawColdDamage = rawElements[DAMAGE_COLD] > 0;
+    result.cycloneArmorConsumedFixed = NativeCycloneArmor.absorb(
+        rawElements, result.elementalScale, defender.cycloneArmorFixed);
     baseDamage = NativeMitigationMath.pvp(baseDamage, pvp, result.physicalScale);
     result.physicalDamage = applyPhysicalDamageReduction(baseDamage, defender,
         defender.isUndead && (attacker.missilePhysical != null
@@ -220,8 +225,8 @@ public final class NativeAttackResolver {
     for (int channel = 1; channel < DAMAGE_TYPE_COUNT; channel++) {
       int i = attacker.missileElemental != null ? MISSILE_ELEMENT_ORDER[channel - 1]
           : attacker.nativeMonsterMeleeElements ? MELEE_ELEMENT_ORDER[channel - 1] : channel;
-      int elemDamage = NativeMitigationMath.pvp(rawElements[i], pvp, result.elementalScale);
-      if (attacker.nativeMonsterMeleeElements && i == DAMAGE_COLD && elemDamage <= 0)
+      int elemDamage = rawElements[i];
+      if (attacker.nativeMonsterMeleeElements && i == DAMAGE_COLD && !hasRawColdDamage)
         result.coldDuration = 0;
       if (elemDamage > 0) {
         if (nativeElements != null) {

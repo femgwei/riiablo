@@ -114,6 +114,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       StateId.CRITICALSTRIKE, StateId.DODGE, StateId.AVOID,
       StateId.PENETRATE, StateId.EVADE, StateId.PIERCE
   };
+  private static final int[] ASSASSIN_PASSIVE_SKILLS = {252, 263};
+  private static final int[] ASSASSIN_PASSIVE_STATES = {StateId.CLAWMASTERY, StateId.WEAPONBLOCK};
+  private static final int[] NECROMANCER_PASSIVE_SKILLS = {89};
+  private static final int[] NECROMANCER_PASSIVE_STATES = {StateId.SUMMONRESIST};
 
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Velocity> mVelocity;
@@ -1032,6 +1036,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     target.setNativeModifier(Stat.coldresist, source.resolvedResistModifier(1));
     target.setNativeModifier(Stat.lightresist, source.resolvedResistModifier(2));
     target.setNativeModifier(Stat.poisonresist, source.resolvedResistModifier(3));
+    target.setNativeModifier(Stat.thorns_percent,
+        source.getStatContributionValue(Stat.thorns_percent));
     target.runtimeValue = source.runtimeValue;
   }
 
@@ -1064,6 +1070,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     synchronizePaladinHardPointPassives(entityId, stateList);
     synchronizeAmazonPassives(entityId, stateList);
     synchronizeSorceressPassives(entityId, stateList);
+    synchronizeAssassinAndNecromancerPassives(entityId, stateList);
 
     processHolyFireAura(entityId, stateList);
     processThunderStorm(entityId, stateList);
@@ -1106,6 +1113,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       synchronizePaladinHardPointPassives(entityId, states.stateList);
       synchronizeAmazonPassives(entityId, states.stateList);
       synchronizeSorceressPassives(entityId, states.stateList);
+      synchronizeAssassinAndNecromancerPassives(entityId, states.stateList);
     }
     if (mVelocity.has(entityId)) applyVelocityModifiers(entityId, states.stateList);
   }
@@ -1410,6 +1418,44 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
             applied.getStatContributionValue(Stat.skill_pierce));
       }
     }
+  }
+
+  /** Native permanent lists for Claw Mastery, Weapon Block and Summon Resist. */
+  private void synchronizeAssassinAndNecromancerPassives(int entityId, StateList states) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return;
+    CharData data = mPlayer.get(entityId).data;
+    boolean assassin = data.classId == CharacterClass.ASSASSIN;
+    if (!assassin && data.classId != CharacterClass.NECROMANCER) return;
+    int[] ids = assassin ? ASSASSIN_PASSIVE_SKILLS : NECROMANCER_PASSIVE_SKILLS;
+    int[] stateIds = assassin ? ASSASSIN_PASSIVE_STATES : NECROMANCER_PASSIVE_STATES;
+    for (int i = 0; i < ids.length; i++) {
+      Skills.Entry skill = files().skills.get(ids[i]);
+      int owned = skill == null ? 0 : Math.max(0, data.getSkill(ids[i]));
+      int level = owned > 0 ? Math.max(0, owned + states.getTotalSkillModifier()) : 0;
+      if (level <= 0 || skill == null || !skill.passive) {
+        states.removeState(stateIds[i]);
+        continue;
+      }
+      // Native SUNITDMG_GetWeaponBlock accepts a matching type in either hand.
+      // Reevaluate it even without a skill-level change when equipment changes.
+      Item right = data.getItems().getEquipped(BodyLoc.RARM);
+      Item left = data.getItems().getEquipped(BodyLoc.LARM);
+      boolean matching = passiveWeaponMatches(right, skill.passiveitype)
+          || passiveWeaponMatches(left, skill.passiveitype);
+      if (ids[i] == 263 && !matching) {
+        if (states.getState(stateIds[i]) != null) states.removeState(stateIds[i]);
+        continue;
+      }
+      UnitState old = states.getState(stateIds[i]);
+      if (old != null && old.level == level && !old.expired) continue;
+      if (assassin) AssassinSkills.applyPassiveState(states, skill, level, entityId, matching);
+      else NecromancerSkills.applySummonResist(states, skill, level, entityId);
+    }
+  }
+
+  private static boolean passiveWeaponMatches(Item item, String type) {
+    return item != null && item.typeEntry != null && type != null
+        && !type.isEmpty() && item.typeEntry.is(type);
   }
 
   /** Keeps the Sorceress native permanent passive stat lists current. */

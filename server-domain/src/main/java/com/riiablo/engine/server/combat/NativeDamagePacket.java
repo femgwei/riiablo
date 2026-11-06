@@ -36,6 +36,8 @@ public class NativeDamagePacket {
   }
   public int lifeDrainFixed, manaDrainFixed, staminaDrainFixed;
   public int absorbedLife;
+  /** State capacity consumed before MDR/resistance; this never heals life. */
+  public int cycloneArmorConsumedFixed;
   public int hitChance;
   public int attackRating;
   public int targetDefense;
@@ -99,6 +101,7 @@ public class NativeDamagePacket {
     fixedMonsterDrain = false;
     lifeDrainFixed = manaDrainFixed = staminaDrainFixed = 0;
     absorbedLife = 0;
+    cycloneArmorConsumedFixed = 0;
     hitChance = 0;
     attackRating = 0;
     targetDefense = 0;
