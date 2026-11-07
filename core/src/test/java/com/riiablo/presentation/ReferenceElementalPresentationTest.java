@@ -269,6 +269,49 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
     } finally { Riiablo.colors = previous; }
   }
 
+  @Test void hurricaneTangentDirectionSurvivesTheLateGenericDirectionPassOnEveryTick() {
+    com.riiablo.Colors previous = Riiablo.colors;
+    Riiablo.colors = new com.riiablo.Colors();
+    try (Harness h = new Harness()) {
+      int caster = h.world.create();
+      h.world.getMapper(Position.class).create(caster).position.set(10, 20);
+      h.world.getMapper(UnitStates.class).create(caster).init(caster).stateList
+          .addState(StateId.HURRICANE, 250, 1, caster);
+      h.tick(.04f);
+      int index = h.names.indexOf("hurricaneswoosh");
+      assertTrue(index >= 0);
+      int wind = h.created.get(index);
+      ReferenceElementalEffect effect = h.effect(wind);
+      com.riiablo.codec.Animation animation = h.attachAnimation(wind, 8, 11);
+      h.world.delete(caster);
+      int nonDefaultDirections = 0;
+      for (int i = 0; i < 16; i++) {
+        h.tick(.04f);
+        if (effect.direction != com.riiablo.engine.Direction.EAST) nonDefaultDirections++;
+        assertEquals(effect.direction, animation.getDirection(),
+            "tick " + i + ": the factory Angle must not overwrite the orbital tangent");
+        assertEquals(ReferenceElementalPresentationSystem.frameAt(effect, 11), animation.getFrame(),
+            "the 12.5 FPS wind clock must also survive the generic animation pass");
+      }
+      assertTrue(nonDefaultDirections > 8, "exercise directions that disagree with the birth Angle");
+    } finally { Riiablo.colors = previous; }
+  }
+
+  @Test void ordinarySpritesStillResolveTheirAngleAfterTwoStableTicks() {
+    com.riiablo.Colors previous = Riiablo.colors;
+    Riiablo.colors = new com.riiablo.Colors();
+    try (Harness h = new Harness()) {
+      int unit = h.world.create();
+      h.world.getMapper(com.riiablo.engine.server.component.Angle.class).create(unit).set(Vector2.X);
+      com.riiablo.codec.Animation animation = h.attachAnimation(unit, 8, 11);
+      animation.setDirection(com.riiablo.engine.Direction.SOUTH);
+      h.tick(.04f);
+      assertEquals(com.riiablo.engine.Direction.SOUTH, animation.getDirection());
+      h.tick(.04f);
+      assertEquals(com.riiablo.engine.Direction.EAST, animation.getDirection());
+    } finally { Riiablo.colors = previous; }
+  }
+
   private static final class Harness implements AutoCloseable {
     final ReferenceElementalPresentationSystem system = new ReferenceElementalPresentationSystem();
     final World world;
@@ -280,7 +323,8 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
       EntityFactory factory = mock(EntityFactory.class, CALLS_REAL_METHODS);
       world = new World(new WorldConfigurationBuilder().with(
           new net.mostlyoriginal.api.event.common.EventSystem(), system,
-          new MissileImpactPresentationSystem(), new OverlayManager(), factory).build()
+          new MissileImpactPresentationSystem(), new OverlayManager(), factory,
+          new AnimationStepper(), new DirectionResolver()).build()
           .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0))
           .register("clientContext", ClientGameplayContext.fromGlobals()));
       doAnswer(call -> {
@@ -290,6 +334,8 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
         world.getMapper(Missile.class).create(id).set(row, at, row.Range);
         world.getMapper(Position.class).create(id).position.set(at);
         world.getMapper(Velocity.class).create(id).velocity.set(100, 100);
+        world.getMapper(com.riiablo.engine.server.component.Angle.class).create(id)
+            .set((Vector2) call.getArgument(1));
         created.add(id); names.add(row.Missile); births.add(new Vector2(at));
         return id;
       }).when(factory).createMissile(anyInt(), any(Vector2.class), any(Vector2.class), anyInt());
@@ -307,6 +353,16 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
     }
     Missile missile(int id) { return world.getMapper(Missile.class).get(id); }
     ReferenceElementalEffect effect(int id) { return world.getMapper(ReferenceElementalEffect.class).get(id); }
+    com.riiablo.codec.Animation attachAnimation(int id, int directions, int frames) {
+      DCC dcc = mock(DCC.class);
+      when(dcc.getNumDirections()).thenReturn(directions);
+      when(dcc.getNumFramesPerDir()).thenReturn(frames);
+      when(dcc.getBox(anyInt())).thenReturn(new com.riiablo.codec.util.BBox());
+      com.riiablo.codec.Animation animation = world.getMapper(
+          com.riiablo.presentation.component.AnimationWrapper.class).create(id).animation;
+      animation.edit().layer(dcc, com.riiablo.graphics.BlendMode.ID).build();
+      return animation;
+    }
     MissileImpactEvent impact(int id) { return MissileImpactEvent.obtain(id, missile(id).missile.Id,
         -1, -1, world.getMapper(Position.class).get(id).position); }
     void tick(float delta) { world.setDelta(delta); world.process(); }

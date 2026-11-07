@@ -2,8 +2,10 @@ package com.riiablo.presentation;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Exclude;
 import com.artemis.systems.IteratingSystem;
 import com.riiablo.presentation.component.AnimationWrapper;
+import com.riiablo.presentation.component.ReferenceElementalEffect;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.Direction;
@@ -12,6 +14,10 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 @All({Angle.class, AnimationWrapper.class})
+// These sprites derive their direction from their visual trajectory. Their
+// factory Angle is only a birth facing; resolving it here fights the tangent
+// every two ticks and makes Hurricane wind bands flicker between directions.
+@Exclude(ReferenceElementalEffect.class)
 public class DirectionResolver extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(DirectionResolver.class);
   private static final int STABLE_FRAMES_REQUIRED = 2;
