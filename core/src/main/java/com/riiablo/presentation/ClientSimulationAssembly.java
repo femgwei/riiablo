@@ -160,6 +160,7 @@ public final class ClientSimulationAssembly {
         .with(SimulationSystemGroups.unitLifecycle())
         .with(new SkillCastHandler()) // TODO: move to more appropriate spot in list
         .with(new OverlayManager()) // TODO: move to more appropriate spot in list
+        .with(new ReferenceElementalPresentationSystem())
         .with(new com.riiablo.presentation.MissileImpactPresentationSystem())
         .with(new ElementalHitPresentationSystem())
         .with(new NativeShrinePresentationSystem())

@@ -63,3 +63,7 @@ APK 恢复出的 JavaScript、怪物动作描述、当前生产代码和 D2MOO�
 
 工作区既有 Actioneer 的目标选择修改与 Sorceress Ghidra snapshot 保留在用户工作区，
 不纳入本批提交。
+
+2026-11-07：用户窗口反馈确认德鲁伊其余元素系、法师陨石/暴风雪仍有视觉问题。
+后续展示重建、参考包证据及权威时序边界见
+`elemental-reference-client-2026-11-07.md`；本文件的历史机制验证不代表视觉验收。

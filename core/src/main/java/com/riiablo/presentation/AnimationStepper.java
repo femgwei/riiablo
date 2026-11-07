@@ -17,6 +17,7 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<com.riiablo.presentation.component.ReferenceElementalEffect> mReferenceElementalEffect;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.Casting> mCasting;
@@ -35,6 +36,8 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected void process(int entityId) {
     AnimationWrapper wrapper = mAnimationWrapper.get(entityId);
     if (wrapper == null || wrapper.animation == null) return;
+    // The reference sprite clock applies its own FPS, intro/loop and fade.
+    if (mReferenceElementalEffect.has(entityId)) return;
 
     // Ground items use a standalone DC6 flippy animation.  COF/DCC loading
     // markers belong to composite units only; allowing them to gate a flippy

@@ -150,6 +150,9 @@ public class MissileLoader extends IteratingSystem {
       animation.setDirection(0);
     }
 
+    ReferenceElementalPresentationSystem referenceElemental =
+        world.getSystem(ReferenceElementalPresentationSystem.class);
+    if (referenceElemental != null) referenceElemental.refreshLoadedEffect(entityId);
     mBBoxWrapper.create(entityId).box = animation.getBox();
   }
 

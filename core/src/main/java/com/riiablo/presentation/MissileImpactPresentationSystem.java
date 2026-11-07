@@ -71,6 +71,9 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
+    ReferenceElementalPresentationSystem referenceElemental =
+        world.getSystem(ReferenceElementalPresentationSystem.class);
+    if (referenceElemental != null && referenceElemental.ownsPresentation(entityId)) return;
     Missile visual = mMissile.get(entityId);
     // Impact children are created from the collision event after the regular
     // MissileLoader pass has already run for this tick.  Very short native
@@ -773,6 +776,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     if (hitClassSound != null && clientContext.audio() != null) {
       playImpactSound(event, hitClassSound);
     }
+
+    ReferenceElementalPresentationSystem referenceElemental =
+        world.getSystem(ReferenceElementalPresentationSystem.class);
+    if (referenceElemental != null && referenceElemental.impact(source, event)) return;
 
     // SrvHit22 creates the Holy Bolt authoritatively when the delay missile
     // expires.  The native client callback number 26 is only the legacy

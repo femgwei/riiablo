@@ -53,6 +53,8 @@ import com.riiablo.engine.client.ClientTransformView;
 import com.riiablo.engine.client.AuthoritativeInterpolationSystem;
 import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.presentation.component.BBoxWrapper;
+import com.riiablo.presentation.component.ReferenceElementalEffect;
+import com.riiablo.presentation.ReferenceElementalPresentationSystem;
 import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.presentation.component.Overlay;
 import com.riiablo.engine.shared.component.Selectable;
@@ -256,6 +258,7 @@ public class RenderSystem extends BaseEntitySystem {
   };
 
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<ReferenceElementalEffect> mReferenceElementalEffect;
   protected ComponentMapper<Overlay> mOverlay;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<CofComponents> mCofComponents;
@@ -753,9 +756,12 @@ public class RenderSystem extends BaseEntitySystem {
     int protectedLights = count;
     int nativeFrame = Math.max(0,
         (int) (mapAnimationTime * Animation.FRAMES_PER_SECOND));
+    ReferenceElementalPresentationSystem referenceElemental =
+        world.getSystem(ReferenceElementalPresentationSystem.class);
     for (int i = 0, size = entities.size(); i < size; i++) {
       int id = entities.get(i);
       if (!mMissile.has(id) || !mPosition.has(id) || !isInLightingZone(id, zone)) continue;
+      if (referenceElemental != null && referenceElemental.hideOriginal(id)) continue;
       com.riiablo.engine.server.component.Missile missile = mMissile.get(id);
       Missiles.Entry entry = missile == null ? null : missile.missile;
       if (entry == null || entry.Light <= 0) continue;
@@ -1115,6 +1121,8 @@ public class RenderSystem extends BaseEntitySystem {
         orderFlag = entityOrderFlag(false, 0, false);
       }
 
+      ReferenceElementalEffect elementalEffect = mReferenceElementalEffect.get(id);
+      if (elementalEffect != null && elementalEffect.ground) orderFlag = 1;
       cache[orderFlag].add(id);
       if (isIceExplosion(id)) {
         Animation animation = mAnimationWrapper.get(id).animation;
@@ -1319,6 +1327,9 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   private void drawEntity(Array<Integer>[] cache, int entity) {
+      ReferenceElementalPresentationSystem referenceElemental =
+          world.getSystem(ReferenceElementalPresentationSystem.class);
+      if (referenceElemental != null && referenceElemental.hideOriginal(entity)) return;
 //      if (!entity.target().isZero() && !entity.position().epsilonEquals(entity.target())) {
 //        entity.angle(angle(entity.position(), entity.target()));
 //      }
@@ -1329,6 +1340,8 @@ public class RenderSystem extends BaseEntitySystem {
       // TODO: create EntityRenderer class to encapsulate the following code:
       Vector2 pos = renderPosition(entity);
       Vector2 tmp = iso.toScreen(tmpVec2.set(pos));
+      ReferenceElementalEffect elementalEffect = mReferenceElementalEffect.get(entity);
+      if (elementalEffect != null) tmp.add(elementalEffect.offset);
 
       Overlay overlay = mOverlay.get(entity);
       drawOverlayLayers(entity, overlay, tmp.x, tmp.y, true);
@@ -1392,6 +1405,9 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   private boolean isPresentationMissile(int entity) {
+    ReferenceElementalEffect effect = mReferenceElementalEffect.get(entity);
+    // Orbiting debris must pass behind and in front of the caster by ground depth.
+    if (effect != null && (effect.orbit || effect.ground)) return false;
     return mMissile.has(entity) && mMissile.get(entity).presentationOnly;
   }
 
