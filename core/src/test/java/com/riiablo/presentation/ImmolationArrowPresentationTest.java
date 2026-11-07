@@ -154,43 +154,17 @@ class ImmolationArrowPresentationTest extends RiiabloTest {
     } finally { world.dispose(); }
   }
 
-  @Test void groundFireRandomPhaseUsesClientSeedWithoutConsumingDamageSeed() {
+  @Test void groundFireUsesReferenceGrowthPhaseAndFade() {
     Missile fire = groundFire();
-    fire.nativeSeed = new D2Seed(0x12345678, 666);
-    fire.rngState = 0x76543210;
-    Animation animation = animationAt(11);
-    long oracle = Integer.toUnsignedLong(0x12345678) * 0x6AC690C5L + 666L;
-    int selected = 11 + (int) ((oracle & 0xffffffffL) % 24);
-
-    NativeGroundFirePresentation.adjustFrame(fire, animation, 50);
-
-    verify(animation).setFrame(selected);
-    assertEquals((int) oracle, fire.clientSeed.getNLowSeed());
-    assertEquals((int) (oracle >>> 32), fire.clientSeed.getNHighSeed());
-    assertEquals(0x12345678, fire.nativeSeed.getNLowSeed());
-    assertEquals(666, fire.nativeSeed.getNHighSeed());
-    assertEquals(0x76543210, fire.rngState);
-    assertNotSame(fire.nativeSeed, fire.clientSeed);
-  }
-
-  @Test void groundFireEndingRewindsFromRemainingLifetime() {
-    Missile fire = groundFire();
-    Animation endStart = animationAt(30);
-    NativeGroundFirePresentation.adjustFrame(fire, endStart, 12);
-    verify(endStart).setFrame(9);
-
-    Animation ending = animationAt(9);
-    NativeGroundFirePresentation.adjustFrame(fire, ending, 11);
-    verify(ending).setFrame(7);
-
-    Animation clamped = animationAt(1);
-    NativeGroundFirePresentation.adjustFrame(fire, clamped, 1);
-    verify(clamped).setFrame(0);
-
-    Animation steady = animationAt(20);
-    NativeGroundFirePresentation.adjustFrame(fire, steady, 13);
-    verify(steady, never()).setFrame(anyInt());
-    assertNull(fire.clientSeed, "ending/steady branches do not roll random numbers");
+    fire.presentationSeedKnown = true;
+    fire.presentationSeed = 0;
+    assertEquals(0, NativeGroundFirePresentation.frameAt(fire, 37, 0));
+    assertEquals(11, NativeGroundFirePresentation.frameAt(fire, 37, 11));
+    assertEquals(28, NativeGroundFirePresentation.frameAt(fire, 37, 12));
+    assertEquals(36, NativeGroundFirePresentation.frameAt(fire, 37, 20));
+    assertEquals(12, NativeGroundFirePresentation.frameAt(fire, 37, 21));
+    assertEquals(.5f, NativeGroundFirePresentation.fadeAlpha(5));
+    assertEquals(0f, NativeGroundFirePresentation.fadeAlpha(0));
   }
 
   private static Missile groundFire() {
@@ -200,10 +174,4 @@ class ImmolationArrowPresentationTest extends RiiabloTest {
     return fire;
   }
 
-  private static Animation animationAt(int frame) {
-    Animation animation = mock(Animation.class);
-    when(animation.getNumFramesPerDir()).thenReturn(37);
-    when(animation.getFrame()).thenReturn(frame);
-    return animation;
-  }
 }

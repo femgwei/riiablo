@@ -120,15 +120,15 @@ public class MissileLoader extends IteratingSystem {
         .layer(celFile, blendMode)
         .build();
     animation.setMode(entry.LoopAnim > 0 ? Animation.Mode.LOOP : Animation.Mode.CLAMP); // TODO: Some are 2 -- special case?
-    if (entry.SubLoop > 0 && animation.getMode() == Animation.Mode.LOOP) {
+    if (!NativeGroundFirePresentation.handles(missile)
+        && entry.SubLoop > 0 && animation.getMode() == Animation.Mode.LOOP) {
       animation.setSubLoop(entry.SubStart, entry.SubStop);
     }
     int initialFrame = entry.RandStart;
-    // D2Client's ground-fire maker allocates each segment with an independent
-    // client seed.  Starting every Firewall/Blaze segment at frame zero makes
-    // the wall march in lockstep; use the presentation seed only for the
-    // visual phase, never the authoritative damage RNG.
-    if (isGroundFire(entry) && animation.getNumFramesPerDir() > 1) {
+    // CltDo5 initializes growth separately below. Keep the legacy random
+    // startup only for groundFireBig rows using a different client callback.
+    if (!NativeGroundFirePresentation.handles(missile)
+        && isGroundFire(entry) && animation.getNumFramesPerDir() > 1) {
       initialFrame += MissileImpactPresentationSystem.nextClientRandom(missile,
           animation.getNumFramesPerDir());
     }
@@ -249,9 +249,13 @@ public class MissileLoader extends IteratingSystem {
       Animation animation, int initialFrame) {
     int frames = animation.getNumFramesPerDir();
     if (frames <= 0) return;
+    if (NativeGroundFirePresentation.handles(missile)) {
+      NativeGroundFirePresentation.initialize(missile, animation);
+      return;
+    }
     int start = Math.floorMod(initialFrame, frames);
     animation.setFrame(start);
-    // CltDo5 owns its randomized sub-loop and final fade frame selection.
+    // CltDo5 above owns reference-style growth, phased looping and alpha fade.
     // Ordinary missiles, including reconstructed monster projectiles, retain
     // fractional native animation progress across asynchronous asset loading.
     if (!isGroundFire(entry) && missile.nativeFrame > 0) {

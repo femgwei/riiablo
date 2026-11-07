@@ -4,14 +4,7 @@ import com.riiablo.codec.Animation;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.codec.excel.Missiles;
 
-/**
- * Small client-side part of D2Client's CltDo5 (0x6FB306F0) callback.
- *
- * <p>The callback is intentionally kept outside {@link Animation}: ground
- * fire uses the missile's remaining native clock to rewind the resident DCC
- * around its SubStart frame, while ordinary animation playback continues in
- * {@link Animation#update(float)} afterwards.</p>
- */
+/** CltDo5 presentation using the reference APK's Ws/Ts/vne animation model. */
 public final class NativeGroundFirePresentation {
   private NativeGroundFirePresentation() {}
 
@@ -21,25 +14,43 @@ public final class NativeGroundFirePresentation {
         && missile.missile.pCltDoFunc == 5;
   }
 
-  /** CltDo5 plus 0x6FB3DB1E / D2Common#10375's first-pass sub-loop. */
+  /** Growth starts at frame zero; the random phase applies only inside the loop. */
+  static void initialize(Missile missile, Animation animation) {
+    if (!missile.presentationSeedKnown) {
+      missile.presentationSeed = missile.rngState;
+      missile.presentationSeedKnown = true;
+    }
+    missile.clientFrame = Math.max(missile.clientFrame, missile.nativeFrame);
+    animation.setFrameDelta(256); // APK ground-fire sheets run at 25 FPS.
+    animation.setFrame(frameAt(missile, animation.getNumFramesPerDir(), missile.clientFrame));
+    int remaining = missile.authoritative && !missile.presentationOnly && missile.persistent
+        ? missile.remainingFrames : remainingFrames(missile);
+    applyFade(missile, animation, remaining);
+  }
+
+  /** Keep playing forward while fading over the final 0.4 seconds (ten ticks). */
   public static void update(Missile missile, Animation animation, int remainingFrames,
       float delta) {
-    adjustFrame(missile, animation, remainingFrames);
-    Missiles.Entry row = missile.missile;
-    if (row.LoopAnim > 0 && row.SubLoop > 0 && row.SubStart < row.SubStop
-        && row.SubStop <= animation.getNumFramesPerDir()
-        && remainingFrames > row.AnimLen - row.SubStop + 1) {
-      animation.updateSubLoop(delta, row.SubStart, row.SubStop);
-    } else {
-      animation.update(delta);
-    }
+    if (!handles(missile) || animation == null) return;
+    missile.clientFrame = Math.max(missile.nativeFrame,
+        missile.clientFrame + Math.max(0, Math.round(delta * 25f)));
+    animation.setFrame(frameAt(missile, animation.getNumFramesPerDir(), missile.clientFrame));
+    // Replica snapshots may be sparse. Extrapolate only the presentation
+    // clock; never advance the server's lifetime, collision or damage clock.
+    applyFade(missile, animation, remainingFrames);
+  }
+
+  private static void applyFade(Missile missile, Animation animation, int remainingFrames) {
+    int remaining = remainingFrames - Math.max(0, missile.clientFrame - missile.nativeFrame);
+    Animation.Layer layer = animation.getLayer(0);
+    if (layer != null) layer.setAlpha(fadeAlpha(remaining));
   }
 
   /**
    * Returns the native remaining clock for a replica.  Older snapshot packets
    * legitimately carry a zero TotalFrames value for persistent ground fire;
-   * the client-created missile still has the row's Range and must not enter
-   * the extinguish branch immediately.  Once a server lifetime is available,
+   * the client-created missile still has the row's Range and must not fade
+   * immediately. Once a server lifetime is available,
    * it remains authoritative (some skills extend the sub-loop beyond Range).
    */
   static int remainingFrames(Missile missile) {
@@ -51,35 +62,28 @@ public final class NativeGroundFirePresentation {
     return Math.max(0, rowLifetime - missile.nativeFrame);
   }
 
-  /**
-   * Applies one 1.10f CltDo5 frame correction before normal animation update.
-   * The original callback uses the native missile frame for the first branch,
-   * then the remaining lifetime for the two rewind branches.
-   */
-  public static void adjustFrame(Missile missile, Animation animation, int remainingFrames) {
-    if (!handles(missile) || animation == null) return;
+  static int frameAt(Missile missile, int frames, int ageFrames) {
+    if (frames <= 0) return 0;
     Missiles.Entry row = missile.missile;
     int subStart = row.SubStart;
-    int subStop = row.SubStop;
-    if (subStart <= 0 || animation.getNumFramesPerDir() <= 0) return;
-
-    int frame = animation.getFrame();
-    if (frame == subStart - 1) {
-      // D2Client's CltDo5 uses ITEMS_RollLimitedRandomNumber with the
-      // SubStop-SubStart bound, then adds it to the pre-subloop frame.
-      int span = subStop - subStart;
-      if (span <= 0) return;
-      int selected = frame + MissileImpactPresentationSystem.nextClientRandom(missile, span);
-      setFrameClamped(animation, selected);
-    } else if (remainingFrames == subStart) {
-      setFrameClamped(animation, Math.max(subStart - 3, 0));
-    } else if (remainingFrames < subStart) {
-      setFrameClamped(animation, Math.max(frame - 2, 0));
+    int subStop = Math.min(frames - 1, row.SubStop);
+    int age = Math.max(0, ageFrames);
+    // Ts includes loopEnd, unlike the old native exclusive-stop sub-loop.
+    if (row.SubLoop > 0 && subStart >= 0 && subStart <= subStop && age >= subStart) {
+      return subStart + (age - subStart + phase(missile)) % (subStop - subStart + 1);
     }
+    return Math.min(frames - 1, age);
   }
 
-  private static void setFrameClamped(Animation animation, int frame) {
-    int max = animation.getNumFramesPerDir() - 1;
-    animation.setFrame(Math.max(0, Math.min(max, frame)));
+  static int phase(Missile missile) {
+    // Ws samples phase once in [0,24]. Derive it from the immutable birth
+    // seed so reloads are stable and neither client nor damage RNG is consumed.
+    int seed = missile.presentationSeedKnown ? missile.presentationSeed : missile.rngState;
+    return com.d2moo.common.seed.Seed.rollLimitedRandomNumber(
+        new com.d2moo.common.drlg.D2Seed(seed, 666), 25);
+  }
+
+  static float fadeAlpha(int remainingFrames) {
+    return Math.max(0f, Math.min(1f, remainingFrames / 10f));
   }
 }

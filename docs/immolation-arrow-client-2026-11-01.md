@@ -46,15 +46,56 @@ cells, and adds one outer visual ring.  Wall/range termination remains on the
 native sparse `CltHit12` path, so this is a presentation change only and does
 not alter area damage, duration, or network authority.
 
+## All CltDo5 fire uses APK growth and fade (2026-11-07)
+
+User requested the reference APK's playback/extinguishing for every CltDo5
+missile, including small/medium flames and other skills. This supersedes the
+native frame rewinding/sub-loop playback described in the earlier evidence.
+
+Verified static sources in `D2Survivors_extracted`:
+
+- `analysis/readable-www/assets/itemArt-BOATIR-s.js:5828` (`Ts`): play age-based
+  frames from zero until loopStart, then apply the random phase within the
+  inclusive loopStart..loopEnd range.
+- Same file `:10202` (`Ws`): age starts at zero; phase is random in 0..24.
+  This phase does **not** select the first displayed frame when a sheet has
+  a loop. The previous explanation of immediate random-frame startup was
+  incorrect for the looped ground-fire sheets.
+- Same file `:10279` (`vne`): continue normal animation, multiply alpha by
+  `min(1, remainingSeconds / 0.4)` and delete the zone at expiry. No reversed
+  frames, shrinking sprites or shrinking radius are used.
+- `assets/www/d2/missiles.json`, `immolationfire`: 25 FPS, 37 frames, loopStart
+  12, loopEnd 36. Thus ages 0..11 show growth; subsequent frames loop in 12..36.
+
+Riiablo applies the same growth/phase/fade behavior to all pCltDoFunc=5 rows.
+The immutable missile birth seed supplies a stable 0..24 phase independent
+of damage RNG. A presentation clock catches up to snapshots and advances
+between them, preserving age across DCC reloads. Fade lasts ten 25 Hz ticks
+before the existing missile expiry; server lifetimes and damage stay intact.
+Independent missile cells retain their own phases rather than sharing the
+APK zone's phase plus child-index offsets; field geometry/composition remain
+the existing riiablo implementation. This is static-source-guided playback,
+not proof of whole-scene pixel equivalence with a running APK or original.
+
 ## Regression boundary
 
 The impact integration test invokes the actual handler with a recording factory
 and an independent unsigned RNG oracle: circular integer cells, child selection,
 63..87-frame lifetime, percentage gate, skill inheritance and distinct child birth
-seeds. Other tests cover all four fire rows' blend policy, first-pass/fractional
-sub-loop behaviour, existing arrow effects and poison-policy isolation.
+seeds. Ground-fire tests now cover initial growth, inclusive phased looping,
+the ten-tick alpha fade, RNG isolation and reload/sparse-snapshot continuity.
+Adjacent missile animation and existing Immolation Arrow server tests remain
+part of the targeted regression.
 
-No fire radius or sprite size is enlarged to fit the screenshot. The actual
-framebuffer appearance, wall/room filtering, remote impact source lookup and
+Validation: JDK 17 with the installed 1.10F MPQs; 23 targeted tests passed,
+zero failures/skips. The selection includes `NativeGroundFirePresentationTest`,
+`GroundFireReplicaClockTest`, `ImmolationArrowPresentationTest`,
+`MissileAnimationCatchupTest`, `MissileLoaderTest`, and the four Immolation
+Arrow methods in `AmazonSkillSpecializationTest`. Remote window verification
+of the growth and fade remains for the user.
+
+The client hit field was enlarged in the screenshot-driven change above;
+this follow-up only changes playback and fading. The actual framebuffer
+appearance, wall/room filtering, remote impact source lookup and
 sound-instance parity still require separate verification; passing these tests
 does not claim complete original-client parity.

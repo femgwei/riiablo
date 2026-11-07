@@ -61,6 +61,23 @@ class MissileAnimationCatchupTest extends RiiabloTest {
     assertEquals(11, animation.getFrame());
   }
 
+  @Test void cltDoFiveReloadRetainsReferenceLoopAgeInsteadOfRestartingGrowth() {
+    Missile missile = missile(40);
+    missile.missile.pCltDoFunc = 5;
+    missile.missile.SubLoop = 1;
+    missile.missile.SubStart = 12;
+    missile.missile.SubStop = 36;
+    missile.presentationSeedKnown = true;
+    Animation animation = animation(37, 128, Animation.Mode.LOOP);
+    MissileLoader.initializePlayback(missile, missile.missile, animation, 30);
+    assertEquals(31, animation.getFrame());
+    assertEquals(256, animation.getFrameDelta());
+    NativeGroundFirePresentation.update(missile, animation, 35, .04f);
+    assertEquals(32, animation.getFrame());
+    MissileLoader.initializePlayback(missile, missile.missile, animation, 0);
+    assertEquals(32, animation.getFrame(), "sparse snapshots/reloads cannot rewind local age");
+  }
+
   private static Missile missile(int age) {
     Missile missile = new Missile();
     missile.missile = new Missiles.Entry();
