@@ -34,6 +34,18 @@ not controlled in those screenshots.
   countdown. Use their nativeLifetimeFrames/nativeFrame snapshot clock, rather
   than interpreting a default remainingFrames=0 as the ending animation phase.
 
+## Screenshot-driven APK composition (2026-11-07)
+
+The supplied comparison shows the native fire patch at roughly 1.4x the width
+of the current riiablo patch, with a filled core instead of visible sparse
+holes.  The recovered APK's `ode` handler confirms that a successful unit hit
+plays `explodingarrowexp` and creates one continuous `immolationfire` zone.
+Riiablo now keeps the native server field and damage ownership, but its client
+unit-hit branch adds that explosion presentation, fills the visual child
+cells, and adds one outer visual ring.  Wall/range termination remains on the
+native sparse `CltHit12` path, so this is a presentation change only and does
+not alter area damage, duration, or network authority.
+
 ## Regression boundary
 
 The impact integration test invokes the actual handler with a recording factory

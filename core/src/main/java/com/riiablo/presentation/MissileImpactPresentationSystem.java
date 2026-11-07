@@ -906,6 +906,24 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     }
     int chance = source.cHitPar != null && source.cHitPar.length > 1
         ? Math.max(0, Math.min(100, source.cHitPar[1])) : 100;
+    // The extracted APK renders a successful unit hit as a filled, continuous
+    // fire patch and adds an explicit exploding-arrow burst before the patch.
+    // Its zone is visual-only; the native server immolationfire missiles still
+    // own all damage and synchronization.  Keep wall/range termination on the
+    // audited D2Client CltHit12 path, while using the APK-style composition
+    // for the player-visible monster-hit path shown in the reference capture.
+    boolean apkUnitHit = event.targetEntityId >= 0;
+    if (apkUnitHit) {
+      Missiles.Entry explosion = clientContext.files().Missiles.get("explodingarrowexp");
+      if (explosion != null) {
+        createVisual(source, explosion.Missile, event, 0f, 0f, 0f, 0, parent);
+      }
+      // The APK's single Ws(zone) covers the whole patch.  In the native
+      // missile representation one extra cell ring is the closest equivalent
+      // without changing the authoritative radius or damage ownership.
+      radius = Math.max(1, radius + 1);
+      chance = 100;
+    }
     int lifetimeBase = nativeImmolationHitLifetime(source, parent, level);
     int centerX = MathUtils.floor(event.x), centerY = MathUtils.floor(event.y);
     for (int x = -radius; x <= radius; x++) {
