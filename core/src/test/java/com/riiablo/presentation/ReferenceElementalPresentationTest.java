@@ -168,16 +168,39 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
     }
   }
 
-  @Test void armageddonLayersMeetAtOneLandingPointAndExplodeAfterTheFall() {
+  @Test void armageddonLayersScatterAroundTheCastCenterAndExplodeAfterTheFall() {
     try (Harness h = new Harness()) {
-      h.root("armageddoncontrol", SkillId.ARMAGEDDON);
+      int caster = h.world.create();
+      h.world.getMapper(Position.class).create(caster).position.set(10, 20);
+      h.world.getMapper(UnitStates.class).create(caster).init(caster).stateList
+          .addState(StateId.ARMAGEDDON, 250, 1, caster);
+      int first = h.root("armageddoncontrol", SkillId.ARMAGEDDON);
+      h.missile(first).ownerId = caster;
+      h.missile(first).presentationSeedKnown = true;
+      h.missile(first).presentationSeed = 101;
+      int second = h.root("armageddoncontrol", SkillId.ARMAGEDDON);
+      h.missile(second).ownerId = caster;
+      h.missile(second).presentationSeedKnown = true;
+      h.missile(second).presentationSeed = 202;
       h.tick(0);
-      assertEquals(2, h.created.size());
+      assertEquals(4, h.created.size());
       assertEquals(h.effect(h.created.get(0)).offset, h.effect(h.created.get(1)).offset);
       assertEquals(330, h.effect(h.created.get(0)).offset.y);
+      assertEquals(h.births.get(0), h.births.get(1));
+      assertEquals(h.births.get(2), h.births.get(3));
+      assertNotEquals(h.births.get(0), h.births.get(2),
+          "each strike must land at a different point in the cast area");
+      Vector2 center = h.world.getMapper(Position.class).get(caster).position;
+      Vector2 screenCenter = EngineUtils.worldToScreenCoords(center, new Vector2());
+      for (int i : new int[] {0, 2}) {
+        Vector2 delta = EngineUtils.worldToScreenCoords(h.births.get(i), new Vector2())
+            .sub(screenCenter);
+        assertTrue(delta.x * delta.x / (220 * 220)
+            + delta.y * delta.y / (149.6f * 149.6f) <= 1.001f);
+      }
       for (int i = 0; i < 12; i++) h.tick(.04f);
       assertTrue(h.names.contains("armageddonexplosion"));
-      assertEquals(1, h.names.stream().filter("armageddonexplosion"::equals).count());
+      assertEquals(2, h.names.stream().filter("armageddonexplosion"::equals).count());
     }
   }
 

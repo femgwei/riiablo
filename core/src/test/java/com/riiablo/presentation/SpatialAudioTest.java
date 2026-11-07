@@ -47,6 +47,19 @@ class SpatialAudioTest {
     }
   }
 
+  @Test void hurricaneLoopIsOwnedByTheActiveStateInsteadOfEveryParticle() {
+    com.riiablo.codec.excel.Missiles.Entry swoosh =
+        new com.riiablo.codec.excel.Missiles.Entry();
+    swoosh.Missile = "hurricaneswoosh";
+    com.riiablo.codec.excel.Missiles.Entry rock =
+        new com.riiablo.codec.excel.Missiles.Entry();
+    rock.Missile = "hurricanerock";
+    assertTrue(MissileTravelAudio.isStateOwnedLoop(swoosh, "druid_hurricane"));
+    assertTrue(MissileTravelAudio.isStateOwnedLoop(rock, "druid_hurricane"));
+    assertFalse(MissileTravelAudio.isStateOwnedLoop(swoosh, "druid_windcast"));
+    assertFalse(MissileTravelAudio.isStateOwnedLoop(null, "druid_hurricane"));
+  }
+
   @Test void playbackUsesTheOwningWorldAndLiveListenerDespiteOtherGlobals() {
     World oldWorld = Riiablo.engine;
     Audio oldAudio = Riiablo.audio;

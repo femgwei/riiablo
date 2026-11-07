@@ -679,7 +679,8 @@ public class ClientEntityFactory extends ServerEntityFactory {
     mBox2DBody.create(id);
 
     Missiles.Entry missile = mMissile.get(id).missile;
-    if (!missile.TravelSound.isEmpty()) { // FIXME: how to handle this audio for aoe spell effects?
+    if (!missile.TravelSound.isEmpty()
+        && !MissileTravelAudio.isStateOwnedLoop(missile, missile.TravelSound)) {
       // D2 plays TravelSound once when the missile is created.  Keep the
       // emitter on the missile so the normal distance attenuation applies;
       // MissileCollisionSystem separately emits HitSound on impact.

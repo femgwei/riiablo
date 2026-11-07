@@ -19,6 +19,7 @@ public final class MissileTravelAudio {
   public static void play(World world, ClientSpatialAudioServices session, int entity, String sound) {
     if (session.audio() == null || sound == null || sound.isEmpty()) return;
     Missile missile = world.getMapper(Missile.class).get(entity);
+    if (isStateOwnedLoop(missile == null ? null : missile.missile, sound)) return;
     boolean poisonCloud = missile != null && missile.missile != null
         && "poisonjavcloud".equals(missile.missile.Missile)
         && "object_poison_loop".equals(sound) && missile.ownerId >= 0;
@@ -53,5 +54,12 @@ public final class MissileTravelAudio {
     world.getMapper(SoundEmitter.class).create(entity).set(travel, Interpolation.pow2OutInverse,
         SoundEmitter.DEFAULT_RADIUS, true);
     if (owners != null) owners.put(missile.ownerId, entity);
+  }
+
+  static boolean isStateOwnedLoop(com.riiablo.codec.excel.Missiles.Entry row, String sound) {
+    // The SrvDo124 carrier lasts two ticks. Restarting this native looping
+    // sound on every carrier/particle produces repeated wind attacks/cuts.
+    return "druid_hurricane".equals(sound) && row != null && row.Missile != null
+        && row.Missile.startsWith("hurricane");
   }
 }
