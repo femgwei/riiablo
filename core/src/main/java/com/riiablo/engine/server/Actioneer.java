@@ -4613,7 +4613,9 @@ public class Actioneer extends PassiveSystem {
         wrapped = candidate;
       }
     }
-    return next != Engine.INVALID_ENTITY ? next : wrapped;
+    if (next != Engine.INVALID_ENTITY) return next;
+    if (wrapped != Engine.INVALID_ENTITY) return wrapped;
+    return Engine.INVALID_ENTITY;
   }
 
   private Item whirlwindPrimaryWeapon(int entityId) {
