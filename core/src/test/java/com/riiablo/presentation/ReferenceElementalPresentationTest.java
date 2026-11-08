@@ -123,11 +123,16 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
   @Test void volcanoHasTwoResidentLayersAndRocksLandWithExplosionAndLava() {
     try (Harness h = new Harness()) {
       int root = h.root("volcano", SkillId.VOLCANO);
-      h.missile(root).nativeLifetimeFrames = 150;
+      // The controller can arrive with only one authoritative frame left;
+      // the reference client still keeps the authored 5.5s volcano layers.
+      h.missile(root).nativeLifetimeFrames = 1;
       h.tick(0);
       assertEquals(2, h.created.size());
       assertEquals("volcano", h.names.get(0));
       assertEquals("volcano overlay fire", h.names.get(1));
+      assertEquals(5.5f, h.effect(h.created.get(0)).duration, .0001f);
+      assertEquals(5.5f, h.effect(h.created.get(1)).duration, .0001f);
+      assertTrue(h.effect(h.created.get(0)).ground);
       for (int i = 0; i < 8; i++) h.tick(.04f);
       assertEquals("volcano debris 2", h.names.get(2));
       ReferenceElementalEffect rock = h.effect(h.created.get(2));
@@ -137,6 +142,13 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
       assertTrue(h.names.contains("volcano explosion"));
       assertTrue(h.names.contains("volcano small fire"));
       assertTrue(h.system.hideOriginal(root));
+    }
+    try (Harness h = new Harness()) {
+      // Authoritative eruption children carry the parent skill id for damage;
+      // they must not be mistaken for another volcano controller.
+      h.root("volcano debris 2", SkillId.VOLCANO);
+      h.tick(0);
+      assertEquals(0, h.created.size());
     }
   }
 

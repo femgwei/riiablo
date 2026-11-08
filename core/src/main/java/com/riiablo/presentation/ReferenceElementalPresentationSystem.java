@@ -29,6 +29,9 @@ import com.riiablo.presentation.component.ReferenceElementalEmitter;
  */
 @All(Position.class)
 public class ReferenceElementalPresentationSystem extends IteratingSystem {
+  private static final float VOLCANO_DURATION_SECONDS = 5.5f;
+  private static final float VOLCANO_FIRST_ROCK_DELAY = .3f;
+  private static final float VOLCANO_ROCK_INTERVAL = .2f;
   private static final int[] HURRICANE_X = {7, 5, 0, -5, -7, -5, 0, 5};
   private static final int[] HURRICANE_Y = {0, 5, 7, 5, 0, -5, -7, -5};
   protected ComponentMapper<Position> mPosition;
@@ -78,6 +81,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
     }
     String name = missile.missile.Missile.toLowerCase(java.util.Locale.ROOT);
     Vector2 at = mPosition.get(id).position;
+    boolean volcano = isVolcanoController(missile, name);
     if (!clock.initialized) {
       clock.initialized = true;
       if ("meteorcenter".equals(name)) {
@@ -86,11 +90,15 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
         // Retain the authoritative warning delay, but use Sne's actual 0.6s
         // fall in its final segment instead of stretching the descent to 2.4s.
         clock.next = Math.max(0, duration - .6f);
-      } else if ("volcano".equals(name)) {
-        float duration = remaining(missile);
-        sprite("volcano", at, duration);
+      } else if (volcano) {
+        // Tbe creates both resident layers for the authored S0=5.5 seconds.
+        // Do not shorten the volcano to the remaining network carrier life:
+        // a late controller snapshot would otherwise show no volcano at all.
+        float duration = VOLCANO_DURATION_SECONDS;
+        ReferenceElementalEffect base = sprite("volcano", at, duration);
+        if (base != null) base.ground = true;
         sprite("volcano overlay fire", at, duration);
-        clock.next = clock.age + .3f;
+        clock.next = clock.age + VOLCANO_FIRST_ROCK_DELAY;
       } else if (missile.skillId == SkillId.ARMAGEDDON) {
         // Ebe: both layers share one landing point and a 0.45s diagonal fall.
         // The native state is attached to the caster and the server emits a
@@ -140,21 +148,21 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
         sprite("erruption smoke 1", vent, .9f);
         clock.next += .09f;
       }
-    } else if ("volcano".equals(name)) {
+    } else if (volcano) {
       while (clock.next <= end + .00001f) {
         float angle = random(clock) * MathUtils.PI2;
         float radius = 20 + random(clock) * 110;
         Vector2 landing = pixelOffset(at, MathUtils.cos(angle) * radius,
-            MathUtils.sin(angle) * radius * .7f, new Vector2());
+            -MathUtils.sin(angle) * radius * .7f, new Vector2());
         // Start at the mouth, 50px above the base; land after 0.45s (wbe).
         ReferenceElementalEffect rock = sprite("volcano debris 2", landing, .45f);
         if (rock != null) {
           rock.startOffset.set(-MathUtils.cos(angle) * radius,
-              50 + MathUtils.sin(angle) * radius * .7f);
+              -50 - MathUtils.sin(angle) * radius * .7f);
           rock.landing = "volcano explosion";
           sample(rock, 0);
         }
-        clock.next += .2f;
+        clock.next += VOLCANO_ROCK_INTERVAL;
       }
     }
     clock.age = end;
@@ -205,7 +213,8 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
 
   public static boolean replaces(Missile m) {
     if (m == null || m.missile == null) return false;
-    if (m.skillId == SkillId.HURRICANE || m.skillId == SkillId.ARMAGEDDON) return true;
+    if (m.skillId == SkillId.VOLCANO || m.skillId == SkillId.HURRICANE
+        || m.skillId == SkillId.ARMAGEDDON) return true;
     switch (m.missile.Missile.toLowerCase(java.util.Locale.ROOT)) {
       case "meteorcenter": case "blizzardcenter":
       case "blizzard1": case "blizzard2": case "blizzard3": case "blizzard4":
@@ -291,7 +300,8 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
   }
 
   static void configure(String name, ReferenceElementalEffect e) {
-    e.ground = "erruption crack 1".equals(name) || "volcano small fire".equals(name);
+    e.ground = "volcano".equals(name) || "erruption crack 1".equals(name)
+        || "volcano small fire".equals(name);
     switch (name) {
       case "volcano": e.loopStart = 17; e.loopEnd = 18; break;
       case "volcano overlay fire": e.loopStart = 6; e.loopEnd = 14; break;
@@ -398,6 +408,13 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
   private Vector2 armageddonCenter(int ownerId, Vector2 fallback) {
     return ownerId >= 0 && mPosition.has(ownerId)
         ? mPosition.get(ownerId).position : fallback;
+  }
+
+  private static boolean isVolcanoController(Missile missile, String name) {
+    // Volcano eruption children inherit skillId=VOLCANO for damage, so the
+    // skill id alone must not make every child spawn another resident volcano.
+    return "volcano".equals(name)
+        || missile.skillId == SkillId.VOLCANO && missile.missile.pSrvDoFunc == 123;
   }
 
   private static float random(ReferenceElementalEmitter clock) {
