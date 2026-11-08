@@ -6,7 +6,6 @@ import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
@@ -41,8 +40,6 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
   protected ComponentMapper<ReferenceElementalEmitter> mEmitter;
   @Wire(name = "factory") protected EntityFactory factory;
   @Wire(name = "clientContext") protected ClientGameplayContext clientContext;
-  /** Stable visual center for each active caster; combat still owns all hits. */
-  private final IntMap<Vector2> armageddonCenters = new IntMap<>();
 
   @Override protected void initialize() {
     // Queue short effects before the first cast; their visual clocks must not
@@ -96,10 +93,10 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
         clock.next = clock.age + .3f;
       } else if (missile.skillId == SkillId.ARMAGEDDON) {
         // Ebe: both layers share one landing point and a 0.45s diagonal fall.
-        // The native strike packet is aimed at one combat target, so retain
-        // the first strike as the cast center and scatter each later visual
-        // around it. This changes only presentation coordinates; the
-        // authoritative missile remains at its server-selected target.
+        // The native state is attached to the caster and the server emits a
+        // fresh strike from the caster's current position every period. Keep
+        // that moving center for the visual area; the authoritative missile
+        // remains at its server-selected target for combat.
         Vector2 center = armageddonCenter(missile.ownerId, at);
         Vector2 landing = scatter(center, 220f, .68f, clock);
         falling("armageddontail", landing, .45f, 17160f / 127f, -330, 0, 0, 0, null);
@@ -166,8 +163,6 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
   private void updateHurricane(int id) {
     UnitStates states = mUnitStates.get(id);
     boolean active = states.stateList != null && states.stateList.hasState(StateId.HURRICANE);
-    boolean armageddon = states.stateList != null && states.stateList.hasState(StateId.ARMAGEDDON);
-    if (!armageddon) armageddonCenters.remove(id);
     ReferenceElementalEmitter clock = mEmitter.get(id);
     if (!active) {
       if (clock != null) clock.hurricane = false;
@@ -401,13 +396,8 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
   }
 
   private Vector2 armageddonCenter(int ownerId, Vector2 fallback) {
-    if (ownerId < 0) return fallback;
-    Vector2 center = armageddonCenters.get(ownerId);
-    if (center == null) {
-      center = new Vector2(fallback);
-      armageddonCenters.put(ownerId, center);
-    }
-    return center;
+    return ownerId >= 0 && mPosition.has(ownerId)
+        ? mPosition.get(ownerId).position : fallback;
   }
 
   private static float random(ReferenceElementalEmitter clock) {

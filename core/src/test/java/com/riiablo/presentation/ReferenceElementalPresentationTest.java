@@ -198,9 +198,24 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
         assertTrue(delta.x * delta.x / (220 * 220)
             + delta.y * delta.y / (149.6f * 149.6f) <= 1.001f);
       }
+      h.world.getMapper(Position.class).get(caster).position.set(100, 80);
+      int third = h.root("armageddoncontrol", SkillId.ARMAGEDDON);
+      h.missile(third).ownerId = caster;
+      h.missile(third).presentationSeedKnown = true;
+      h.missile(third).presentationSeed = 303;
+      h.tick(0);
+      assertEquals(6, h.created.size());
+      Vector2 movedCenter = EngineUtils.worldToScreenCoords(
+          h.world.getMapper(Position.class).get(caster).position, new Vector2());
+      Vector2 movedDelta = EngineUtils.worldToScreenCoords(h.births.get(4), new Vector2())
+          .sub(movedCenter);
+      assertTrue(movedDelta.x * movedDelta.x / (220 * 220)
+          + movedDelta.y * movedDelta.y / (149.6f * 149.6f) <= 1.001f);
+      assertNotEquals(h.births.get(0), h.births.get(4),
+          "later strikes must follow the caster's moved center");
       for (int i = 0; i < 12; i++) h.tick(.04f);
       assertTrue(h.names.contains("armageddonexplosion"));
-      assertEquals(2, h.names.stream().filter("armageddonexplosion"::equals).count());
+      assertEquals(3, h.names.stream().filter("armageddonexplosion"::equals).count());
     }
   }
 
