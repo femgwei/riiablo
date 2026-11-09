@@ -115,6 +115,13 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
           rock.landingPhase = (int) (random(clock) * 25);
         }
       }
+      if ("firestormmaker".equals(name)) {
+        // The reference client releases three trails at -0.2, 0 and +0.2
+        // radians. The authoritative server stream ids are intentionally not
+        // used for damage here; this is a visual-only lane derived from the
+        // immutable presentation seed.
+        clock.firestormLaneAngle = (Math.floorMod(clock.seed, 3) - 1) * .2f;
+      }
     }
     float end = clock.age + Math.max(0f, world.delta);
     if ("meteorcenter".equals(name) && end + .00001f >= clock.next) {
@@ -127,7 +134,21 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
       boolean firestorm = "firestormmaker".equals(name);
       while (clock.next <= end + .00001f) {
         Vector2 trailAt = new Vector2(at);
-        if (mVelocity.has(id)) trailAt.mulAdd(mVelocity.get(id).velocity, clock.next - end);
+        if (firestorm && mVelocity.has(id)) {
+          Vector2 velocity = mVelocity.get(id).velocity;
+          if (!velocity.isZero(0.0001f)) {
+            float speed = velocity.len();
+            Vector2 direction = new Vector2(velocity).nor()
+                .rotateRad(clock.firestormLaneAngle);
+            Vector2 origin = new Vector2(missile.start);
+            if (origin.isZero(0.0001f) && !at.isZero(0.0001f)) {
+              origin.set(at).mulAdd(velocity, -clock.age);
+            }
+            trailAt.set(origin).mulAdd(direction, speed * clock.next);
+          }
+        } else if (mVelocity.has(id)) {
+          trailAt.mulAdd(mVelocity.get(id).velocity, clock.next - end);
+        }
         groundFire(firestorm ? "firestorm" : "moltenboulderfirepath", trailAt,
             firestorm ? 1.2f : 2f, clock);
         clock.next += firestorm ? 26f / 320f : 30f / 230f;

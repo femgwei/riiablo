@@ -180,6 +180,26 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
     }
   }
 
+  @Test void firestormTrailsFanIntoReferenceStreamsInsteadOfOverlapping() {
+    try (Harness h = new Harness()) {
+      int[] roots = new int[3];
+      int[] seeds = {101, 202, 303};
+      for (int i = 0; i < roots.length; i++) {
+        roots[i] = h.root("firestormmaker", SkillId.FIRESTORM);
+        h.missile(roots[i]).presentationSeedKnown = true;
+        h.missile(roots[i]).presentationSeed = seeds[i];
+        h.world.getMapper(Velocity.class).get(roots[i]).velocity.set(320, 0);
+      }
+      h.tick(0);
+      assertEquals(3, h.created.size());
+      h.tick(.12f);
+      assertEquals(6, h.created.size());
+      assertNotEquals(h.births.get(3), h.births.get(4));
+      assertNotEquals(h.births.get(4), h.births.get(5));
+      assertNotEquals(h.births.get(3), h.births.get(5));
+    }
+  }
+
   @Test void armageddonLayersScatterAroundTheCastCenterAndExplodeAfterTheFall() {
     try (Harness h = new Harness()) {
       int caster = h.world.create();
@@ -398,6 +418,7 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
       m.skillId = skill;
       m.authoritative = true;
       world.getMapper(Position.class).create(id).position.set(10, 20);
+      m.start.set(10, 20);
       world.getMapper(Velocity.class).create(id);
       return id;
     }
