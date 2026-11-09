@@ -17,6 +17,7 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
@@ -72,6 +73,30 @@ class BarbarianWhirlwindTest extends RiiabloTest {
     assertEquals(12, BarbarianSkills.getWhirlwindAttackInterval(20));
     assertEquals(14, BarbarianSkills.getWhirlwindAttackInterval(23));
     assertEquals(16, BarbarianSkills.getWhirlwindAttackInterval(26));
+  }
+
+  @Test
+  void whirlwindFacingCompletesOneSpinEveryHalfSecond() {
+    Actioneer actioneer = new Actioneer();
+    World world = world(actioneer, new DummyFactory());
+    try {
+      Skills.Entry skill = Riiablo.files.skills.get("Whirlwind");
+      int id = player(world, 0, 0, attributes(1000, 1, 1, 100000));
+      world.getMapper(Casting.class).create(id)
+          .set(skill.Id, Engine.INVALID_ENTITY, new Vector2(10, 0));
+      actioneer.onSkillStart(SkillStartEvent.obtain(id, skill.Id, Engine.INVALID_ENTITY,
+          new Vector2(10, 0), skill.srvstfunc, skill.cltstfunc));
+
+      world.setDelta(WhirlwindSystem.ROTATION_PERIOD_SECONDS);
+      world.process();
+      Angle angle = world.getMapper(Angle.class).get(id);
+      assertEquals(1f, angle.angle.x, 0.0001f);
+      assertEquals(0f, angle.angle.y, 0.0001f);
+      assertEquals(angle.angle.x, angle.target.x, 0.0001f);
+      assertEquals(angle.angle.y, angle.target.y, 0.0001f);
+    } finally {
+      world.dispose();
+    }
   }
 
   @Test
@@ -294,6 +319,7 @@ class BarbarianWhirlwindTest extends RiiabloTest {
     world.getMapper(Player.class).create(id);
     world.getMapper(Class.class).create(id).type = Class.Type.PLR;
     world.getMapper(Position.class).create(id).position.set(x, y);
+    world.getMapper(Angle.class).create(id);
     world.getMapper(AttributesWrapper.class).create(id).attrs = attrs;
     world.getMapper(UnitStates.class).create(id).init(id);
     world.getMapper(Velocity.class).create(id).set(6f, 9f);

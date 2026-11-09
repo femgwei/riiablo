@@ -5,11 +5,13 @@ import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.ai.utils.Collision;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
@@ -29,10 +31,13 @@ import com.riiablo.map.Map;
 public class WhirlwindSystem extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(WhirlwindSystem.class);
   static final float GAME_FRAMES_PER_SECOND = 25f;
+  /** Reference client advances the Whirlwind overlay through one turn every 0.5s. */
+  static final float ROTATION_PERIOD_SECONDS = 0.5f;
   static final float ARRIVAL_EPSILON = 0.1f;
   static final int MAX_STALLED_FRAMES = 2;
 
   protected ComponentMapper<WhirlwindRuntime> mWhirlwindRuntime;
+  protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
@@ -92,6 +97,8 @@ public class WhirlwindSystem extends IteratingSystem {
       return;
     }
 
+    advanceSpin(entityId, runtime);
+
     if (runtime.positionInitialized) {
       if (position.position.epsilonEquals(runtime.lastPosition, 0.001f)) {
         runtime.stalledFrames++;
@@ -136,6 +143,26 @@ public class WhirlwindSystem extends IteratingSystem {
           ? runtime.elapsedFrames + interval : next;
       actioneer.resolveWhirlwindPulse(entityId, runtime);
     }
+  }
+
+  /**
+   * Keeps the SQ presentation turning while the unit travels.  The native
+   * client does not leave the facing pointed at the destination; it advances
+   * the whirlwind overlay continuously and the unit direction follows it.
+   * Updating both sides of Angle prevents AngularVelocity from easing the
+   * sprite back toward the original travel direction on the same frame.
+   */
+  private void advanceSpin(int entityId, WhirlwindRuntime runtime) {
+    if (!mAngle.has(entityId)) return;
+    float delta = Math.max(0f, world.getDelta());
+    if (!runtime.spinInitialized) {
+      runtime.spinRadians = mAngle.get(entityId).angle.angleRad();
+      runtime.spinInitialized = true;
+    }
+    runtime.spinRadians += delta * MathUtils.PI2 / ROTATION_PERIOD_SECONDS;
+    Angle angle = mAngle.get(entityId);
+    angle.angle.setAngleRad(runtime.spinRadians);
+    angle.target.set(angle.angle);
   }
 
   private boolean blocked(

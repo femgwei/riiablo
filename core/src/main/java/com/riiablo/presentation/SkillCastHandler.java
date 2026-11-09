@@ -41,6 +41,11 @@ import com.riiablo.skill.SkillCodes;
 
 public class SkillCastHandler extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(SkillCastHandler.class);
+  private static final float WHIRLWIND_SOUND_GAP_SECONDS = 0.3f;
+  private static final String WHIRLWIND_SOUND = "barbarian_whirlwind";
+
+  private float presentationTime;
+  private float lastWhirlwindSoundTime = -Float.MAX_VALUE;
 
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Monster> mMonster;
@@ -64,6 +69,17 @@ public class SkillCastHandler extends PassiveSystem {
   }
 
   private final Vector2 tmpVec = new Vector2();
+
+  @Override
+  protected void processSystem() {
+    presentationTime += Math.max(0f, world.getDelta());
+  }
+
+  private void playWhirlwindSound() {
+    if (presentationTime - lastWhirlwindSoundTime < WHIRLWIND_SOUND_GAP_SECONDS) return;
+    playSound(WHIRLWIND_SOUND);
+    lastWhirlwindSoundTime = presentationTime;
+  }
 
   @Subscribe
   public void onLeapLand(com.riiablo.engine.server.event.LeapLandEvent event) {
@@ -171,6 +187,11 @@ public class SkillCastHandler extends PassiveSystem {
       // D2Client resolves this class bank at the skill-start callback.
       playSound(startSound);
     }
+
+    // Whirlwind's Skills.txt row leaves stsound/dosound empty.  The retail
+    // client starts its dedicated bank once at cast start; cltdofunc 76 is a
+    // repeated hit callback and must not replay the sound on every window.
+    if (skill.Id == SkillId.WHIRLWIND) playWhirlwindSound();
 
     if (skill.castoverlay != null && !skill.castoverlay.isEmpty()) {
       overlays.set(event.entityId, skill.castoverlay);
