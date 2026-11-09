@@ -50,7 +50,8 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
     if (clientContext.assets() == null) return;
     for (String name : new String[] {"meteorcenter", "meteor", "meteortail", "meteorexplode",
         "blizzard1", "blizzard4", "firestormmaker", "firestorm", "moltenboulderemerge",
-        "moltenboulder", "moltenboulderfirepath", "moltenboulder-flyingrocks",
+        "moltenboulder", "moltenboulderexplode", "moltenboulderfirepath",
+        "moltenboulder-flyingrocks",
         "erruption crack 1", "erruption smoke 1", "volcano", "volcano overlay fire",
         "volcano debris 2", "volcano explosion", "volcano small fire", "armageddontail",
         "armageddonrock", "armageddonexplosion", "armageddonfire", "hurricaneswoosh",
@@ -240,6 +241,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
       case "meteorcenter": case "blizzardcenter":
       case "blizzard1": case "blizzard2": case "blizzard3": case "blizzard4":
       case "firestormmaker": case "firestorm": case "moltenboulder": case "moltenboulderfirepath":
+      case "moltenboulderexplode":
       case "erruption center": case "erruption crack 1": case "erruption smoke 1":
       case "volcano": case "volcano debris 2": return true;
       default: return false;
@@ -263,12 +265,25 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
     }
     if (name.matches("blizzard[1-4]") || "volcano debris 2".equals(name)) return true;
     if ("moltenboulder".equals(name)) {
+      // CltHit52 draws the rolling boulder's explicit explosion before the
+      // eight fragments.  The server event is presentation-only; damage and
+      // collision remain owned by the authoritative missile.
+      sprite("moltenboulderexplode", at, 16f / 25f);
       for (int i = 0; i < 8; i++) {
         ReferenceElementalEffect fragment = sprite("moltenboulder-flyingrocks", at, .5f);
         if (fragment == null) continue;
         float angle = i * MathUtils.PI2 / 8;
         fragment.direction = i;
         fragment.endOffset.set(MathUtils.cos(angle) * 70, -MathUtils.sin(angle) * 45);
+      }
+      // The reference client's final Ws(moltenboulderfirepath) cell remains
+      // on the ground after the boulder expires.  The native server may have
+      // already removed its damage child by the time this event is rendered,
+      // so retain the visual cell independently for the authored two seconds.
+      ReferenceElementalEffect fire = sprite("moltenboulderfirepath", at, 2f);
+      if (fire != null) {
+        fire.fade = true;
+        fire.phase = impactFirePhase(event.missileEntityId, at);
       }
       return true;
     }
@@ -279,8 +294,28 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
     ReferenceElementalEffect effect = sprite(name, at, duration);
     if (effect != null) {
       effect.fade = true;
-      effect.phase = (int) (random(clock) * 25);
+      effect.phase = groundFirePhase(name, clock);
     }
+  }
+
+  private static int groundFirePhase(String name, ReferenceElementalEmitter clock) {
+    int phase = (int) (random(clock) * 25);
+    if ("moltenboulderfirepath".equals(name)) {
+      // Ws samples a fresh phase for every cell.  Keep the deterministic
+      // visual RNG, while preventing adjacent boulder cells from repeatedly
+      // landing on the same loop frame in a sparse network snapshot.
+      if (phase == clock.lastBoulderFirePhase) phase = (phase + 7) % 25;
+      clock.lastBoulderFirePhase = phase;
+    }
+    return phase;
+  }
+
+  private static int impactFirePhase(int entityId, Vector2 at) {
+    int seed = entityId * 0x9E3779B9;
+    seed ^= Float.floatToIntBits(at.x) * 31;
+    seed ^= Float.floatToIntBits(at.y) * 17;
+    seed ^= seed >>> 16;
+    return Math.floorMod(seed, 25);
   }
 
   private ReferenceElementalEffect falling(String name, Vector2 at, float duration, float x, float y,

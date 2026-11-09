@@ -27,7 +27,8 @@ import org.junit.jupiter.api.Test;
 
 class ReferenceElementalPresentationTest extends RiiabloTest {
   @Test void referenceSpritesExistInTheReal110fMpqs() {
-    String[] names = {"firestorm", "moltenboulderfirepath", "moltenboulder-flyingrocks",
+    String[] names = {"firestorm", "moltenboulderexplode", "moltenboulderfirepath",
+        "moltenboulder-flyingrocks",
         "erruption crack 1", "erruption smoke 1", "volcano", "volcano overlay fire",
         "volcano debris 2", "volcano explosion", "volcano small fire", "armageddontail",
         "armageddonrock", "armageddonexplosion", "hurricaneswoosh", "hurricanerock",
@@ -170,13 +171,38 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
       assertEquals("moltenboulderfirepath", h.names.get(0));
       assertEquals(2f, h.effect(h.created.get(0)).duration);
       assertTrue(h.system.impact(h.missile(root).missile, h.impact(root)));
-      assertEquals(9, h.created.size());
-      for (int i = 1; i <= 8; i++) {
+      assertEquals(11, h.created.size());
+      assertEquals("moltenboulderexplode", h.names.get(1));
+      assertEquals(16f / 25f, h.effect(h.created.get(1)).duration, .0001f);
+      for (int i = 2; i <= 9; i++) {
         ReferenceElementalEffect fragment = h.effect(h.created.get(i));
-        assertEquals(i - 1, fragment.direction);
+        assertEquals(i - 2, fragment.direction);
         assertEquals(.5f, fragment.duration);
         assertTrue(fragment.endOffset.len() >= 44);
       }
+      assertEquals("moltenboulderfirepath", h.names.get(10));
+      assertEquals(2f, h.effect(h.created.get(10)).duration);
+      assertTrue(h.effect(h.created.get(10)).fade);
+      assertTrue(h.effect(h.created.get(10)).phase >= 0
+          && h.effect(h.created.get(10)).phase < 25);
+    }
+  }
+
+  @Test void boulderTrailCellsUseIndependentReferencePhases() {
+    try (Harness h = new Harness()) {
+      int root = h.root("moltenboulder", SkillId.MOLTEN_BOULDER);
+      h.missile(root).presentationSeedKnown = true;
+      h.missile(root).presentationSeed = 4242;
+      h.world.getMapper(Velocity.class).get(root).velocity.set(230, 0);
+      h.tick(0);
+      h.tick(.52f);
+      List<Integer> fire = new ArrayList<>();
+      for (int i = 0; i < h.names.size(); i++) {
+        if ("moltenboulderfirepath".equals(h.names.get(i))) fire.add(h.created.get(i));
+      }
+      assertTrue(fire.size() >= 4);
+      long distinct = fire.stream().map(id -> h.effect(id).phase).distinct().count();
+      assertTrue(distinct >= 2, "boulder trail cells must not share one animation phase");
     }
   }
 
