@@ -19,7 +19,8 @@ public class CofReferenceSerializer
   @Override
   public int putData(FlatBufferBuilder builder, CofReference component) {
     return CofReferenceP.createCofReferenceP(
-        builder, component.mode, component.wclass, component.animationRestartId & 0xFFFFFFFFL);
+        builder, component.mode, component.wclass, component.animationRestartId & 0xFFFFFFFFL,
+        (short) component.sequenceFrame);
   }
 
   @Override
@@ -34,6 +35,7 @@ public class CofReferenceSerializer
     component.mode = (byte) data.mode();
     component.wclass = (byte) data.weaponClass();
     component.animationRestartId = (int) data.animationRestartId();
+    component.sequenceFrame = data.sequenceFrame();
     return component;
   }
 }

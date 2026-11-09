@@ -200,6 +200,7 @@ public class SequenceHandler extends IteratingSystem {
       // repeated action uses the same mode (for example consecutive Throws),
       // otherwise it inherits the previous frame and can skip its keyframe.
       cofs.setMode(entityId, sequence.mode1, true);
+      if (sequence.nativeLeap) mCofReference.get(entityId).sequenceFrame = 0;
       mAnimData.get(entityId).override = -1;
       if (sequence.nativeMonster != null) {
         mAnimData.get(entityId).frame = sequence.nativeMonster.frames[0] << 8;

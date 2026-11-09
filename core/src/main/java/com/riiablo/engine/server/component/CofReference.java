@@ -29,6 +29,8 @@ public class CofReference extends Component {
    * each forced restart instead of treating the snapshot as unchanged.
    */
   public int animationRestartId;
+  /** Explicit source frame for held/seeked player Leap sequences; -1 is ordinary playback. */
+  public int sequenceFrame = -1;
 
   /** Presentation-only shape override; logical entity type remains PLR. */
   public Class.Type visualType;
@@ -39,6 +41,7 @@ public class CofReference extends Component {
   public CofReference set(String token, byte mode) {
     this.token = token;
     this.mode = mode;
+    sequenceFrame = -1;
     clearVisualOverride();
     return this;
   }

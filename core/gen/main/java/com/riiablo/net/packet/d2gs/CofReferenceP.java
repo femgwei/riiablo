@@ -18,22 +18,26 @@ public final class CofReferenceP extends Table {
   public int mode() { int o = __offset(4); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
   public int weaponClass() { int o = __offset(6); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
   public long animationRestartId() { int o = __offset(8); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0L; }
+  public short sequenceFrame() { int o = __offset(10); return o != 0 ? bb.getShort(o + bb_pos) : -1; }
 
   public static int createCofReferenceP(FlatBufferBuilder builder,
       int mode,
       int weaponClass,
-      long animationRestartId) {
-    builder.startTable(3);
+      long animationRestartId,
+      short sequenceFrame) {
+    builder.startTable(4);
     CofReferenceP.addAnimationRestartId(builder, animationRestartId);
+    CofReferenceP.addSequenceFrame(builder, sequenceFrame);
     CofReferenceP.addWeaponClass(builder, weaponClass);
     CofReferenceP.addMode(builder, mode);
     return CofReferenceP.endCofReferenceP(builder);
   }
 
-  public static void startCofReferenceP(FlatBufferBuilder builder) { builder.startTable(3); }
+  public static void startCofReferenceP(FlatBufferBuilder builder) { builder.startTable(4); }
   public static void addMode(FlatBufferBuilder builder, int mode) { builder.addByte(0, (byte)mode, (byte)0); }
   public static void addWeaponClass(FlatBufferBuilder builder, int weaponClass) { builder.addByte(1, (byte)weaponClass, (byte)0); }
   public static void addAnimationRestartId(FlatBufferBuilder builder, long animationRestartId) { builder.addInt(2, (int)animationRestartId, (int)0L); }
+  public static void addSequenceFrame(FlatBufferBuilder builder, short sequenceFrame) { builder.addShort(3, sequenceFrame, -1); }
   public static int endCofReferenceP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

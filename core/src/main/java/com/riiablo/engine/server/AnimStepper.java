@@ -68,6 +68,10 @@ public class AnimStepper extends IntervalIteratingSystem {
     }
     Sequence sequence = mSequence.get(entityId);
     Casting casting = mCasting.get(entityId);
+    if (sequence != null && sequence.nativeLeap) {
+      processPlayerLeap(entityId, sequence, animData);
+      return;
+    }
     com.riiablo.codec.excel.Skills.Entry leapSkill = casting == null ? null : files().skills.get(casting.skillId);
     if (mLeap.has(entityId) && leapSkill != null && sequence != null && sequence.started
         && (leapSkill.srvstfunc == 40 || leapSkill.srvstfunc == 41
@@ -368,6 +372,38 @@ public class AnimStepper extends IntervalIteratingSystem {
       animData.lastKeyframeIndex = Math.max(-1, (animData.frame >>> 8) - 1);
     } else {
       animData.lastKeyframeIndex = currentIndex;
+    }
+  }
+
+  private void processPlayerLeap(int entityId, Sequence sequence, AnimData animData) {
+    if (!sequence.started) return;
+    int point = sequence.nativeLeapPoint;
+    if (point >= NativePlayerLeapSequence.FLIGHT && mLeap.has(entityId)) {
+      point = NativePlayerLeapSequence.FLIGHT;
+    } else {
+      point++;
+    }
+    sequence.nativeLeapPoint = point;
+    int count = NativePlayerLeapSequence.frameCount(
+        sequence.nativeLeapAttack, sequence.nativeLeapWeaponClass);
+    if (point >= count) {
+      mCofReference.get(entityId).sequenceFrame = -1;
+      events.dispatch(AnimDataFinishedEvent.obtain(entityId));
+      return;
+    }
+    byte mode = NativePlayerLeapSequence.mode(point);
+    if (sequence.mode1 != mode) {
+      sequence.mode1 = mode;
+      cofs.setSequenceMode(entityId, mode, true);
+    }
+    int frame = NativePlayerLeapSequence.sourceFrame(point, sequence.nativeLeapWeaponClass);
+    animData.frame = frame << 8;
+    mCofReference.get(entityId).sequenceFrame = frame;
+    // The S1 action points maintain the leap path; they are not weapon hits.
+    // Only the A1 tail owns Leap Attack's strike/swing callback.
+    if (sequence.nativeLeapAttack
+        && point == NativePlayerLeapSequence.attackPoint(sequence.nativeLeapWeaponClass)) {
+      events.dispatch(AnimDataKeyframeEvent.obtain(entityId, Engine.KEYFRAME_ATK));
     }
   }
 

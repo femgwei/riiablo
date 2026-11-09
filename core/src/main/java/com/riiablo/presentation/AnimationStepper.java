@@ -20,6 +20,7 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected ComponentMapper<com.riiablo.presentation.component.ReferenceElementalEffect> mReferenceElementalEffect;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Sequence> mSequence;
+  protected ComponentMapper<com.riiablo.engine.server.component.CofReference> mCofReference;
   protected ComponentMapper<com.riiablo.engine.server.component.Casting> mCasting;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<com.riiablo.engine.server.component.SummonedPet> mSummonedPet;
@@ -77,6 +78,12 @@ public class AnimationStepper extends IntervalIteratingSystem {
     }
 
     Sequence sequence = mSequence.get(entityId);
+    com.riiablo.engine.server.component.CofReference reference = mCofReference.get(entityId);
+    if (reference != null && reference.sequenceFrame >= 0) {
+      int count = wrapper.animation.getNumFramesPerDir();
+      if (count > 0) wrapper.animation.setFrame(Math.min(count - 1, reference.sequenceFrame));
+      return;
+    }
     AnimData animData = mAnimData.get(entityId);
     com.riiablo.engine.server.component.Casting cast = mCasting.get(entityId);
     boolean inferno = cast != null && cast.monInferno != null

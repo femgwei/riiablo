@@ -314,6 +314,7 @@ public class SerializationManager extends PassiveSystem {
           CofReferenceP table = (CofReferenceP) sync.component(new CofReferenceP(), i);
           cofs.applyNetworkMode(entityId, (byte) table.mode(), (int) table.animationRestartId());
           cofs.setWClass(entityId, (byte) table.weaponClass());
+          mCofReference.get(entityId).sequenceFrame = table.sequenceFrame();
           break;
         }
         case ComponentP.MissileP:

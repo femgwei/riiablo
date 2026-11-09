@@ -1646,6 +1646,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     int oldRestartId = old.animationRestartId;
     cofs.applyNetworkMode(entityId, (byte) data.mode(), (int) data.animationRestartId());
     cofs.setWClass(entityId, (byte) data.weaponClass());
+    old.sequenceFrame = data.sequenceFrame();
     if (oldMode != (byte) data.mode() || oldWClass != (byte) data.weaponClass()
         || oldRestartId != (int) data.animationRestartId()) {
       Gdx.app.log(TAG, String.format(

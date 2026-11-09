@@ -25,10 +25,27 @@ public class LeapSystem extends IteratingSystem {
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<com.riiablo.engine.server.component.Sequence> mSequence;
+
+  private final boolean authoritative;
+
+  public LeapSystem() { this(true); }
+
+  public LeapSystem(boolean authoritative) { this.authoritative = authoritative; }
+
+  public boolean isAuthoritative() { return authoritative; }
 
   @Override
   protected void process(int entityId) {
+    if (!authoritative) return;
     Leap leap = mLeap.get(entityId);
+    com.riiablo.engine.server.component.Sequence sequence = mSequence.get(entityId);
+    boolean playerLeap = sequence != null && sequence.nativeLeap;
+    if (playerLeap && (!sequence.started
+        || sequence.nativeLeapPoint < NativePlayerLeapSequence.TAKEOFF)) {
+      if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
+      return;
+    }
     if (leap.nativeTick != null || NativeLeapMotion.supports(world,entityId,leap)) {
       boolean active=NativeLeapMotion.advance(world,entityId,leap);
       if (mBox2DBody.has(entityId) && mBox2DBody.get(entityId).body != null) {
@@ -44,9 +61,9 @@ public class LeapSystem extends IteratingSystem {
     }
     leap.elapsed = Math.min(leap.duration, leap.elapsed + Math.max(0f, world.delta));
     float alpha = MathUtils.clamp(leap.elapsed / leap.duration, 0f, 1f);
-    // Smooth horizontal motion; the sprite's native leap animation supplies
-    // the apparent vertical arc.
-    float smooth = alpha * alpha * (3f - 2f * alpha);
+    // Like the reference client, move linearly during flight. The S1 frames
+    // supply the vertical movement, with ground Position kept for collision.
+    float smooth = playerLeap ? alpha : alpha * alpha * (3f - 2f * alpha);
     Position position = mPosition.get(entityId);
     position.invalidateNativePrecision();
     position.position.set(leap.start).lerp(leap.destination, smooth);
@@ -63,6 +80,17 @@ public class LeapSystem extends IteratingSystem {
             ? mMonster.get(entityId).monstats.Id : "unknown",
         leap.targetId, leap.destination.x, leap.destination.y, leap.duration);
     mLeap.remove(entityId);
+    if (playerLeap) {
+      // A short flight can arrive before the S1 cursor reaches the hold.
+      // Resume at the landing point on this tick instead of sliding along
+      // the ground while the remaining airborne frames play out.
+      sequence.nativeLeapPoint = Math.max(sequence.nativeLeapPoint, NativePlayerLeapSequence.FLIGHT);
+    }
+    net.mostlyoriginal.api.event.common.EventSystem events =
+        world.getSystem(net.mostlyoriginal.api.event.common.EventSystem.class);
+    if (playerLeap && events != null) {
+      events.dispatch(com.riiablo.engine.server.event.LeapLandEvent.obtain(entityId));
+    }
   }
 
   /** Finds the closest walkable landing subtile using the native three-pass intent. */

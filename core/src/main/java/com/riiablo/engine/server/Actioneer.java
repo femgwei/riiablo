@@ -468,6 +468,14 @@ public class Actioneer extends PassiveSystem {
     mAngle.get(entityId).target.set(targetVec).sub(entityPos).nor();
     Sequence actionSequence = mSequence.create(entityId)
         .sequence(mode, mMovementModes.get(entityId).NU);
+    LeapSystem leapSystem = world.getSystem(LeapSystem.class);
+    if (type == Class.Type.PLR && (skill.Id == SkillId.LEAP || skill.Id == SkillId.LEAP_ATTACK)
+        && (leapSystem == null || leapSystem.isAuthoritative())) {
+      actionSequence.nativeLeap = true;
+      actionSequence.nativeLeapAttack = skill.Id == SkillId.LEAP_ATTACK;
+      actionSequence.nativeLeapWeaponClass = mCofReference.has(entityId)
+          ? mCofReference.get(entityId).wclass : Engine.WEAPON_HTH;
+    }
     // Jab is a native SQ sequence.  Keep its hard-coded sequence cursor on
     // the authoritative server instead of replaying complete A1/A2 COFs.
     if (type == Class.Type.PLR && skill.Id == SkillId.JAB
@@ -500,6 +508,7 @@ public class Actioneer extends PassiveSystem {
     switch (type) {
       case MON: return type.getMode(skill.monanim);
       case PLR: {
+        if (skill.Id == SkillId.LEAP || skill.Id == SkillId.LEAP_ATTACK) return Engine.Player.MODE_S1;
         int mode = type.getMode(skill.anim);
         // Player SQ is a hard-coded native sequence rather than a COF mode.
         // Start with Skills.txt's transition animation instead of SC.
@@ -1766,6 +1775,8 @@ public class Actioneer extends PassiveSystem {
       case 40: { // native Leap validates and reserves its landing point on skill start
         boolean player = mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
         if (player) {
+          LeapSystem leaps = world.getSystem(LeapSystem.class);
+          if (leaps != null && !leaps.isAuthoritative()) break;
           startLeap(entityId, targetId, targetVec, false);
           Casting cast = mCasting.get(entityId);
           if (cast != null) cast.monsterLeapStarted = mLeap.has(entityId);

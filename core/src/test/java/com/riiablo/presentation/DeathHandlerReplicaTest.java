@@ -81,7 +81,7 @@ class DeathHandlerReplicaTest extends RiiabloTest {
 
   private static AuthoritativeUnitLifecycleState.Snapshot snapshot(boolean dead) throws Exception {
     FlatBufferBuilder b = new FlatBufferBuilder(128);
-    int cof = CofReferenceP.createCofReferenceP(b, dead ? Engine.Player.MODE_DD : Engine.Player.MODE_NU, 0, 0);
+    int cof = CofReferenceP.createCofReferenceP(b, dead ? Engine.Player.MODE_DD : Engine.Player.MODE_NU, 0, 0, (short) -1);
     int vitals = VitalsP.createVitalsP(b, dead ? 0f : 37f, 80f, 9f, 20f, dead, 3f, 15f);
     int types = EntitySync.createComponentTypeVector(b, new byte[] {ComponentP.CofReferenceP, ComponentP.VitalsP});
     int components = EntitySync.createComponentVector(b, new int[] {cof, vitals});

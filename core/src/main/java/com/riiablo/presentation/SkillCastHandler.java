@@ -222,6 +222,7 @@ public class SkillCastHandler extends PassiveSystem {
       case 12: // Jab uses the server-synchronized native SQ presentation.
         break;
       case 29: // Leap: MonSeq/LeapSystem owns the action and airborne position.
+      case 30: // Leap Attack uses the same S1 takeoff and flight presentation.
         // Sound/overlay was applied above. Reinitializing movement here would
         // restart the shared server leap when the client receives SkillStart.
         break;

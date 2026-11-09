@@ -116,7 +116,7 @@ class AuthoritativeUnitLifecycleStateTest {
     List<Integer> values = new ArrayList<>();
     List<Byte> types = new ArrayList<>();
     if (mode != null) {
-      values.add(CofReferenceP.createCofReferenceP(builder, mode, 0, 0));
+      values.add(CofReferenceP.createCofReferenceP(builder, mode, 0, 0, (short) -1));
       types.add(ComponentP.CofReferenceP);
     }
     if (dead != null) {

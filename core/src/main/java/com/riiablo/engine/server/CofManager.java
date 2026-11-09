@@ -57,8 +57,10 @@ public class CofManager extends BaseEntitySystem {
     // insertions.  Do not count that insertion as a new animation restart;
     // the serialized restart id must survive the round-trip verbatim.
     boolean checkpointRestore = checkpointInsertions.remove(entityId);
+    int sequenceFrame = reference.sequenceFrame;
     setMode(entityId, reference.mode, !checkpointRestore);
     setWClass(entityId, reference.wclass, true);
+    reference.sequenceFrame = sequenceFrame;
   }
 
   /** Marks a just-created entity so insertion processing preserves its snapshot restart id. */
@@ -141,6 +143,7 @@ public class CofManager extends BaseEntitySystem {
           world.getMapper(com.riiablo.engine.server.component.Sequence.class).has(id));
     }
     reference.mode = mode;
+    reference.sequenceFrame = -1;
     if (refreshDamage) {
       Sequence sequence = mSequence.get(id);
       refreshMonsterElements(id, sequence != null && sequence.nativeMonster != null

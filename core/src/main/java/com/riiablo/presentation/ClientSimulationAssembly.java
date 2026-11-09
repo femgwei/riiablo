@@ -206,7 +206,7 @@ public final class ClientSimulationAssembly {
         // clients remain replicas of D2GS positions.
         .with(mode.createDynamicUnitCollisionSystem())
         .with(new Pathfinder())
-        .with(new LeapSystem())
+        .with(new LeapSystem(mode.isAuthoritative()))
 
         .with(new ObjectAmbientSoundSystem(clientAudioSession))
         .with(new ObjectBreakSoundEmitter())

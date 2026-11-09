@@ -256,6 +256,8 @@ table CofReferenceP {
   // Monotonic server-side sequence used to restart a repeated attack on
   // clients even when the COF mode itself does not change.
   animationRestartId:uint32;
+  // Explicit S1/A1 source frame, including an airborne hold. Absent on old peers.
+  sequenceFrame:int16 = -1;
 }
 
 // Authoritative projectile identity. Position, velocity and angle are sent

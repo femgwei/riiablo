@@ -19,6 +19,12 @@ public class Sequence extends Component {
   /** New actions must restart their animation even when mode1 equals the current mode. */
   public boolean started;
 
+  /** Player Leap uses S1, holds its flight point, then resumes its landing tail. */
+  public boolean nativeLeap;
+  public boolean nativeLeapAttack;
+  public int nativeLeapPoint;
+  public byte nativeLeapWeaponClass;
+
   /** MonSeq seq_mummyres: SC points 0..15, missile action on point 13. */
   public boolean nativeMummy;
   public int nativeMummyFrame;
@@ -53,6 +59,10 @@ public class Sequence extends Component {
     this.mode1 = mode1;
     this.mode2 = mode2;
     this.started = false;
+    nativeLeap = false;
+    nativeLeapAttack = false;
+    nativeLeapPoint = 0;
+    nativeLeapWeaponClass = 0;
     nativeMummy = false;
     nativeMummyFrame = 0;
     nativeDeathMaul = false;
