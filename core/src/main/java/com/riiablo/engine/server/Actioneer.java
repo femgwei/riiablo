@@ -4401,6 +4401,17 @@ public class Actioneer extends PassiveSystem {
       rejectWhirlwind(entityId, "missing_runtime_data");
       return;
     }
+    // A held skill can deliver another SkillStartEvent while the previous
+    // native skill-move is still active.  SrvSt38 is an initializer, not a
+    // per-frame retarget operation: restarting it resets the attack timer and
+    // spin state, and the new target may already be in melee range, which used
+    // to call rejectWhirlwind and tear down the active cast altogether.
+    WhirlwindRuntime active = mWhirlwindRuntime.get(entityId);
+    if (active != null && active.skillId == casting.skillId) {
+      log.debug("[WHIRLWIND] phase=start_ignored entity={} skill={} target={} reason=already_active",
+          entityId, casting.skillId, targetId);
+      return;
+    }
     if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)
         && isInMeleeRange(entityId, targetId, 0)) {
       rejectWhirlwind(entityId, "target_in_melee_range");
@@ -4551,8 +4562,9 @@ public class Actioneer extends PassiveSystem {
     events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit) {
       log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} "
-              + "result=miss chance={}",
-          entityId, targetId, strike, whirlwindHand(entityId, hand), combat.hitChance);
+              + "result=miss attackRating={} defense={} chance={} roll={}",
+          entityId, targetId, strike, whirlwindHand(entityId, hand),
+          combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll);
       return;
     }
     if (combat.blocked) {
