@@ -32,6 +32,13 @@ public class MissileLoader extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Missile missile = mMissile.get(entityId);
+    // Fire Wall makers are invisible native path controllers.  Their row uses
+    // groundFireBig as a callback carrier, but drawing that row produces the
+    // oversized continuous wall/loose flying flame; only their firewall child
+    // segments are part of the original visual.
+    if (missile.missile != null && "firewallmaker".equalsIgnoreCase(missile.missile.Missile)) {
+      return;
+    }
     // cursecenter is a native callback carrier and deliberately has no CelFile.
     // Its CltDo17 child pulses create the actual rendered curse-area cells.
     if (missile.missile == null || missile.missile.CelFile == null
