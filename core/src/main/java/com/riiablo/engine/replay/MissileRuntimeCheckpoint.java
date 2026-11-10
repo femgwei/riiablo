@@ -51,7 +51,7 @@ public final class MissileRuntimeCheckpoint {
       "freezeExplosionId", "usesAttackRating", "persistent", "areaRadiusOverride", "remainingFrames",
       "tickInterval", "tickFrames", "fixedElementalRate", "fixedElementalType", "elementalMinRateFixed",
       "elementalMaxRateFixed", "elementalPiercePercent", "elementalDamageRate", "elementalAttackerPlayer", "fireWallMaker",
-      "fireWallSegmentsCreated", "diabWallMaker", "diabWallMoved", "diabWallFire", "diabWallParentId",
+      "fireWallSegmentsCreated", "fireWallVisualIndex", "fireWallVisualSide", "diabWallMaker", "diabWallMoved", "diabWallFire", "diabWallParentId",
       "diabWallCastId", "fixedPoisonRate", "poisonMinRateFixed", "poisonMaxRateFixed", "poisonDurationFrames",
       "poisonPiercePercent", "poisonAttackerPlayer", "poisonCloudLoops", "poisonCloudTraveling", "targetId",
       "homing", "homingNextTurnFrame", "attachedEntityId", "attached", "nativeFrame",
@@ -244,6 +244,8 @@ public final class MissileRuntimeCheckpoint {
     out.writeBoolean(m.elementalAttackerPlayer);
     out.writeBoolean(m.fireWallMaker);
     out.writeInt(m.fireWallSegmentsCreated);
+    out.writeInt(m.fireWallVisualIndex);
+    out.writeInt(m.fireWallVisualSide);
     out.writeBoolean(m.diabWallMaker);
     out.writeBoolean(m.diabWallMoved);
     out.writeBoolean(m.diabWallFire);
@@ -405,6 +407,8 @@ public final class MissileRuntimeCheckpoint {
       m.elementalAttackerPlayer = presence(in);
       m.fireWallMaker = presence(in);
       m.fireWallSegmentsCreated = in.readInt();
+      m.fireWallVisualIndex = in.readInt();
+      m.fireWallVisualSide = in.readInt();
       m.diabWallMaker = presence(in);
       m.diabWallMoved = presence(in);
       m.diabWallFire = presence(in);

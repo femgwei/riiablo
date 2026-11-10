@@ -2472,6 +2472,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (childId < 0 || !mMissile.has(childId)) return;
     Missile child = mMissile.get(childId);
     child.skillId = maker.skillId;
+    child.fireWallVisualIndex = maker.fireWallVisualSide
+        * (maker.fireWallSegmentsCreated + 1);
     child.persistent = true;
     child.remainingFrames = nativeMissileRange(childRow, level);
     child.tickInterval = 1;

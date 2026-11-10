@@ -3727,6 +3727,7 @@ public class ServerSkillSystem extends PassiveSystem {
       Missile maker = mMissile.get(makerId);
       maker.fireWallMaker = true;
       maker.skillId = skill.Id;
+      maker.fireWallVisualSide = side;
       maker.damageLevel = level;
       maker.range = nativeMissileRange(makerRow, level);
       maker.nativeLifetimeFrames = Missile.nativeRangeFrames(makerRow, level);
@@ -3734,7 +3735,10 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     int centreId = createMissile(fireRow, Vector2.X, target,
         event.entityId, null, level);
-    if (configureFireAreaMissile(centreId, skill, event.entityId, level)) created++;
+    if (configureFireAreaMissile(centreId, skill, event.entityId, level)) {
+      mMissile.get(centreId).fireWallVisualIndex = 0;
+      created++;
+    }
     log.info("[SORCERESS_FIRE_WALL] phase=create source={} target={} skill={} level={} "
             + "maker={} fire={} created={} position=({}, {}) axis=({}, {})",
         event.entityId, event.targetId, skill.Id, level, makerName, fireName, created,
