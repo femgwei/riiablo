@@ -104,6 +104,7 @@ import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.PlayerItemHandler;
 import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
@@ -359,6 +360,7 @@ public class SkillViewer extends Tool {
         .register("stage", stage)
         .register("scaledStage", null)
         .register("partyManager", new PartyManager())
+        .register("townPortalRegistry", new TownPortalRegistry())
         .register("combatPositionHistory", new CombatPositionHistory(arenaMap));
     engine = Riiablo.engine = new World(worldConfig);
     com.riiablo.engine.MapRuntimeBindings.bind(arenaMap, engine, entityFactory, false);
