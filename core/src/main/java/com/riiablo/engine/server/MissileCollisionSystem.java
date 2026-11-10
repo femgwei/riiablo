@@ -2471,6 +2471,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     int childId = factory.createMissile(childRow, Vector2.X, origin, owner, level);
     if (childId < 0 || !mMissile.has(childId)) return;
     Missile child = mMissile.get(childId);
+    child.skillId = maker.skillId;
     child.persistent = true;
     child.remainingFrames = nativeMissileRange(childRow, level);
     child.tickInterval = 1;

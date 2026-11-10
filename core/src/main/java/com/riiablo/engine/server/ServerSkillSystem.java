@@ -3745,6 +3745,7 @@ public class ServerSkillSystem extends PassiveSystem {
       int missileId, Skills.Entry skill, int ownerId, int level) {
     if (missileId < 0 || !mMissile.has(missileId)) return false;
     Missile projectile = mMissile.get(missileId);
+    projectile.skillId = skill.Id;
     projectile.persistent = true;
     projectile.remainingFrames = nativeMissileRange(projectile.missile, level);
     projectile.tickInterval = 1;

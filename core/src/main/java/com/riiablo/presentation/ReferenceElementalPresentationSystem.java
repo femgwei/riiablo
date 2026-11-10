@@ -274,6 +274,13 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
         && m.skillId == SkillId.BLAZE && "blaze".equalsIgnoreCase(m.missile.Missile);
   }
 
+  static boolean isFireWallNative(Missile m) {
+    if (m == null || m.presentationOnly || m.missile == null
+        || m.skillId != SkillId.FIRE_WALL) return false;
+    String name = m.missile.Missile;
+    return "firewall".equalsIgnoreCase(name) || "firewallmaker".equalsIgnoreCase(name);
+  }
+
   private void updateBlazeTrail(int id, Missile missile) {
     // An authoritative segment is only an observation of the owner's trail.
     // Never replace its row, lifetime, position or combat RNG with visual data.
@@ -311,6 +318,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
   public boolean hideOriginal(int id) {
     if (mEffect.has(id) || !mMissile.has(id)) return false;
     Missile m = mMissile.get(id);
+    if (isFireWallNative(m)) return true;
     String name = m.missile.Missile;
     return replaces(m) && !"meteorcenter".equalsIgnoreCase(name)
         && !"firestormmaker".equalsIgnoreCase(name) && !"moltenboulder".equalsIgnoreCase(name);

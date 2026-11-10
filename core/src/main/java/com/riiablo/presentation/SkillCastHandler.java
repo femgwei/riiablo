@@ -868,21 +868,25 @@ public class SkillCastHandler extends PassiveSystem {
 
   private void cltDoFireWallMissiles(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || skill.cltmissilea.isEmpty() || position == null) return;
-    // SrvDo24 already creates the authoritative maker/segment missiles.  The
-    // client callback is not an additional projectile emitter; doing so draws
-    // the unwanted single "launching" flame at the cast point (and duplicates
-    // damage in local games).
-    if (event.srvdofunc == 24 || "Fire Wall".equalsIgnoreCase(skill.skill)) return;
-    Missiles.Entry missile = clientContext.files().Missiles.get(skill.cltmissilea);
+    Missiles.Entry missile = clientContext.files().Missiles.get("firewall");
     if (missile == null) return;
-
-    // Create line of fire at target location
-    Vector2 direction = tmpVec.set(event.targetVec).sub(position).nor().rotate90(1);
-    int segments = 5;
-
-    for (int i = -segments / 2; i <= segments / 2; i++) {
-      Vector2 pos = new Vector2(event.targetVec).add(direction.x * i * 2, direction.y * i * 2);
-      factory.createMissile(missile, Vector2.Zero, pos);
+    Vector2 target = event.targetId >= 0 && mPosition.has(event.targetId)
+        ? mPosition.get(event.targetId).position : event.targetVec;
+    if (target == null) return;
+    Vector2 casterScreen = com.riiablo.util.EngineUtils.worldToScreenCoords(position, new Vector2());
+    Vector2 targetScreen = com.riiablo.util.EngineUtils.worldToScreenCoords(target, new Vector2());
+    Vector2 aim = targetScreen.sub(casterScreen);
+    if (aim.isZero(0.0001f)) aim.set(1f, 0f);
+    // Reference APK places 11 fixed cells 22 pixels apart across the wall.
+    // pixelOffset takes screen-down Y, while EngineUtils returns screen-up Y.
+    Vector2 tangent = new Vector2(-aim.y, aim.x).nor();
+    for (int i = -5; i <= 5; i++) {
+      Vector2 offset = new Vector2(tangent.x * i * 22f, -tangent.y * i * 22f);
+      Vector2 at = ReferenceElementalPresentationSystem.pixelOffset(target,
+          offset.x, offset.y, new Vector2());
+      int id = createPresentationMissile(missile, Vector2.Zero, at);
+      if (id >= 0 && mMissile.has(id))
+        mMissile.get(id).nativeLifetimeFrames = 100; // reference: 4 seconds
     }
   }
 
