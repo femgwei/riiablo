@@ -322,11 +322,12 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         float rewind = (currentFrame - frame - 1) / 25f;
         at = new Vector2(current).mulAdd(velocity, -rewind);
       }
-      for (int i = 0; i < source.CltSubMissile.length; i++) {
-        String child = source.CltSubMissile[i];
-        if (child == null || child.isEmpty()) continue;
-        createFlightVisual(source, child, at, Vector2.X);
-      }
+      // D2Client's CltDo6 creates one client child per maker tick.  The
+      // three CltSubMissile rows are alternatives, not a three-sprite stack:
+      // selecting one keeps the small/medium/big ground fires interleaved
+      // without turning every cell into an overbright pile of flames.
+      String child = fireWallChild(maker, source);
+      if (child != null) createFlightVisual(source, child, at, Vector2.X);
     }
     maker.clientFrame = currentFrame;
     maker.nativeFrame = Math.max(maker.nativeFrame, currentFrame);
@@ -337,6 +338,21 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     return missile != null && missile.missile != null
         && missile.skillId == SkillId.FIRE_WALL
         && "firewallmaker".equalsIgnoreCase(missile.missile.Missile);
+  }
+
+  private static String fireWallChild(Missile maker, Missiles.Entry source) {
+    if (maker == null || source == null || source.CltSubMissile == null) return null;
+    int count = 0;
+    for (String child : source.CltSubMissile) {
+      if (child != null && !child.isEmpty()) count++;
+    }
+    if (count == 0) return null;
+    int selected = nextClientRandom(maker, count);
+    for (String child : source.CltSubMissile) {
+      if (child == null || child.isEmpty()) continue;
+      if (selected-- == 0) return child;
+    }
+    return null;
   }
 
   /** 1.10f 6FB32470: one stationary directional trail cell per client update. */
