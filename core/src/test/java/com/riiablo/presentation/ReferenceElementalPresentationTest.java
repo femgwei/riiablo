@@ -26,6 +26,93 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ReferenceElementalPresentationTest extends RiiabloTest {
+  @Test void blazeUsesRealSizeVariantsWithTheSameGroundAnchorAndLoop() {
+    String[] names = {"blaze", "firemedium", "firesmall"};
+    String[] cels = {"groundFireBig", "groundFireMedium", "groundFireSmall"};
+    for (int i = 0; i < names.length; i++) {
+      Missiles.Entry row = Riiablo.files.Missiles.get(names[i]);
+      assertEquals(cels[i].toLowerCase(), row.CelFile.toLowerCase());
+      DCC dcc = DCC.loadFromFile(Riiablo.mpqs.resolve(
+          "data\\global\\missiles\\" + row.CelFile + ".dcc"));
+      assertEquals(37, dcc.getNumFramesPerDir());
+      ReferenceElementalEffect profile = new ReferenceElementalEffect();
+      ReferenceElementalPresentationSystem.configure(names[i], profile);
+      assertEquals(12, profile.loopStart);
+      assertEquals(36, profile.loopEnd);
+      assertEquals(Vector2.Zero, profile.offset);
+      System.out.println("BLAZE_RESOURCE " + names[i] + " " + dcc.getBox(0));
+    }
+  }
+
+  @Test void blazeDownsamplesOneTrailWithoutMovingOrRetimingAuthority() {
+    try (Harness h = new Harness()) {
+      int owner = h.world.create();
+      for (int frame = 0; frame < 25; frame++) {
+        int root = h.root("blaze", SkillId.BLAZE);
+        Missile authority = h.missile(root);
+        authority.ownerId = owner;
+        authority.presentationSeedKnown = true;
+        authority.presentationSeed = frame * 7919;
+        authority.remainingFrames = 590;
+        authority.nativeLifetimeFrames = 590;
+        authority.rngState = 123;
+        Vector2 at = new Vector2(10 + frame, 20);
+        h.world.getMapper(Position.class).get(root).position.set(at);
+        h.tick(.04f);
+        assertEquals(at, h.world.getMapper(Position.class).get(root).position);
+        assertEquals(590, authority.remainingFrames);
+        assertEquals(590, authority.nativeLifetimeFrames);
+        assertEquals("blaze", authority.missile.Missile);
+        assertEquals(123, authority.rngState);
+        assertTrue(h.system.hideOriginal(root));
+      }
+      assertEquals(9, h.created.size(), "one cell per .12s at 25Hz; never three per observation");
+      assertTrue(new java.util.HashSet<>(h.names).size() > 1);
+      for (int i = 0; i < h.created.size(); i++) {
+        int visual = h.created.get(i);
+        ReferenceElementalEffect effect = h.effect(visual);
+        assertEquals(2f, effect.duration);
+        assertTrue(effect.fade);
+        assertEquals(Vector2.Zero, effect.offset);
+        assertFalse(h.system.hideOriginal(visual));
+        assertTrue(h.missile(visual).presentationOnly);
+        if (i > 0) assertTrue(EngineUtils.worldToScreenCoords(h.births.get(i), new Vector2())
+            .dst(EngineUtils.worldToScreenCoords(h.births.get(i - 1), new Vector2())) >= 14);
+      }
+      h.tick(2.01f);
+      for (int visual : h.created) assertFalse(h.world.getEntityManager().isActive(visual));
+    }
+  }
+
+  @Test void blazeDistanceGateOwnersAndLateSnapshotsDoNotDuplicateCells() {
+    try (Harness h = new Harness()) {
+      int owner = h.world.create();
+      int root = h.root("blaze", SkillId.BLAZE);
+      h.missile(root).ownerId = owner;
+      h.missile(root).authoritative = false;
+      h.tick(0);
+      assertEquals(1, h.created.size());
+      int adjacent = h.root("blaze", SkillId.BLAZE);
+      h.missile(adjacent).ownerId = owner;
+      h.world.getMapper(Position.class).get(adjacent).position.add(.01f, 0);
+      h.tick(.2f);
+      assertEquals(1, h.created.size(), "time alone cannot admit an overlapping fire cell");
+      int old = h.root("blaze", SkillId.BLAZE);
+      h.missile(old).ownerId = owner;
+      h.missile(old).nativeFrame = 51;
+      h.tick(.2f);
+      assertEquals(1, h.created.size(), "old baseline cells must not restart a 2s visual");
+      int other = h.root("blaze", SkillId.BLAZE);
+      h.missile(other).ownerId = h.world.create();
+      h.missile(other).nativeFrame = 25;
+      h.tick(0);
+      assertEquals(2, h.created.size(), "each owner has its own spacing gate");
+      assertEquals(1f, h.effect(h.created.get(1)).age);
+      h.tick(0);
+      assertEquals(2, h.created.size(), "repeated snapshots cannot create three variants");
+    }
+  }
+
   @Test void referenceSpritesExistInTheReal110fMpqs() {
     String[] names = {"firestorm", "moltenboulderexplode", "moltenboulderfirepath",
         "moltenboulder-flyingrocks",

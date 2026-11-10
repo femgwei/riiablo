@@ -34,6 +34,14 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
   private static final float VOLCANO_ROCK_INTERVAL = .2f;
   private static final int[] HURRICANE_X = {7, 5, 0, -5, -7, -5, 0, 5};
   private static final int[] HURRICANE_Y = {0, 5, 7, 5, 0, -5, -7, -5};
+  private static final String[] BLAZE_SPRITES = {"blaze", "firemedium", "firesmall"};
+  private final java.util.Map<Integer, BlazeTrail> blazeTrails = new java.util.HashMap<>();
+  private double presentationTime;
+
+  private static final class BlazeTrail {
+    double birthTime;
+    final Vector2 screen = new Vector2();
+  }
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Velocity> mVelocity;
@@ -48,7 +56,8 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
     // Queue short effects before the first cast; their visual clocks must not
     // block the render thread waiting for a cold DCC decoder/texture upload.
     if (clientContext.assets() == null) return;
-    for (String name : new String[] {"meteorcenter", "meteor", "meteortail", "meteorexplode",
+    for (String name : new String[] {"blaze", "firemedium", "firesmall",
+        "meteorcenter", "meteor", "meteortail", "meteorexplode",
         "blizzard1", "blizzard4", "firestormmaker", "firestorm", "moltenboulderemerge",
         "moltenboulder", "moltenboulderexplode", "moltenboulderfirepath",
         "moltenboulder-flyingrocks",
@@ -64,6 +73,13 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
     }
   }
 
+  @Override protected void begin() {
+    presentationTime += Math.max(0f, world.delta);
+    blazeTrails.entrySet().removeIf(entry ->
+        presentationTime - entry.getValue().birthTime >= 2.0
+            || !world.getEntityManager().isActive(entry.getKey()));
+  }
+
   @Override protected void process(int id) {
     if (mEffect.has(id)) {
       updateEffect(id, mEffect.get(id), Math.max(0f, world.delta));
@@ -72,6 +88,10 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
     if (mUnitStates.has(id)) updateHurricane(id);
     if (!mMissile.has(id)) return;
     Missile missile = mMissile.get(id);
+    if (isBlazeTrail(missile)) {
+      updateBlazeTrail(id, missile);
+      return;
+    }
     if (!replaces(missile)) return;
     ReferenceElementalEmitter clock = mEmitter.get(id);
     if (clock == null) {
@@ -235,6 +255,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
 
   public static boolean replaces(Missile m) {
     if (m == null || m.missile == null) return false;
+    if (isBlazeTrail(m)) return true;
     if (m.skillId == SkillId.VOLCANO || m.skillId == SkillId.HURRICANE
         || m.skillId == SkillId.ARMAGEDDON) return true;
     switch (m.missile.Missile.toLowerCase(java.util.Locale.ROOT)) {
@@ -246,6 +267,45 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
       case "volcano": case "volcano debris 2": return true;
       default: return false;
     }
+  }
+
+  static boolean isBlazeTrail(Missile m) {
+    return m != null && !m.presentationOnly && m.missile != null
+        && m.skillId == SkillId.BLAZE && "blaze".equalsIgnoreCase(m.missile.Missile);
+  }
+
+  private void updateBlazeTrail(int id, Missile missile) {
+    // An authoritative segment is only an observation of the owner's trail.
+    // Never replace its row, lifetime, position or combat RNG with visual data.
+    ReferenceElementalEmitter observed = mEmitter.get(id);
+    if (observed != null) return;
+    mEmitter.create(id);
+    float age = Math.max(0, missile.nativeFrame) / 25f;
+    if (age >= 2f) return; // A late baseline must not reignite expired visuals.
+    double birth = presentationTime - age;
+    Vector2 at = mPosition.get(id).position;
+    Vector2 screen = com.riiablo.util.EngineUtils.worldToScreenCoords(at, new Vector2());
+    BlazeTrail trail = blazeTrails.get(missile.ownerId);
+    // APK blaze.cast samples every .1s, requiring 14 pixels from the last cell.
+    // Quantize that policy to the incoming 25Hz authoritative observations.
+    if (trail != null && (birth - trail.birthTime < .1 - .00001
+        || screen.dst2(trail.screen) < 14f * 14f)) return;
+    int seed = missile.presentationSeedKnown ? missile.presentationSeed : missile.rngState;
+    com.d2moo.common.drlg.D2Seed visualSeed =
+        new com.d2moo.common.drlg.D2Seed(seed, 666);
+    int variant = com.d2moo.common.seed.Seed.rollLimitedRandomNumber(visualSeed, 3);
+    ReferenceElementalEffect effect = sprite(BLAZE_SPRITES[variant], at, 2f);
+    if (effect == null) return;
+    effect.age = age;
+    effect.fade = true;
+    effect.phase = com.d2moo.common.seed.Seed.rollLimitedRandomNumber(visualSeed, 25);
+    applyAnimation(effect.entityId, effect);
+    if (trail == null) {
+      trail = new BlazeTrail();
+      blazeTrails.put(missile.ownerId, trail);
+    }
+    trail.birthTime = birth;
+    trail.screen.set(screen);
   }
 
   public boolean hideOriginal(int id) {
@@ -365,6 +425,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
       case "armageddonrock": case "armageddontail":
       case "moltenboulder-flyingrocks": e.loopStart = 0; e.loopEnd = 15; break;
       case "volcano debris 2": e.loopStart = 0; e.loopEnd = 14; break;
+      case "blaze": case "firemedium": case "firesmall":
       case "firestorm": case "moltenboulderfirepath": case "armageddonfire":
         e.loopStart = 12; e.loopEnd = 36; break;
       case "hurricaneswoosh": e.fps = 12.5f; break;

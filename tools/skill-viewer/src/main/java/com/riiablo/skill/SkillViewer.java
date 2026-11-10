@@ -340,6 +340,7 @@ public class SkillViewer extends Tool {
         .with(new CofLayerUnloader(), new CofLayerLoader(), new CofLayerCacher())
         .with(new CofAlphaHandler(), new CofTransformHandler())
         .with(new MissileLoader())
+        .with(new com.riiablo.presentation.ReferenceElementalPresentationSystem())
         .with(new MissileImpactPresentationSystem())
         .with(new AnimationStepper())
         .with(new StateOverlaySystem())
@@ -1108,10 +1109,16 @@ public class SkillViewer extends Tool {
 
   private void drawEntityAnimation(int entity) {
     if (entity == Engine.INVALID_ENTITY || !animations.has(entity) || !positions.has(entity)) return;
+    com.riiablo.presentation.ReferenceElementalPresentationSystem reference =
+        engine.getSystem(com.riiablo.presentation.ReferenceElementalPresentationSystem.class);
+    if (reference != null && reference.hideOriginal(entity)) return;
     com.riiablo.codec.Animation animation = animations.get(entity).animation;
     if (animation == null) return;
     com.badlogic.gdx.math.Vector2 screen = iso.toScreen(positions.get(entity).position.cpy());
     screen.add(Gdx.graphics.getWidth() * .5f, Gdx.graphics.getHeight() * .5f);
+    com.riiablo.presentation.component.ReferenceElementalEffect effect = engine.getMapper(
+        com.riiablo.presentation.component.ReferenceElementalEffect.class).get(entity);
+    if (effect != null) screen.add(effect.offset);
     if (overlays != null && overlays.has(entity)) {
       com.riiablo.presentation.component.Overlay overlay = overlays.get(entity);
       if (overlay != null && overlay.isLoaded && overlay.entry != null && overlay.entry.PreDraw) {
