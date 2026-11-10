@@ -274,11 +274,11 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
         && m.skillId == SkillId.BLAZE && "blaze".equalsIgnoreCase(m.missile.Missile);
   }
 
-  static boolean isFireWallMakerNative(Missile m) {
+  static boolean isFireWallNative(Missile m) {
     if (m == null || m.presentationOnly || m.missile == null
         || m.skillId != SkillId.FIRE_WALL) return false;
     String name = m.missile.Missile;
-    return "firewallmaker".equalsIgnoreCase(name);
+    return "firewall".equalsIgnoreCase(name) || "firewallmaker".equalsIgnoreCase(name);
   }
 
   private void updateBlazeTrail(int id, Missile missile) {
@@ -318,7 +318,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
   public boolean hideOriginal(int id) {
     if (mEffect.has(id) || !mMissile.has(id)) return false;
     Missile m = mMissile.get(id);
-    if (isFireWallMakerNative(m)) return true;
+    if (isFireWallNative(m)) return true;
     String name = m.missile.Missile;
     return replaces(m) && !"meteorcenter".equalsIgnoreCase(name)
         && !"firestormmaker".equalsIgnoreCase(name) && !"moltenboulder".equalsIgnoreCase(name);

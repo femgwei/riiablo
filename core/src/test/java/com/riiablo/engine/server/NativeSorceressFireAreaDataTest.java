@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -89,6 +90,10 @@ class NativeSorceressFireAreaDataTest extends RiiabloTest {
     Missiles.Entry maker = Riiablo.files.Missiles.get(skill.srvmissilea);
     assertNotNull(maker);
     assertEquals(6, maker.pSrvDoFunc);
+    assertEquals(6, maker.pCltDoFunc);
+    assertArrayEquals(new String[] {"firewall", "firesmall", "firemedium"},
+        maker.CltSubMissile);
+    assertEquals(4, maker.CltParam[0]);
     assertEquals("firewall", maker.SubMissile[0]);
     assertEquals(7, maker.Range);
     assertEquals(2, maker.LevRange);

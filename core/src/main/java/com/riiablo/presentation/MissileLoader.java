@@ -34,10 +34,9 @@ public class MissileLoader extends IteratingSystem {
     Missile missile = mMissile.get(entityId);
     if (world.getSystem(ReferenceElementalPresentationSystem.class) != null
         && ReferenceElementalPresentationSystem.isBlazeTrail(missile)) return;
-    // Fire Wall makers are invisible native path controllers.  Their row uses
-    // groundFireBig as a callback carrier, but drawing that row produces the
-    // oversized continuous wall/loose flying flame; only their firewall child
-    // segments are part of the original visual.
+    // Fire Wall makers are invisible native path controllers. Their server
+    // firewall rows are damage carriers; CltDo6 creates the render-only
+    // GroundFire children from CltSubMissile1..3.
     if (missile.missile != null && "firewallmaker".equalsIgnoreCase(missile.missile.Missile)) {
       return;
     }
@@ -53,7 +52,9 @@ public class MissileLoader extends IteratingSystem {
           com.riiablo.engine.server.component.Class.Type.MIS.PATH
               + '\\' + missile.missile.CelFile + ".dcc", DCC.class);
     }
-    Missiles.Entry visualRow = presentationVisualRow(clientContext, missile);
+    if (!missile.presentationOnly && missile.skillId == com.riiablo.engine.server.skill.SkillId.FIRE_WALL
+        && missile.missile != null && "firewall".equalsIgnoreCase(missile.missile.Missile)) return;
+    Missiles.Entry visualRow = infernoVisualRow(clientContext, missile);
     if (visualRow != missile.missile && visualRow != null) {
       String path = com.riiablo.engine.server.component.Class.Type.MIS.PATH
           + '\\' + visualRow.CelFile + ".dcc";
@@ -204,20 +205,6 @@ public class MissileLoader extends IteratingSystem {
       return missile.missile;
     Missiles.Entry alternate = context.files().Missiles.get("infernoflame2");
     return alternate != null ? alternate : missile.missile;
-  }
-
-  /** Fire Wall grows from the centre: large core, medium inner cells, small ends. */
-  static Missiles.Entry presentationVisualRow(ClientGameplayContext context, Missile missile) {
-    Missiles.Entry row = infernoVisualRow(context, missile);
-    if (missile == null || row == null
-        || missile.skillId != com.riiablo.engine.server.skill.SkillId.FIRE_WALL
-        || !"firewall".equalsIgnoreCase(row.Missile)
-        || context == null || context.files() == null) return row;
-    int distance = Math.abs(missile.fireWallVisualIndex);
-    if (distance == 0) return row;
-    String variant = distance <= 2 ? "firemedium" : "firesmall";
-    Missiles.Entry alternate = context.files().Missiles.get(variant);
-    return alternate != null ? alternate : row;
   }
 
   /**

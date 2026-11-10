@@ -110,10 +110,6 @@ public class Missile extends PooledComponent {
   /** Next native CltDo6/SrvDo06 ground-fire segment emission frame. */
   public int fireWallNextFrame;
   public int fireWallSegmentsCreated;
-  /** Signed visual distance from the centre Fire Wall segment (client-only). */
-  public int fireWallVisualIndex;
-  /** Direction of a Fire Wall maker: -1 or +1 along the wall axis. */
-  public int fireWallVisualSide;
   /** Native SrvDo12 emits only after an integer-tile movement on the prior step. */
   public boolean diabWallMaker;
   public boolean diabWallMoved;
@@ -345,8 +341,6 @@ public class Missile extends PooledComponent {
     fireWallMaker = false;
     fireWallNextFrame = 0;
     fireWallSegmentsCreated = 0;
-    fireWallVisualIndex = 0;
-    fireWallVisualSide = 0;
     diabWallMaker = false;
     diabWallMoved = false;
     diabWallFire = false;

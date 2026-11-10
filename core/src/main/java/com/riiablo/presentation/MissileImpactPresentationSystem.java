@@ -14,7 +14,9 @@ import com.riiablo.engine.server.missile.NativePoisonMissileMotion;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.audio.MonsterAudio;
 import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.event.MissileImpactEvent;
@@ -75,6 +77,14 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         world.getSystem(ReferenceElementalPresentationSystem.class);
     if (referenceElemental != null && referenceElemental.ownsPresentation(entityId)) return;
     Missile visual = mMissile.get(entityId);
+    if (isFireWallMaker(visual)) {
+      // Local authority has a separate presentation-only maker created by
+      // SkillCastHandler. The authoritative maker remains combat-only.
+      if (!visual.presentationOnly && world.getSystem(ServerSkillSystem.class) != null) return;
+      processFireWallMaker(entityId, visual, mPosition.get(entityId).position,
+          mVelocity.get(entityId).velocity, Math.max(0f, world.delta));
+      return;
+    }
     // Impact children are created from the collision event after the regular
     // MissileLoader pass has already run for this tick.  Very short native
     // effects (fireexplosion2 uses a one-frame Range) would otherwise be
@@ -281,6 +291,52 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         createFlightVisual(source, childName, at, angle, offsetX, offsetY);
       }
     }
+  }
+
+  /**
+   * Native MoveFunc 6 / CltDo6: the maker itself is invisible and emits the
+   * three client-only GroundFire rows while it advances along its path. The
+   * server-side SubMissile rows remain hidden combat carriers.
+   */
+  private void processFireWallMaker(int entityId, Missile maker, Vector2 current,
+      Vector2 velocity, float delta) {
+    Missiles.Entry source = maker.missile;
+    if (source == null || current == null || factory == null
+        || source.CltSubMissile == null || source.CltSubMissile.length == 0) return;
+    int elapsed = Math.max(1, Math.round(delta * 25f));
+    int previous = maker.clientFrame;
+    int currentFrame = previous + elapsed;
+    int lifetime = maker.nativeLifetimeFrames > 0
+        ? maker.nativeLifetimeFrames : Math.max(1, source.Range);
+    currentFrame = Math.min(currentFrame, lifetime);
+    if (currentFrame <= previous) return;
+    for (int frame = previous; frame < currentFrame; frame++) {
+      Vector2 at;
+      if (maker.presentationOnly) {
+        // Client-side makers advance locally and emit before each move.
+        at = new Vector2(current);
+        current.mulAdd(velocity, 1f / 25f);
+      } else {
+        // Reconstruct missed positions from the maker's current authoritative
+        // position. At the normal 25 Hz step this is exactly the maker cell.
+        float rewind = (currentFrame - frame - 1) / 25f;
+        at = new Vector2(current).mulAdd(velocity, -rewind);
+      }
+      for (int i = 0; i < source.CltSubMissile.length; i++) {
+        String child = source.CltSubMissile[i];
+        if (child == null || child.isEmpty()) continue;
+        createFlightVisual(source, child, at, Vector2.X);
+      }
+    }
+    maker.clientFrame = currentFrame;
+    maker.nativeFrame = Math.max(maker.nativeFrame, currentFrame);
+    if (maker.presentationOnly && currentFrame >= lifetime) world.delete(entityId);
+  }
+
+  private static boolean isFireWallMaker(Missile missile) {
+    return missile != null && missile.missile != null
+        && missile.skillId == SkillId.FIRE_WALL
+        && "firewallmaker".equalsIgnoreCase(missile.missile.Missile);
   }
 
   /** 1.10f 6FB32470: one stationary directional trail cell per client update. */
