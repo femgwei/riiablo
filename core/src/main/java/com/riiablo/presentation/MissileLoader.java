@@ -16,7 +16,6 @@ import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.presentation.component.BBoxWrapper;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Missile;
-import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.graphics.BlendMode;
 
 @All(Missile.class)
@@ -53,7 +52,6 @@ public class MissileLoader extends IteratingSystem {
               + '\\' + missile.missile.CelFile + ".dcc", DCC.class);
     }
     Missiles.Entry visualRow = infernoVisualRow(clientContext, missile);
-    visualRow = blazeVisualRow(clientContext, missile, visualRow);
     if (visualRow != missile.missile && visualRow != null) {
       String path = com.riiablo.engine.server.component.Class.Type.MIS.PATH
           + '\\' + visualRow.CelFile + ".dcc";
@@ -204,23 +202,6 @@ public class MissileLoader extends IteratingSystem {
       return missile.missile;
     Missiles.Entry alternate = context.files().Missiles.get("infernoflame2");
     return alternate != null ? alternate : missile.missile;
-  }
-
-  /**
-   * The reference client varies Blaze's ground flame between the three
-   * authored fire sizes. Keep the server missile and its collision data intact;
-   * this only selects the DCC used by the local renderer.
-   */
-  static Missiles.Entry blazeVisualRow(ClientGameplayContext context, Missile missile,
-      Missiles.Entry row) {
-    if (context == null || context.files() == null || missile == null
-        || missile.missile == null || missile.skillId != SkillId.BLAZE
-        || !"blaze".equalsIgnoreCase(missile.missile.Missile)) return row;
-    String[] variants = {"blaze", "firemedium", "firesmall"};
-    int seed = missile.presentationSeedKnown ? missile.presentationSeed : missile.rngState;
-    int index = Math.floorMod(seed, variants.length);
-    Missiles.Entry variant = context.files().Missiles.get(variants[index]);
-    return variant != null ? variant : row;
   }
 
   /**
