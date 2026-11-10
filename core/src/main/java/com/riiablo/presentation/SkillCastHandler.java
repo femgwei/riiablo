@@ -358,6 +358,14 @@ public class SkillCastHandler extends PassiveSystem {
     // Blaze's missile is a parameter for the server's movement-triggered
     // ground-fire trail, not a projectile released when the buff is cast.
     if (skill.Id == SkillId.BLAZE) return;
+    // Fire Wall's shipped CltDoFunc is 26 (shared with Chain Lightning), while
+    // its native server callback is SrvDo24. Route by the skill/server row
+    // before the generic CltDo26 branch so the reference wall cells are drawn.
+    if (skill.Id == SkillId.FIRE_WALL || event.srvdofunc == 24
+        || skill.srvdofunc == 24) {
+      cltDoFireWallMissiles(event, skill, position);
+      return;
+    }
     boolean authoritativeThrow = event.skillId == SkillCodes.throw_
         || event.skillId == SkillCodes.left_hand_throw;
     // Throwing weapons are created by ServerSkillSystem (including the local
