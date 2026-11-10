@@ -16,6 +16,7 @@ import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.presentation.component.BBoxWrapper;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.graphics.BlendMode;
 
 @All(Missile.class)
@@ -52,6 +53,7 @@ public class MissileLoader extends IteratingSystem {
               + '\\' + missile.missile.CelFile + ".dcc", DCC.class);
     }
     Missiles.Entry visualRow = infernoVisualRow(clientContext, missile);
+    visualRow = blazeVisualRow(clientContext, missile, visualRow);
     if (visualRow != missile.missile && visualRow != null) {
       String path = com.riiablo.engine.server.component.Class.Type.MIS.PATH
           + '\\' + visualRow.CelFile + ".dcc";
@@ -126,6 +128,7 @@ public class MissileLoader extends IteratingSystem {
     animation.edit()
         .layer(celFile, blendMode)
         .build();
+    applyBlazeVisualScale(missile, visualRow, animation);
     animation.setMode(entry.LoopAnim > 0 ? Animation.Mode.LOOP : Animation.Mode.CLAMP); // TODO: Some are 2 -- special case?
     if (!NativeGroundFirePresentation.handles(missile)
         && entry.SubLoop > 0 && animation.getMode() == Animation.Mode.LOOP) {
@@ -202,6 +205,30 @@ public class MissileLoader extends IteratingSystem {
       return missile.missile;
     Missiles.Entry alternate = context.files().Missiles.get("infernoflame2");
     return alternate != null ? alternate : missile.missile;
+  }
+
+  static Missiles.Entry blazeVisualRow(ClientGameplayContext context, Missile missile,
+      Missiles.Entry row) {
+    if (context == null || context.files() == null || missile == null
+        || missile.missile == null || missile.skillId != SkillId.BLAZE
+        || !"blaze".equalsIgnoreCase(missile.missile.Missile)) return row;
+    String[] variants = {"blaze", "firemedium", "firesmall"};
+    int seed = missile.presentationSeedKnown ? missile.presentationSeed : missile.rngState;
+    Missiles.Entry variant = context.files().Missiles.get(
+        variants[Math.floorMod(seed, variants.length)]);
+    return variant != null && variant.CelFile != null && !variant.CelFile.isEmpty()
+        ? variant : row;
+  }
+
+  private static void applyBlazeVisualScale(Missile missile, Missiles.Entry row,
+      Animation animation) {
+    if (missile == null || row == null || animation == null || missile.missile == null
+        || missile.skillId != SkillId.BLAZE
+        || !"blaze".equalsIgnoreCase(missile.missile.Missile)) return;
+    float scale = "firemedium".equalsIgnoreCase(row.Missile) ? 1.20f
+        : "firesmall".equalsIgnoreCase(row.Missile) ? 1.65f : 1f;
+    Animation.Layer layer = animation.getLayer(0);
+    if (layer != null) layer.setScale(scale, scale);
   }
 
   /**

@@ -712,6 +712,8 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     final Color tint = new Color(Color.WHITE);
     float blendAlpha = 1f;
     float alpha = 1f;
+    float scaleX = 1f;
+    float scaleY = 1f;
     Index transform;
     int   transformColor;
     boolean shadow;
@@ -743,9 +745,13 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       tint.set(Color.WHITE);
       blendAlpha     = 1f;
       alpha          = 1f;
+      scaleX         = 1f;
+      scaleY         = 1f;
       numDirections  = dc.getNumDirections();
       numFrames      = dc.getNumFramesPerDir();
       transform      = null;
+      scaleX         = 1f;
+      scaleY         = 1f;
       transformColor = 0;
       // Screen/luminosity effects are already composited against the scene;
       // projecting their source rectangle as a solid D2 unit shadow produces
@@ -813,6 +819,12 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       return this;
     }
 
+    public Layer setScale(float x, float y) {
+      scaleX = x;
+      scaleY = y;
+      return this;
+    }
+
     public Layer setTransform(Index colormap, int id) {
       transform      = colormap;
       transformColor = colormap == null ? 0 : id;
@@ -850,7 +862,14 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       PaletteIndexedBatch b = (PaletteIndexedBatch) batch;
       b.setBlendMode(blendMode, tint, true);
       b.setColormap(transform, transformColor);
-      b.draw(region, x, y);
+      if (scaleX == 1f && scaleY == 1f) {
+        b.draw(region, x, y);
+      } else {
+        float width = region.getRegionWidth();
+        float height = region.getRegionHeight();
+        b.draw(region, x, y, width * .5f, height,
+            width, height, scaleX, scaleY, 0f);
+      }
       drawSubmitted = tint.a > 0f;
     }
 
