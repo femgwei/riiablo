@@ -16,6 +16,7 @@ import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.presentation.component.BBoxWrapper;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.graphics.BlendMode;
 
 @All(Missile.class)
