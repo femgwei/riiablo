@@ -64,6 +64,10 @@ public final class NativeUnitRandom implements IntUnaryOperator {
   public int nextInt(int bound) {
     int value = Seed.rollLimitedRandomNumber(seed, bound); mirror(); return value;
   }
+  /** Native bit-mask draw; unlike nextInt, zero and one still consume a draw. */
+  public int nextMask(int max) {
+    int value = Seed.rollMask(seed, max); mirror(); return value;
+  }
   @Override public int applyAsInt(int bound) { return nextInt(bound); }
   public long nextUnsigned() {
     long value = Seed.rollRandomNumber(seed) & 0xFFFFFFFFL; mirror(); return value;

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.artemis.World;
 import com.artemis.WorldConfiguration;
 import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.seed.Seed;
 import com.riiablo.engine.server.ai.AI;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
@@ -77,6 +78,20 @@ class NativeUnitRandomTest {
     assertEquals(0,rng.nextInt(0)); assertEquals(0,rng.nextInt(-2)); assertEquals(123,rng.high());
     assertEquals(123,rng.nextUnsigned());
     assertEquals(123,NativeUnitRandom.monster(unit,999,42).state());
+  }
+
+  @Test void maskDrawAlwaysAdvancesAndUsesUnsignedMaxMinusOne() {
+    D2Seed zeroMask = new D2Seed(1, 666);
+    assertEquals(1791398751, Seed.rollMask(zeroMask, 0));
+    assertEquals(1791398751, zeroMask.getNLowSeed());
+
+    D2Seed oneMask = new D2Seed(1, 666);
+    assertEquals(0, Seed.rollMask(oneMask, 1));
+    assertEquals(1791398751, oneMask.getNLowSeed());
+
+    D2Seed bounded = new D2Seed(1, 666);
+    assertEquals(0, Seed.rollLimitedRandomNumber(bounded, 0));
+    assertEquals(1, bounded.getNLowSeed());
   }
 
   @Test void replayedHighAndLowWordsAreBothUnsigned() {

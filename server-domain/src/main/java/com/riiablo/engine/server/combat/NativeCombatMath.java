@@ -79,8 +79,11 @@ public final class NativeCombatMath {
       boolean bypassResistance) {
     if (damage <= 0) return 0;
     if (!bypassResistance && immune) return 0;
+    // Native SrvDo damage mitigation subtracts flat physical reduction before
+    // applying resistance. Doing this in the opposite order changes every
+    // partially resisted hit that has Damage Reduced by X.
+    damage = Math.max(0, damage - Math.max(0, flat));
     if (!bypassResistance && percent != 0) damage = damage * (100 - percent) / 100;
-    damage -= flat;
     return Math.max(1, damage);
   }
 

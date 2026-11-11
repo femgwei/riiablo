@@ -2630,7 +2630,7 @@ public class Actioneer extends PassiveSystem {
           log.debug("{} is dead!", targetId);
           DamageSettlement.finishDeath(world, event);
         } else if (dragonTalonLastKick
-            && shouldDragonTalonKnockback(activeSkill, activeSkillLevel, targetId)) {
+            && shouldDragonTalonKnockback(entityId, activeSkill, activeSkillLevel, targetId)) {
           applyDragonTalonKnockback(entityId, targetId);
         }
                   break;
@@ -4748,7 +4748,7 @@ public class Actioneer extends PassiveSystem {
   }
 
   private boolean shouldDragonTalonKnockback(
-      Skills.Entry skill, int skillLevel, int targetId) {
+      int attackerId, Skills.Entry skill, int skillLevel, int targetId) {
     boolean playerOrHireling = mPlayer.has(targetId) || mMercenary.has(targetId);
     Monster monster = mMonster.get(targetId);
     boolean boss = monster != null && (monster.rank == MonsterRank.BOSS
@@ -4756,7 +4756,10 @@ public class Actioneer extends PassiveSystem {
     boolean unique = monster != null && MonsterRank.isUnique(monster.rank);
     int chance = AssassinSkills.dragonTalonKnockbackChance(
         skill, skillLevel, playerOrHireling, boss, unique);
-    boolean applied = chance > 0 && roll(100) < chance;
+    // Knockback belongs to the attacker's native unit stream. Using the
+    // Actioneer stream made this result depend on unrelated combat actions.
+    boolean applied = chance > 0
+        && NativeUnitRandom.unit(world, gameSeed(), attackerId).nextInt(100) < chance;
     log.info("[ASSASSIN_DRAGON_TALON] phase=knockback_roll target={} class={} chance={} applied={}",
         targetId, playerOrHireling ? "player_or_hireling" : boss ? "boss" : unique ? "unique" : "normal",
         chance, applied);
@@ -5570,7 +5573,14 @@ public class Actioneer extends PassiveSystem {
       resistance += defenderStates.getTotalResistModifier(stateResistType);
     }
     if (resistance >= 100) return 0;
-    return Math.max(0, rawDamage * (100 - Math.min(75, resistance)) / 100);
+    int flatReduction = statInt(defender, Stat.normal_damage_reduction);
+    if (defenderStates != null) {
+      flatReduction += defenderStates.getTotalStatContribution(Stat.normal_damage_reduction);
+    }
+    // Native physical mitigation applies Damage Reduced by X before the
+    // resistance percentage. Keep this path aligned with attack snapshots.
+    int afterFlat = Math.max(0, rawDamage - Math.max(0, flatReduction));
+    return Math.max(0, afterFlat * (100 - Math.min(75, resistance)) / 100);
   }
 
   /** Applies D2's global 17% scalar to the physical portion of player-vs-player

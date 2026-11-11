@@ -46,7 +46,8 @@ class NativeCombatMathTest {
     assertEquals(0, NativeCombatMath.physicalReduction(100, true, 100, 5, false));
     assertEquals(95, NativeCombatMath.physicalReduction(100, true, 100, 5, true));
     assertEquals(1, NativeCombatMath.physicalReduction(100, false, 50, 100, false));
-    assertEquals(145, NativeCombatMath.physicalReduction(100, false, -50, 5, false));
+    assertEquals(142, NativeCombatMath.physicalReduction(100, false, -50, 5, false));
+    assertEquals(45, NativeCombatMath.physicalReduction(100, false, 50, 10, false));
     assertEquals(0, NativeCombatMath.physicalReduction(0, false, 0, -10, false));
   }
 

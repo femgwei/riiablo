@@ -120,6 +120,20 @@ public class Seed {
             return (int) (lowSeed % nMax);
         }
     }
+
+    /**
+     * Native mask draw used by bit-mask random sites. Unlike a bounded draw,
+     * this always advances the seed for a non-null seed, including max 0 and
+     * max 1. The mask is formed in unsigned 32-bit space, so max 0 means
+     * {@code 0xFFFFFFFF} and max 1 means zero.
+     */
+    public static int rollMask(D2Seed seed, int nMax) {
+        if (seed == null) {
+            return 0;
+        }
+        long value = rollRandomNumber(seed);
+        return (int) (value & Integer.toUnsignedLong(nMax - 1));
+    }
     
     /**
      * 生成百分比随机数 [0, 100)
