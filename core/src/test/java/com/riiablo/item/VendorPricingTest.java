@@ -384,7 +384,12 @@ class VendorPricingTest extends RiiabloTest {
         manager.open(10, "gheed", null, true, null, 0, 1, false);
     session.stock.add(item);
 
-    assertEquals(750, manager.buy(session, character, item.id));
+    NpcVendorSessionManager.PurchaseResult result =
+        manager.purchase(session, character, item.id, false);
+    assertNotNull(result);
+    assertEquals(item.id, result.itemId);
+    assertEquals(750, result.price);
+    assertEquals(2, result.revision);
     assertEquals(250, character.getStats().get(Stat.gold).asInt());
     assertEquals(0, session.stock.size);
     assertEquals(2, session.revision);

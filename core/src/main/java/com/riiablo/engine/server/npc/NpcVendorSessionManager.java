@@ -13,6 +13,19 @@ import com.riiablo.codec.excel.Npc;
 
 /** Server-owned shared trade and player-private gamble inventories/revisions. */
 public final class NpcVendorSessionManager {
+  /** Server-authoritative result for a completed vendor purchase. */
+  public static final class PurchaseResult {
+    public final int itemId;
+    public final int price;
+    public final long revision;
+
+    private PurchaseResult(int itemId, int price, long revision) {
+      this.itemId = itemId;
+      this.price = price;
+      this.revision = revision;
+    }
+  }
+
   public static final class Session {
     public final int npcEntityId;
     public final String npcType;
@@ -130,12 +143,23 @@ public final class NpcVendorSessionManager {
 
   /** Atomically buys and removes one stock item after all player checks pass. */
   public synchronized int buy(Session session, CharData player, int itemId) {
-    return buy(session, player, itemId, false);
+    PurchaseResult result = purchase(session, player, itemId, false);
+    return result == null ? 0 : result.price;
   }
 
   public synchronized int buy(Session session, CharData player, int itemId, boolean toCursor) {
+    PurchaseResult result = purchase(session, player, itemId, toCursor);
+    return result == null ? 0 : result.price;
+  }
+
+  /**
+   * Atomically buys an item and returns the server price, store GUID and new
+   * session revision. The client-supplied price is never consulted.
+   */
+  public synchronized PurchaseResult purchase(Session session, CharData player, int itemId,
+      boolean toCursor) {
     Item item = find(session, itemId);
-    if (item == null || player == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return 0;
+    if (item == null || player == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return null;
     Item replacement = !session.isGamble() && VendorPricing.isInfiniteStockItem(item)
         && session.generator != null ? restock(session, item) : null;
     int price = price(session, item, player);
@@ -144,12 +168,12 @@ public final class NpcVendorSessionManager {
             : VendorPricing.gamble(player, item))
         : (toCursor ? VendorPricing.buyToCursor(player, item, session.pricing)
             : VendorPricing.buy(player, item, session.pricing));
-    if (!purchased) return 0;
+    if (!purchased) return null;
     int stockIndex = session.stock.indexOf(item, true);
     if (replacement != null && stockIndex >= 0) session.stock.set(stockIndex, replacement);
     else session.stock.removeValue(item, true);
     session.revision++;
-    return price;
+    return new PurchaseResult(item.id, price, session.revision);
   }
 
   private static Item restock(Session session, Item item) {
