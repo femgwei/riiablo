@@ -310,7 +310,13 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         ? maker.nativeLifetimeFrames : Math.max(1, source.Range);
     currentFrame = Math.min(currentFrame, lifetime);
     if (currentFrame <= previous) return;
+    // The native firewallmaker rows carry CltParam1=4.  CltDo6 advances the
+    // invisible maker every game tick but only lays a ground-fire cell on
+    // this four-frame cadence; using every tick makes a level-one wall emit
+    // three times as many visible cells as the reference client.
+    int interval = Math.max(1, cltParam(source, 0, 1));
     for (int frame = previous; frame < currentFrame; frame++) {
+      if (frame % interval != 0) continue;
       Vector2 at;
       if (maker.presentationOnly) {
         // Client-side makers advance locally and emit before each move.
