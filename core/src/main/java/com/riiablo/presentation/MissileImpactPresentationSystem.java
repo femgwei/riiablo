@@ -311,15 +311,19 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     currentFrame = Math.min(currentFrame, lifetime);
     if (currentFrame <= previous) return;
     // The native firewallmaker rows carry CltParam1=4.  CltDo6 advances the
-    // invisible maker every game tick but only lays a ground-fire cell on
-    // this four-frame cadence; using every tick makes a level-one wall emit
-    // three times as many visible cells as the reference client.
+    // invisible maker every game tick and uses that value as a one-in-N
+    // probability gate.  It is not a deterministic four-frame cadence: the
+    // callback consumes one D2Seed draw on every tick, then consumes another
+    // draw only when a ground-fire cell is actually created.
     int interval = Math.max(1, cltParam(source, 0, 1));
     for (int frame = previous; frame < currentFrame; frame++) {
-      if (frame % interval != 0) continue;
       Vector2 at;
       if (maker.presentationOnly) {
-        // Client-side makers advance locally and emit before each move.
+        // The client-side maker has no ordinary movement pass: CltDo6 is
+        // invoked from the callback dispatcher and this presentation system
+        // owns the local path clock. Advance it on every native tick, even
+        // when the sparse visual sampler does not lay a fire cell. Advancing
+        // only on sampled frames compresses the wall toward its center.
         at = new Vector2(current);
         current.mulAdd(velocity, 1f / 25f);
       } else {
@@ -328,6 +332,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         float rewind = (currentFrame - frame - 1) / 25f;
         at = new Vector2(current).mulAdd(velocity, -rewind);
       }
+      if (!rollFireWallClientSpawn(maker, interval)) continue;
       // D2Client's CltDo6 creates one client child per maker tick.  The
       // three CltSubMissile rows are alternatives, not a three-sprite stack:
       // selecting one keeps the small/medium/big ground fires interleaved
@@ -348,17 +353,26 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   private static String fireWallChild(Missile maker, Missiles.Entry source) {
     if (maker == null || source == null || source.CltSubMissile == null) return null;
-    int count = 0;
-    for (String child : source.CltSubMissile) {
-      if (child != null && !child.isEmpty()) count++;
-    }
-    if (count == 0) return null;
-    int selected = nextClientRandom(maker, count);
-    for (String child : source.CltSubMissile) {
-      if (child == null || child.isEmpty()) continue;
-      if (selected-- == 0) return child;
-    }
-    return null;
+    String first = first(source.CltSubMissile, 0);
+    String second = first(source.CltSubMissile, 1);
+    String third = first(source.CltSubMissile, 2);
+    if (first == null && second == null && third == null) return null;
+
+    // 1.10f CltDo6 rolls modulo three after the spawn gate.  The recovered
+    // callback initializes the selected id from CltSubMissile1, replaces it
+    // with CltSubMissile2 for roll==0 or CltSubMissile3 for roll==1, and
+    // leaves it at SubMissile1 for roll==2.  Thus all three table entries are
+    // used once per three successful rolls, but never stacked at one cell.
+    int selected = nextClientRandom(maker, 3);
+    if (selected == 0 && second != null) return second;
+    if (selected == 1 && third != null) return third;
+    if (first != null) return first;
+    return second != null ? second : third;
+  }
+
+  /** Native CltDo6's one-in-CltParam1 spawn gate, using the D2Seed stream. */
+  private static boolean rollFireWallClientSpawn(Missile maker, int interval) {
+    return interval <= 1 || (maker != null && nextClientRandom(maker, interval) == 0);
   }
 
   /** 1.10f 6FB32470: one stationary directional trail cell per client update. */
