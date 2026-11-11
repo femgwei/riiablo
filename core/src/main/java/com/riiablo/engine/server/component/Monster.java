@@ -6,6 +6,7 @@ import com.artemis.annotations.Transient;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.map.Map;
+import com.riiablo.engine.server.monster.NativeMonsterSpawnMods;
 
 @Transient
 @PooledWeaver
@@ -131,8 +132,11 @@ public class Monster extends Component {
     nativeRequestedMountId = -1;
     nativeRequestedMountIdentity = null;
     nativeSelfResurrections = 0;
-    nativeSelfResurrect = monstats != null && "reanimatedhorde1".equals(monstats.BaseId);
-    nativeChargedBolts = monstats != null && "scarab1".equals(monstats.BaseId);
+    String baseId = monstats == null ? null : monstats.BaseId;
+    nativeSelfResurrect = NativeMonsterSpawnMods.has(baseId,
+        NativeMonsterSpawnMods.SELF_RESURRECT);
+    nativeChargedBolts = NativeMonsterSpawnMods.has(baseId,
+        NativeMonsterSpawnMods.CHARGED_BOLTS);
     baalLinkedOwnerId = -1;
     baalClonesCreated = 0;
     rngState = 0;
