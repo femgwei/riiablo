@@ -294,8 +294,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   }
 
   /**
-   * Native MoveFunc 6 / CltDo6: the maker itself is invisible and emits the
-   * three client-only GroundFire rows while it advances along its path. The
+   * Native MoveFunc 6 / CltDo6: the maker itself is invisible and emits
+   * one of three client-only GroundFire rows on integer path movement. The
    * server-side SubMissile rows remain hidden combat carriers.
    */
   private void processFireWallMaker(int entityId, Missile maker, Vector2 current,
@@ -306,42 +306,67 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     int elapsed = Math.max(1, Math.round(delta * 25f));
     int previous = maker.clientFrame;
     int currentFrame = previous + elapsed;
+    if (!maker.presentationOnly && maker.clientSnapshotKnown) {
+      currentFrame = Math.max(currentFrame, maker.nativeFrame);
+    }
     int lifetime = maker.nativeLifetimeFrames > 0
         ? maker.nativeLifetimeFrames : Math.max(1, source.Range);
     currentFrame = Math.min(currentFrame, lifetime);
     if (currentFrame <= previous) return;
-    // The native firewallmaker rows carry CltParam1=4.  CltDo6 advances the
-    // invisible maker every game tick and uses that value as a one-in-N
-    // probability gate.  It is not a deterministic four-frame cadence: the
-    // callback consumes one D2Seed draw on every tick, then consumes another
-    // draw only when a ground-fire cell is actually created.
-    int interval = Math.max(1, cltParam(source, 0, 1));
-    for (int frame = previous; frame < currentFrame; frame++) {
-      Vector2 at;
-      if (maker.presentationOnly) {
-        // The client-side maker has no ordinary movement pass: CltDo6 is
-        // invoked from the callback dispatcher and this presentation system
-        // owns the local path clock. Advance it on every native tick, even
-        // when the sparse visual sampler does not lay a fire cell. Advancing
-        // only on sampled frames compresses the wall toward its center.
-        at = new Vector2(current);
-        current.mulAdd(velocity, 1f / 25f);
-      } else {
-        // Reconstruct missed positions from the maker's current authoritative
-        // position. At the normal 25 Hz step this is exactly the maker cell.
-        float rewind = (currentFrame - frame - 1) / 25f;
-        at = new Vector2(current).mulAdd(velocity, -rewind);
+    if (!maker.clientFlightInitialized) {
+      // Snapshots carry current position, not the cast origin. Recover that
+      // origin using the server's legacy velocity before applying the native
+      // presentation path. Keep it fixed between subsequent position packets.
+      Vector2 origin = new Vector2(maker.start);
+      if (!maker.presentationOnly && maker.clientSnapshotKnown) {
+        origin.set(current).mulAdd(velocity, -maker.nativeFrame / 25f);
       }
-      if (!rollFireWallClientSpawn(maker, interval)) continue;
-      // D2Client's CltDo6 creates one client child per maker tick.  The
+      origin.set(MathUtils.floor(origin.x + 0.5f), MathUtils.floor(origin.y + 0.5f));
+      maker.clientSamplePosition.set(origin);
+      maker.clientPathX = (int) origin.x;
+      maker.clientPathY = (int) origin.y;
+      maker.clientFlightInitialized = true;
+      // The combat centre is deliberately hidden by MissileLoader. Rebuild
+      // its visual exactly once for the opposed pair, including on replicas.
+      // Assigning it to the positive-facing maker is a client adapter policy.
+      if (velocity.x > 0f || (velocity.x == 0f && velocity.y > 0f)) {
+        createFlightVisual(source, first(source.CltSubMissile, 0), origin, Vector2.X);
+      }
+    }
+    // Native allocation: (Vel + level*VelLev/8)<<8, scaled by 75/100;
+    // D2Common then multiplies its 12-bit direction vector and shifts by 8.
+    // Do not interpret the table velocity as world units per second.
+    int speed = source.Vel + Math.max(1, maker.damageLevel) * source.VelLev / 8;
+    Vector2 pathVelocity = NativePoisonMissileMotion.velocity(Vector2.Zero, velocity,
+        (Math.max(0, speed) << 8) * 75 / 100, new Vector2());
+    int stepX = NativePoisonMissileMotion.frameStep(pathVelocity.x);
+    int stepY = NativePoisonMissileMotion.frameStep(pathVelocity.y);
+    Vector2 origin = maker.clientSamplePosition;
+    for (int frame = previous; frame < currentFrame; frame++) {
+      // CltDo6 tests ordinal 10234 BEFORE the ordinary movement update.
+      // Host integer positions denote native cell centres (precision +0.5).
+      int x = (int) origin.x + (int) Math.floorDiv(32768L + (long) stepX * frame, 65536L);
+      int y = (int) origin.y + (int) Math.floorDiv(32768L + (long) stepY * frame, 65536L);
+      if (x == maker.clientPathX && y == maker.clientPathY) continue;
+      maker.clientPathX = x;
+      maker.clientPathY = y;
+      // D2Client's CltDo6 creates one child per changed path cell. The
       // three CltSubMissile rows are alternatives, not a three-sprite stack:
       // selecting one keeps the small/medium/big ground fires interleaved
       // without turning every cell into an overbright pile of flames.
       String child = fireWallChild(maker, source);
-      if (child != null) createFlightVisual(source, child, at, Vector2.X);
+      // CltParam1 only samples dynamic lights (creation flag 0x4000).
+      // Consume the native roll, but NEVER use it to omit the flame sprite.
+      int lightInterval = cltParam(source, 0, 0);
+      if (lightInterval > 0) nextClientRandom(maker, lightInterval);
+      if (child != null) createFlightVisual(source, child, new Vector2(x, y), Vector2.X);
     }
     maker.clientFrame = currentFrame;
-    maker.nativeFrame = Math.max(maker.nativeFrame, currentFrame);
+    if (maker.presentationOnly) {
+      current.set(origin.x + stepX * (currentFrame / 65536f),
+          origin.y + stepY * (currentFrame / 65536f));
+      maker.nativeFrame = currentFrame;
+    }
     if (maker.presentationOnly && currentFrame >= lifetime) world.delete(entityId);
   }
 
@@ -368,11 +393,6 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     if (selected == 1 && third != null) return third;
     if (first != null) return first;
     return second != null ? second : third;
-  }
-
-  /** Native CltDo6's one-in-CltParam1 spawn gate, using the D2Seed stream. */
-  private static boolean rollFireWallClientSpawn(Missile maker, int interval) {
-    return interval <= 1 || (maker != null && nextClientRandom(maker, interval) == 0);
   }
 
   /** 1.10f 6FB32470: one stationary directional trail cell per client update. */
