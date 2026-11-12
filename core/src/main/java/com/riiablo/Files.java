@@ -133,6 +133,7 @@ public class Files {
   public final MagicSuffix      MagicSuffix;
   public final MonAI            MonAI;
   public final MonLvl           MonLvl;
+  public final com.riiablo.codec.excel.MonEquip MonEquip;
   public final MonMode          MonMode;
   public final MonStats         monstats;
   public final MonStats2        monstats2;
@@ -230,6 +231,8 @@ public class Files {
     MagicSuffix      = load(MagicSuffix.class, Excel.EXPANSION);
     MonAI            = load(MonAI.class);
     MonLvl           = load(MonLvl.class);
+    MonEquip         = Excel.load(com.riiablo.codec.excel.MonEquip.class,
+        Riiablo.mpqs.resolve(EXCEL_PATH + "MonEquip.txt"));
     MonMode          = load(MonMode.class);
     monstats         = load(MonStats.class, Excel.EXPANSION);
     monstats2        = load(MonStats2.class, Excel.EXPANSION);

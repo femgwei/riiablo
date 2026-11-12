@@ -3191,8 +3191,10 @@ public class ServerSkillSystem extends PassiveSystem {
     int petMax = SkillFormula.evaluate(skill.petmax, skill, skillLevel);
     if (petMax <= 0) petMax = 1;
     Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    int duration = Math.max(0, evaluateSummonFormula(event.entityId, skill.auralencalc,
+        skill, skillLevel));
     int petId = factory.createSummonedPet(event.entityId, summon, petType, event.skillId,
-        skillLevel, petMax, false, 0, target.x, target.y);
+        skillLevel, petMax, false, duration, target.x, target.y);
     if (petId < 0) {
       log.warn("[ASSASSIN_SHADOW] phase=reject owner={} skill={} reason=create_failed",
           event.entityId, event.skillId);
@@ -3210,12 +3212,15 @@ public class ServerSkillSystem extends PassiveSystem {
           petAttrs.base().put(Stat.maxhp, life);
           petAttrs.base().put(Stat.hitpoints, life);
           // Retail SrvDo049 uses the second formula for every valid entry.
-          applyShadowStats(petAttrs, skill, skillLevel, skill.aurastat, skill.aurastatcalc);
-          applyShadowStats(petAttrs, skill, skillLevel, skill.passivestat, skill.passivecalc);
+          applyShadowStats(petId, petAttrs, skill, skillLevel, skill.aurastat, skill.aurastatcalc);
+          applyShadowStats(petId, petAttrs, skill, skillLevel, skill.passivestat, skill.passivecalc);
         }
         petAttrs.reset();
       }
     }
+    equipSummon(event.entityId, petId, summon, skillLevel,
+        Math.max(1, Math.min(99, firstParam(skill, 4, 0)
+            + (skillLevel - 1) * firstParam(skill, 5, 0))));
     if (mUnitStates.has(petId)) {
       UnitStates states = mUnitStates.get(petId);
       if (states.stateList == null) states.init(world, petId);
@@ -3231,14 +3236,14 @@ public class ServerSkillSystem extends PassiveSystem {
         event.entityId, petId, summon.Id, petType, skillLevel, petMax, target.x, target.y);
   }
 
-  private static void applyShadowStats(Attributes attrs, Skills.Entry skill, int level,
+  private void applyShadowStats(int petId, Attributes attrs, Skills.Entry skill, int level,
       String[] stats, String[] formulas) {
     if (stats == null || formulas == null || formulas.length < 2) return;
     int value = SkillFormula.evaluate(formulas[1], skill, level);
     for (String name : stats) {
       if (name == null || name.isEmpty()) continue;
       short stat = Stat.index(name);
-      if (stat >= 0 && value != 0) attrs.base().add(stat, value);
+      if (stat >= 0 && value != 0) addSummonStat(petId, attrs, stat, value);
     }
   }
 
@@ -3269,6 +3274,8 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId);
       return;
     }
+    applySummonSkillStats(event.entityId, petId, skill, skillLevel, true);
+    applySummonGrantedSkills(event.entityId, petId, skill, skillLevel);
     if (mSummonedPet.has(petId)) {
       com.riiablo.engine.server.component.SummonedPet trap = mSummonedPet.get(petId);
       Skills.Entry attackSkill = summon.Skill1 == null || summon.Skill1.isEmpty()
@@ -4424,10 +4431,14 @@ public class ServerSkillSystem extends PassiveSystem {
     }
 
     if (petAttrs != null) {
+      applySummonBaseStats(event.entityId, petId, petLevel, skillLevel);
       applySummonSkillStats(event.entityId, petId, skill, skillLevel, false);
-      petAttrs.base().put(Stat.level, petLevel);
       petAttrs.reset();
       applySummonGrantedSkills(event.entityId, petId, skill, skillLevel);
+      int itemLevel = valkyrie
+          ? evaluateSummonFormula(event.entityId, skill.calc2, skill, skillLevel)
+          : Math.max(1, Math.min(ownerLevel, 3 * skillLevel));
+      equipSummon(event.entityId, petId, summon, skillLevel, itemLevel);
     }
 
     log.info("[AMAZON_{}] phase=spawn owner={} entity={} summon={} petType={} "
@@ -4447,16 +4458,16 @@ public class ServerSkillSystem extends PassiveSystem {
         || !mAttributesWrapper.has(petId)) return;
     Skills.Entry damageSkill = files().skills.get(summon.SkillDamage);
     if (damageSkill == null) return;
-    int level = Math.max(1, getBaseSkillLevel(ownerId, damageSkill.skill));
+    int level = Math.max(1, getSkillLevel(ownerId, damageSkill.Id));
     int min = MissileDamageResolver.skillPhysicalDamage(damageSkill, level, true,
         name -> getBaseSkillLevel(ownerId, name));
     int max = MissileDamageResolver.skillPhysicalDamage(damageSkill, level, false,
         name -> getBaseSkillLevel(ownerId, name));
     int toHit = SkillFormula.evaluate("toht", damageSkill, level);
     Attributes attrs = mAttributesWrapper.get(petId).attrs;
-    attrs.base().add(Stat.mindamage, min);
-    attrs.base().add(Stat.maxdamage, max);
-    attrs.base().add(Stat.tohit, toHit);
+    addSummonStat(petId, attrs, Stat.mindamage, min);
+    addSummonStat(petId, attrs, Stat.maxdamage, max);
+    addSummonStat(petId, attrs, Stat.tohit, toHit);
     attrs.reset();
     log.info("[DRUID_SUMMON_DAMAGE] owner={} pet={} skill={} level={} damage={}..{} toHit={}",
         ownerId, petId, damageSkill.skill, level, min, max, toHit);
@@ -4508,7 +4519,12 @@ public class ServerSkillSystem extends PassiveSystem {
       // Native Druid summons use the same passive/calc1/aurastat pipeline as
       // the other summon families.  Keep the level on base before the reset so
       // the aggregate and later combat snapshots see the same value.
-      petAttrs.base().put(Stat.level, petLevel);
+      if (skill.srvdofunc != 115) {
+        applySummonBaseStats(event.entityId, petId, petLevel, skillLevel);
+      } else {
+        // Native vines set their level directly; they do not add MonLvl AC/TH.
+        petAttrs.base().put(Stat.level, petLevel);
+      }
       applySummonSkillStats(event.entityId, petId, skill, skillLevel, false);
       petAttrs.base().put(Stat.level, petLevel);
       petAttrs.reset();
@@ -4598,7 +4614,11 @@ public class ServerSkillSystem extends PassiveSystem {
       int petId = factory.createSummonedPet(event.entityId, variant, petType,
           event.skillId, skillLevel, petMax, false, duration,
           target.x + offsetX[i], target.y + offsetY[i]);
-      if (petId != Engine.INVALID_ENTITY) created++;
+      if (petId != Engine.INVALID_ENTITY) {
+        applySummonSkillStats(event.entityId, petId, skill, skillLevel, false);
+        applySummonGrantedSkills(event.entityId, petId, skill, skillLevel);
+        created++;
+      }
     }
     if (created == 0) {
       log.warn("[HYDRA] phase=reject owner={} skill={} petType={} reason=create_failed",
@@ -5397,6 +5417,21 @@ public class ServerSkillSystem extends PassiveSystem {
     if (missileId < 0 || skill == null || !mMissile.has(missileId)
         || !mAttributesWrapper.has(ownerId)) return;
     Missile projectile = mMissile.get(missileId);
+    // The cast row (HydraMissile) selects the projectile; Missiles.Skill names
+    // its damage row (Hydra). Use the pet's copied mastery and its owner's
+    // hard-point synergies, rather than the empty HydraMissile damage fields.
+    if (mSummonedPet.has(ownerId) && projectile.missile != null
+        && hasText(projectile.missile.Skill)) {
+      SummonedPet pet = mSummonedPet.get(ownerId);
+      Skills.Entry linked = files().skills.get(projectile.missile.Skill);
+      if (linked != null && linked.Id == SkillId.HYDRA
+          && linked.Id == pet.skillId && linked.Id != skill.Id) {
+        MissileDamageResolver.initializeHydra(files(), projectile, linked,
+            mAttributesWrapper.get(ownerId).attrs, skillLevel,
+            name -> getBaseSkillLevel(pet.ownerId, name));
+        return;
+      }
+    }
     if ((skill.Id == SkillCodes.attack || skill.Id == SkillCodes.throw_
         || skill.Id == SkillCodes.left_hand_throw) && (mPlayer.has(ownerId) || mMercenary.has(ownerId))) {
       boolean throwing = skill.Id != SkillCodes.attack;
@@ -5544,6 +5579,10 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private int getSkillLevel(int entityId, int skillId) {
+    Casting cast = mCasting.has(entityId) ? mCasting.get(entityId) : null;
+    if (cast != null && cast.skillId == skillId && cast.monsterSkillLevel > 0) {
+      return cast.monsterSkillLevel;
+    }
     if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
       int bonus = mUnitStates.has(entityId)
           && mUnitStates.get(entityId).stateList != null
@@ -6200,6 +6239,78 @@ public class ServerSkillSystem extends PassiveSystem {
     }
   }
 
+  /** D2GAME_SKILLS_SetSummonBaseStats: add the level row, never scale it again. */
+  private void applySummonBaseStats(int source, int petId, int petLevel, int skillLevel) {
+    if (!mAttributesWrapper.has(petId)) return;
+    Attributes attrs = mAttributesWrapper.get(petId).attrs;
+    if (attrs == null) return;
+    if (petLevel <= 0) {
+      Attributes owner = mAttributesWrapper.has(source)
+          ? mAttributesWrapper.get(source).attrs : null;
+      petLevel = summonBaseLevel(statInt(owner, Stat.level), skillLevel);
+    }
+    attrs.base().put(Stat.level, petLevel);
+    if (files().MonLvl == null || files().MonLvl.size() == 0) return;
+    com.riiablo.codec.excel.MonLvl.Entry row = files().MonLvl.get(
+        Math.min(petLevel, files().MonLvl.size() - 1));
+    if (row == null) return;
+    int difficulty = Math.max(0, Math.min(2, combatDifficulty(source, source)));
+    boolean expansion = nativeDifficultyContext(difficulty).expansion();
+    int[] armor = expansion ? row.LAC : row.AC;
+    int[] toHit = expansion ? row.LTH : row.TH;
+    if (armor != null && difficulty < armor.length) attrs.base().add(Stat.armorclass, armor[difficulty]);
+    if (toHit != null && difficulty < toHit.length) addSummonStat(petId, attrs, Stat.tohit, toHit[difficulty]);
+  }
+
+  private int evaluateSummonFormula(int source, String expression, Skills.Entry skill, int level) {
+    Attributes owner = mAttributesWrapper.has(source) ? mAttributesWrapper.get(source).attrs : null;
+    StateList states = stateList(source);
+    return SkillFormula.evaluate(expression, skill, level,
+        name -> getBaseSkillLevel(source, name), name -> files().skills.get(name),
+        statInt(owner, Stat.level), name -> {
+          short stat = Stat.index(name);
+          return stat < 0 ? 0 : statInt(owner, stat)
+              + (states == null ? 0 : states.getTotalStatContribution(stat));
+        });
+  }
+
+  private void equipSummon(int source, int petId, MonStats.Entry summon,
+      int skillLevel, int itemLevel) {
+    if (summon == null || !mAttributesWrapper.has(petId)) return;
+    if (itemLevel <= 0) {
+      Attributes owner = mAttributesWrapper.has(source) ? mAttributesWrapper.get(source).attrs : null;
+      itemLevel = Math.max(1, Math.min(3 * skillLevel, statInt(owner, Stat.level)));
+    }
+    ItemGenerator generator = itemGenerator != null ? itemGenerator : new ItemGenerator(files());
+    ItemData ownerItems = mPlayer.has(source) && mPlayer.get(source).data != null
+        ? mPlayer.get(source).data.getItems() : null;
+    java.util.List<Item> equipment = com.riiablo.engine.server.skill.SummonEquipment.generate(
+        files(), generator, summon.Id, skillLevel, itemLevel,
+        combatDifficulty(source, source), ownerItems,
+        NativeUnitRandom.unit(world, gameSeed(), petId));
+    AttributesWrapper wrapper = mAttributesWrapper.get(petId);
+    Attributes previous = wrapper.attrs;
+    Attributes equipped = com.riiablo.engine.server.skill.SummonEquipment.apply(previous, equipment);
+    if (previous != null && equipped != null && mMonster.has(petId)) {
+      Monster monster = mMonster.get(petId);
+      monster.attack2MinDamage += statInt(equipped, Stat.mindamage) - statInt(previous, Stat.mindamage);
+      monster.attack2MaxDamage += statInt(equipped, Stat.maxdamage) - statInt(previous, Stat.maxdamage);
+      monster.attack2ToHit += statInt(equipped, Stat.tohit) - statInt(previous, Stat.tohit);
+    }
+    wrapper.attrs = equipped;
+  }
+
+  /** A2 is stored separately from the ordinary attribute snapshot. Native
+   * summon stat lists contribute to both modes, including SkillDamage. */
+  private void addSummonStat(int petId, Attributes attrs, short stat, int value) {
+    attrs.base().add(stat, value);
+    if (!mMonster.has(petId)) return;
+    Monster monster = mMonster.get(petId);
+    if (stat == Stat.mindamage) monster.attack2MinDamage += value;
+    else if (stat == Stat.maxdamage) monster.attack2MaxDamage += value;
+    else if (stat == Stat.tohit) monster.attack2ToHit += value;
+  }
+
   /** Applies the native summon row's passive stat list to the new pet. */
   private void applySummonSkillStats(int source, int petId, Skills.Entry skill, int level,
       boolean setBaseLevel) {
@@ -6207,9 +6318,7 @@ public class ServerSkillSystem extends PassiveSystem {
     Attributes attrs = mAttributesWrapper.get(petId).attrs;
     if (attrs == null) return;
     if (setBaseLevel) {
-      int ownerLevel = mAttributesWrapper.has(source)
-          ? Math.max(1, statInt(mAttributesWrapper.get(source).attrs, Stat.level)) : 1;
-      attrs.base().put(Stat.level, summonBaseLevel(ownerLevel, level));
+      applySummonBaseStats(source, petId, 0, level);
     }
     if (skill.passivestat != null && skill.passivecalc != null) {
       for (int i = 0; i < skill.passivestat.length && i < skill.passivecalc.length; i++) {
@@ -6217,9 +6326,8 @@ public class ServerSkillSystem extends PassiveSystem {
         if (name == null || name.isEmpty()) continue;
         short stat = Stat.index(name);
         if (stat < 0) continue;
-        int value = SkillFormula.evaluate(skill.passivecalc[i], skill, level,
-            name2 -> getBaseSkillLevel(source, name2));
-        if (value != 0) attrs.base().add(stat, value);
+        int value = evaluateSummonFormula(source, skill.passivecalc[i], skill, level);
+        if (value != 0) addSummonStat(petId, attrs, stat, value);
       }
     }
     // D2MOO posts the summon aura stat-list after passive stats.  Keeping the
@@ -6232,9 +6340,8 @@ public class ServerSkillSystem extends PassiveSystem {
         if (name == null || name.isEmpty()) continue;
         short stat = Stat.index(name);
         if (stat < 0) continue;
-        int value = SkillFormula.evaluate(skill.aurastatcalc[i], skill, level,
-            name2 -> getBaseSkillLevel(source, name2));
-        if (value != 0) attrs.base().add(stat, value);
+        int value = evaluateSummonFormula(source, skill.aurastatcalc[i], skill, level);
+        if (value != 0) addSummonStat(petId, attrs, stat, value);
       }
     }
     if (skill.aurastate != null && !skill.aurastate.isEmpty() && mUnitStates.has(petId)) {

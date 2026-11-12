@@ -33,6 +33,38 @@ import org.junit.jupiter.api.Test;
 
 /** Real 1.10f tables + ECS decisions. Path search is stubbed, not collision acceptance. */
 class Act1NativeAiIntegrationTest extends RiiabloTest {
+  @Test
+  void summonSelectedSkillLevelsReachCastingAndSurviveCheckpoint() throws Exception {
+    String[] rows = {"hydra1", "shadowwarrior", "shadowmaster"};
+    int[] summonSkills = {62, 268, 279};
+    int[] expectedLevels = {30, 14, 19};
+    for (int i = 0; i < rows.length; i++) {
+      try (Fixture f = new Fixture(rows[i], 0, 4f)) {
+        CharData owner = CharData.createRemote("summon-owner", (byte) Riiablo.ASSASSIN);
+        f.world.getMapper(Player.class).get(f.target).data = owner;
+        f.world.getMapper(SummonedPet.class).create(f.actor)
+            .set(f.target, rows[i], summonSkills[i], 30, false, 0);
+        int attack = Riiablo.files.skills.index(f.ai.resolveMonsterSkillName(0));
+        owner.setSkillLevel(attack, 8);
+        if (f.ai instanceof ShadowMaster) {
+          java.lang.reflect.Field selected = ShadowMaster.class.getDeclaredField("selectedSkillId");
+          selected.setAccessible(true); selected.setInt(f.ai, attack);
+        }
+        if (i > 0) {
+          // The first native AITHINK is scheduled 20 frames after creation.
+          f.ai.update(19f / 25f);
+          assertNull(f.casting());
+        }
+        assertTrue(f.ai.useMonsterSkill(0, f.target, f.targetPosition()));
+        assertEquals(expectedLevels[i], f.casting().monsterSkillLevel, rows[i]);
+        com.riiablo.engine.replay.ActionRuntimeCheckpoint checkpoint =
+            com.riiablo.engine.replay.ActionRuntimeCheckpoint.capture(f.world, f.actor);
+        f.casting().monsterSkillLevel = 1;
+        com.riiablo.engine.replay.ActionRuntimeCheckpoint.restore(f.world, f.actor, checkpoint);
+        assertEquals(expectedLevels[i], f.casting().monsterSkillLevel);
+      }
+    }
+  }
   @Test void corruptArcherWithoutBasicMissileUsesConfiguredArrowSkill() {
     for (String row : new String[] {"cr_archer6", "cr_archer7"}) {
       try (Fixture f = new Fixture(row, 0, 8f)) {

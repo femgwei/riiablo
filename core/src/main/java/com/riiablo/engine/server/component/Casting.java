@@ -18,6 +18,8 @@ public class Casting extends PooledComponent {
   /** Diagnostic identity survives component pooling and multi-stage sequence changes. */
   public long actionId;
   public int skillId = -1;
+  /** Monster AI's selected level, frozen through SrvSt/SrvDo and checkpoints. */
+  public int monsterSkillLevel;
   public int nativeSummonClass = -1;
   public int nativeSummonMode;
   public final Vector2 nativeSummonPosition = new Vector2();
@@ -146,6 +148,7 @@ public class Casting extends PooledComponent {
     nativeSummonMode = 0;
     nativeSummonPosition.setZero();
     this.skillId = skillId;
+    monsterSkillLevel = 0;
     this.targetId = targetId;
     this.targetVec.set(targetVec);
     shapeShiftProcessed = false;
@@ -253,6 +256,7 @@ public class Casting extends PooledComponent {
     monInferno = null;
     diabRun = null;
     skillId = -1;
+    monsterSkillLevel = 0;
     targetId = Engine.INVALID_ENTITY;
     targetVec.setZero();
     shapeShiftProcessed = false;

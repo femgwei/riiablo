@@ -275,7 +275,10 @@ class AiRuntimeStateTest {
       assertEquals(0, ((QuillRat) target.wrapper(0).ai).time);
       assertThrows(IllegalStateException.class, () -> UnitStateRuntimeCheckpoint.capture(source.world, new int[] {0}));
       byte[] current = records.get(0).bytes();
-      byte[] legacy = Arrays.copyOf(current, current.length - 4 - records.get(0).aiDecisionRuntime().bytes().length); legacy[3] = 3;
+      int v4ToV6Length = 12 + records.get(0).aiDecisionRuntime().bytes().length
+          + records.get(0).actionRuntime().bytes().length
+          + records.get(0).pathRuntime().bytes().length;
+      byte[] legacy = Arrays.copyOf(current, current.length - v4ToV6Length); legacy[3] = 3;
       UnitStateRuntimeCheckpoint uncovered = UnitStateRuntimeCheckpoint.fromBytes(legacy);
       assertNull(uncovered.aiDecisionRuntime());
       UnitStateRuntimeCheckpoint.restore(target.world, Collections.singletonMap(0, uncovered));

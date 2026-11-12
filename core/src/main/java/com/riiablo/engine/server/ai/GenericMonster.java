@@ -43,6 +43,11 @@ public class GenericMonster extends AI {
   protected com.artemis.ComponentMapper<Sequence> mSequence;
   protected com.artemis.ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
+  /** Reuses the checkpointed timer for a native first AITHINK deadline. */
+  protected final void delayFirstThink(int frames) {
+    nextThink = Math.max(0, frames) / 25f;
+  }
+
   public GenericMonster(int entityId, String nativeAiName) {
     super(entityId);
     this.nativeAiName = nativeAiName;

@@ -203,7 +203,12 @@ class SorceressThunderStormIntegrationTest extends RiiabloTest {
         String petType, int skillId, int skillLevel, int petMax, boolean passive,
         int durationFrames, float x, float y) {
       summons.add(new Summon(petType, durationFrames, x, y));
-      return 1000 + summons.size();
+      int id = world.create();
+      world.getMapper(AttributesWrapper.class).create(id).attrs = attrs(100f);
+      world.getMapper(UnitStates.class).create(id).init(id);
+      world.getMapper(com.riiablo.engine.server.component.SummonedPet.class).create(id)
+          .set(ownerId, petType, skillId, skillLevel, passive, durationFrames);
+      return id;
     }
     @Override public int createPlayer(CharData data, Vector2 position) { return Engine.INVALID_ENTITY; }
     @Override public int createMonster(int id, float x, float y) { return Engine.INVALID_ENTITY; }

@@ -37,6 +37,7 @@ public class StateOverlaySystem extends IteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Monster> mMonster;
   protected ComponentMapper<com.riiablo.engine.server.component.Player> mPlayer;
+  protected ComponentMapper<com.riiablo.engine.server.component.SummonedPet> mSummonedPet;
   @Wire protected OverlayManager overlays;
   @Wire protected CofManager cofs;
   @Wire(name = "clientContext")
@@ -47,6 +48,7 @@ public class StateOverlaySystem extends IteratingSystem {
   private final IntMap<byte[]> weaponAppliedTransforms = new IntMap<>();
   private final IntSet coldTransformActive = new IntSet();
   private final IntMap<IntSet> overlayStates = new IntMap<>();
+  private final IntSet summonSpawnOverlays = new IntSet();
 
   /** Native States.txt owns curse/buff visuals; damage is not required to display a state. */
   private void reconcileStateOverlays(int entity, UnitStates states) {
@@ -98,6 +100,16 @@ public class StateOverlaySystem extends IteratingSystem {
   protected void process(int entityId) {
     UnitStates states = mUnitStates.get(entityId);
     if (states == null || states.stateList == null) return;
+
+    if (mSummonedPet.has(entityId) && !summonSpawnOverlays.contains(entityId)) {
+      com.riiablo.codec.excel.NativeSkills.Entry skill = clientContext.files().NativeSkills.get(
+          mSummonedPet.get(entityId).skillId);
+      if (skill != null) {
+        String overlay = skill.string("sumoverlay");
+        if (overlay != null && !overlay.isEmpty()) overlays.set(entityId, overlay);
+      }
+      summonSpawnOverlays.add(entityId);
+    }
 
     reconcileStateOverlays(entityId, states);
     reconcileWeaponTransforms(entityId, states);
@@ -256,6 +268,7 @@ public class StateOverlaySystem extends IteratingSystem {
 
   @Override
   protected void removed(int entityId) {
+    summonSpawnOverlays.remove(entityId);
     IntSet previous = overlayStates.remove(entityId);
     if (previous != null && overlays != null) {
       for (IntSet.IntSetIterator it = previous.iterator(); it.hasNext;)

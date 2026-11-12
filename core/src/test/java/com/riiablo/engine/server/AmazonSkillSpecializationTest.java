@@ -1466,7 +1466,8 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertEquals(1, factory.petMax);
       assertEquals(SkillFormula.evaluate(decoy.calc2, decoy, 5), factory.durationFrames);
       int hpPercent = SkillFormula.evaluate(decoy.calc3, decoy, 5);
-      assertEquals(200f * hpPercent / 100f,
+      int hpBonus = SkillFormula.evaluate(decoy.calc1, decoy, 5);
+      assertEquals(200f * hpPercent / 100f * (100 + hpBonus) / 100f,
           world.getMapper(AttributesWrapper.class).get(factory.lastEntity)
               .attrs.get(Stat.maxhp).asFixed(), 0.001f);
 
@@ -1481,6 +1482,9 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertEquals(ServerSkillSystem.summonBaseLevel(20, 7),
           world.getMapper(AttributesWrapper.class).get(factory.lastEntity)
               .attrs.get(Stat.level).asInt());
+      assertTrue(world.getMapper(AttributesWrapper.class).get(factory.lastEntity)
+          .attrs.getValue(Stat.mindamage, 0) > 0,
+          "Valkyrie's MonEquip spear must reach the attack attributes");
     } finally {
       world.dispose();
     }

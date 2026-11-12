@@ -4303,6 +4303,10 @@ public class Actioneer extends PassiveSystem {
   }
 
   private int skillLevel(int entityId, int skillId) {
+    Casting cast = mCasting.has(entityId) ? mCasting.get(entityId) : null;
+    if (cast != null && cast.skillId == skillId && cast.monsterSkillLevel > 0) {
+      return cast.monsterSkillLevel;
+    }
     if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
       int bonus = mUnitStates.has(entityId)
           && mUnitStates.get(entityId).stateList != null

@@ -15,6 +15,12 @@ public final class ShadowWarrior extends GenericMonster {
   }
 
   @Override
+  public void initialize() {
+    super.initialize();
+    delayFirstThink(20);
+  }
+
+  @Override
   protected int resolveProjectileSkillSlot() {
     if (!mSummonedPet.has(entityId)) return super.resolveProjectileSkillSlot();
     com.riiablo.engine.server.component.SummonedPet pet = mSummonedPet.get(entityId);

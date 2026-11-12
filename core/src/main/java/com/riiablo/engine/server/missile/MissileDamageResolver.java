@@ -485,6 +485,23 @@ public final class MissileDamageResolver {
     return initialized;
   }
 
+  /** Hydra's cast row has no damage: its missile links back to the summon
+   * skill. Preserve that skill's 8.8 packet through synergy and copied mastery. */
+  public static boolean initializeHydra(com.riiablo.Files files, Missile projectile,
+      Skills.Entry skill, Attributes owner, int level, ToIntFunction<String> ownerSkills) {
+    if (skill == null || !"fire".equalsIgnoreCase(skill.EType)
+        || !initializeSkill(files, projectile, skill, owner, level, ownerSkills)) return false;
+    int mastery = Math.max(0, statInt(owner, Stat.passive_fire_mastery));
+    int min = percentage(skillElementalDamageFixed(skill, level, true, ownerSkills), 100 + mastery);
+    int max = percentage(skillElementalDamageFixed(skill, level, false, ownerSkills), 100 + mastery);
+    projectile.nativeElemental = new com.riiablo.engine.server.combat.NativeMissileElementalDamage(
+        FIRE, min, max, 0);
+    projectile.damage.base().put(Stat.firemindam, min >> 8);
+    projectile.damage.base().put(Stat.firemaxdam, max >> 8);
+    projectile.damage.reset();
+    return true;
+  }
+
   /** Builds the elemental-only snapshot inherited by an explosion sub-missile. */
   public static boolean initializeSkillArea(com.riiablo.Files files, Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level) {

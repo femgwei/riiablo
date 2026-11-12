@@ -9,6 +9,12 @@ public final class ShadowMaster extends GenericMonster {
   }
 
   @Override
+  public void initialize() {
+    super.initialize();
+    delayFirstThink(20);
+  }
+
+  @Override
   protected int resolveProjectileSkillSlot() {
     int[] candidates = new int[8];
     int[] scores = new int[8];

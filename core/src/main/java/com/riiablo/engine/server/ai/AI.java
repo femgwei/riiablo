@@ -702,7 +702,8 @@ public abstract class AI implements Interactable.Interactor {
     }
     if (mode < 0) mode = Engine.Monster.MODE_S1;
 
-    if (!startMonsterSkill(skill, mode, targetId, targetVec)) return false;
+    if (!startMonsterSkill(skill, mode, targetId, targetVec,
+        resolveMonsterSkillLevel(skillIndex))) return false;
     if (nativeSequence != null) {
       mSequence.get(entityId).nativeMonster = nativeSequence;
       mSequence.get(entityId).nativeMonsterName = nativeSequence.name;
@@ -722,6 +723,17 @@ public abstract class AI implements Interactable.Interactor {
 
   /** Dynamic counterpart to the MonStats skill level lookup. */
   protected int resolveMonsterSkillLevel(int index) {
+    if (mSummonedPet.has(entityId)) {
+      SummonedPet pet = mSummonedPet.get(entityId);
+      Skills.Entry summon = files().skills.get(pet.skillId);
+      Skills.Entry granted = files().skills.get(resolveMonsterSkillName(index));
+      int level = granted == null ? 0
+          : com.riiablo.engine.server.skill.DruidSkills.getSummonGrantedSkillLevel(
+              files(), summon, pet.skillLevel, granted.Id,
+              name -> mPlayer.has(pet.ownerId) && mPlayer.get(pet.ownerId).data != null
+                  ? mPlayer.get(pet.ownerId).data.getSkill(files().skills.index(name)) : 0);
+      if (level > 0) return level;
+    }
     return monsterSkillLevel(monster.monstats, index);
   }
 
@@ -737,6 +749,11 @@ public abstract class AI implements Interactable.Interactor {
   }
 
   private boolean startMonsterSkill(Skills.Entry skill, int mode, int targetId, Vector2 targetVec) {
+    return startMonsterSkill(skill, mode, targetId, targetVec, 0);
+  }
+
+  private boolean startMonsterSkill(Skills.Entry skill, int mode, int targetId,
+      Vector2 targetVec, int skillLevel) {
     Vector2 resolvedTarget = targetVec;
     if (resolvedTarget == null && targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
       resolvedTarget = mPosition.get(targetId).position;
@@ -769,7 +786,8 @@ public abstract class AI implements Interactable.Interactor {
     stopMovement();
     if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) lookAt(targetId);
     mSequence.create(entityId).sequence((byte) mode, Engine.Monster.MODE_NU);
-    mCasting.create(entityId).set(skill.Id, targetId, resolvedTarget);
+    mCasting.create(entityId).set(skill.Id, targetId, resolvedTarget).monsterSkillLevel =
+        Math.max(0, skillLevel);
     if (events != null) {
       events.dispatch(SkillStartEvent.obtain(
           entityId, skill.Id, targetId, resolvedTarget.cpy(), skill.srvstfunc, skill.cltstfunc));

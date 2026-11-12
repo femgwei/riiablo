@@ -237,7 +237,8 @@ public class AssassinTrapSystem extends IteratingSystem {
             ? monster.monstats.Sk2mode : monster.monstats.Sk1mode;
       }
       NativeMonsterSequence nativeSequence = NativeMonsterSequence.load(configuredMode, files(),
-          serverContext != null ? serverContext.mpqs() : null);
+          serverContext == null || serverContext.mpqs() == null
+              ? Riiablo.mpqs : serverContext.mpqs());
       String fallbackMode = skill != null && skill.monanim != null && !skill.monanim.isEmpty()
           ? skill.monanim : "S2";
       int mode = corpseAttack ? Engine.Monster.MODE_S2

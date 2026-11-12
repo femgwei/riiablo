@@ -21,6 +21,24 @@ import org.junit.jupiter.api.Test;
 /** Client presentation recovered entirely from authoritative StateP data. */
 class StateOverlaySystemTest extends RiiabloTest {
   @Test
+  void decoySummonOverlayPlaysOnceFromAuthoritativeSummonRow() {
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int entity = world.create();
+      world.getMapper(UnitStates.class).create(entity).init(entity);
+      world.process();
+      world.getMapper(com.riiablo.engine.server.component.SummonedPet.class).create(entity)
+          .set(7, "dopplezon", 28, 5, true, 250);
+      world.process();
+      world.process();
+      assertEquals(1, overlays.spawnOverlayCount);
+      assertEquals("dopllezon_appear", overlays.spawnOverlay);
+    } finally { world.dispose(); }
+  }
+  @Test
   void auraTransitionPlaysNativeStateSoundOnceNotOnRefresh() {
     com.riiablo.audio.Audio audio = org.mockito.Mockito.mock(com.riiablo.audio.Audio.class);
     java.util.concurrent.atomic.AtomicInteger listener = new java.util.concurrent.atomic.AtomicInteger(-1);
@@ -369,6 +387,8 @@ class StateOverlaySystemTest extends RiiabloTest {
 
   @com.artemis.annotations.All(com.riiablo.presentation.component.Overlay.class)
   private static final class RecordingOverlayManager extends OverlayManager {
+    int spawnOverlayCount;
+    String spawnOverlay;
     boolean bladeShieldActive;
     String overlayId;
     final IntMap<Array<String>> overlays = new IntMap<>();
@@ -395,7 +415,10 @@ class StateOverlaySystemTest extends RiiabloTest {
       return layers == null ? null : layers.first();
     }
 
-    @Override public void set(int entityId, String overlayId) {}
+    @Override public void set(int entityId, String overlayId) {
+      spawnOverlayCount++;
+      spawnOverlay = overlayId;
+    }
   }
 }
 
