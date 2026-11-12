@@ -163,6 +163,8 @@ public class Missile extends PooledComponent {
   public boolean clientRecyclerVineSpawned;
   /** Native client pCltDoFunc=51 recycler-delay explosion child gate. */
   public boolean clientRecyclerExplosionSpawned;
+  /** Server-side one-shot recovery applied by recycler delay missiles. */
+  public boolean recyclerRecovered;
   /** Native TotalFrames, independent of velocity; explicit skill overrides are allowed. */
   public int nativeLifetimeFrames;
   /** Stationary SrvDo136 missile: Activate countdown and NextDelay re-hits. */
@@ -371,6 +373,7 @@ public class Missile extends PooledComponent {
     clientSamplePosition.setZero();
     clientRecyclerVineSpawned = false;
     clientRecyclerExplosionSpawned = false;
+    recyclerRecovered = false;
     nativeLifetimeFrames = 0;
     deathMaul = false;
     nextHitFrame.clear();

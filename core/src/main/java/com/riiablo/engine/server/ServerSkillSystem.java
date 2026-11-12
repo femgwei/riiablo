@@ -910,6 +910,10 @@ public class ServerSkillSystem extends PassiveSystem {
         && !mMercenary.has(event.entityId)) return;
     Skills.Entry skill = files().skills.get(event.skillId);
     if (skill == null) return;
+    if (skill.srvdofunc == 137) {
+      applyFenrisRage(event, skill);
+      return;
+    }
     if (skill.Id == 286) { // Native Baal Monster Spawn: stationary target controller.
       Missiles.Entry row = files().Missiles.get(skill.srvmissile);
       if (row == null || row.pSrvHitFunc != 54) return;
@@ -1750,6 +1754,36 @@ public class ServerSkillSystem extends PassiveSystem {
       consumeJavelinQuantityForSkill(event, skill);
       consumeRangedAmmoForSkill(event, skill);
     }
+  }
+
+  /** Native SKILLS_SrvDo137_FenrisRage: reserve/hide a corpse and buff the wolf. */
+  private void applyFenrisRage(SkillDoEvent event, Skills.Entry skill) {
+    if (!mMonster.has(event.entityId) || event.targetId < 0
+        || !mCorpse.has(event.targetId) || !mMonster.has(event.targetId)
+        || !mAttributesWrapper.has(event.targetId)) return;
+    UnitStates corpseStates = mUnitStates.has(event.targetId)
+        ? mUnitStates.get(event.targetId) : mUnitStates.create(event.targetId).init(world, event.targetId);
+    if (corpseStates.stateList == null) corpseStates.init(world, event.targetId);
+    int level = Math.max(1, getSkillLevel(event.entityId, skill.Id));
+    if (!CorpseConsumption.tryReserve(mCorpse.get(event.targetId), mMonster.get(event.targetId),
+        mAttributesWrapper.get(event.targetId).attrs, corpseStates.stateList,
+        true, level, event.entityId, skill.Id)) return;
+    UnitStates wolfStates = mUnitStates.has(event.entityId)
+        ? mUnitStates.get(event.entityId) : mUnitStates.create(event.entityId).init(world, event.entityId);
+    if (wolfStates.stateList == null) wolfStates.init(world, event.entityId);
+    int duration = Math.max(1, SkillFormula.evaluate(skill.auralencalc, skill, level,
+        name -> getBaseSkillLevel(event.entityId, name)));
+    UnitState rage = wolfStates.stateList.addStateLayer(
+        StateId.FENRIS_RAGE, duration, level, event.entityId, skill.Id);
+    if (rage != null) {
+      int bonus = skill.aurastatcalc != null && skill.aurastatcalc.length > 0
+          ? SkillFormula.evaluate(skill.aurastatcalc[0], skill, level,
+              name -> getBaseSkillLevel(event.entityId, name)) : 0;
+      if (bonus != 0) rage.setNativeModifier(Stat.damagepercent, bonus);
+      rage.needsSync = true;
+    }
+    log.info("[FENRIS_RAGE] source={} corpse={} level={} duration={}",
+        event.entityId, event.targetId, level, duration);
   }
 
   /** SrvDo134 rolls one packet, then applies it directly to the nearby units. */
@@ -4380,6 +4414,27 @@ public class ServerSkillSystem extends PassiveSystem {
     }
   }
 
+  /** Native SKILLS_FillMinionSkillDamage for MonStats.SkillDamage. */
+  private void applyDruidSkillDamage(int ownerId, int petId, MonStats.Entry summon) {
+    if (summon == null || summon.SkillDamage == null || summon.SkillDamage.isEmpty()
+        || !mAttributesWrapper.has(petId)) return;
+    Skills.Entry damageSkill = files().skills.get(summon.SkillDamage);
+    if (damageSkill == null) return;
+    int level = Math.max(1, getBaseSkillLevel(ownerId, damageSkill.skill));
+    int min = MissileDamageResolver.skillPhysicalDamage(damageSkill, level, true,
+        name -> getBaseSkillLevel(ownerId, name));
+    int max = MissileDamageResolver.skillPhysicalDamage(damageSkill, level, false,
+        name -> getBaseSkillLevel(ownerId, name));
+    int toHit = SkillFormula.evaluate("toht", damageSkill, level);
+    Attributes attrs = mAttributesWrapper.get(petId).attrs;
+    attrs.base().add(Stat.mindamage, min);
+    attrs.base().add(Stat.maxdamage, max);
+    attrs.base().add(Stat.tohit, toHit);
+    attrs.reset();
+    log.info("[DRUID_SUMMON_DAMAGE] owner={} pet={} skill={} level={} damage={}..{} toHit={}",
+        ownerId, petId, damageSkill.skill, level, min, max, toHit);
+  }
+
   /** Native SKILLS_SrvDo114 Raven, SrvDo115 Vines and SrvDo119 DruidSummon. */
   private void spawnDruidSummon(SkillDoEvent event, Skills.Entry skill,
       int skillLevel, Vector2 caster) {
@@ -4416,17 +4471,22 @@ public class ServerSkillSystem extends PassiveSystem {
     Attributes petAttrs = mAttributesWrapper.has(petId)
         ? mAttributesWrapper.get(petId).attrs : null;
     // D2MOO SrvDo114/115/119 evaluates Skills.txt Calc2 (dwCalc[1]) for
-    // the summon base level.  Do not substitute the owner's character level:
-    // high-level casters can intentionally create low-level summons when the
-    // native row's formula says so, and vice versa.
+    // the summon base level.  `ulvl` is the owner's native unit level; other
+    // formulas still retain their exact Skills.txt arithmetic.
+    int ownerLevel = Math.max(1, statInt(ownerAttrs, Stat.level));
     int petLevel = Math.max(1, SkillFormula.evaluate(skill.calc2, skill, skillLevel,
         name -> getBaseSkillLevel(event.entityId, name),
-        name -> files().skills.get(name)));
+        name -> files().skills.get(name), ownerLevel));
     if (petAttrs != null) {
-      StatRef level = petAttrs.get(Stat.level, StatRef.obtain());
-      if (level != null) level.set(petLevel);
-      applyDruidSummonStats(petAttrs, skill, skillLevel,
-          name -> getBaseSkillLevel(event.entityId, name));
+      // Native Druid summons use the same passive/calc1/aurastat pipeline as
+      // the other summon families.  Keep the level on base before the reset so
+      // the aggregate and later combat snapshots see the same value.
+      petAttrs.base().put(Stat.level, petLevel);
+      applySummonSkillStats(event.entityId, petId, skill, skillLevel, false);
+      petAttrs.base().put(Stat.level, petLevel);
+      petAttrs.reset();
+      applySummonGrantedSkills(event.entityId, petId, skill, skillLevel);
+      applyDruidSkillDamage(event.entityId, petId, summon);
     }
     if (mUnitStates.has(petId)) {
       UnitStates states = mUnitStates.get(petId);
@@ -4568,21 +4628,6 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[DRUID_FIRESTORM] phase=create source={} skill={} level={} missile={} "
             + "requested={} created={} calc1={}",
         event.entityId, skill.Id, skillLevel, missile.Missile, count, created, skill.calc1);
-  }
-
-  private void applyDruidSummonStats(Attributes attrs, Skills.Entry skill, int level,
-      java.util.function.ToIntFunction<String> baseSkills) {
-    if (attrs == null || skill == null || skill.passivestat == null
-        || skill.passivecalc == null) return;
-    for (int i = 0; i < skill.passivestat.length && i < skill.passivecalc.length; i++) {
-      String name = skill.passivestat[i];
-      if (name == null || name.isEmpty()) continue;
-      short stat = Stat.index(name);
-      if (stat < 0) continue;
-      int value = SkillFormula.evaluate(skill.passivecalc[i], skill, level, baseSkills,
-          skillName -> files().skills.get(skillName));
-      if (value != 0) attrs.base().put(stat, value);
-    }
   }
 
   static int summonBaseLevel(int ownerLevel, int skillLevel) {

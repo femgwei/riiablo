@@ -938,8 +938,11 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       if (sourceAura == null || !isAlive(sourceId)) continue;
       activeSources.add(sourceId);
       int level = Math.max(1, pet.skillLevel > 0 ? pet.skillLevel : sourceAura.level);
-      int range = skill != null
-          ? SkillFormula.evaluate(skill.aurarangecalc, skill, level,
+      // D2 stores the spirit radius on the linked SumSkill aura row
+      // (Oak/Wolverine/Barbs Aura), not on Summon Oak Sage/Wolverine/Barbs.
+      Skills.Entry auraSkill = DruidSkills.getSummonAuraSkill(files(), skill);
+      int range = auraSkill != null
+          ? SkillFormula.evaluate(auraSkill.aurarangecalc, auraSkill, level,
               name -> baseSkillLevel(pet.ownerId, name)) : 0;
       range = Math.max(1, range > 0 ? range : 13);
       Vector2 origin = mPosition.get(sourceId).position;

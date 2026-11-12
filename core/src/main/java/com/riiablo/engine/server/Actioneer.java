@@ -1310,9 +1310,20 @@ public class Actioneer extends PassiveSystem {
         preparePoisonDagger(entityId, targetId);
         break;
       }
-      case 32: // SKILLS_SrvSt32_Conversion_Bash_Stun_Concentrate_BearSmite
-        prepareConversion(entityId, targetId);
+      case 32: { // Conversion/Bash/Stun/Concentrate/BearSmite
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
+        if (skill != null && skill.srvdofunc == 2 && mMonster.has(entityId)) {
+          // BearSmite shares SrvSt32's dispatch slot but is an ordinary
+          // native melee packet at SrvDo2; Conversion validation must not
+          // cancel the bear's sequence.
+          log.debug("[DRUID_BEAR_SMITE] phase=start entity={} target={} skill={}",
+              entityId, targetId, skill.Id);
+        } else {
+          prepareConversion(entityId, targetId);
+        }
         break;
+      }
       case 24: { // SKILLS_SrvSt24_DragonTalon
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
@@ -6698,19 +6709,25 @@ public class Actioneer extends PassiveSystem {
 
   private int monsterAttackMinDamage(int entityId) {
     Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
-    return currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2
-        && monster != null ? monster.attack2MinDamage : 0;
+    if (monster == null) return 0;
+    if (currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2) return monster.attack2MinDamage;
+    return mAttributesWrapper.has(entityId)
+        ? Math.max(0, mAttributesWrapper.get(entityId).attrs.getValue(Stat.mindamage, 0)) : 0;
   }
 
   private int monsterAttackMaxDamage(int entityId) {
     Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
-    return currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2
-        && monster != null ? monster.attack2MaxDamage : 0;
+    if (monster == null) return 0;
+    if (currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2) return monster.attack2MaxDamage;
+    return mAttributesWrapper.has(entityId)
+        ? Math.max(0, mAttributesWrapper.get(entityId).attrs.getValue(Stat.maxdamage, 0)) : 0;
   }
 
   private int monsterAttackRating(int entityId) {
     Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
-    return currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2
-        && monster != null ? monster.attack2ToHit : 0;
+    if (monster == null) return 0;
+    if (currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2) return monster.attack2ToHit;
+    return mAttributesWrapper.has(entityId)
+        ? Math.max(0, mAttributesWrapper.get(entityId).attrs.getValue(Stat.tohit, 0)) : 0;
   }
 }

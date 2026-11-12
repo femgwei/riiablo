@@ -14,17 +14,18 @@ import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.skill.CorpseConsumption;
+import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.attributes.Stat;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * Rooted AI used by the Druid vine summons (SrvDo115).
+ * AI used by the Druid vine summons (SrvDo115).
  *
- * <p>A vine is a stationary summon. It may acquire a hostile unit and use
- * the projectile skill configured by its MonStats row, but it must never run
- * the generic monster chase/melee fallback. That fallback allowed a Plague
- * Poppy to leave its spawn point and request a non-existent walk layer.</p>
+ * <p>Vines are player pets: they follow their owner, approach a valid target,
+ * and only use the configured skill once they reach its native range.</p>
  */
 public class Vines extends AI {
   private static final Logger log = LogManager.getLogger(Vines.class);
@@ -69,9 +70,6 @@ public class Vines extends AI {
   public void update(float delta) {
     if (monster == null || !mPosition.has(entityId)) return;
 
-    // A rooted summon never retains an old path, including a path left by a
-    // pre-fix GenericMonster instance during a live reload.
-    stopMovement();
     if (mAttributesWrapper.has(entityId)) {
       com.riiablo.attributes.StatRef hp = mAttributesWrapper.get(entityId).attrs
           .get(com.riiablo.attributes.Stat.hitpoints,
@@ -97,18 +95,27 @@ public class Vines extends AI {
 
     Skills.Entry projectileSkill = skillForSlot(skillSlot);
     boolean corpseCycler = projectileSkill != null && projectileSkill.srvstfunc == 63;
+    if (corpseCycler && !ownerNeedsResource(projectileSkill)) {
+      state = followSummonOwner(8f) ? "FOLLOW" : "IDLE";
+      if (state.equals("IDLE")) stopMovement();
+      return;
+    }
     float[] outDistance = { Float.MAX_VALUE };
     int targetId = corpseCycler
-        ? findNearbyCorpse(outDistance, 20f)
-        : findSummonTarget(Engine.INVALID_ENTITY, outDistance, 20f);
+        ? findNearbyCorpse(outDistance, 10f)
+        : findSummonTarget(Engine.INVALID_ENTITY, outDistance, 24f);
     if (targetId == Engine.INVALID_ENTITY || !mPosition.has(targetId)) {
-      state = "IDLE";
+      state = followSummonOwner(8f) ? "FOLLOW" : "IDLE";
+      if (state.equals("IDLE")) stopMovement();
       return;
     }
 
-    float range = resolveSkillRange(skillSlot);
+    float range = projectileSkill != null && projectileSkill.aurarangecalc != null
+        ? Math.max(1f, SkillFormula.evaluate(projectileSkill.aurarangecalc,
+            projectileSkill, resolveMonsterSkillLevel(skillSlot))) : 10f;
     if (outDistance[0] > range) {
-      state = "WAIT_RANGE";
+      state = "APPROACH";
+      walkTo(mPosition.get(targetId).position, targetId);
       return;
     }
 
@@ -117,6 +124,20 @@ public class Vines extends AI {
     if (!useMonsterSkill(skillSlot, targetId, mPosition.get(targetId).position)) {
       state = "WAIT_CAST";
     }
+  }
+
+  private boolean ownerNeedsResource(Skills.Entry skill) {
+    if (!mSummonedPet.has(entityId) || skill == null) return false;
+    SummonedPet pet = mSummonedPet.get(entityId);
+    if (pet == null || !mAttributesWrapper.has(pet.ownerId)) return false;
+    com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(pet.ownerId).attrs;
+    boolean mana = monster != null && monster.monstats != null
+        && "vinecreature".equalsIgnoreCase(monster.monstats.Id);
+    short currentStat = mana ? Stat.mana : Stat.hitpoints;
+    short maximumStat = mana ? Stat.maxmana : Stat.maxhp;
+    float current = attrs.getValue(currentStat, 0f);
+    float maximum = attrs.getValue(maximumStat, 0f);
+    return maximum > 0f && current < maximum;
   }
 
   private Skills.Entry skillForSlot(int skillSlot) {

@@ -109,7 +109,7 @@ class DruidSummonIntegrationTest extends RiiabloTest {
           skill.srvdofunc, skill.cltdofunc));
 
       int expected = Math.max(1, SkillFormula.evaluate(skill.calc2, skill, 8,
-          name -> 0, name -> Riiablo.files.skills.get(name)));
+          name -> 0, name -> Riiablo.files.skills.get(name), 20));
       int actual = world.getMapper(AttributesWrapper.class).get(factory.lastEntity)
           .attrs.get(Stat.level).asInt();
       assertEquals(expected, actual,

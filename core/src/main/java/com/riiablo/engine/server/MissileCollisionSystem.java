@@ -216,6 +216,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     int callbackFrame = missile.nativeFrame;
     missile.nativeFrame += elapsedFrames;
 
+    processDruidRecyclerRecovery(missile, callbackFrame);
+
     if (NativeMoltenBoulder.isRolling(missile.missile)) {
       processMoltenBoulderTrail(missile, position);
     }
@@ -544,6 +546,37 @@ public class MissileCollisionSystem extends IteratingSystem {
 
     // 碰撞检测：检查是否与玩家或怪物碰撞
     checkCollisions(entityId, missile, position, lastPos);
+  }
+
+  /** Native SrvDo29/SrvDo33 recovery callback for Carrion/Solar Creeper. */
+  private void processDruidRecyclerRecovery(Missile missile, int previousFrame) {
+    if (missile == null || missile.recyclerRecovered || missile.missile == null
+        || (missile.missile.pSrvDoFunc != 29 && missile.missile.pSrvDoFunc != 33)
+        || missile.ownerId < 0 || !mAttributesWrapper.has(missile.ownerId)) return;
+    int trigger = missile.missile.Param != null && missile.missile.Param.length > 0
+        ? missile.missile.Param[0] : 0;
+    int lifetime = missile.nativeLifetimeFrames > 0 ? missile.nativeLifetimeFrames
+        : Missile.nativeRangeFrames(missile.missile, Math.max(1, missile.damageLevel));
+    int previousRemaining = lifetime - previousFrame;
+    int currentRemaining = lifetime - missile.nativeFrame;
+    if (!(previousRemaining > trigger && currentRemaining <= trigger)) return;
+    Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
+    if (skill == null) return;
+    int level = Math.max(1, missile.damageLevel);
+    int percent = SkillFormula.evaluate(skill.calc1, skill, level);
+    Attributes attrs = mAttributesWrapper.get(missile.ownerId).attrs;
+    boolean mana = missile.missile.pSrvDoFunc == 33;
+    short currentStat = mana ? Stat.mana : Stat.hitpoints;
+    short maximumStat = mana ? Stat.maxmana : Stat.maxhp;
+    StatRef current = attrs.get(currentStat, StatRef.obtain());
+    StatRef maximum = attrs.get(maximumStat, StatRef.obtain());
+    if (current == null || maximum == null) return;
+    float amount = Math.max(0f, maximum.asFixed() * percent / 100f);
+    current.set(Math.min(maximum.asFixed(), current.asFixed() + amount));
+    missile.recyclerRecovered = true;
+    log.info("[VINE_RECYCLER] owner={} missile={} skill={} resource={} percent={} amount={}",
+        missile.ownerId, missile.missile.Missile, skill.skill,
+        mana ? "mana" : "life", percent, amount);
   }
 
   static boolean usesFrameLifetime(Missile missile) {

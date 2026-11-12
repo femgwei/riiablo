@@ -50,6 +50,13 @@ public final class SkillFormula {
   public static int evaluate(String expression, Skills.Entry skill, int skillLevel,
       ToIntFunction<String> skillLevelResolver,
       Function<String, Skills.Entry> skillResolver) {
+    return evaluate(expression, skill, skillLevel, skillLevelResolver, skillResolver, 0);
+  }
+
+  /** Evaluates a summon formula with the native user-level (ulvl) value. */
+  public static int evaluate(String expression, Skills.Entry skill, int skillLevel,
+      ToIntFunction<String> skillLevelResolver,
+      Function<String, Skills.Entry> skillResolver, int userLevel) {
     if (expression == null || expression.trim().isEmpty()) return 0;
     String normalized = expression.trim();
     // Excel exports occasionally quote an entire formula (for example
@@ -60,7 +67,7 @@ public final class SkillFormula {
             || (normalized.charAt(0) == '\'' && normalized.charAt(normalized.length() - 1) == '\''))) {
       normalized = normalized.substring(1, normalized.length() - 1).trim();
     }
-    Parser parser = new Parser(normalized, skill, Math.max(1, skillLevel),
+    Parser parser = new Parser(normalized, skill, Math.max(1, skillLevel), Math.max(0, userLevel),
         skillLevelResolver == null ? name -> 0 : skillLevelResolver,
         skillResolver == null ? name -> null : skillResolver);
     return parser.parse();
@@ -70,16 +77,18 @@ public final class SkillFormula {
     private final String text;
     private final Skills.Entry skill;
     private final int level;
+    private final int userLevel;
     private final ToIntFunction<String> skillLevelResolver;
     private final Function<String, Skills.Entry> skillResolver;
     private int index;
 
-    Parser(String expression, Skills.Entry skill, int level,
+    Parser(String expression, Skills.Entry skill, int level, int userLevel,
         ToIntFunction<String> skillLevelResolver,
         Function<String, Skills.Entry> skillResolver) {
       text = expression.trim();
       this.skill = skill;
       this.level = level;
+      this.userLevel = userLevel;
       this.skillLevelResolver = skillLevelResolver;
       this.skillResolver = skillResolver;
     }
@@ -167,6 +176,7 @@ public final class SkillFormula {
       }
       if ("skill".equalsIgnoreCase(identifier)) return skillCall();
       if ("lvl".equalsIgnoreCase(identifier)) return level;
+      if ("ulvl".equalsIgnoreCase(identifier)) return userLevel;
       if ("toht".equalsIgnoreCase(identifier)) {
         return skill == null ? 0 : skill.ToHit + (level - 1) * skill.LevToHit;
       }

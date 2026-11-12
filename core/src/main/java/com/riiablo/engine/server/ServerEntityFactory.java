@@ -847,6 +847,10 @@ public class ServerEntityFactory extends EntityFactory {
         .set(ownerId, nativePetType, skillId, skillLevel,
         passive, durationFrames);
     mNativeUnitFlags.get(entityId).reset().set(NativeUnitFlags.PLAYER_SUMMON);
+    // Ravens are native untargetable pets (SrvDo114 clears 0x4).
+    if (summon != null && "druidhawk".equalsIgnoreCase(summon.Id)) {
+      mNativeUnitFlags.get(entityId).clear(NativeUnitFlags.CAN_BE_ATTACKED);
+    }
     if ("skeletonmage".equals(nativePetType) && "necromage".equals(summon.Id)) {
       // SkillNec D2GAME_SetUnitComponent: the OWNER rolls one element for
       // both S4/S5; SrvDo149 reads S4. Independent visual rolls disagree.
