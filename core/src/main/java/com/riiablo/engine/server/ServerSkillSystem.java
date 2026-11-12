@@ -1454,6 +1454,10 @@ public class ServerSkillSystem extends PassiveSystem {
       spawnChargedStrike(event, skill, start);
       return;
     }
+    if (event.srvdofunc == 130 || skill.srvdofunc == 130) {
+      spawnDruidVineAttack(event, skill, skillLevel, start);
+      return;
+    }
     if (event.srvdofunc == 14 || skill.srvdofunc == 14) {
       spawnLightningStrike(event, skill);
       return;
@@ -4184,6 +4188,29 @@ public class ServerSkillSystem extends PassiveSystem {
       child.range = 0f;
       initializeSkillDamage(id, skill, event.entityId, level);
     }
+  }
+
+  /** Native SrvDo130: root missiles originate at the target in four directions. */
+  private void spawnDruidVineAttack(SkillDoEvent event, Skills.Entry skill, int level, Vector2 start) {
+    Missiles.Entry row = files().Missiles.get(skill.srvmissilea);
+    if (row == null) return;
+    Vector2 target = resolveTargetPoint(event, start, new Vector2());
+    int count = Math.max(1, Math.abs(SkillFormula.evaluate(skill.calc1, skill, level,
+        name -> getBaseSkillLevel(event.entityId, name))));
+    count = Math.min(16, count);
+    final float[][] directions = {{0f, 1f}, {0f, -1f}, {1f, 0f}, {-1f, 0f}};
+    for (int i = 0; i < count; i++) {
+      float[] direction = directions[i & 3];
+      int id = createMissile(row, new Vector2(direction[0], direction[1]), target,
+          event.entityId, null, level);
+      if (id < 0 || !mMissile.has(id)) continue;
+      Missile vine = mMissile.get(id);
+      vine.skillId = skill.Id;
+      vine.damageLevel = level;
+      initializeSkillDamage(id, skill, event.entityId, level);
+    }
+    log.info("[VINE_ATTACK] phase=create source={} skill={} level={} count={} origin=({}, {})",
+        event.entityId, skill.skill, level, count, target.x, target.y);
   }
 
   /** Native SrvDo019: one stream per armed callback, sharing SrvSt11 with Arctic Blast. */
