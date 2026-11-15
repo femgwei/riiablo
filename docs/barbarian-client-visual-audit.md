@@ -50,3 +50,9 @@ WarCryVisualResourceTest，共 19 项通过，失败/错误为 0。
 
 判定边界：已完成数据入口清点与本批 Overlay 参数对齐，不等于上述完整技能
 动画状态机通过验收。尚未执行原版/riiablo 的逐帧截图或逐像素比较。
+
+## 当前研究交接（2026-11-15）
+
+旋风斩的后续目标已调整为功能性客户端动画重构，而不是像素级窗口截图一致。
+具体的原版后台 trace、Riiablo 回放差分、SQ 序列游标证据和三轮实现计划见
+[`docs/original-client-animation-research-2026-11-15.md`](original-client-animation-research-2026-11-15.md)。

@@ -1,5 +1,8 @@
 # 自动动画绘制验证
 
+技能客户端动画的原版观测、Riiablo trace 和旋风斩当前验收边界见
+[`original-client-animation-research-2026-11-15.md`](original-client-animation-research-2026-11-15.md)。
+
 运行（PowerShell，属性参数整体加引号）：
 
 ```powershell
