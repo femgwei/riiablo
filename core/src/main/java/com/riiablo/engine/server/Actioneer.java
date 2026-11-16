@@ -824,11 +824,13 @@ public class Actioneer extends PassiveSystem {
         && casting.zealInitialized && casting.zealRemainingStrikes > 0;
     boolean fendRetarget = skill != null && skill.Id == SkillId.FEND
         && casting.fendInitialized && casting.fendRemainingStrikes > 0;
+    boolean telekinesisItem = skill.Id == SkillId.TELEKINESIS && casting.targetId >= 0
+        && world.getMapper(com.riiablo.engine.server.component.Item.class).has(casting.targetId);
     // SrvDo094 only consumes the unit's own sequence action. Its prey pointer
     // is not dereferenced by native Submerge and must not gate the final hold.
     if (!targetDead || skill.srvdofunc == 94 || skill.srvdofunc == 104 || NativeDiabWall.supports(skill)
         || allowsDeadTarget(skill) || frenzyRetarget || furyRetarget
-        || zealRetarget || fendRetarget) {
+        || zealRetarget || fendRetarget || telekinesisItem) {
       if (skill.srvdofunc == 116) casting.shapeShiftProcessed = true;
       srvdofunc(event.entityId, skill.srvdofunc, casting.targetId, casting.targetVec);
       if (mPlayer.has(event.entityId)) {

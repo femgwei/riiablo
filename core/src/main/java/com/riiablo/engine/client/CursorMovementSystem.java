@@ -146,7 +146,8 @@ public class CursorMovementSystem extends BaseSystem {
       final int skillId = actionInput == null ? Engine.INVALID_ENTITY : actionInput.action(
           leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
       final int targetId = getSkillTargetAt(playerId, Gdx.input.getX(), Gdx.input.getY(), skillId);
-      if (!NativeSkillResolver.requiresCorpse(skillEntry(skillId))
+      if (!allowsNonLivingSkillTarget(skillId, targetId)
+          && !NativeSkillResolver.requiresCorpse(skillEntry(skillId))
           && targetId != Engine.INVALID_ENTITY && isTargetDead(targetId)) {
         stopTargeting(playerId);
       } else {
@@ -343,6 +344,7 @@ public class CursorMovementSystem extends BaseSystem {
         : actionInput.action(Input.Buttons.RIGHT);
     int targetId = getSkillTargetAt(src, click.screenX, click.screenY, skillId);
     if (targetId != Engine.INVALID_ENTITY
+        && !allowsNonLivingSkillTarget(skillId, targetId)
         && !NativeSkillResolver.requiresCorpse(skillEntry(skillId)) && isTargetDead(targetId)) {
       stopTargeting(src);
       return true;
@@ -693,6 +695,11 @@ public class CursorMovementSystem extends BaseSystem {
   private int getSkillTargetAt(int src, float screenX, float screenY, int skillId) {
     return hoveredManager.getHoveredAt(src, screenX, screenY,
         NativeSkillResolver.requiresCorpse(skillEntry(skillId)));
+  }
+
+  private boolean allowsNonLivingSkillTarget(int skillId, int targetId) {
+    return skillId == SkillId.TELEKINESIS && targetId >= 0
+        && world.getMapper(com.riiablo.engine.server.component.Item.class).has(targetId);
   }
 
   private boolean touchDown(int src) {

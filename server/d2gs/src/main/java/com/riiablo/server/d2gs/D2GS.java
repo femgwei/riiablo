@@ -6636,6 +6636,11 @@ public class D2GS extends ApplicationAdapter {
         .register("townPortalRegistry", townPortalRegistry)
         ;
     Riiablo.engine = world = new World(config);
+    world.getSystem(com.riiablo.engine.server.ServerSkillSystem.class).configureSkillItemMoves(
+        authoritativeItems, entityId -> {
+          int clientId = connectionIdForEntity(entityId);
+          if (clientId >= 0) publishInventorySnapshot(clientId, false);
+        });
 
     playerTrades.setAuthority(new ItemDataTradeAuthority(entityId -> {
       Player component = world.getMapper(Player.class).get(entityId);

@@ -172,7 +172,7 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
     }
   }
 
-  @Test void blizzardAlternatesStationaryDccsAcrossAnEllipseWithoutDuplicateHits() {
+  @Test void blizzardAlternatesFallingDccsAcrossAnEllipseWithoutDuplicateHits() {
     try (Harness h = new Harness()) {
       int center = h.root("blizzardcenter", SkillId.BLIZZARD);
       h.tick(0);
@@ -188,6 +188,32 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
       }
       assertTrue(h.system.impact(Riiablo.files.Missiles.get("blizzard1"), h.impact(center)));
       assertEquals(24, h.created.size());
+    }
+  }
+
+  @Test void secondBlizzardVariantFallsFromNativeHeightAndLoopsUntilLanding() {
+    try (Harness h = new Harness()) {
+      int center = h.root("blizzardcenter", SkillId.BLIZZARD);
+      h.tick(0);
+      h.tick(.1f);
+      h.tick(.1f);
+      int second = h.created.get(2);
+      assertEquals("blizzard4", h.missile(second).missile.Missile);
+      ReferenceElementalEffect effect = h.effect(second);
+      assertEquals(24f / 25f, effect.duration, .00001f);
+      assertEquals(120f, effect.offset.y, .0001f);
+      assertEquals(0f, effect.offset.x);
+      Vector2 landing = new Vector2(h.world.getMapper(Position.class).get(second).position);
+      // Stop rain to verify this child outlives its controller and its 8-frame DCC.
+      h.world.delete(center);
+      h.tick(12f / 25f);
+      assertEquals(60f, effect.offset.y, .0001f);
+      assertEquals(4, ReferenceElementalPresentationSystem.frameAt(effect, 8));
+      assertEquals(landing, h.world.getMapper(Position.class).get(second).position);
+      h.tick(11f / 25f);
+      assertEquals(5f, effect.offset.y, .0001f);
+      h.tick(1f / 25f + .00001f);
+      assertFalse(h.world.getEntityManager().isActive(second));
     }
   }
 

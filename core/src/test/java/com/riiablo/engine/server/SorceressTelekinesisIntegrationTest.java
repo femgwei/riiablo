@@ -39,6 +39,75 @@ import org.junit.jupiter.api.Test;
 
 /** Headless authoritative coverage for D2MOO SrvSt12/SrvDo021. */
 class SorceressTelekinesisIntegrationTest extends RiiabloTest {
+  @Test void picksUpNativeConsumablesAndAmmunitionButLeavesEquipmentAndRunes() {
+    try (Harness test = new Harness()) {
+      int caster = test.player(0, 0, 20, 0);
+      java.util.concurrent.atomic.AtomicInteger snapshots = new java.util.concurrent.atomic.AtomicInteger();
+      test.skills.configureSkillItemMoves(new com.riiablo.engine.server.item.AuthoritativeItemMoveService(),
+          entity -> snapshots.incrementAndGet());
+      for (String code : new String[] {"hp1", "mp1", "rvs", "tsc", "isc", "key", "aqv", "cqv", "opl"}) {
+        Item item = new com.riiablo.item.ItemGenerator().generate(code);
+        int ground = test.ground(item, 4, 0);
+        test.cast(caster, ground);
+        test.world.process();
+        assertTrue(test.world.getMapper(Player.class).get(caster).data.getItems().contains(item), code);
+        assertTrue(!test.world.getEntityManager().isActive(ground), code);
+      }
+      assertEquals(9, snapshots.get());
+      for (String code : new String[] {"hax", "sbw", "r01", "gcv", "tbk"}) {
+        Item item = new com.riiablo.item.ItemGenerator().generate(code);
+        int ground = test.ground(item, 4, 0);
+        test.cast(caster, ground);
+        test.world.process();
+        assertTrue(test.world.getEntityManager().isActive(ground), code);
+        assertEquals(com.riiablo.item.Location.GROUND, item.location, code);
+      }
+      assertEquals(9, snapshots.get());
+    }
+  }
+
+  @Test void itemPickupHonorsRangeOwnershipAndCursorAndUpdatesGold() {
+    try (Harness test = new Harness()) {
+      int caster = test.player(0, 0, 20, 0);
+      CharData character = test.world.getMapper(Player.class).get(caster).data;
+      Item potion = new com.riiablo.item.ItemGenerator().generate("hp1");
+      int ground = test.ground(potion, test.range() + 1, 0);
+      test.cast(caster, ground);
+      assertEquals(com.riiablo.item.Location.GROUND, potion.location);
+      test.world.getMapper(Position.class).get(ground).position.set(2, 0);
+      com.riiablo.engine.server.item.GroundDropOwnership.register(ground, caster + 100, 10_000);
+      test.cast(caster, ground);
+      assertEquals(com.riiablo.item.Location.GROUND, potion.location);
+      com.riiablo.engine.server.item.GroundDropOwnership.clear(ground);
+      character.groundToCursor(new com.riiablo.item.ItemGenerator().generate("hax"));
+      test.cast(caster, ground);
+      assertEquals(com.riiablo.item.Location.GROUND, potion.location);
+      character.cursorToGround();
+      Item gold = new com.riiablo.item.ItemGenerator().generate("gld");
+      gold.attrs.base().put(Stat.quantity, 100);
+      gold.attrs.reset();
+      int goldId = test.ground(gold, 2, 0);
+      int before = character.getStats().getValue(Stat.gold, 0);
+      test.cast(caster, goldId);
+      test.world.process();
+      assertEquals(before + 100, character.getStats().getValue(Stat.gold, 0));
+      assertTrue(!test.world.getEntityManager().isActive(goldId));
+    }
+  }
+
+  @Test void actionKeyframeExecutesTelekinesisOnAnItemWithoutLifeAttributes() {
+    try (Harness test = new Harness()) {
+      int caster = test.player(0, 0, 20, 0);
+      Item item = new com.riiablo.item.ItemGenerator().generate("hp1");
+      int ground = test.ground(item, 3, 0);
+      test.world.getMapper(com.riiablo.engine.server.component.Casting.class).create(caster)
+          .set(SkillId.TELEKINESIS, ground, new Vector2(3, 0));
+      test.world.getSystem(EventSystem.class).dispatch(
+          com.riiablo.engine.server.event.AnimDataKeyframeEvent.obtain(caster, Engine.KEYFRAME_MIS));
+      assertTrue(test.world.getMapper(Player.class).get(caster).data.getItems().contains(item));
+    }
+  }
+
   @Test void fractionalRemainderDies() { deathBoundary(20f + 255f / 256, 0f, false, false); }
   @Test void exactlyOneLifeSurvives() { deathBoundary(21f, 1f, false, false); }
   @Test void aboveOneLifeSurvives() { deathBoundary(21f + 1f / 256, 1f + 1f / 256, false, false); }
@@ -170,7 +239,8 @@ class SorceressTelekinesisIntegrationTest extends RiiabloTest {
     final ServerSkillSystem skills = new ServerSkillSystem(true);
     final Map map = new Map(0, 0);
     final World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), damage, skills, factory).build()
+        .with(new EventSystem(), damage, skills, new Actioneer(), new Pathfinder(),
+            new CofManager(), factory).build()
         .register("factory", factory)
         .register("map", map)
         .register("partyManager", parties));
@@ -193,6 +263,16 @@ class SorceressTelekinesisIntegrationTest extends RiiabloTest {
       Monster monster = world.getMapper(Monster.class).create(id);
       monster.monstats = row;
       monster.monstats2 = row != null ? Riiablo.files.monstats2.get(row.MonStatsEx) : null;
+      return id;
+    }
+
+    int ground(Item item, float x, float y) {
+      int id = world.create();
+      item.id = id;
+      item.location = com.riiablo.item.Location.GROUND;
+      com.riiablo.engine.server.item.GroundDropOwnership.created(id);
+      world.getMapper(com.riiablo.engine.server.component.Item.class).create(id).set(item);
+      world.getMapper(Position.class).create(id).position.set(x, y);
       return id;
     }
 

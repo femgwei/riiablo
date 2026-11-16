@@ -57,6 +57,10 @@ public final class MissileTravelAudio {
   }
 
   static boolean isStateOwnedLoop(com.riiablo.codec.excel.Missiles.Entry row, String sound) {
+    if (row != null && ("sorceress_inferno".equals(sound)
+        && ("infernoflame1".equals(row.Missile) || "infernoflame2".equals(row.Missile))
+        || "druid_arcticblast".equals(sound)
+        && ("arcticblast1".equals(row.Missile) || "arcticblast2".equals(row.Missile)))) return true;
     // The SrvDo124 carrier lasts two ticks. Restarting this native looping
     // sound on every carrier/particle produces repeated wind attacks/cuts.
     return "druid_hurricane".equals(sound) && row != null && row.Missile != null

@@ -178,8 +178,17 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
       while (clock.next <= end + .00001f) {
         int index = Math.round(clock.next * 10f);
         Vector2 landing = scatter(at, 110, .75f, clock);
-        sprite(index % 3 == 2 ? "blizzard4" : "blizzard1", landing,
-            index % 3 == 2 ? 8f / 25f : 6f / 25f);
+        String child = index % 3 == 2 ? "blizzard4" : "blizzard1";
+        Missiles.Entry row = clientContext.files().Missiles.get(child);
+        // D2Client CltDo13 (6FB31B2D..71): Z=max(CltParam1,step),
+        // velocity Z=-max(1,CltParam2), lifetime=Z/step native frames.
+        int step = row.CltParam != null && row.CltParam.length > 1
+            ? Math.max(1, row.CltParam[1]) : 1;
+        int height = row.CltParam != null && row.CltParam.length > 0
+            ? Math.max(step, row.CltParam[0]) : step;
+        int frames = height / step;
+        falling(child, landing, frames / 25f, 0, -height, 0,
+            -(height - frames * step), Math.max(0, end - clock.next), null);
         clock.next += .1f;
       }
     } else if ("erruption center".equals(name)) {
@@ -430,6 +439,8 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
       case "volcano": e.loopStart = 17; e.loopEnd = 18; break;
       case "volcano overlay fire": e.loopStart = 6; e.loopEnd = 14; break;
       case "meteor": case "meteortail": e.loopStart = 0; e.loopEnd = 11; break;
+      case "blizzard1": e.loopStart = 0; e.loopEnd = 5; break;
+      case "blizzard4": e.loopStart = 0; e.loopEnd = 7; break;
       case "armageddonrock": case "armageddontail":
       case "moltenboulder-flyingrocks": e.loopStart = 0; e.loopEnd = 15; break;
       case "volcano debris 2": e.loopStart = 0; e.loopEnd = 14; break;

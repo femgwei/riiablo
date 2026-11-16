@@ -449,6 +449,18 @@ public class ServerSkillSystem extends PassiveSystem {
   };
   private static final float CHAIN_LIGHTNING_JUMP_RANGE2 = 13f * 13f;
   private final boolean monstersOnly;
+  private com.riiablo.engine.server.item.AuthoritativeItemMoveService skillItemMoves =
+      new com.riiablo.engine.server.item.AuthoritativeItemMoveService();
+  @com.artemis.annotations.SkipWire
+  private java.util.function.IntConsumer skillInventoryChanged = entity -> {};
+
+  /** Dedicated hosts share item revisions and publish the resulting inventory snapshot. */
+  public void configureSkillItemMoves(
+      com.riiablo.engine.server.item.AuthoritativeItemMoveService service,
+      java.util.function.IntConsumer inventoryChanged) {
+    skillItemMoves = java.util.Objects.requireNonNull(service, "service");
+    skillInventoryChanged = java.util.Objects.requireNonNull(inventoryChanged, "inventoryChanged");
+  }
   private final Ray<Vector2> auraRay = new Ray<>(new Vector2(), new Vector2());
   private final Collision<Vector2> auraCollision =
       new Collision<>(new Vector2(), new Vector2());
@@ -2776,6 +2788,10 @@ public class ServerSkillSystem extends PassiveSystem {
   private void applyTelekinesis(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
     int sourceId = event.entityId;
     int targetId = event.targetId;
+    if (SorceressSkills.isTelekinesis(skill) && targetId >= 0 && mItem.has(targetId)) {
+      pickupTelekinesisItem(event, skill, skillLevel);
+      return;
+    }
     if (!SorceressSkills.isTelekinesis(skill) || !mPlayer.has(sourceId)
         || targetId < 0 || (!mPlayer.has(targetId) && !mMonster.has(targetId))
         || !mPosition.has(sourceId) || !mPosition.has(targetId)
@@ -5576,6 +5592,40 @@ public class ServerSkillSystem extends PassiveSystem {
       cursor = files.monstats.get(cursor.NextInClass);
     }
     return 0;
+  }
+
+  /** D2MOO SrvDo021's item branch uses the ordinary validated pickup transaction. */
+  private void pickupTelekinesisItem(SkillDoEvent event, Skills.Entry skill, int level) {
+    int source = event.entityId, target = event.targetId;
+    if (!mPlayer.has(source) || mPlayer.get(source).data == null
+        || !mPosition.has(source) || !mPosition.has(target) || !sameZone(source, target)) return;
+    com.riiablo.engine.server.component.Item ground = mItem.get(target);
+    Item item = ground.item;
+    if (ground.skillReserved || item == null || item.type == null
+        || item.location != com.riiablo.item.Location.GROUND) return;
+    int range = Math.max(0, SkillFormula.evaluate(skill.aurarangecalc, skill, level));
+    if (mPosition.get(source).position.dst2(mPosition.get(target).position)
+        > (float) range * range) return;
+    // Native permits consumables/ammunition, not equipment, gems, runes or tomes.
+    if (!item.type.is(Type.SCRO) && !item.type.is(Type.GOLD) && !item.type.is(Type.TPOT)
+        && !item.type.is(Type.MISL) && !item.type.is(Type.POTI) && !item.type.is(Type.KEY)) return;
+    int party = partyManager == null ? -1 : partyManager.getPartyId(source);
+    com.riiablo.engine.server.item.ItemMoveIntent intent =
+        new com.riiablo.engine.server.item.ItemMoveIntent(0, skillItemMoves.revision(source),
+            com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR,
+            item.id, target, -1, -1, -1, -1, false);
+    com.riiablo.engine.server.item.AuthoritativeItemMoveService.Outcome outcome =
+        skillItemMoves.pickup(source, party, mPlayer.get(source).data, intent, item);
+    if (!outcome.success) return;
+    if (outcome.consumeGroundEntity) {
+      // Reserve until Artemis flushes deletion; a second keyframe cannot pick it twice.
+      ground.skillReserved = true;
+      world.delete(target);
+    }
+    events.dispatch(com.riiablo.engine.server.event.QuestItemPickedUpEvent.obtain(
+        source, target, item.code));
+    events.dispatch(com.riiablo.engine.server.event.SoundEvent.obtain(source, "item_pickup", true));
+    skillInventoryChanged.accept(source);
   }
 
   private int getSkillLevel(int entityId, int skillId) {
