@@ -8,12 +8,38 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.d2moo.common.drlg.D2Seed;
 import com.google.flatbuffers.FlatBufferBuilder;
+import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.serializer.MissileSerializer;
 import com.riiablo.net.packet.d2gs.MissileP;
 import org.junit.jupiter.api.Test;
 
 class MissileLifetimeSnapshotTest {
+  @Test
+  void replicatedBlessedHammerRestoresItsNativePathMarker() {
+    Missile source = new Missile();
+    source.nativeLifetimeFrames = 120;
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    builder.finish(new MissileSerializer().putData(builder, source));
+
+    Missile local = new Missile();
+    local.missile = new Missiles.Entry();
+    local.missile.Missile = " BlessedHammer ";
+    local.start.set(12f, 34f);
+    ClientNetworkReceiver.applyMissileSnapshot(local,
+        MissileP.getRootAsMissileP(builder.dataBuffer()));
+
+    assertTrue(local.blessedHammerPath);
+    assertEquals(new com.badlogic.gdx.math.Vector2(12f, 34f), local.blessedHammerOrigin);
+    assertEquals(1, local.blessedHammerPointIndex);
+
+    local.blessedHammerPointIndex = 8;
+    ClientNetworkReceiver.applyMissileSnapshot(local,
+        MissileP.getRootAsMissileP(builder.dataBuffer()));
+    assertEquals(8, local.blessedHammerPointIndex,
+        "repeated snapshots must preserve the native path cursor");
+  }
+
   @Test
   void lateJoinAndRepeatedSnapshotsPreserveRemainingLifetime() {
     Missile source = new Missile();

@@ -1580,6 +1580,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   static void applyMissileSnapshot(Missile local, MissileP data) {
     if (local == null || data == null) return;
     local.authoritative = false;
+    restoreBlessedHammerPath(local);
     local.range = data.range();
     local.skillId = data.skillId();
     local.damageLevel = data.damageLevel();
@@ -1599,6 +1600,23 @@ public class ClientNetworkReceiver extends IntervalSystem {
       // authoritative damage pSeed/rngState.  Repeated equal snapshots leave
       // the stream untouched so smoke callbacks do not jump backwards.
       local.clientSeed = new D2Seed(local.presentationSeed, 666);
+    }
+  }
+
+  /**
+   * Reconstructs the client-only path marker omitted by the legacy MissileP
+   * wire schema.  The server position remains authoritative; this metadata
+   * keeps a replicated Blessed Hammer from being treated as a linear missile
+   * by any client presentation or movement code.
+   */
+  static void restoreBlessedHammerPath(Missile local) {
+    if (local == null || local.missile == null
+        || local.missile.Missile == null
+        || !"blessedhammer".equalsIgnoreCase(local.missile.Missile.trim())) return;
+    local.blessedHammerPath = true;
+    if (local.blessedHammerPointIndex <= 0) {
+      local.blessedHammerOrigin.set(local.start);
+      local.blessedHammerPointIndex = 1;
     }
   }
 

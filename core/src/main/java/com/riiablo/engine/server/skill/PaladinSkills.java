@@ -436,8 +436,10 @@ public final class PaladinSkills {
 
   /** True only for the native 1.10f SrvDo073 Blessed Hammer row. */
   public static boolean isBlessedHammer(Skills.Entry skill) {
-    return skill != null && skill.srvdofunc == 73
-        && skill.skill != null && "Blessed Hammer".equalsIgnoreCase(skill.skill);
+    // SrvDo073 is the stable native discriminator.  Some table exports alter
+    // the display string (or include whitespace), which must not make the
+    // authoritative spiral fall back to the generic straight missile path.
+    return skill != null && skill.srvdofunc == 73;
   }
 
   /**
