@@ -308,3 +308,48 @@ CXBarb 的 Blood Moor，并在 `d2game_whirlwind` 触发窗口前启动只读
 - 不把整数坐标相同当作没有移动；优先比较 FP16 坐标。
 - 不用单个截图或感知相似度替代完整帧序列。
 - 原版 collector 未读取 D2Client 动画帧前，所有报告都必须保留 `incomplete` 状态。
+
+## 2026-11-19 旋风斩可见调用链验证
+
+在 `CXBarbWW`、Blood Moor、800x600 窗口可见但不抢前台的条件下，原版
+D2Client 断点采样得到两次真实调用：
+
+- `overlay_create`（RVA `0xBBA70`，约 1187 ms）；
+- `skill_callback_dispatch`（RVA `0x1C6B0`，约 1312 ms）。
+
+同批只读客户端采样得到 300 帧，观察到技能模式 `SQ`（模式号 18），因此
+技能输入和客户端模式切换已经证实。候选的 `unit_animation_update`、
+`unit_render_dispatch`、`render_frame_dispatch`、`overlay_draw` 在 15 秒窗口内
+没有命中。这个结果说明当前 D2Client 断点集合还不足以覆盖实际的 DirectDraw
+提交路径，不能直接解释为原版没有绘制。
+
+Riiablo 同一旋风斩语义样本有 300 帧、2424 个事件：`SEQUENCE_CURSOR` 300 次、
+`LAYER_DRAW` 2100 次、`LAYER_LOAD` 14 次、`COF_RESOLVE` 2 次、
+`ANIMATION_MODE_CHANGE` 5 次、`KEYFRAME_EVENT` 3 次。每帧的层顺序和组件号
+已保留，可用于定位少画或顺序错误。
+
+机器可读报告：
+`runs/semantic-whirlwind-20261119b/client-callchain-diff.json`。
+报告状态为 `partial`：已确认技能回调和 Overlay 创建，但仍需补充 D2Gfx
+帧提交入口后，才能把原版未命中的四个候选与 Riiablo 的图层提交做严格对应。
+## 2026-11-19 语义调用链差分
+
+Riiablo 的离屏 JSONL 现在额外写出有序事件：`ANIMATION_MODE_CHANGE`、
+`COF_RESOLVE`、`LAYER_LOAD`、`SEQUENCE_CURSOR`、`KEYFRAME_EVENT` 和
+`LAYER_DRAW`。`LAYER_DRAW.component` 是实际提交到 PaletteIndexedBatch 的
+COF 组件，事件顺序就是本帧的绘制顺序，可以直接定位少画的层或错误顺序，
+不依赖像素哈希。
+
+原版侧新增 `native-harness/d2client_animation_trace.exe`。它对固定 SHA-256
+的 1.10f D2Client.dll 在静态核实的技能分派 `0x6FABC6B0`、通用单位动画更新
+`0x6FB3D880`、Overlay 创建 `0x6FB5BA70` 和绘制 `0x6FB57E2A` 设置一次性
+断点，只读取 EIP、返回地址和栈，命中后恢复断点并继续。它不调用目标函数，
+不写目标内存；入口未命中时保持 `incomplete`，不会把静态地址当作运行时证据。
+
+```powershell
+$pid = (Get-CimInstance Win32_Process |
+  ? { $_.Name -eq 'Game.exe' } | Select-Object -First 1 -Expand ProcessId)
+.\native-harness\build\d2client_animation_trace.exe $pid `
+  'G:\BaiduNetdiskDownload\Diablo II 1.10F' `
+  'F:\3rd_src\riiablo\tools\original-observer\runs\original-client-callchain' 5000
+```

@@ -1,0 +1,19 @@
+{
+  "character": "CXBarbWW",
+  "lifecycle": "restart",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "client-visible-whirlwind-animation",
+      "collector": "native_runtime_trace",
+      "scenario": {
+        "scope": "update-target-damage",
+        "seconds": 30,
+        "input": "whirlwind",
+        "class": 4,
+        "skill": 151,
+        "level": 1
+      }
+    }
+  ]
+}
