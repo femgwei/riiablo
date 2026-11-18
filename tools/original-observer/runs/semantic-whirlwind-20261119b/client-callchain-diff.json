@@ -1,0 +1,520 @@
+{
+  "schema": 1,
+  "status": "partial",
+  "reason": "Original breakpoints and Riiablo semantic events are different instrumentation levels; missing original candidates require a D2Gfx/frame-present probe before declaring a rendering omission.",
+  "skill": 151,
+  "original": {
+    "trace": "tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-071940-0eac35b4\\orchestrator\\process-session\\001-d2client-whirlwind-callchain-visible\\animation-call-trace.jsonl",
+    "metadata": {
+      "source": "original-d2client-read-only-breakpoints",
+      "module": "D2Client.dll",
+      "sha256": "94466b84c0593ab682f1d3d8dc65ef4f8170f33e430865d802bc752458b2b282",
+      "address_mode": "module-relative-rva",
+      "capabilities": [
+        "native_call_stack"
+      ]
+    },
+    "event_count": 2,
+    "observed_names": [
+      "overlay_create",
+      "skill_callback_dispatch"
+    ],
+    "observed_phases": [
+      "OVERLAY_CREATE",
+      "SKILL_DISPATCH"
+    ],
+    "missing_candidate_names": [
+      "unit_animation_update",
+      "unit_render_dispatch",
+      "render_frame_dispatch",
+      "overlay_draw"
+    ],
+    "missing_candidate_phases": [
+      "ANIMATION_UPDATE",
+      "UNIT_RENDER_DISPATCH",
+      "RENDER_FRAME_DISPATCH",
+      "OVERLAY_DRAW"
+    ],
+    "events": [
+      {
+        "type": "event",
+        "tick": 0,
+        "game_frame": null,
+        "entity_id": -1,
+        "kind": "ORIGINAL_NATIVE_CALL",
+        "name": "overlay_create",
+        "eip": 1874180720,
+        "rva": 768624,
+        "return_address": 1874121560,
+        "thread_id": 14280,
+        "elapsed_ms": 1187,
+        "stack": [
+          1874121560,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          174,
+          108090112,
+          1702664,
+          129682992,
+          4294967295,
+          174,
+          4294967295,
+          0,
+          1874121856
+        ]
+      },
+      {
+        "type": "event",
+        "tick": 1,
+        "game_frame": null,
+        "entity_id": -1,
+        "kind": "ORIGINAL_NATIVE_CALL",
+        "name": "skill_callback_dispatch",
+        "eip": 1873528496,
+        "rva": 116400,
+        "return_address": 1873529451,
+        "thread_id": 14280,
+        "elapsed_ms": 1312,
+        "stack": [
+          1873529451,
+          1,
+          0,
+          5642,
+          4521,
+          108090112,
+          1874103508,
+          0,
+          108090112,
+          1,
+          0,
+          0,
+          0,
+          44264960,
+          1,
+          0
+        ]
+      }
+    ]
+  },
+  "riiablo": {
+    "trace": "tools\\original-observer\\runs\\semantic-whirlwind-20261119b\\riiablo-whirlwind-client-visual.jsonl",
+    "metadata": {
+      "schema": 1,
+      "source": "riiablo-offscreen-production-client",
+      "class": 4,
+      "character": "Riiablo-offscreen-CXBarbWW",
+      "token": "BA",
+      "wclass": "1HS",
+      "logical_mode": "SQ",
+      "sample_clock": {
+        "rate_hz": 25,
+        "ticks_per_sample": 2,
+        "sample_interval_ms": 80
+      },
+      "capabilities": [
+        "mode",
+        "token",
+        "wclass",
+        "animation_frame",
+        "animation_frame_count",
+        "animation_speed",
+        "keyframes",
+        "visual"
+      ],
+      "missing_capabilities": [],
+      "visual_capture": {
+        "samples": 300,
+        "status": "complete",
+        "scope": "offscreen FBO character composite",
+        "viewport": "320x240"
+      }
+    },
+    "event_count": 2424,
+    "frame_count": 300,
+    "event_counts": {
+      "ANIMATION_MODE_CHANGE": 5,
+      "COF_RESOLVE": 2,
+      "KEYFRAME_EVENT": 3,
+      "LAYER_DRAW": 2100,
+      "LAYER_LOAD": 14,
+      "SEQUENCE_CURSOR": 300
+    },
+    "semantic_phases": [
+      "MODE_SELECT",
+      "COF_RESOLVE",
+      "KEYFRAME",
+      "LAYER_DRAW",
+      "LAYER_RESOLVE",
+      "FRAME_CURSOR"
+    ],
+    "first_ticks": [
+      {
+        "tick": 0,
+        "sequence": [
+          {
+            "kind": "ANIMATION_MODE_CHANGE",
+            "phase": "MODE_SELECT"
+          },
+          {
+            "kind": "SEQUENCE_CURSOR",
+            "phase": "FRAME_CURSOR"
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 3
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 2
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 1
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 4
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 8
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 0
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 9
+          }
+        ]
+      },
+      {
+        "tick": 1,
+        "sequence": [
+          {
+            "kind": "SEQUENCE_CURSOR",
+            "phase": "FRAME_CURSOR"
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 3
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 2
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 1
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 4
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 8
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 0
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 9
+          }
+        ]
+      },
+      {
+        "tick": 2,
+        "sequence": [
+          {
+            "kind": "SEQUENCE_CURSOR",
+            "phase": "FRAME_CURSOR"
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 3
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 2
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 1
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 4
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 8
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 0
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 9
+          }
+        ]
+      },
+      {
+        "tick": 3,
+        "sequence": [
+          {
+            "kind": "SEQUENCE_CURSOR",
+            "phase": "FRAME_CURSOR"
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 3
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 2
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 1
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 4
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 8
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 0
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 9
+          }
+        ]
+      },
+      {
+        "tick": 4,
+        "sequence": [
+          {
+            "kind": "SEQUENCE_CURSOR",
+            "phase": "FRAME_CURSOR"
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 3
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 2
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 1
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 4
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 8
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 0
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 9
+          }
+        ]
+      },
+      {
+        "tick": 5,
+        "sequence": [
+          {
+            "kind": "SEQUENCE_CURSOR",
+            "phase": "FRAME_CURSOR"
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 3
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 2
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 1
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 4
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 8
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 0
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 9
+          }
+        ]
+      },
+      {
+        "tick": 6,
+        "sequence": [
+          {
+            "kind": "SEQUENCE_CURSOR",
+            "phase": "FRAME_CURSOR"
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 3
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 2
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 1
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 4
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 8
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 0
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 9
+          }
+        ]
+      },
+      {
+        "tick": 7,
+        "sequence": [
+          {
+            "kind": "SEQUENCE_CURSOR",
+            "phase": "FRAME_CURSOR"
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 3
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 2
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 1
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 4
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 8
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 0
+          },
+          {
+            "kind": "LAYER_DRAW",
+            "phase": "LAYER_DRAW",
+            "component": 9
+          }
+        ]
+      }
+    ]
+  },
+  "actionable_findings": [
+    "Original skill dispatch was observed at runtime.",
+    "Original overlay creation was observed at runtime.",
+    "Original animation/render candidate entries were not observed in this bounded run.",
+    "Riiablo records explicit COF resolution, cursor, keyframe, layer and shadow submissions.",
+    "Run a D2Gfx frame-present probe before treating the four missing D2Client candidates as a proven omission."
+  ]
+}
