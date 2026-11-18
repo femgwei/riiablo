@@ -321,6 +321,17 @@ public class SkillCastHandler extends PassiveSystem {
           event.entityId, networkClient, localServer);
       return;
     }
+    // Inferno and Arctic Blast stream missiles are created by SrvDo019 and
+    // replicated with their native CltDo24 animation clock. CltDo19 is only
+    // the retail packet hook; creating its legacy client stream as well makes
+    // a held cast show a second fire/animation action.
+    if ((skill.Id == SkillId.INFERNO || skill.Id == SkillId.ARCTIC_BLAST)
+        && (localServer || networkClient)) {
+      log.info("[SORCERESS_STREAM] phase=reuse_server_missile entity={} skill={} "
+              + "networkClient={} localServer={}", event.entityId, skill.skill,
+          networkClient, localServer);
+      return;
+    }
     // Meteor/Blizzard use SrvDo28 to create a resident centre controller.
     // Their CltDo28 callback is only the retail client-side packet hook; in a
     // local server world the controller already owns the delayed visual and

@@ -59,6 +59,14 @@ class SorceressFrozenOrbIntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void novaSpawnDirectionUsesTheSameProjectedWorldRingAsItsFinalExpansion() {
+    Vector2 direction = MissileCollisionSystem.frozenOrbWorldDirection(5, -2, new Vector2());
+    assertEquals(new Vector2(3, 1).nor(), direction);
+    direction = MissileCollisionSystem.frozenOrbWorldDirection(-5, 2, direction);
+    assertEquals(new Vector2(-3, -1).nor(), direction);
+  }
+
+  @Test
   void castEmitsBoltsAndOnlyLifetimeExpiryFansSixteenNovaShards() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()

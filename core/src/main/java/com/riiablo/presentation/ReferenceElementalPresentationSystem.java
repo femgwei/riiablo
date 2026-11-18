@@ -40,6 +40,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
 
   private static final class BlazeTrail {
     double birthTime;
+    double duration = 2.0;
     final Vector2 screen = new Vector2();
   }
   protected ComponentMapper<Position> mPosition;
@@ -76,7 +77,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
   @Override protected void begin() {
     presentationTime += Math.max(0f, world.delta);
     blazeTrails.entrySet().removeIf(entry ->
-        presentationTime - entry.getValue().birthTime >= 2.0
+        presentationTime - entry.getValue().birthTime >= entry.getValue().duration
             || !world.getEntityManager().isActive(entry.getKey()));
   }
 
@@ -297,7 +298,8 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
     if (observed != null) return;
     mEmitter.create(id);
     float age = Math.max(0, missile.nativeFrame) / 25f;
-    if (age >= 2f) return; // A late baseline must not reignite expired visuals.
+    float duration = blazeDurationSeconds(missile);
+    if (age >= duration) return; // A late baseline must not reignite expired visuals.
     double birth = presentationTime - age;
     Vector2 at = mPosition.get(id).position;
     Vector2 screen = com.riiablo.util.EngineUtils.worldToScreenCoords(at, new Vector2());
@@ -310,7 +312,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
     com.d2moo.common.drlg.D2Seed visualSeed =
         new com.d2moo.common.drlg.D2Seed(seed, 666);
     int variant = com.d2moo.common.seed.Seed.rollLimitedRandomNumber(visualSeed, 3);
-    ReferenceElementalEffect effect = sprite(BLAZE_SPRITES[variant], at, 2f);
+    ReferenceElementalEffect effect = sprite(BLAZE_SPRITES[variant], at, duration);
     if (effect == null) return;
     effect.age = age;
     effect.fade = true;
@@ -321,7 +323,15 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
       blazeTrails.put(missile.ownerId, trail);
     }
     trail.birthTime = birth;
+    trail.duration = duration;
     trail.screen.set(screen);
+  }
+
+  /** Uses the authoritative 25 Hz Blaze lifetime when the server supplied it. */
+  static float blazeDurationSeconds(Missile missile) {
+    if (missile == null) return 2f;
+    return missile.nativeLifetimeFrames > 0
+        ? missile.nativeLifetimeFrames / 25f : 2f;
   }
 
   public boolean hideOriginal(int id) {

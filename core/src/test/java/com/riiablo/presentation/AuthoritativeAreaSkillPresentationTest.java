@@ -53,6 +53,19 @@ class AuthoritativeAreaSkillPresentationTest extends RiiabloTest {
   }
 
   @Test
+  void infernoUsesTheAuthoritativeStreamForLocalAndNetworkCasts() {
+    for (int id : new int[] {SkillId.INFERNO, SkillId.ARCTIC_BLAST}) {
+      Skills.Entry skill = Riiablo.files.skills.get(id);
+      assertNotNull(skill);
+      assertTrue(SkillCastHandler.shouldReuseServerMissile(skill,
+          true, false, false, false, false, false, false), skill.skill);
+      assertTrue(SkillCastHandler.shouldReuseServerMissile(skill,
+          false, false, false, false, false, false, false, false, false, true),
+          skill.skill);
+    }
+  }
+
+  @Test
   void lightningStrikeDoesNotUseSharedNovaClientFan() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.LIGHTNING_STRIKE);
     assertNotNull(skill);

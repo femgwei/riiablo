@@ -71,7 +71,7 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
       for (int i = 0; i < h.created.size(); i++) {
         int visual = h.created.get(i);
         ReferenceElementalEffect effect = h.effect(visual);
-        assertEquals(2f, effect.duration);
+        assertEquals(590f / 25f, effect.duration);
         assertTrue(effect.fade);
         assertEquals(Vector2.Zero, effect.offset);
         assertFalse(h.system.hideOriginal(visual));
@@ -79,7 +79,7 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
         if (i > 0) assertTrue(EngineUtils.worldToScreenCoords(h.births.get(i), new Vector2())
             .dst(EngineUtils.worldToScreenCoords(h.births.get(i - 1), new Vector2())) >= 14);
       }
-      h.tick(2.01f);
+      h.tick(590f / 25f + .01f);
       for (int visual : h.created) assertFalse(h.world.getEntityManager().isActive(visual));
     }
   }

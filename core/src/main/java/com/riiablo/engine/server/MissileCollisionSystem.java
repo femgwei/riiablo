@@ -1032,9 +1032,8 @@ public class MissileCollisionSystem extends IteratingSystem {
         ? mAttributesWrapper.get(source.ownerId).attrs : null;
     int created = 0;
     for (int i = 0; i < FROZEN_ORB_X.length; i += step) {
-      Vector2 direction = tmpVec.set(FROZEN_ORB_X[i], FROZEN_ORB_Y[i]);
-      if (direction.isZero(0.0001f)) direction.set(Vector2.X);
-      int childId = factory.createMissile(row, direction.nor(), origin, source.ownerId, level);
+      Vector2 direction = frozenOrbWorldDirection(FROZEN_ORB_X[i], FROZEN_ORB_Y[i], tmpVec);
+      int childId = factory.createMissile(row, direction, origin, source.ownerId, level);
       if (childId < 0 || !mMissile.has(childId)) continue;
       Missile nova = mMissile.get(childId);
       nova.skillId = source.skillId;
@@ -1052,6 +1051,14 @@ public class MissileCollisionSystem extends IteratingSystem {
     log.info("[SORCERESS_FROZEN_ORB] phase=nova source={} origin=({}, {}) step={} created={} "
             + "level={} lifetime={}", source.ownerId, origin.x, origin.y, step, created,
         level, row.Range);
+  }
+
+  /** Projects the native Frozen Orb integer ring offset into world coordinates. */
+  static Vector2 frozenOrbWorldDirection(int targetX, int targetY, Vector2 out) {
+    int dx = (targetX - targetY) / 2;
+    int dy = (targetX + targetY) / 2;
+    if (dx == 0 && dy == 0) return out.set(Vector2.X);
+    return out.set(dx, dy).nor();
   }
 
   /** Native MISSMODE_SrvHit14: delayed impact plus meteorfire fields. */
