@@ -1,0 +1,37 @@
+{
+  "id": "20261114-070747-be26ed70",
+  "status": "completed",
+  "started": 1794611267.765738,
+  "broker_pid": 7064,
+  "command": {
+    "op": "enter",
+    "character": "CXBarb"
+  },
+  "result": {
+    "exit_code": 0,
+    "summary_path": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-054548-ed32aaff\\runs\\20261114-070747-be26ed70\\entry\\summary.json",
+    "status": "scene_observed",
+    "error": null,
+    "player": {
+      "status": "player",
+      "pointer": 99767040,
+      "type": 0,
+      "class_id": 4,
+      "unit_id": 1,
+      "mode": 1,
+      "act": 0,
+      "animation_frame_raw": 1184,
+      "seed": [
+        2769228770,
+        1509896640
+      ],
+      "name": "CXBarb",
+      "position": {
+        "x": 4522,
+        "y": 5642
+      }
+    },
+    "level_id": 2
+  },
+  "finished": 1794611291.2949517
+}

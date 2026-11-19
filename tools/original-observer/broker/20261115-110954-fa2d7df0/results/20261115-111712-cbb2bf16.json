@@ -1,0 +1,12 @@
+{
+  "id": "20261115-111712-cbb2bf16",
+  "status": "failed",
+  "started": 1794712632.1560113,
+  "broker_pid": 18036,
+  "command": {
+    "op": "client_animation_probe"
+  },
+  "error": "client observer trace has no player samples",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 325, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 261, in execute\n    metadata, frames = client_trace(samples_path)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\animation_compare.py\", line 174, in client_trace\n    raise ValueError(\"client observer trace has no player samples\")\nValueError: client observer trace has no player samples\n",
+  "finished": 1794712644.1349022
+}

@@ -1,0 +1,16 @@
+{
+  "character": "CensusSorc",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "riiablo-navigation-cold-plains",
+      "collector": "room_census_walk",
+      "scenario": {
+        "level_id": 3,
+        "seconds": 600,
+        "navigation_plan": "cold-plains-seed127897359",
+        "resume_census": "cold-plains-resume-223951"
+      }
+    }
+  ]
+}

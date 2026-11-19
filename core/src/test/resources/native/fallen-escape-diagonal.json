@@ -1,0 +1,50 @@
+{
+  "source_run": "20261117-173757-4dedb43c",
+  "source": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261117-173757-4dedb43c\\orchestrator\\process-session\\001-recovery\\frames.csv",
+  "source_sha256": "0f00491cfd661b7f3d44d6e821a5ea1f549f1c8ca7d395bb8c1b2bf2eb9199e3",
+  "fixture_sha256": "5e88f2585cac89b77989eddffbb6b3afa8519fc3ee48317cb09779972913507c",
+  "native_summary": {
+    "status": "passed",
+    "detached": true,
+    "cleanup_confirmed": true,
+    "fixtures_removed": true,
+    "native_death_observed": true,
+    "room_ring_verified": true,
+    "samples": 601,
+    "first_frame": 19919,
+    "ai_parity": "untested",
+    "restart_required": false
+  },
+  "identity": {
+    "map_seed": 127897359,
+    "observer_id": 88,
+    "corpse_id": 91,
+    "observation_frames": 600,
+    "death_count": 1,
+    "requested_distance": 0,
+    "observer_class": 19,
+    "corpse_class": 0,
+    "room": 110908032,
+    "death_room": 110908032,
+    "adjacent_room_fixture": false,
+    "player_id": 1,
+    "player_x": 4523,
+    "player_y": 5642,
+    "observer_x": 4525,
+    "observer_y": 5644,
+    "corpse_x": 4523,
+    "corpse_y": 5646,
+    "adjacent_rooms": [
+      105682688,
+      110907648,
+      105682816,
+      110910336,
+      110914560,
+      110908032,
+      110908288,
+      110910464,
+      110910592
+    ]
+  },
+  "scope": "Initial native path at step 2 through arrival at step 46. Terminal sample has already entered a new movement action; compare terminal position, not terminal action velocity."
+}

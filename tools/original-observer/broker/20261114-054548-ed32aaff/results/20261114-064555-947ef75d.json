@@ -1,0 +1,16 @@
+{
+  "id": "20261114-064555-947ef75d",
+  "status": "completed",
+  "started": 1794609955.719509,
+  "broker_pid": 7064,
+  "command": {
+    "op": "ping"
+  },
+  "result": {
+    "pong": true,
+    "broker_pid": 7064,
+    "elevated": true,
+    "target_pid": null
+  },
+  "finished": 1794609955.7415118
+}

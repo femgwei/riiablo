@@ -1,0 +1,13 @@
+{
+  "id": "20261119-091245-bdbda4a2",
+  "status": "failed",
+  "started": 1795050765.4953718,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-whirlwind-d2gfx-unfocused"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-091245-bdbda4a2\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 330, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 297, in execute\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-091245-bdbda4a2\\orchestrator\n",
+  "finished": 1795050795.4873662
+}

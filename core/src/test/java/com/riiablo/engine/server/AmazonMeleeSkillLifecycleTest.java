@@ -258,7 +258,7 @@ class AmazonMeleeSkillLifecycleTest extends RiiabloTest {
         assertTrue(casting.amazonElementalPrepared, skillName);
         casting.amazonElementalCombat.hit = true;
         casting.amazonElementalCombat.blocked = false;
-        MathUtils.random.setSeed(seedForChance(ItemDurabilityManager.WEAPON_DURABILITY_CHANCE));
+        CombatRandomFixture.nextWeaponDurabilityLoss(world.getSystem(Actioneer.class));
         world.getSystem(EventSystem.class).dispatch(
             AnimDataKeyframeEvent.obtain(amazon, Engine.KEYFRAME_ATK));
 

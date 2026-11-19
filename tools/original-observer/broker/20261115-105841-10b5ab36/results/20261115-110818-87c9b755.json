@@ -1,0 +1,13 @@
+{
+  "id": "20261115-110818-87c9b755",
+  "status": "completed",
+  "started": 1794712098.669317,
+  "broker_pid": 27268,
+  "command": {
+    "op": "shutdown"
+  },
+  "result": {
+    "shutdown": true
+  },
+  "finished": 1794712098.680318
+}

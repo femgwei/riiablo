@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.Map;
@@ -52,6 +53,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Flags> mFlags;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
   protected ComponentMapper<Warp> mWarp;
@@ -414,6 +416,21 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       if ((recipientMask(entityIds[i]) & recipient) != 0) count++;
     }
     return count;
+  }
+
+  /** Returns the monster entity ids currently eligible for this client's room visibility. */
+  public java.util.Set<Integer> visibleMonsterIds(int clientId) {
+    java.util.Set<Integer> result = new java.util.HashSet<>();
+    if (clientId < 0 || clientId >= 32 || mMonster == null) return result;
+    int recipient = 1 << clientId;
+    IntBag entities = subscription.getEntities();
+    int[] entityIds = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int entityId = entityIds[i];
+      if (!mMonster.has(entityId)) continue;
+      if ((recipientMask(entityId) & recipient) != 0) result.add(entityId);
+    }
+    return result;
   }
 
   private static boolean sameLevel(MapWrapper source, MapWrapper target) {

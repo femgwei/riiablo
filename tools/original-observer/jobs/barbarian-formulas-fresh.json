@@ -1,0 +1,7 @@
+{
+  "character": "CXSorc",
+  "lifecycle": "restart",
+  "batches": [
+    {"name": "barbarian-all30-levels1to40", "collector": "barbarian_formulas", "scenario": {}}
+  ]
+}

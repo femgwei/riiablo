@@ -1,0 +1,55 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/F:/Gradle/wrapper/dists/gradle-7.3-bin/ddwl0k7mt9g6ak16i1m905vyv/gradle-7.3/lib/native-platform-0.22-milestone-21.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+
+> Task :verifyModuleBoundaries
+Module boundaries verified: strict project DAG and zero host/presentation/global RNG access in extracted modules.
+
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :shared:compileJava UP-TO-DATE
+> Task :game-data:compileJava UP-TO-DATE
+> Task :game-data:processResources NO-SOURCE
+> Task :game-data:classes UP-TO-DATE
+> Task :game-data:jar UP-TO-DATE
+> Task :server-domain:compileJava
+> Task :server-domain:processResources NO-SOURCE
+> Task :server-domain:classes
+> Task :server-domain:compileTestJava
+> Task :server-domain:processTestResources NO-SOURCE
+> Task :server-domain:testClasses
+> Task :shared:processResources NO-SOURCE
+> Task :shared:classes UP-TO-DATE
+> Task :shared:jar UP-TO-DATE
+
+> Task :server-domain:test
+
+NativeMonsterMeleeElementTest > differentChannelsRollInSourceOrderAndEqualEndpointsDoNotDraw() FAILED
+    org.opentest4j.AssertionFailedError at NativeMonsterMeleeElementTest.java:45
+
+NativeMonsterMeleeElementTest > monsterCriticalIsAfterEverySourceRollBeforeMitigationAndDoublesRateNotLength() FAILED
+    org.opentest4j.AssertionFailedError at NativeMonsterMeleeElementTest.java:108
+
+313 tests completed, 2 failed
+
+> Task :server-domain:test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':server-domain:test'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/server-domain/build/reports/tests/test/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 9s
+10 actionable tasks: 4 executed, 6 up-to-date

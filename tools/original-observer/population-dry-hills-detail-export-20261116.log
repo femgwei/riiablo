@@ -1,0 +1,186 @@
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+
+> Task :verifyModuleBoundaries
+Module boundaries verified: strict project DAG and zero host/presentation/global RNG access in extracted modules.
+
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :shared:compileJava UP-TO-DATE
+> Task :game-data:compileJava UP-TO-DATE
+> Task :server-domain:compileJava UP-TO-DATE
+> Task :quests:compileJava UP-TO-DATE
+> Task :server-systems:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+> Task :core:jar
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :game-data:processResources NO-SOURCE
+> Task :game-data:classes UP-TO-DATE
+> Task :game-data:jar UP-TO-DATE
+> Task :quests:processResources NO-SOURCE
+> Task :quests:classes UP-TO-DATE
+> Task :quests:jar UP-TO-DATE
+> Task :server-domain:processResources NO-SOURCE
+> Task :server-domain:classes UP-TO-DATE
+> Task :server-domain:jar UP-TO-DATE
+> Task :server-systems:processResources NO-SOURCE
+> Task :server-systems:classes UP-TO-DATE
+> Task :server-systems:jar UP-TO-DATE
+> Task :shared:processResources NO-SOURCE
+> Task :shared:classes UP-TO-DATE
+> Task :shared:jar UP-TO-DATE
+> Task :server:d2gs:compileJava
+> Task :server:d2gs:processResources UP-TO-DATE
+> Task :server:d2gs:classes
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :server:d2gs:headlessMapTour
+[HEADLESS_COMBAT] phase=server_start home=G:\BaiduNetdiskDownload\Diablo II 1.10F seed=127897359
+[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+[D2Log][INFO] DATATBLS_LEVELDEF_INSTALL thread=HeadlessApplication cacheRecords=132 indexed=132
+[D2Log][WARNING] ACT1_D2MOO_LEVELDEF skip id=0: unsupported DrlgType=0
+[D2Log][WARNING] Memory pool not provided; using Java fallback allocation (object)
+[MAP_LINK] level=26 vis=[7, 27, 0, 0, 0, 0, 0, 0] warp=[-1, -1, -1, -1, -1, -1, -1, -1]
+[MAP_LINK] level=27 vis=[26, 28, 0, 0, 0, 0, 0, 0] warp=[-1, -1, -1, -1, -1, -1, -1, -1]
+[MAP_LINK] level=28 vis=[27, 29, 0, 0, 0, 0, 0, 0] warp=[-1, 14, -1, -1, -1, -1, -1, -1]
+[MAP_LINK] level=33 vis=[32, 34, 0, 0, 0, 0, 0, 0] warp=[-1, 15, -1, -1, -1, -1, -1, -1]
+[MAP_LINK] level=32 vis=[31, 33, 0, 0, 0, 0, 0, 0] warp=[14, -1, -1, -1, -1, -1, -1, -1]
+[HEADLESS_COMBAT] phase=server_ready server=127.0.0.1:6114
+[HEADLESS_COMBAT] phase=melee_save_roundtrip weapon=spr leftArm=empty result=PASS
+[HEADLESS_COMBAT] phase=character_generated name=HeadAmaMelee class=amazon skill=10 skillLevel=1 weapon=spr level=80 bytes=973
+[HEADLESS_COMBAT] phase=connect server=127.0.0.1:6114 character=HeadAmaMelee class=0
+[MAP_TOUR] BEGIN seed=127897359 difficulty=0 contract=2 tickStepSeconds=0.04 ticksPerWallSecond=25 acts=2-2 coverage=OBJECT_LOAD_ONLY planned=1 itinerary=[42]
+[HEADLESS_COMBAT] phase=connected player=119
+[MAP_TOUR_FIXTURE] player=119 actualLife=1000000.0 actualMaxLife=1000000.0
+[MAP_TOUR] FIXTURE player=119 life=1000000 weapon=spr attackRating=100000 physicalDamage=5000-5000 combat=REAL_TCP_BLOCKER_CLEARING mode=MAP_MOVEMENT_NOT_COMBAT_BALANCE
+[MAP_TOUR] ENTER level=42 mode=JUMP_SEGMENT_START
+[D2Log][INFO] DATATBLS_LEVELDEF_INSTALL thread=HeadlessApplication cacheRecords=132 indexed=132
+[D2Log][WARNING] ACT1_D2MOO_LEVELDEF skip id=0: unsupported DrlgType=0
+[D2Log][INFO] DATATBLS_LEVELDEF_INSTALL thread=HeadlessApplication cacheRecords=132 indexed=132
+[D2Log][WARNING] ACT1_D2MOO_LEVELDEF skip id=0: unsupported DrlgType=0
+[D2Log][INFO] DATATBLS_LEVELDEF_INSTALL thread=HeadlessApplication cacheRecords=132 indexed=132
+[D2Log][WARNING] ACT1_D2MOO_LEVELDEF skip id=0: unsupported DrlgType=0
+[DS1] Object out of DS1 bounds: com.riiablo.map.DS1$Object@196d4987[type=DYNAMIC_TYPE,id=4,x=27,y=-92,ds1Flags=00000000]
+[DS1] Object out of DS1 bounds: com.riiablo.map.DS1$Object@473414cb[type=DYNAMIC_TYPE,id=4,x=30,y=-107,ds1Flags=00000000]
+[DS1] Object out of DS1 bounds: com.riiablo.map.DS1$Object@7254aefc[type=DYNAMIC_TYPE,id=4,x=11,y=-109,ds1Flags=00000000]
+[DS1] data/global/tiles/Act2/Outdoors/Head2.ds1 4B still available in stream! version=13; [00, 00, 00, 00]
+[DS1] com.riiablo.map.DS1@3bd3214a[fileName=data/global/tiles/Act2/Outdoors/Head2.ds1,version=13,width=8,height=8,act=1,tagType=0,numFiles=3,numWalls=1,numFloors=1,numTags=0,numShadows=1,layerStream=[0, 4, 8, 10],floorLine=9,floorLen=81,shadowLine=9,shadowLen=81,tagLine=0,tagLen=0,wallLine=9,wallLen=81,numObjects=0,numGroups=0,numPaths=0]
+[NET_SYNC] phase=self_baseline client=0 entity=119 level=42 recipientMask=0x1 queued=16
+[HEADLESS_LEVEL] baseline_enqueued player=119 client=0 requestedLevel=42 zoneLevel=42 baselineStart=2 baselineEnd=2 queueSize=16 recipientMask=0x1
+[HEADLESS_CLIENT] level_sync player=119 previous=-1 packet=1 tick=16 components=10
+[HEADLESS_CLIENT] level_sync player=119 previous=1 packet=42 tick=0 components=10
+[HEADLESS_COMBAT] phase=area_state entity=119 state=108 skill=-1 source=119 duration=1 level=1 periodic=0/-1
+[MAP_TOUR] LOAD level=42 name=Dry Hills diagnostics=[42, 400, 400, 80, 80, 95, 1, 119363567, 73210, 86790, 5535, 833, 1131, 2] nativeObjects=67 nativeMonsters=0 entities=66 synthetic=false nativeTerrain=true pendingMonsters=128 spawnedMonsters=9 currentVisibleMonsters=9 cumulativeVisibleMonsters=9 spawnedObjects=65 groundItems=0 position=(121.0,-439.0) blocked=false
+[MAP_TOUR] ROOM_SWEEP level=42 room=0 currentVisibleMonsters=9 cumulativeVisibleMonsters=9 spawnedMonsters=9
+[MAP_TOUR] ROOM_SWEEP level=42 room=1 currentVisibleMonsters=11 cumulativeVisibleMonsters=11 spawnedMonsters=11
+[MAP_TOUR] ROOM_SWEEP level=42 room=2 currentVisibleMonsters=13 cumulativeVisibleMonsters=13 spawnedMonsters=13
+[MAP_TOUR] ROOM_SWEEP level=42 room=3 currentVisibleMonsters=4 cumulativeVisibleMonsters=13 spawnedMonsters=13
+[MAP_TOUR] ROOM_SWEEP level=42 room=4 currentVisibleMonsters=9 cumulativeVisibleMonsters=20 spawnedMonsters=20
+[MAP_TOUR] ROOM_SWEEP level=42 room=5 currentVisibleMonsters=7 cumulativeVisibleMonsters=20 spawnedMonsters=20
+[MAP_TOUR] ROOM_SWEEP level=42 room=6 currentVisibleMonsters=9 cumulativeVisibleMonsters=22 spawnedMonsters=22
+[MAP_TOUR] ROOM_SWEEP level=42 room=7 currentVisibleMonsters=2 cumulativeVisibleMonsters=22 spawnedMonsters=22
+[MAP_TOUR] ROOM_SWEEP level=42 room=8 currentVisibleMonsters=2 cumulativeVisibleMonsters=22 spawnedMonsters=22
+[MAP_TOUR] ROOM_SWEEP level=42 room=9 currentVisibleMonsters=9 cumulativeVisibleMonsters=22 spawnedMonsters=22
+[MAP_TOUR] ROOM_SWEEP level=42 room=10 currentVisibleMonsters=11 cumulativeVisibleMonsters=22 spawnedMonsters=22
+[MAP_TOUR] ROOM_SWEEP level=42 room=11 currentVisibleMonsters=13 cumulativeVisibleMonsters=22 spawnedMonsters=22
+[MAP_TOUR] ROOM_SWEEP level=42 room=12 currentVisibleMonsters=4 cumulativeVisibleMonsters=22 spawnedMonsters=22
+[MAP_TOUR] ROOM_SWEEP level=42 room=13 currentVisibleMonsters=9 cumulativeVisibleMonsters=22 spawnedMonsters=22
+[MAP_TOUR] ROOM_SWEEP level=42 room=14 currentVisibleMonsters=14 cumulativeVisibleMonsters=29 spawnedMonsters=29
+[MAP_TOUR] ROOM_SWEEP level=42 room=15 currentVisibleMonsters=21 cumulativeVisibleMonsters=34 spawnedMonsters=34
+[MAP_TOUR] ROOM_SWEEP level=42 room=16 currentVisibleMonsters=14 cumulativeVisibleMonsters=34 spawnedMonsters=34
+[MAP_TOUR] ROOM_SWEEP level=42 room=17 currentVisibleMonsters=7 cumulativeVisibleMonsters=34 spawnedMonsters=34
+[MAP_TOUR] ROOM_SWEEP level=42 room=18 currentVisibleMonsters=9 cumulativeVisibleMonsters=34 spawnedMonsters=34
+[MAP_TOUR] ROOM_SWEEP level=42 room=19 currentVisibleMonsters=11 cumulativeVisibleMonsters=34 spawnedMonsters=34
+[MAP_TOUR] ROOM_SWEEP level=42 room=20 currentVisibleMonsters=13 cumulativeVisibleMonsters=34 spawnedMonsters=34
+[MAP_TOUR] ROOM_SWEEP level=42 room=21 currentVisibleMonsters=4 cumulativeVisibleMonsters=34 spawnedMonsters=34
+[MAP_TOUR] ROOM_SWEEP level=42 room=22 currentVisibleMonsters=9 cumulativeVisibleMonsters=34 spawnedMonsters=34
+[MAP_TOUR] ROOM_SWEEP level=42 room=23 currentVisibleMonsters=17 cumulativeVisibleMonsters=37 spawnedMonsters=37
+[MAP_TOUR] ROOM_SWEEP level=42 room=24 currentVisibleMonsters=29 cumulativeVisibleMonsters=42 spawnedMonsters=42
+[MAP_TOUR] ROOM_SWEEP level=42 room=25 currentVisibleMonsters=22 cumulativeVisibleMonsters=42 spawnedMonsters=42
+[MAP_TOUR] ROOM_SWEEP level=42 room=26 currentVisibleMonsters=12 cumulativeVisibleMonsters=42 spawnedMonsters=42
+[MAP_TOUR] ROOM_SWEEP level=42 room=27 currentVisibleMonsters=0 cumulativeVisibleMonsters=42 spawnedMonsters=42
+[MAP_TOUR] ROOM_SWEEP level=42 room=28 currentVisibleMonsters=0 cumulativeVisibleMonsters=42 spawnedMonsters=42
+[MAP_TOUR] ROOM_SWEEP level=42 room=29 currentVisibleMonsters=4 cumulativeVisibleMonsters=46 spawnedMonsters=46
+[MAP_TOUR] ROOM_SWEEP level=42 room=30 currentVisibleMonsters=9 cumulativeVisibleMonsters=51 spawnedMonsters=51
+[MAP_TOUR] ROOM_SWEEP level=42 room=31 currentVisibleMonsters=10 cumulativeVisibleMonsters=54 spawnedMonsters=54
+[MAP_TOUR] ROOM_SWEEP level=42 room=32 currentVisibleMonsters=13 cumulativeVisibleMonsters=59 spawnedMonsters=59
+[MAP_TOUR] ROOM_SWEEP level=42 room=33 currentVisibleMonsters=18 cumulativeVisibleMonsters=59 spawnedMonsters=59
+[MAP_TOUR] ROOM_SWEEP level=42 room=34 currentVisibleMonsters=27 cumulativeVisibleMonsters=61 spawnedMonsters=61
+[MAP_TOUR] ROOM_SWEEP level=42 room=35 currentVisibleMonsters=27 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=36 currentVisibleMonsters=17 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=37 currentVisibleMonsters=5 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=38 currentVisibleMonsters=2 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=39 currentVisibleMonsters=4 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=40 currentVisibleMonsters=9 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=41 currentVisibleMonsters=10 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=42 currentVisibleMonsters=13 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=43 currentVisibleMonsters=11 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=44 currentVisibleMonsters=15 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=45 currentVisibleMonsters=15 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=46 currentVisibleMonsters=12 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=47 currentVisibleMonsters=5 cumulativeVisibleMonsters=66 spawnedMonsters=66
+[MAP_TOUR] ROOM_SWEEP level=42 room=48 currentVisibleMonsters=7 cumulativeVisibleMonsters=71 spawnedMonsters=71
+[MAP_TOUR] ROOM_SWEEP level=42 room=49 currentVisibleMonsters=15 cumulativeVisibleMonsters=77 spawnedMonsters=77
+[MAP_TOUR] ROOM_SWEEP level=42 room=50 currentVisibleMonsters=23 cumulativeVisibleMonsters=80 spawnedMonsters=80
+[MAP_TOUR] ROOM_SWEEP level=42 room=51 currentVisibleMonsters=19 cumulativeVisibleMonsters=80 spawnedMonsters=80
+[MAP_TOUR] ROOM_SWEEP level=42 room=52 currentVisibleMonsters=19 cumulativeVisibleMonsters=83 spawnedMonsters=83
+[MAP_TOUR] ROOM_SWEEP level=42 room=53 currentVisibleMonsters=16 cumulativeVisibleMonsters=88 spawnedMonsters=88
+[MAP_TOUR] ROOM_SWEEP level=42 room=54 currentVisibleMonsters=25 cumulativeVisibleMonsters=98 spawnedMonsters=98
+[MAP_TOUR] ROOM_SWEEP level=42 room=55 currentVisibleMonsters=22 cumulativeVisibleMonsters=98 spawnedMonsters=98
+[MAP_TOUR] ROOM_SWEEP level=42 room=56 currentVisibleMonsters=19 cumulativeVisibleMonsters=100 spawnedMonsters=100
+[MAP_TOUR] ROOM_SWEEP level=42 room=57 currentVisibleMonsters=7 cumulativeVisibleMonsters=100 spawnedMonsters=100
+[MAP_TOUR] ROOM_SWEEP level=42 room=58 currentVisibleMonsters=8 cumulativeVisibleMonsters=103 spawnedMonsters=103
+[MAP_TOUR] ROOM_SWEEP level=42 room=59 currentVisibleMonsters=19 cumulativeVisibleMonsters=108 spawnedMonsters=108
+[MAP_TOUR] ROOM_SWEEP level=42 room=60 currentVisibleMonsters=25 cumulativeVisibleMonsters=111 spawnedMonsters=111
+[MAP_TOUR] ROOM_SWEEP level=42 room=61 currentVisibleMonsters=17 cumulativeVisibleMonsters=111 spawnedMonsters=111
+[MAP_TOUR] ROOM_SWEEP level=42 room=62 currentVisibleMonsters=17 cumulativeVisibleMonsters=119 spawnedMonsters=119
+[MAP_TOUR] ROOM_SWEEP level=42 room=63 currentVisibleMonsters=16 cumulativeVisibleMonsters=119 spawnedMonsters=119
+[MAP_TOUR] ROOM_SWEEP level=42 room=64 currentVisibleMonsters=21 cumulativeVisibleMonsters=122 spawnedMonsters=122
+[MAP_TOUR] ROOM_SWEEP level=42 room=65 currentVisibleMonsters=23 cumulativeVisibleMonsters=124 spawnedMonsters=124
+[MAP_TOUR] ROOM_SWEEP level=42 room=66 currentVisibleMonsters=16 cumulativeVisibleMonsters=124 spawnedMonsters=124
+[MAP_TOUR] ROOM_SWEEP level=42 room=67 currentVisibleMonsters=4 cumulativeVisibleMonsters=124 spawnedMonsters=124
+[MAP_TOUR] ROOM_SWEEP level=42 room=68 currentVisibleMonsters=8 cumulativeVisibleMonsters=124 spawnedMonsters=124
+[MAP_TOUR] ROOM_SWEEP level=42 room=69 currentVisibleMonsters=19 cumulativeVisibleMonsters=124 spawnedMonsters=124
+[MAP_TOUR] ROOM_SWEEP level=42 room=70 currentVisibleMonsters=27 cumulativeVisibleMonsters=126 spawnedMonsters=126
+[MAP_TOUR] ROOM_SWEEP level=42 room=71 currentVisibleMonsters=27 cumulativeVisibleMonsters=126 spawnedMonsters=126
+[MAP_TOUR] ROOM_SWEEP level=42 room=72 currentVisibleMonsters=18 cumulativeVisibleMonsters=126 spawnedMonsters=126
+[MAP_TOUR] ROOM_SWEEP level=42 room=73 currentVisibleMonsters=17 cumulativeVisibleMonsters=126 spawnedMonsters=126
+[MAP_TOUR] ROOM_SWEEP level=42 room=74 currentVisibleMonsters=22 cumulativeVisibleMonsters=126 spawnedMonsters=126
+[MAP_TOUR] ROOM_SWEEP level=42 room=75 currentVisibleMonsters=25 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=76 currentVisibleMonsters=17 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=77 currentVisibleMonsters=6 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=78 currentVisibleMonsters=3 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=79 currentVisibleMonsters=8 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=80 currentVisibleMonsters=13 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=81 currentVisibleMonsters=17 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=82 currentVisibleMonsters=13 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=83 currentVisibleMonsters=8 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=84 currentVisibleMonsters=4 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=85 currentVisibleMonsters=7 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=86 currentVisibleMonsters=7 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=87 currentVisibleMonsters=4 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=88 currentVisibleMonsters=2 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=89 currentVisibleMonsters=2 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=90 currentVisibleMonsters=2 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=91 currentVisibleMonsters=0 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=92 currentVisibleMonsters=2 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=93 currentVisibleMonsters=2 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP level=42 room=94 currentVisibleMonsters=2 cumulativeVisibleMonsters=128 spawnedMonsters=128
+[MAP_TOUR] ROOM_SWEEP_SUMMARY level=42 rooms=95 expectedRooms=95 spawnedMonsters=128 currentVisibleMonsters=2 cumulativeVisibleMonsters=128
+[MAP_TOUR] OBJECT_LOAD_PASS level=42 mode=FULL_LEVEL_MATERIALIZATION walkingEvidence=false
+[MAP_TOUR] SUMMARY planned=1 visited=1 coverage=OBJECT_LOAD_ONLY walks=0 transitions=0 detachedJumps=0 combatKills=0 failures=0 result=PASS
+
+BUILD SUCCESSFUL in 41s
+25 actionable tasks: 6 executed, 19 up-to-date

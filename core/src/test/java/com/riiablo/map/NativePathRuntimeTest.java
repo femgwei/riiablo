@@ -14,6 +14,26 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NativePathRuntimeTest {
+  @Test void recordedArcherRoundTripAlsoMatchesThroughProductionMovement() {
+    // Translate original (4541,5642)/(4523,5642) into the test room.
+    // Terrain is deliberately clear; original collision export is incomplete.
+    try(Fixture f=new Fixture()) {
+      int id=f.monster(48,40), target=f.monster(30,40);
+      assertTrue(f.finder.findNativeOrbit(id,target,3,true));
+      assertEquals(5,f.path(id).nativeRuntime.result.path.pathType);
+      for(int i=0;i<120 && f.path(id)!=null;i++) f.world.process();
+      assertNull(f.path(id));
+      assertEquals(D2PathStep.toFp16Center(48),f.position(id).nativePrecisionX());
+      assertEquals(D2PathStep.toFp16Center(37),f.position(id).nativePrecisionY());
+      assertTrue(f.finder.findNativeOrbit(id,target,3,false));
+      assertEquals(6,f.path(id).nativeRuntime.result.path.pathType);
+      for(int i=0;i<120 && f.path(id)!=null;i++) f.world.process();
+      assertNull(f.path(id));
+      assertEquals(D2PathStep.toFp16Center(48),f.position(id).nativePrecisionX());
+      assertEquals(D2PathStep.toFp16Center(40),f.position(id).nativePrecisionY());
+    }
+  }
+
   static final class Fixture implements AutoCloseable {
     final com.badlogic.gdx.Application previous = com.badlogic.gdx.Gdx.app;
     final Map map = new Map(1,0);

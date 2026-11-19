@@ -234,10 +234,11 @@ public final class SkillFormula {
           int base = param(first);
           int step = param(second);
           if (identifier.regionMatches(true, 0, "dm", 0, 2)) {
-            // Native diminishing-return macro:
-            // a + 110 * level * (b - a) / (100 * (level + 6)).
-            long numerator = 110L * level * (step - base);
-            return base + (int) (numerator / (100L * (level + 6)));
+            // D2Common_11033 performs the first division before applying the
+            // parameter delta: a + (b-a) * (110*level/(level+6)) / 100.
+            // Keeping this order matters for the native integer truncation.
+            long scaledLevel = (110L * level) / (level + 6);
+            return base + (int) ((step - base) * scaledLevel / 100L);
           }
           // D2Common SKILLS_GetSpecialParamValue (lnXY) uses the first
           // parameter at skill level one, then adds the second parameter for
@@ -316,8 +317,8 @@ public final class SkillFormula {
         int base = param(referencedSkill, first);
         int step = param(referencedSkill, second);
         if (special.regionMatches(true, 0, "dm", 0, 2)) {
-          long numerator = 110L * referencedLevel * (step - base);
-          return base + (int) (numerator / (100L * (referencedLevel + 6)));
+          long scaledLevel = (110L * referencedLevel) / (referencedLevel + 6);
+          return base + (int) ((step - base) * scaledLevel / 100L);
         }
         return base + (referencedLevel - 1) * step;
       }

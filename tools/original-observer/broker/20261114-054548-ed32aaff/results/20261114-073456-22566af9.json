@@ -1,0 +1,13 @@
+{
+  "id": "20261114-073456-22566af9",
+  "status": "failed",
+  "started": 1794612896.165298,
+  "broker_pid": 7064,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-bash-target"
+  },
+  "error": "collector is not allow-listed: barbarian_bash_target",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 266, in serve_once\n    self.heartbeat(status=\"running\", active=key)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 218, in execute\n    player.get(\"class_id\") != (4 if expected == \"CXBarb\" else 1) or result[\"level_id\"] != 2):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\orchestrator.py\", line 131, in validate_job\n    def write_command(directory, name, command):\nValueError: collector is not allow-listed: barbarian_bash_target\n",
+  "finished": 1794612896.176296
+}

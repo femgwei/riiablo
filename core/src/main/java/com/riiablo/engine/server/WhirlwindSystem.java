@@ -13,6 +13,7 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Casting;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
@@ -43,6 +44,7 @@ public class WhirlwindSystem extends IteratingSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Size> mSize;
@@ -99,6 +101,28 @@ public class WhirlwindSystem extends IteratingSystem {
 
     advanceSpin(entityId, runtime);
 
+    // SrvSt38 enters SQ immediately, but the native movement cursor does not
+    // advance until the third game frame.  Consume that lead-in explicitly;
+    // otherwise the first authoritative tick moves the unit three frames too
+    // early and the first attack window is displaced relative to D2Game.
+    float worldDelta = Math.max(0f, world.getDelta());
+    float frameDelta = worldDelta * GAME_FRAMES_PER_SECOND;
+    float activeDelta = worldDelta;
+    if (runtime.startupDelayFrames > 0f) {
+      float consumed = Math.min(frameDelta, runtime.startupDelayFrames);
+      runtime.startupDelayFrames -= consumed;
+      runtime.elapsedFrames += consumed;
+      float activeFrames = frameDelta - consumed;
+      if (activeFrames <= 0.0001f) {
+        velocity.velocity.setZero();
+        resolveAttackWindows(entityId, runtime);
+        return;
+      }
+      // Preserve the amount of movement when a caller advances several game
+      // frames in one simulation step (the normal loop is one frame/tick).
+      activeDelta = activeFrames / GAME_FRAMES_PER_SECOND;
+    }
+
     if (runtime.positionInitialized) {
       if (position.position.epsilonEquals(runtime.lastPosition, 0.001f)) {
         runtime.stalledFrames++;
@@ -121,17 +145,32 @@ public class WhirlwindSystem extends IteratingSystem {
     // SrvSt38 installs WalkSpeed, never the preceding ordinary run mode.
     velocity.movementRunning = false;
     velocity.velocity.set(runtime.destination).sub(position.position).nor().setLength(baseSpeed);
-    float delta = Math.max(0f, world.getDelta());
     float multiplier = velocity.movementMultiplier();
-    velocity.velocity.setLength(Pathfinder.limitWaypointSpeed(
-        baseSpeed, delta * multiplier, distance));
-    if (blocked(entityId, position.position, velocity.velocity, delta,
+    // VelocityAdder integrates over the complete simulation delta.  Scale the
+    // velocity for a partially consumed startup frame, while keeping the
+    // waypoint cap based on that complete delta so a short active portion
+    // cannot overshoot the destination.
+    float activeRatio = worldDelta > 0f ? activeDelta / worldDelta : 0f;
+    // Unit tests and offline tools sometimes advance a whole coarse step at
+    // once (for example delta=1s).  Those steps are already treated as an
+    // authoritative movement quantum by the integrator; retain that legacy
+    // behaviour while the normal 25 Hz loop uses the exact partial ratio.
+    if (worldDelta > 1f / GAME_FRAMES_PER_SECOND + 0.0001f) activeRatio = 1f;
+    float cappedSpeed = Pathfinder.limitWaypointSpeed(
+        baseSpeed, worldDelta * multiplier, distance);
+    velocity.velocity.setLength(cappedSpeed * activeRatio);
+    if (blocked(entityId, position.position, velocity.velocity, worldDelta,
         multiplier)) {
       finish(entityId, "collision");
       return;
     }
 
-    runtime.elapsedFrames += delta * GAME_FRAMES_PER_SECOND;
+    runtime.elapsedFrames += activeDelta * GAME_FRAMES_PER_SECOND;
+    resolveAttackWindows(entityId, runtime);
+  }
+
+  private void resolveAttackWindows(int entityId, WhirlwindRuntime runtime) {
+    if (runtime.elapsedFrames + 0.0001f < runtime.nextAttackFrame) return;
     if (!runtime.attackTimerInitialized) {
       runtime.attackTimerInitialized = true;
       runtime.nextAttackFrame = runtime.elapsedFrames + 4f;
@@ -210,6 +249,13 @@ public class WhirlwindSystem extends IteratingSystem {
     // An interruption may already have installed a different skill/sequence.
     if (ownsCasting && mCasting.has(entityId)) mCasting.remove(entityId);
     if (ownsCasting && mSequence.has(entityId)) mSequence.remove(entityId);
+    // SrvSt38's SQ sequence returns the player to neutral after its final
+    // movement frame.  Keep the authoritative presentation mode in sync so
+    // headless traces and connected clients do not fall back to the A1
+    // transition COF after the runtime is retired.
+    if (ownsCasting && mCofReference.has(entityId)) {
+      mCofReference.get(entityId).mode = com.riiablo.engine.Engine.Player.MODE_NU;
+    }
     if (mWhirlwindRuntime.has(entityId)) mWhirlwindRuntime.remove(entityId);
     Box2DBody physics = mBox2DBody.get(entityId);
     if (physics != null && physics.body != null) {

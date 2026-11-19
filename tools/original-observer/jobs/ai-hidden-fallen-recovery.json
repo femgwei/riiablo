@@ -1,0 +1,13 @@
+{
+  "character": "CXSorc",
+  "entry_visibility": "hidden",
+  "batches": [
+    {
+      "name": "recovery",
+      "collector": "fallen_death",
+      "scenario": {
+        "profile": "recovery"
+      }
+    }
+  ]
+}

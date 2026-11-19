@@ -1,0 +1,42 @@
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2common_smoke.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2common_smoke.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2common_seed.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2common_seed.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2common_rng.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2common_rng.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2game_controller.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2game_controller.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2game_cast.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2game_cast.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2game_barbarian.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2game_barbarian.exe

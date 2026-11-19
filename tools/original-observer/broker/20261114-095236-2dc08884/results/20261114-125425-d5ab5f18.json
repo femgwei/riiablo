@@ -1,0 +1,15 @@
+{
+  "id": "20261114-125425-d5ab5f18",
+  "status": "completed",
+  "started": 1794632065.6247563,
+  "broker_pid": 20520,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-formulas-fresh"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-095236-2dc08884\\runs\\20261114-125425-d5ab5f18\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794632102.1147683
+}

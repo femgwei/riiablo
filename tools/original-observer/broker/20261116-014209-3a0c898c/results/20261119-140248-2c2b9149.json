@@ -1,0 +1,15 @@
+{
+  "id": "20261119-140248-2c2b9149",
+  "status": "completed",
+  "started": 1795068168.77571,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "frozen-orb-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-140248-2c2b9149\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795068209.3136752
+}

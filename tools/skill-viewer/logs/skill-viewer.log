@@ -1,0 +1,141 @@
+event=scene_reset class=Amazon
+event=debug_character_prepared class=Amazon level=99 skills=20 mana=999 hitpoints=999 stamina=999
+event=debug_equipment_equipped class=Amazon skill=none weapon=sbw offhand=aqv quantity=200
+event=player_composite_initialized entity=0 components=LIT
+event=presentation_refresh entity=0
+event=player_created entity=0 class=Amazon position=(0,0)
+event=cof_queued entity=0 path=data/global/CHARS/AM/cof/AMTNBOW.cof
+event=cof_refresh entity=0
+event=player_render_ready entity=0 frames=16 position=(0.0,0.0)
+event=scene_reset class=Sorceress
+event=debug_character_prepared class=Sorceress level=99 skills=20 mana=999 hitpoints=999 stamina=999
+event=debug_equipment_equipped class=Sorceress skill=none weapon=sst offhand=none quantity=0
+event=player_composite_initialized entity=0 components=LIT
+event=presentation_refresh entity=0
+event=player_created entity=0 class=Sorceress position=(0,0)
+event=cof_queued entity=0 path=data/global/CHARS/SO/cof/SOTNSTF.cof
+event=cof_refresh entity=0
+event=player_render_ready entity=0 frames=16 position=(0.0,0.0)
+event=debug_equipment_equipped class=Sorceress skill=Blaze weapon=sst offhand=none quantity=0
+event=equipment_presentation_refresh entity=0
+event=input button=1 screen=(434,335) world=(7.9374995,5.8124995) player=0 skillIndex=12
+event=cast_result skillId=46 target=none accepted=true mode=actioneer
+event=cof_queued entity=0 path=data/global/CHARS/SO/cof/SOSCSTF.cof
+event=input button=0 screen=(434,335) world=(7.9374995,5.8124995) player=0 skillIndex=12
+event=move_requested entity=0 target=(7.9374995,5.8124995) started=true mode=open_plane
+event=cof_queued entity=0 path=data/global/CHARS/SO/cof/SORNSTF.cof
+event=input button=0 screen=(351,345) world=(5.9687495,9.03125) player=0 skillIndex=12
+event=move_requested entity=0 target=(5.9687495,9.03125) started=true mode=open_plane
+event=move_completed entity=0 position=(5.9687495,9.03125)
+event=input button=0 screen=(134,242) world=(-7.25,9.375) player=0 skillIndex=12
+event=move_requested entity=0 target=(-7.25,9.375) started=true mode=open_plane
+event=input button=0 screen=(55,235) world=(-10.15625,11.40625) player=0 skillIndex=12
+event=move_requested entity=0 target=(-10.15625,11.40625) started=true mode=open_plane
+event=input button=0 screen=(374,202) world=(-2.25,-0.625) player=0 skillIndex=12
+event=move_requested entity=0 target=(-2.25,-0.625) started=true mode=open_plane
+event=input button=0 screen=(389,211) world=(-1.21875,-0.53125) player=0 skillIndex=12
+event=move_requested entity=0 target=(-1.21875,-0.53125) started=true mode=open_plane
+event=input button=0 screen=(465,241) world=(3.03125,-1.03125) player=0 skillIndex=12
+event=move_requested entity=0 target=(3.03125,-1.03125) started=true mode=open_plane
+event=input button=0 screen=(465,241) world=(3.03125,-1.03125) player=0 skillIndex=12
+event=move_requested entity=0 target=(3.03125,-1.03125) started=true mode=open_plane
+event=input button=1 screen=(619,209) world=(5.84375,-7.84375) player=0 skillIndex=12
+event=cast_result skillId=46 target=none accepted=true mode=actioneer
+event=input button=0 screen=(352,297) world=(3.0,6.0) player=0 skillIndex=12
+event=move_requested entity=0 target=(3.0,6.0) started=true mode=open_plane
+event=move_completed entity=0 position=(3.0,6.0)
+event=input button=1 screen=(546,252) world=(6.25,-2.875) player=0 skillIndex=12
+event=cast_result skillId=46 target=none accepted=true mode=actioneer
+event=input button=1 screen=(594,239) world=(6.9375,-5.1875) player=0 skillIndex=12
+event=cast_result skillId=46 target=none accepted=true mode=actioneer
+event=input button=0 screen=(595,239) world=(6.96875,-5.21875) player=0 skillIndex=12
+event=move_requested entity=0 target=(6.96875,-5.21875) started=true mode=open_plane
+event=input button=0 screen=(635,239) world=(8.21875,-6.46875) player=0 skillIndex=12
+event=move_requested entity=0 target=(8.21875,-6.46875) started=true mode=open_plane
+event=input button=1 screen=(347,286) world=(2.15625,5.46875) player=0 skillIndex=12
+event=cast_result skillId=46 target=none accepted=true mode=actioneer
+event=input button=0 screen=(218,302) world=(-0.875,10.5) player=0 skillIndex=12
+event=move_requested entity=0 target=(-0.875,10.5) started=true mode=open_plane
+event=input button=0 screen=(206,310) world=(-0.75,11.375) player=0 skillIndex=12
+event=move_requested entity=0 target=(-0.75,11.375) started=true mode=open_plane
+event=input button=1 screen=(577,277) world=(8.78125,-2.28125) player=0 skillIndex=12
+event=cast_result skillId=46 target=none accepted=true mode=actioneer
+event=input button=0 screen=(577,277) world=(8.78125,-2.28125) player=0 skillIndex=12
+event=move_requested entity=0 target=(8.78125,-2.28125) started=true mode=open_plane
+event=input button=0 screen=(577,277) world=(8.78125,-2.28125) player=0 skillIndex=12
+event=move_requested entity=0 target=(8.78125,-2.28125) started=true mode=open_plane
+event=input button=0 screen=(577,277) world=(8.78125,-2.28125) player=0 skillIndex=12
+event=move_requested entity=0 target=(8.78125,-2.28125) started=true mode=open_plane
+event=debug_equipment_equipped class=Sorceress skill=Lightning weapon=sst offhand=none quantity=0
+event=equipment_presentation_refresh entity=0
+event=input button=1 screen=(292,269) world=(-0.625,6.125) player=0 skillIndex=8
+event=cast_result skillId=49 target=none accepted=true mode=actioneer
+event=input button=0 screen=(299,262) world=(-0.84375,5.46875) player=0 skillIndex=8
+event=move_requested entity=0 target=(-0.84375,5.46875) started=true mode=open_plane
+event=debug_monster_health entity=41 hp=999 maxhp=999
+event=presentation_refresh entity=41
+event=monster_created entity=41 monster=fallen1 position=(20,10)
+event=cof_queued entity=41 path=data/global/MONSTERS/FA/cof/FANUHTH.cof
+event=cof_refresh entity=41
+event=input button=1 screen=(564,428) world=(17.8125,7.5625) player=0 skillIndex=8
+event=cast_result skillId=49 target=monster-41 accepted=true mode=actioneer
+event=input button=1 screen=(564,427) world=(17.75,7.5) player=0 skillIndex=8
+event=cast_result skillId=49 target=monster-41 accepted=true mode=actioneer
+event=input button=0 screen=(303,319) world=(2.84375,8.90625) player=0 skillIndex=8
+event=move_requested entity=0 target=(2.84375,8.90625) started=true mode=open_plane
+event=move_completed entity=0 position=(2.84375,8.90625)
+event=input button=0 screen=(428,311) world=(6.250001,4.499999) player=0 skillIndex=8
+event=move_requested entity=0 target=(6.250001,4.499999) started=true mode=open_plane
+event=move_completed entity=0 position=(6.250001,4.499999)
+event=input button=1 screen=(535,438) world=(17.53125,9.09375) player=0 skillIndex=8
+event=cast_result skillId=49 target=monster-41 accepted=true mode=actioneer
+event=input button=0 screen=(277,249) world=(-2.34375,5.34375) player=0 skillIndex=8
+event=move_requested entity=0 target=(-2.34375,5.34375) started=true mode=open_plane
+event=input button=1 screen=(529,401) world=(15.03125,6.96875) player=0 skillIndex=8
+event=cast_result skillId=49 target=monster-41 accepted=true mode=actioneer
+event=input button=0 screen=(537,308) world=(9.46875,0.90625) player=0 skillIndex=8
+event=move_requested entity=0 target=(9.46875,0.90625) started=true mode=open_plane
+event=input button=0 screen=(394,261) world=(2.0625,2.4375) player=0 skillIndex=8
+event=move_requested entity=0 target=(2.0625,2.4375) started=true mode=open_plane
+event=input button=0 screen=(393,288) world=(3.71875,4.15625) player=0 skillIndex=8
+event=move_requested entity=0 target=(3.71875,4.15625) started=true mode=open_plane
+event=move_completed entity=0 position=(3.71875,4.15625)
+event=debug_equipment_equipped class=Sorceress skill=Fire Ball weapon=sst offhand=none quantity=0
+event=equipment_presentation_refresh entity=0
+event=input button=1 screen=(556,426) world=(17.4375,7.6875) player=0 skillIndex=1
+event=cast_result skillId=47 target=monster-41 accepted=true mode=actioneer
+event=input button=1 screen=(556,426) world=(17.4375,7.6875) player=0 skillIndex=1
+event=cast_result skillId=47 target=monster-41 accepted=true mode=actioneer
+event=input button=0 screen=(587,7) world=(-7.78125,-19.46875) player=0 skillIndex=1
+event=move_requested entity=0 target=(-7.78125,-19.46875) started=true mode=open_plane
+event=debug_equipment_equipped class=Sorceress skill=Chilling Armor weapon=sst offhand=none quantity=0
+event=equipment_presentation_refresh entity=0
+event=input button=1 screen=(414,266) world=(3.0,2.125) player=0 skillIndex=2
+event=cast_result skillId=60 target=monster-41 accepted=true mode=actioneer
+event=debug_equipment_equipped class=Sorceress skill=Frost Nova weapon=sst offhand=none quantity=0
+event=equipment_presentation_refresh entity=0
+event=input button=1 screen=(527,179) world=(1.09375,-6.84375) player=0 skillIndex=5
+event=cast_result skillId=44 target=monster-41 accepted=true mode=actioneer
+event=input button=0 screen=(252,251) world=(-3.0,6.25) player=0 skillIndex=5
+event=move_requested entity=0 target=(-3.0,6.25) started=true mode=open_plane
+event=input button=0 screen=(448,253) world=(3.25,0.25) player=0 skillIndex=5
+event=move_requested entity=0 target=(3.25,0.25) started=true mode=open_plane
+event=input button=0 screen=(442,270) world=(4.125,1.5) player=0 skillIndex=5
+event=move_requested entity=0 target=(4.125,1.5) started=true mode=open_plane
+event=move_completed entity=0 position=(4.125,1.5)
+event=input button=0 screen=(361,310) world=(4.09375,6.53125) player=0 skillIndex=5
+event=move_requested entity=0 target=(4.09375,6.53125) started=true mode=open_plane
+event=input button=0 screen=(289,296) world=(0.96875,7.90625) player=0 skillIndex=5
+event=move_requested entity=0 target=(0.96875,7.90625) started=true mode=open_plane
+event=input button=0 screen=(358,231) world=(-0.9375,1.6875) player=0 skillIndex=5
+event=move_requested entity=0 target=(-0.9375,1.6875) started=true mode=open_plane
+event=input button=0 screen=(420,234) world=(1.187499,-0.062499046) player=0 skillIndex=5
+event=move_requested entity=0 target=(1.187499,-0.062499046) started=true mode=open_plane
+event=input button=0 screen=(453,241) world=(2.656251,-0.65625095) player=0 skillIndex=5
+event=move_requested entity=0 target=(2.656251,-0.65625095) started=true mode=open_plane
+event=input button=0 screen=(451,250) world=(3.156251,-0.031250954) player=0 skillIndex=5
+event=move_requested entity=0 target=(3.156251,-0.031250954) started=true mode=open_plane
+event=input button=0 screen=(270,155) world=(-8.4375,-0.3125) player=0 skillIndex=5
+event=move_requested entity=0 target=(-8.4375,-0.3125) started=true mode=open_plane
+event=input button=0 screen=(447,146) world=(-3.468751,-6.406249) player=0 skillIndex=5
+event=move_requested entity=0 target=(-3.468751,-6.406249) started=true mode=open_plane

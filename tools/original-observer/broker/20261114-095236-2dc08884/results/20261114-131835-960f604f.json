@@ -1,0 +1,15 @@
+{
+  "id": "20261114-131835-960f604f",
+  "status": "completed",
+  "started": 1794633515.8403955,
+  "broker_pid": 20520,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-bash-target"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-095236-2dc08884\\runs\\20261114-131835-960f604f\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794633571.7130015
+}

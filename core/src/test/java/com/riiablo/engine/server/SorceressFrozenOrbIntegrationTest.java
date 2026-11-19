@@ -23,8 +23,15 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.Angle;
+import com.riiablo.codec.DCC;
+import com.riiablo.codec.util.BBox;
+import com.riiablo.engine.Direction;
+import com.riiablo.presentation.DirectionResolver;
+import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.missile.NativeFrozenOrbMotion;
 import com.riiablo.item.Item;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
@@ -34,6 +41,78 @@ import org.junit.jupiter.api.Test;
 
 /** Headless contract for the native Frozen Orb SrvDo15/SrvHit29/SrvDo16 chain. */
 class SorceressFrozenOrbIntegrationTest extends RiiabloTest {
+  /** Diagnostic only: export actual motion/facing, without asserting visual parity. */
+  @Test
+  void exportBoltAndFinalNovaFacingThroughProductionSystems() throws Exception {
+    Riiablo.colors = new com.riiablo.Colors();
+    RecordingFactory factory = new RecordingFactory();
+    factory.presentation = true;
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(),
+            new MissileCollisionSystem(), new AngularVelocity(), new DirectionResolver(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    com.badlogic.gdx.utils.Json json = new com.badlogic.gdx.utils.Json();
+    json.setOutputType(com.badlogic.gdx.utils.JsonWriter.OutputType.json);
+    ArrayList<java.util.Map<String, Object>> samples = new ArrayList<>();
+    java.util.Map<String, Integer> totals = new java.util.TreeMap<>();
+    java.util.Map<String, Integer> mismatches = new java.util.TreeMap<>();
+    float largestError = 0;
+    try {
+      int caster = player(world, 3);
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.FROZEN_ORB);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          caster, skill.Id, Engine.INVALID_ENTITY, new Vector2(2f, 0f),
+          skill.srvdofunc, skill.cltdofunc));
+      world.setDelta(1f / 25f);
+      for (int tick = 0; tick < 110; tick++) {
+        world.process();
+        for (int id : factory.ids) {
+          if (!world.getEntityManager().isActive(id)) continue;
+          Missile m = world.getMapper(Missile.class).get(id);
+          if (m == null || m.missile == null) continue;
+          String name = m.missile.Missile;
+          if (!"frozenorbbolt".equals(name) && !"frozenorbnova".equals(name)) continue;
+          Vector2 velocity = world.getMapper(Velocity.class).get(id).velocity;
+          Angle angle = world.getMapper(Angle.class).get(id);
+          com.riiablo.codec.Animation animation = world.getMapper(AnimationWrapper.class).get(id).animation;
+          int expected = Direction.radiansToDirection(velocity.angleRad(), animation.getNumDirections());
+          int actual = animation.getDirection();
+          float difference = Math.abs(velocity.angleDeg() - angle.angle.angleDeg()) % 360f;
+          difference = Math.min(difference, 360f - difference);
+          largestError = Math.max(largestError, difference);
+          totals.merge(name, 1, Integer::sum);
+          if (expected != actual) mismatches.merge(name, 1, Integer::sum);
+          java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
+          row.put("tick", tick); row.put("entity", id); row.put("missile", name);
+          row.put("age", m.nativeFrame); row.put("vx", velocity.x); row.put("vy", velocity.y);
+          Vector2 position = world.getMapper(Position.class).get(id).position;
+          row.put("x", position.x); row.put("y", position.y);
+          row.put("facing_x", angle.angle.x); row.put("facing_y", angle.angle.y);
+          row.put("expected_direction", expected); row.put("animation_direction", actual);
+          row.put("heading_error_degrees", difference); row.put("cel_file", m.missile.CelFile);
+          row.put("directions", animation.getNumDirections()); samples.add(row);
+        }
+      }
+      assertTrue(totals.getOrDefault("frozenorbbolt", 0) > 0);
+      assertTrue(totals.getOrDefault("frozenorbnova", 0) > 0);
+      assertEquals(0, mismatches.getOrDefault("frozenorbbolt", 0).intValue(),
+          "ordinary shards are the control group for the same facing pipeline");
+      assertEquals(0, mismatches.getOrDefault("frozenorbnova", 0).intValue(),
+          "final-ring velocity turns must update the presentation-facing target");
+      java.util.Map<String, Object> report = new java.util.LinkedHashMap<>();
+      report.put("scope", "headless production movement/Angle/DirectionResolver; DCC direction count stub; no GPU/pixel observation");
+      report.put("sample_counts", totals); report.put("direction_mismatches", mismatches);
+      report.put("largest_heading_error_degrees", largestError);
+      report.put("ordinary_shards_created", factory.count("frozenorbbolt"));
+      report.put("final_shards_created", factory.count("frozenorbnova"));
+      report.put("samples", samples);
+      java.nio.file.Path out = java.nio.file.Paths.get("build/diagnostics/frozen-orb-facing.json");
+      java.nio.file.Files.createDirectories(out.getParent());
+      java.nio.file.Files.write(out, json.prettyPrint(report).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      System.out.println("FROZEN_ORB_FACING samples=" + totals + " mismatches=" + mismatches
+          + " max_error=" + largestError + " report=" + out.toAbsolutePath());
+    } finally { world.dispose(); }
+  }
   @Test
   void nativeRowsUseFrozenOrbControllerAndNovaCallbacks() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.FROZEN_ORB);
@@ -56,14 +135,6 @@ class SorceressFrozenOrbIntegrationTest extends RiiabloTest {
     assertEquals(16, nova.pSrvDoFunc);
     assertEquals("Frozen Orb", bolt.Skill);
     assertEquals("Frozen Orb", nova.Skill);
-  }
-
-  @Test
-  void novaSpawnDirectionUsesTheSameProjectedWorldRingAsItsFinalExpansion() {
-    Vector2 direction = MissileCollisionSystem.frozenOrbWorldDirection(5, -2, new Vector2());
-    assertEquals(new Vector2(3, 1).nor(), direction);
-    direction = MissileCollisionSystem.frozenOrbWorldDirection(-5, 2, direction);
-    assertEquals(new Vector2(-3, -1).nor(), direction);
   }
 
   @Test
@@ -215,6 +286,8 @@ class SorceressFrozenOrbIntegrationTest extends RiiabloTest {
   }
 
   private static final class RecordingFactory extends EntityFactory {
+    boolean presentation;
+    final ArrayList<Integer> ids = new ArrayList<>();
     final ArrayList<Missile> missiles = new ArrayList<>();
     final java.util.Map<String, Integer> counts = new java.util.HashMap<>();
     final java.util.Map<String, Integer> lastSkillLevel = new java.util.HashMap<>();
@@ -250,8 +323,20 @@ class SorceressFrozenOrbIntegrationTest extends RiiabloTest {
       Missile missile = world.getMapper(Missile.class).create(entityId)
           .set(row, position, row.Range).setOwner(ownerId);
       world.getMapper(Position.class).create(entityId).position.set(position);
-      world.getMapper(Velocity.class).create(entityId).velocity
-          .set(direction).setLength(row.Vel);
+      missile.frozenOrbVelocity = NativeFrozenOrbMotion.nativeVelocity(row, 1, 0);
+      NativeFrozenOrbMotion.initialVelocity(direction, missile.frozenOrbVelocity,
+          world.getMapper(Velocity.class).create(entityId).velocity);
+      if (presentation) {
+        world.getMapper(Angle.class).create(entityId).set(direction);
+        DCC dcc = org.mockito.Mockito.mock(DCC.class);
+        org.mockito.Mockito.when(dcc.getNumDirections()).thenReturn(Math.max(1, row.NumDirections));
+        org.mockito.Mockito.when(dcc.getNumFramesPerDir()).thenReturn(Math.max(1, row.AnimLen));
+        org.mockito.Mockito.when(dcc.getBox(org.mockito.ArgumentMatchers.anyInt())).thenReturn(new BBox());
+        com.riiablo.codec.Animation animation = world.getMapper(AnimationWrapper.class).create(entityId).animation;
+        animation.edit().layer(dcc).build();
+        animation.setDirection(Direction.radiansToDirection(direction.angleRad(), animation.getNumDirections()));
+      }
+      ids.add(entityId);
       missiles.add(missile);
       counts.merge(row.Missile, 1, Integer::sum);
       firstOrigin.putIfAbsent(row.Missile, new Vector2(position));

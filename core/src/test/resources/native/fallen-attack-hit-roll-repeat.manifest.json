@@ -1,0 +1,8 @@
+{
+  "sources": {
+    "hit_trace_sha256": "65f9997efe34ca218e521048e833abfc70d97ea530b284c812cff44aff5b3fb4"
+  },
+  "fixture_sha256": "29d59ebee6920fbfd770b7dbb6c7a49e7fbdd236f973c743be91e05c0d27b1eb",
+  "report": "tools\\original-observer\\fallen-attack-success-native.json",
+  "report_sha256": "f5515e5b5910d87de490e2fe7493d8004fa0e209cdc4e65b101f058f770bcac7"
+}

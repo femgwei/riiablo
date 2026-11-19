@@ -1,0 +1,13 @@
+{
+  "id": "20261114-075324-18e2402b",
+  "status": "failed",
+  "started": 1794614004.6364148,
+  "broker_pid": 7064,
+  "command": {
+    "op": "run_job",
+    "job": "native-runtime-trace"
+  },
+  "error": "collector is not allow-listed: native_runtime_trace",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 266, in serve_once\n    accepted = self.accepted / path.name\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 218, in execute\n    player.get(\"class_id\") != (4 if expected == \"CXBarb\" else 1) or result[\"level_id\"] != 2):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\orchestrator.py\", line 131, in validate_job\n    def write_command(directory, name, command):\nValueError: collector is not allow-listed: native_runtime_trace\n",
+  "finished": 1794614004.6464157
+}

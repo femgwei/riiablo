@@ -191,9 +191,12 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
   }
 
   public int getFrame(float stateTime) {
+    return getFrameByIndex((int) (stateTime / frameDuration));
+  }
+
+  private int getFrameByIndex(int frameNumber) {
     int frameRange = endIndex - startIndex;
     if (frameRange <= 1) return startIndex;
-    int frameNumber = (int) (stateTime / frameDuration);
     if (hasSubLoop && mode == Mode.LOOP && frameNumber >= frameRange) {
       int subLoopRange = subLoopEnd - subLoopStart;
       if (subLoopRange > 0) {
@@ -478,6 +481,18 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     if (frame == endIndex - 1) notifyAnimationFinished();
   }
 
+  /** Fixed 25 Hz missile playback using the native 8.8 cursor, without float tick drift. */
+  public void updateNativeFrames(int ticks) {
+    if (frameDuration == Float.POSITIVE_INFINITY) return;
+    long cursor = Math.round((double) elapsedTime / frameDuration * 256.0)
+        + (long) ticks * getFrameDelta();
+    elapsedTime = (float) (cursor * (double) frameDuration / 256.0);
+    frame = getFrameByIndex((int) (cursor / 256));
+    if (reversed) frame = endIndex - 1 - frame;
+    notifyListeners(frame);
+    if (frame == endIndex - 1) notifyAnimationFinished();
+  }
+
   /** Positions playback without replaying frame or completion callbacks. */
   public void seek(float stateTime) {
     Validate.isTrue(Float.isFinite(stateTime) && stateTime >= 0f,
@@ -552,7 +567,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       for (int c = 0; c < layers.length; c++) {
         Layer layer = layers[c];
         if (layer == null) continue;
-        drawLayer(batch, layer, x, y);
+        drawLayer(batch, layer, x, y, c);
         if (layer.drawSubmitted) submittedComponentMask |= 1 << c;
       }
     } else {
@@ -563,7 +578,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
         int component = cof.getLayerOrder(d, f, l);
         Layer layer = layers[component];
         if (layer == null) continue;
-        drawLayer(batch, layer, x, y);
+        drawLayer(batch, layer, x, y, component);
         if (layer.drawSubmitted) submittedComponentMask |= 1 << component;
       }
     }
@@ -573,8 +588,20 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
   }
 
   public void drawLayer(PaletteIndexedBatch batch, Layer layer, float x, float y) {
+    drawLayer(batch, layer, x, y, -1);
+  }
+
+  private void drawLayer(PaletteIndexedBatch batch, Layer layer, float x, float y,
+      int component) {
     layer.draw(batch, direction, frame, x, y);
     if (layer.drawSubmitted) submittedLayerCount++;
+    AnimationTraceProbe.record("LAYER_DRAW", AnimationTraceProbe.values(
+        "component", component,
+        "frame", frame,
+        "direction", direction,
+        "blend_mode", layer.blendMode,
+        "shadow_capable", layer.shadow,
+        "submitted", layer.drawSubmitted));
   }
 
   /** Resident GPU layers for this frame; call after draw so lazy directions are loaded. */
@@ -619,6 +646,8 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
           COF.Layer cofLayer = cof.getComponent(component);
           if (cofLayer.shadow == 0x1) {
             drawShadow(batch, layer, x, y);
+            AnimationTraceProbe.record("SHADOW_DRAW", AnimationTraceProbe.values(
+                "component", component, "frame", frame, "direction", direction));
           }
         }
       }

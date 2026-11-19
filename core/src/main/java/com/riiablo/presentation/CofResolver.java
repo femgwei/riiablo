@@ -15,6 +15,7 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.codec.COF;
+import com.riiablo.codec.AnimationTraceProbe;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -58,6 +59,12 @@ public class CofResolver extends PassiveSystem {
   @Subscribe
   public void onCofChanged(CofChangeEvent event) {
     if (DEBUG_EVENTS) Gdx.app.debug(TAG, "onCofChanged");
+    CofReference before = mCofReference.get(event.entityId);
+    AnimationTraceProbe.record("ANIMATION_MODE_CHANGE", AnimationTraceProbe.values(
+        "restart", event instanceof ModeChangeEvent && ((ModeChangeEvent) event).restart,
+        "mode_id", before == null ? null : before.mode,
+        "token", before == null ? null : before.effectiveToken(),
+        "wclass", before == null ? null : Engine.getWClass(before.effectiveWClass())));
     if (event instanceof ModeChangeEvent && ((ModeChangeEvent) event).restart) {
       // A forced same-mode event is an animation restart, not a visual COF
       // change. Preserve the resolved COF and its resident DCC layers.
@@ -103,6 +110,14 @@ public class CofResolver extends PassiveSystem {
     }
     byte wclass = reference.effectiveWClass();
     String name = token + type.getMode(mode) + Engine.getWClass(wclass);
+    AnimationTraceProbe.record("COF_RESOLVE", AnimationTraceProbe.values(
+        "logical_type", logicalType.name(),
+        "asset_type", type.name(),
+        "mode_id", mode,
+        "mode", type.getMode(mode),
+        "token", token,
+        "wclass", Engine.getWClass(wclass),
+        "cof_name", name));
     COF cof = null;//type.getCOFs().lookup(name);
     if (cof == null) {
       mCofWrapper.remove(entityId);

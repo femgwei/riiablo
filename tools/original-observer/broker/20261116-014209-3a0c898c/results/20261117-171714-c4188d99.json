@@ -1,0 +1,15 @@
+{
+  "id": "20261117-171714-c4188d99",
+  "status": "completed",
+  "started": 1794907034.954426,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "ai-hidden-fallen-death-resume"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261117-171714-c4188d99\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794907052.163343
+}

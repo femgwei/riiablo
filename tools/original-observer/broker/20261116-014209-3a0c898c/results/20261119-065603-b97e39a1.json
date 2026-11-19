@@ -1,0 +1,14 @@
+{
+  "id": "20261119-065603-b97e39a1",
+  "status": "completed",
+  "started": 1795042563.6784241,
+  "broker_pid": 24896,
+  "command": {
+    "op": "launch"
+  },
+  "result": {
+    "target_pid": 33712,
+    "reused": true
+  },
+  "finished": 1795042563.7084248
+}

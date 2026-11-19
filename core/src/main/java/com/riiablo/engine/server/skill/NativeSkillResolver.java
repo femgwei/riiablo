@@ -148,13 +148,36 @@ public final class NativeSkillResolver {
   public static float manaCost(Skills.Entry skill, int level) {
     if (skill == null) return 0f;
     int clampedLevel = Math.max(1, level);
-    int shift = Math.max(0, Math.min(30, skill.manashift));
+    // The legacy Skills.bin shipped with some Riiablo asset packs is not
+    // guaranteed to contain the same raw fixed-point values as the retail
+    // 1.10f TXT table.  Whirlwind is the visible example: the authoritative
+    // row stores mana=50/manashift=7 (25 MP), while a stale bin can expose
+    // mana=25 and make the result look like 12.5 MP.  Prefer the lossless
+    // NativeSkills row when the entry can be matched, and retain the entry
+    // fields as the fallback for synthetic tests and reduced tables.
+    int mana = skill.mana;
+    int levelMana = skill.lvlmana;
+    int minMana = skill.minmana;
+    int shift = skill.manashift;
+    if (skill.skill != null && !skill.skill.trim().isEmpty()
+        && com.riiablo.Riiablo.files != null
+        && com.riiablo.Riiablo.files.NativeSkills != null) {
+      com.riiablo.codec.excel.NativeSkills.Entry nativeSkill =
+          com.riiablo.Riiablo.files.NativeSkills.get(skill.Id);
+      if (nativeSkill != null && nativeSkill.skill.equalsIgnoreCase(skill.skill.trim())) {
+        mana = nativeSkill.nativeInteger("mana");
+        levelMana = nativeSkill.nativeInteger("lvlmana");
+        minMana = nativeSkill.nativeInteger("minmana");
+        shift = nativeSkill.nativeInteger("manashift");
+      }
+    }
+    shift = Math.max(0, Math.min(30, shift));
     double scale = (1L << shift) / 256.0;
-    double calculated = (skill.mana + (clampedLevel - 1L) * skill.lvlmana) * scale;
+    double calculated = (mana + (clampedLevel - 1L) * levelMana) * scale;
     // D2 clamps against MinMana in the same fixed-point domain.  The table
     // stores MinMana in display units, so comparing after conversion keeps
     // fractional costs and low-level skills consistent with the native path.
-    double minimum = Math.max(0, skill.minmana);
+    double minimum = Math.max(0, minMana);
     return (float) Math.max(minimum, calculated);
   }
 

@@ -239,54 +239,19 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
 
       @Override
       public void init(Zone zone) {
-        selectionRng = MapRng.open(NativeLevelSeed.forLevel(zone.map.seed(), zone.level.Id),
-            "base.monster-selection", zone.level.Id);
-        populationRng = MapRng.open(zone.map.seed(), "base.monster-population", zone.level.Id);
-        int prob = 0;
-        int numMon = NativeMonsterRegion.selectedEntryCount(zone.level, zone.diff);
-        String[] columns = NativeMonsterRegion.monsterColumns(zone.level, zone.diff);
-        Array<String> available = new Array<>();
-        for (String mon : columns) {
-          if (mon != null && !mon.isEmpty() && !"0".equals(mon)) available.add(mon);
-        }
-        if (numMon <= 0 || available.size == 0) {
-          monsters = new MonStats.Entry[0];
-          return;
-        }
-        Array<MonStats.Entry> selected = new Array<>();
-        int selectionCount = Math.min(numMon, available.size);
-        for (int i = 0; i < selectionCount; i++) {
-          int index = selectionRng.nextInt(available.size);
-          if (i == 0 && zone.level.rangedspawn && available.size > 1) {
-            for (int attempt = 0; attempt < 20; attempt++) {
-              MonStats.Entry candidate = zone.map.files().monstats.get(available.get(index));
-              if (candidate != null && candidate.rangedtype) break;
-              index = selectionRng.nextInt(available.size);
-            }
-          }
-          MonStats.Entry entry = zone.map.files().monstats.get(available.removeIndex(index));
-          if (entry != null && entry.isSpawn) selected.add(entry);
-        }
-        MonStats.Entry[] monstats = selected.toArray(MonStats.Entry.class);
-        zone.nativeRegionMonsters = monstats.clone();
-        for (MonStats.Entry entry : monstats) {
-          prob += entry.Rarity;
-        }
-
-        if (prob <= 0) {
-          monsters = new MonStats.Entry[0];
-          return;
-        }
-
-        monsters = new MonStats.Entry[prob];
-        prob = 0;
-        for (MonStats.Entry entry : monstats) {
-          if (entry != null) {
-            for (int j = 0; j < entry.Rarity; j++) {
-              monsters[prob++] = entry;
-            }
-          }
-        }
+        // D2Game initializes all Levels.txt regions from one shared stream.
+        // A per-level Java/LCG stream produces a plausible map but shifts the
+        // roster as soon as an earlier level consumes a different number of
+        // draws.  The state object also replays rows that are not materialized
+        // by this headless map, so direct level probes keep native ordering.
+        NativeMonsterRegionState.Selection selection =
+            zone.map.nativeMonsterRegions().forLevel(zone.level.Id);
+        monsters = selection.weighted.clone();
+        zone.nativeRegionMonsters = selection.selected.clone();
+        // Kept for the compatibility (non-native-tile) path. Native room
+        // population uses the D2Seed streams in finish().
+        selectionRng = null;
+        populationRng = null;
       }
 
       @Override
@@ -377,7 +342,7 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
       public void finish(Zone zone) {
         if (zone.nativeTileGrid() == null || !zone.hasNativeRoomTopology()
             || zone.isTown() || remoteClient || nativePopulationQueued) return;
-        java.util.Random rng = new java.util.Random(NativeLevelSeed.forLevel(zone.map.seed(), zone.level.Id));
+        NativeD2SeedRandom gameRandom = zone.map.nativePopulationRandom();
         int packId = 0;
         int uniqueCount = 0, populationRooms = 0, visitedRooms = 0;
         for (Map.RoomEx room : zone.getRoomsEx()) {
@@ -403,32 +368,39 @@ public class BaseMapBuilderD2MOD extends MapBuilderResources {
           MonStats.Entry monster = zone.map.files().monstats.get(preset.monsterId);
           if (room != null && monster != null)
             NativeRoomMonsterPopulation.addGroupAt(zone, room, monster, preset.populationGroupSize,
-                packId++, rng, x, y);
+                packId++, new NativeD2SeedRandom(room.runtimeSeed()), x, y);
         }
         if (monsters == null || monsters.length == 0) return;
         for (Map.RoomEx room : zone.getRoomsEx()) {
           if ((room.populationFlags() & com.d2moo.common.drlg.D2DrlgRoomFlags.POPULATION_ZERO) != 0) continue;
           visitedRooms++;
+          // RoomEx pSeed drives monster choice and placement.  It is kept on
+          // the RoomEx object so later AI/activation code observes the same
+          // consumed seed as the population pass.
+          NativeD2SeedRandom roomRandom = new NativeD2SeedRandom(room.runtimeSeed());
           // Native density budgets and pack searches belong to each eligible
           // coordinate list, not to the entire RoomEx rectangle.
           for (NativeMonsterPopulationRegion region : room.populationRegions()) {
             for (int attempt = region.densityAttempts(); attempt > 0; attempt--) {
               if (!NativeMonsterRegion.densityRoll(NativeMonsterRegion.density(zone.level, zone.diff),
-                  rng.nextInt(100000))) continue;
-              MonStats.Entry monster = replacePlaceSpawn(zone, monsters[rng.nextInt(monsters.length)], 20, rng);
+                  gameRandom.nextInt(100000))) continue;
+              MonStats.Entry monster = replacePlaceSpawn(zone, monsters[roomRandom.nextInt(monsters.length)], 20, roomRandom);
               if (elites != null && NativeMonsterEliteRules.selectElite(
-                  uniqueCount, bossMin, bossMax, visitedRooms, populationRooms, rng)) {
-                MonStats.Entry boss = chooseElite(zone, rng);
+                  uniqueCount, bossMin, bossMax, visitedRooms, populationRooms, roomRandom)) {
+                MonStats.Entry boss = chooseElite(zone, roomRandom);
                 if (boss != null) uniqueCount += NativeRoomMonsterPopulation.addElite(
-                    zone, room, boss, packId++, rng, elites, region);
+                    zone, room, boss, packId++, roomRandom, elites, region);
                 continue;
               }
               if (monster == null || !NativeMonsterRegion.sparsePopulationRoll(
-                  monster.sparsePopulate, rng.nextInt(100))) continue;
+                  monster.sparsePopulate, gameRandom.nextInt(100))) continue;
               int min = MapDataPort.minGroup(monster), max = MapDataPort.maxGroup(monster);
               if (NativeMonsterRegion.isSingleMemberNormalGroup(monster.BaseId, monster.Id)) min = max = 1;
-              int count = min == max ? max : min + rng.nextInt(max - min + 1);
-              NativeRoomMonsterPopulation.addGroup(zone, room, monster, count, packId++, rng, region);
+              // The normal-pack count is rolled from the leader's unit seed in
+              // the native game.  Keep the room stream for placement/selection
+              // and let addNativeGroup consume pGameSeed once per allocation.
+              NativeRoomMonsterPopulation.addNativeGroup(
+                  zone, room, monster, min, max, packId++, roomRandom, gameRandom, region);
             }
           }
         }

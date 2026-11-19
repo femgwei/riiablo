@@ -48,6 +48,7 @@ import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.CombatOwnership;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.missile.NativePoisonMissileMotion;
+import com.riiablo.engine.server.missile.NativeFrozenOrbMotion;
 import com.riiablo.engine.server.missile.NativeBlessedHammerPath;
 import com.riiablo.engine.server.missile.NativeMoltenBoulder;
 import com.riiablo.engine.server.skill.SkillFormula;
@@ -257,7 +258,20 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (!world.getEntityManager().isActive(entityId)) return;
     }
     if (missile.frozenOrbNova) {
-      processFrozenOrbNova(missile, velocity, callbackFrame);
+      processFrozenOrbNova(missile, position, velocity, callbackFrame);
+      // SrvDo16 rotates the nova's velocity during its opening window. Keep
+      // the presentation-facing target synchronized with that new tangent;
+      // otherwise DirectionResolver retains the spawn direction while the
+      // final Frozen Orb ring is already flying elsewhere.
+      if (mAngle.has(entityId) && !velocity.velocity.isZero(0.0001f)) {
+        // Frozen Orb's nova changes direction in native callback steps, not
+        // through the ordinary unit turn-rate. Publish both the current
+        // facing and target so the sprite cannot trail the radial velocity.
+        Angle facing = mAngle.get(entityId);
+        facing.set(velocity.velocity);
+        facing.angle.nor();
+        facing.target.nor();
+      }
     }
     if (missile.meteorCenter) {
       processMeteorCenter(entityId, missile, position);
@@ -413,7 +427,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       moveDistance = velocity.velocity.len() * world.delta;
       Vector2 next = tmpVec.set(position.position).add(
           velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
-      boolean fixedPoisonPath = missile.poisonCloudTraveling && missile.missile != null
+      boolean fixedPoisonPath = NativeFrozenOrbMotion.handles(missile.missile)
+          || com.riiablo.engine.server.missile.NativeBoneSpearMotion.handles(missile.missile)
+          || missile.poisonCloudTraveling && missile.missile != null
           && ("plaguejavcloud".equalsIgnoreCase(missile.missile.Missile)
               || "poisonjavcloud".equalsIgnoreCase(missile.missile.Missile));
       int nextPrecisionX = 0, nextPrecisionY = 0;
@@ -979,7 +995,6 @@ public class MissileCollisionSystem extends IteratingSystem {
         direction.set(mVelocity.get(entityId).velocity);
         if (direction.isZero(0.0001f)) direction.set(Vector2.X);
       }
-      direction.nor();
       int childId = factory.createMissile(shard, direction, position.position, orb.ownerId,
           Math.max(1, orb.damageLevel));
       if (childId >= 0 && mMissile.has(childId)) {
@@ -1001,18 +1016,18 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   /** Native SrvDo16 rotates the stored integer offset during its initial window. */
-  static void processFrozenOrbNova(Missile nova, Velocity velocity, int callbackFrame) {
+  static void processFrozenOrbNova(Missile nova, Position position, Velocity velocity, int callbackFrame) {
     if (nova.missile == null) return;
     int turnWindow = Math.max(0, arrayValue(nova.missile.Param, 0));
     int turnInterval = Math.max(1, arrayValue(nova.missile.Param, 1));
     if (callbackFrame < turnWindow && callbackFrame >= 0 && callbackFrame % turnInterval == 0) {
       int dx = (nova.frozenOrbTargetX - nova.frozenOrbTargetY) / 2;
       int dy = (nova.frozenOrbTargetX + nova.frozenOrbTargetY) / 2;
-      // Path target is current position + offset, never the spawn origin.
-      // Preserve the current speed, including the Slow Missiles modifier.
-      float speed = velocity.velocity.len();
-      velocity.velocity.set(dx, dy);
-      if (dx != 0 || dy != 0) velocity.velocity.setLength(speed);
+      // Older checkpoints predate the scalar; preserve their saved movement speed.
+      if (nova.frozenOrbVelocity == 0 && !velocity.velocity.isZero()) {
+        nova.frozenOrbVelocity = Math.round(velocity.velocity.len() * (65536f / 400f));
+      }
+      NativeFrozenOrbMotion.turnVelocity(position, dx, dy, nova.frozenOrbVelocity, velocity.velocity);
       nova.frozenOrbTargetX = dx;
       nova.frozenOrbTargetY = dy;
     }
@@ -1032,7 +1047,8 @@ public class MissileCollisionSystem extends IteratingSystem {
         ? mAttributesWrapper.get(source.ownerId).attrs : null;
     int created = 0;
     for (int i = 0; i < FROZEN_ORB_X.length; i += step) {
-      Vector2 direction = frozenOrbWorldDirection(FROZEN_ORB_X[i], FROZEN_ORB_Y[i], tmpVec);
+      // Creation uses the unrotated ring. SrvDo16 owns the first 45-degree turn.
+      Vector2 direction = tmpVec.set(FROZEN_ORB_X[i], FROZEN_ORB_Y[i]);
       int childId = factory.createMissile(row, direction, origin, source.ownerId, level);
       if (childId < 0 || !mMissile.has(childId)) continue;
       Missile nova = mMissile.get(childId);
@@ -1051,14 +1067,6 @@ public class MissileCollisionSystem extends IteratingSystem {
     log.info("[SORCERESS_FROZEN_ORB] phase=nova source={} origin=({}, {}) step={} created={} "
             + "level={} lifetime={}", source.ownerId, origin.x, origin.y, step, created,
         level, row.Range);
-  }
-
-  /** Projects the native Frozen Orb integer ring offset into world coordinates. */
-  static Vector2 frozenOrbWorldDirection(int targetX, int targetY, Vector2 out) {
-    int dx = (targetX - targetY) / 2;
-    int dy = (targetX + targetY) / 2;
-    if (dx == 0 && dy == 0) return out.set(Vector2.X);
-    return out.set(dx, dy).nor();
   }
 
   /** Native MISSMODE_SrvHit14: delayed impact plus meteorfire fields. */
@@ -1955,7 +1963,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
       // Factory-audited ordinary missiles own their combat stream. Keep legacy
       // skill/special policies on their existing schedule until audited too.
-      NativeUnitRandom impactRng = areaPacket != null || missile.nativePhysical != null && missile.nativePhysical.criticalCaptured
+      // Original 1.10f Fire Bolt capture: MISSMODE rolls the missile's own
+      // two-word seed in 8.8, independently of the compatibility combat RNG.
+      boolean nativeFireBolt = mPlayer.has(ownerId) && missile.damageSnapshot
+          && missile.skillId == com.riiablo.engine.server.skill.SkillId.FIRE_BOLT;
+      NativeUnitRandom impactRng = areaPacket != null || nativeFireBolt || missile.nativePhysical != null && missile.nativePhysical.criticalCaptured
           && (missile.ordinaryWeaponSnapshot || !mPlayer.has(ownerId) && !mMercenary.has(ownerId))
           ? NativeUnitRandom.missile(missile, serverContext == null ? 0 : serverContext.gameSeed(), missileId) : null;
       final Monster impactOwner = impactRng != null && !missile.ordinaryWeaponSnapshot
@@ -1990,7 +2002,7 @@ public class MissileCollisionSystem extends IteratingSystem {
               && mMonster.get(targetId).monstats.demon,
           mMonster.has(targetId) && isUndead(mMonster.get(targetId)),
           ignoreTargetDefenseAllowed,
-          missile.skillId == com.riiablo.engine.server.skill.SkillId.NOVA,
+          nativeFireBolt || missile.skillId == com.riiablo.engine.server.skill.SkillId.NOVA,
           areaPacket != null ? areaPacket.physical
               : missile.ordinaryWeaponSnapshot || !mPlayer.has(ownerId) && !mMercenary.has(ownerId) ? impactPhysical : null,
           areaPacket != null ? areaPacket.elemental
@@ -2946,6 +2958,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     // packet; otherwise freezingarrowexp3 falls back to weapon damage.
     if (source.missile.Missile != null) {
       String missileName = source.missile.Missile.trim().toLowerCase(java.util.Locale.ROOT);
+      if (missileName.equals("explodingarrow")) {
+        skill = files().skills.get("Exploding Arrow");
+      }
       if (missileName.equals("freezingarrow")
           || source.missile.Id == com.riiablo.engine.server.missile.MissileId.FREEZING_ARROW) {
         skill = files().skills.get("Freezing Arrow");

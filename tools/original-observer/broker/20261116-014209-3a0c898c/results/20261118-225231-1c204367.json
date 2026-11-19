@@ -1,0 +1,15 @@
+{
+  "id": "20261118-225231-1c204367",
+  "status": "completed",
+  "started": 1795013551.2129016,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "ai-batch1-archer-far"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261118-225231-1c204367\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795013578.0370386
+}

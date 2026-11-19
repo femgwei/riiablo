@@ -1,0 +1,109 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/F:/Gradle/wrapper/dists/gradle-7.3-bin/ddwl0k7mt9g6ak16i1m905vyv/gradle-7.3/lib/native-platform-0.22-milestone-21.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+
+> Task :verifyModuleBoundaries
+Module boundaries verified: strict project DAG and zero host/presentation/global RNG access in extracted modules.
+
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :shared:compileJava UP-TO-DATE
+> Task :game-data:compileJava UP-TO-DATE
+> Task :server-domain:compileJava UP-TO-DATE
+> Task :quests:compileJava UP-TO-DATE
+> Task :server-systems:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+
+> Task :core:compileTestJava
+ע: ĳЩ�����ļ�ʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processTestResources NO-SOURCE
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :game-data:processResources NO-SOURCE
+> Task :game-data:classes UP-TO-DATE
+> Task :game-data:jar UP-TO-DATE
+> Task :quests:processResources NO-SOURCE
+> Task :quests:classes UP-TO-DATE
+> Task :quests:jar UP-TO-DATE
+> Task :server-domain:processResources NO-SOURCE
+> Task :server-domain:classes UP-TO-DATE
+> Task :server-domain:jar UP-TO-DATE
+> Task :server-systems:processResources NO-SOURCE
+> Task :server-systems:classes UP-TO-DATE
+> Task :server-systems:jar UP-TO-DATE
+> Task :shared:processResources NO-SOURCE
+> Task :shared:classes UP-TO-DATE
+> Task :shared:jar UP-TO-DATE
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :core:test
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+FallenLeaderCommandTest > deletingTheIssuerDoesNotCancelAnExistingNativeAttackOrder() FAILED
+    org.opentest4j.AssertionFailedError: expected: <true> but was: <false>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+        at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+        at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:31)
+        at app//org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:180)
+        at app//com.riiablo.engine.server.ai.FallenLeaderCommandTest.deletingTheIssuerDoesNotCancelAnExistingNativeAttackOrder(FallenLeaderCommandTest.java:24)
+
+FallenLeaderCommandTest > deletingTheCopiedTargetDoesNotCancelAnOtherwiseValidPackOrder() FAILED
+    org.opentest4j.AssertionFailedError: the copied target is not part of native command 1's validity ==> expected: <true> but was: <false>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+        at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+        at app//org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:211)
+        at app//com.riiablo.engine.server.ai.FallenLeaderCommandTest.verifyRetarget(FallenLeaderCommandTest.java:66)
+        at app//com.riiablo.engine.server.ai.FallenLeaderCommandTest.deletingTheCopiedTargetDoesNotCancelAnOtherwiseValidPackOrder(FallenLeaderCommandTest.java:50)
+
+FallenLeaderCommandTest > packOrderUsesTheCurrentAiTargetInsteadOfItsCopiedTarget() FAILED
+    org.opentest4j.AssertionFailedError: current nearby hostile target must be attacked ==> expected: not <null>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:152)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertNotNull.failNull(AssertNotNull.java:49)
+        at app//org.junit.jupiter.api.AssertNotNull.assertNotNull(AssertNotNull.java:35)
+        at app//org.junit.jupiter.api.Assertions.assertNotNull(Assertions.java:309)
+        at app//com.riiablo.engine.server.ai.FallenLeaderCommandTest.verifyRetarget(FallenLeaderCommandTest.java:64)
+        at app//com.riiablo.engine.server.ai.FallenLeaderCommandTest.packOrderUsesTheCurrentAiTargetInsteadOfItsCopiedTarget(FallenLeaderCommandTest.java:46)
+
+8 tests completed, 3 failed
+
+> Task :core:test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:test'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/core/build/reports/tests/test/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 33s
+23 actionable tasks: 5 executed, 18 up-to-date

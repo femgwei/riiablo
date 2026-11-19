@@ -13,7 +13,7 @@ import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
-/** Frozen 32f72d296 host snapshot and special recipes; resolution kernel is shared. */
+/** 32f72d296 host recipes with documented shield/Weapon Block corrections; kernel is shared. */
 final class PreviousSpecialAttackSystem extends CombatSystem {
   private static final Logger log = LogManager.getLogger(CombatSystem.class);
   AttackerData capturedAttacker;
@@ -24,6 +24,13 @@ final class PreviousSpecialAttackSystem extends CombatSystem {
   @Override public CombatResult calculateAttack(AttackerData a, DefenderData d) {
     // Freeze only the host clock in this harness, not the combat rules or RNG.
     d.currentFrame = 2000;
+    // Documented post-migration native correction: UNITS_GetBlockRate requires
+    // an equipped shield. Preserve the frozen recipes, but do not resurrect
+    // their old assumption that every player with unknown equipment has one.
+    if (!d.combatAttributes.hasCombatShieldContext()) {
+      d.hasEquippedShield = false;
+      d.canBlock = false;
+    }
     capturedAttacker = a;
     capturedDefender = d;
     return super.calculateAttack(a, d);
@@ -411,6 +418,13 @@ final class PreviousSpecialAttackSystem extends CombatSystem {
       d.passiveEvade += defenderStates.getTotalStatContribution(Stat.passive_evade);
     }
     d.passiveWeaponBlock = statInt(defender, Stat.passive_weaponblock, 0);
+    // The active Weapon Block stat-list now participates in defense. This is
+    // an explicit native policy correction to the frozen adapter, like shield
+    // ownership above; the remaining migration comparisons stay unchanged.
+    if (defenderStates != null) {
+      d.passiveWeaponBlock = Math.max(d.passiveWeaponBlock,
+          defenderStates.getTotalStatContribution(Stat.passive_weaponblock));
+    }
     d.resistances[DAMAGE_PHYSICAL] = statInt(defender, Stat.damageresist, 0);
     d.resistances[DAMAGE_FIRE] = statInt(defender, Stat.fireresist, 0);
     d.resistances[DAMAGE_LIGHTNING] = statInt(defender, Stat.lightresist, 0);

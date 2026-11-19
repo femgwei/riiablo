@@ -1,0 +1,13 @@
+{
+  "id": "20261114-055749-9fd02deb",
+  "status": "failed",
+  "started": 1794607070.1104593,
+  "broker_pid": 4728,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-bash"
+  },
+  "error": "Only the pinned CXSorc fixture is currently supported",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 243, in serve_once\n    if not NAME.fullmatch(key):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 202, in execute\n    arguments += [\"--auto-single-player\", \"--character\", command[\"character\"],\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\orchestrator.py\", line 117, in validate_job\n    raise ValueError(\"Only the pinned CXSorc fixture is currently supported\")\nValueError: Only the pinned CXSorc fixture is currently supported\n",
+  "finished": 1794607070.1214583
+}

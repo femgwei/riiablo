@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "source": "https://github.com/blizzhackers/kolbot-SoloPlay/blob/restructuring/Core/ClassAttackOverrides/BarbarianAttacks.js",
+  "policy": "barbarian_attack_slice",
+  "version_scope": "policy reference only; runtime target is pinned Diablo II 1.10f",
+  "state": {
+    "level": 1,
+    "mana": 100,
+    "hp_percent": 80,
+    "max_near_monsters": 2,
+    "attack_skill": 126,
+    "secondary_skill": -1,
+    "available": [
+      126,
+      130
+    ],
+    "dual_wielding": false,
+    "weapon": true,
+    "skill_delay": false,
+    "block_wall": false
+  },
+  "targets": [
+    {
+      "gid": 1001,
+      "class_id": 0,
+      "distance": 2,
+      "attackable": true,
+      "curseable": true,
+      "stunned": false,
+      "special": false,
+      "helpful_curse": false,
+      "scareable": true,
+      "level": 1,
+      "dead": false
+    },
+    {
+      "gid": 1002,
+      "class_id": 0,
+      "distance": 2,
+      "attackable": true,
+      "curseable": true,
+      "stunned": false,
+      "special": false,
+      "helpful_curse": false,
+      "scareable": true,
+      "level": 1,
+      "dead": false
+    },
+    {
+      "gid": 1003,
+      "class_id": 0,
+      "distance": 2,
+      "attackable": true,
+      "curseable": true,
+      "stunned": false,
+      "special": false,
+      "helpful_curse": false,
+      "scareable": true,
+      "level": 1,
+      "dead": false
+    },
+    {
+      "gid": 1004,
+      "class_id": 0,
+      "distance": 2,
+      "attackable": true,
+      "curseable": true,
+      "stunned": false,
+      "special": false,
+      "helpful_curse": false,
+      "scareable": true,
+      "level": 1,
+      "dead": false
+    }
+  ],
+  "actions": [
+    {
+      "op": "cast",
+      "skill": 130,
+      "target": null,
+      "reason": "too_many_nearby_low_level_targets"
+    },
+    {
+      "op": "cast",
+      "skill": 126,
+      "target": 1001,
+      "reason": "selected_attack"
+    }
+  ],
+  "expected_observations": [
+    "player mode transition",
+    "skill/target binding",
+    "damage or state event",
+    "authoritative game-frame continuity"
+  ]
+}

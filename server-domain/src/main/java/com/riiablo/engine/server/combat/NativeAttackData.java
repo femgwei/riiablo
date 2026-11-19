@@ -88,6 +88,8 @@ public class NativeAttackData {
   public int masteryCritical;
   /** SUNITDMG_ApplyDamageBonuses scales the completed draw, before critical/conversion. */
   public int weaponSourceDamage = 128;
+  /** HP appended by SrvSt32 after AllocCombat caches total damage; does not increase life loss. */
+  public int skillFlatPhysicalDamage;
   /** Sacrifice pre-fills physical damage and sets DAMAGEHITFLAG_1. */
   public boolean suppressWeaponCritical;
   /** Explicit projectile policy; endpoints are already 8.8, not melee HP stats. */

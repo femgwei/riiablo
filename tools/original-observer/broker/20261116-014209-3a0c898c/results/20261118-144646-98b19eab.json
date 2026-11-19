@@ -1,0 +1,13 @@
+{
+  "id": "20261118-144646-98b19eab",
+  "status": "failed",
+  "started": 1794984406.9083655,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "cxportal-scroll-probe"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261118-144646-98b19eab\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 330, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 297, in execute\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261118-144646-98b19eab\\orchestrator\n",
+  "finished": 1794984416.3430326
+}

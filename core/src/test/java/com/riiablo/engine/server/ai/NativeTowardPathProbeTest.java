@@ -9,6 +9,64 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class NativeTowardPathProbeTest {
   @Test
+  void recordedNeighborCollisionAllowsTheOriginalCrossRoomOrbit() throws Exception {
+    // Map seed 127897359, difficulty 0; terrain resampled in original run
+    // 20261118-225231-1c204367 before spawning the test monster.
+    // Full collision-neighbors.csv SHA256:
+    // adf2c7d8fae5475fee37650b46685a874a3d65d22d3cc31166a0d000c49beb2b.
+    // This resample is terrain evidence, not the old run's dynamic occupancy.
+    java.util.Map<String,Integer> flags = new java.util.HashMap<>();
+    java.util.Map<String,String> rooms = new java.util.HashMap<>();
+    try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(
+        java.util.Objects.requireNonNull(getClass().getResourceAsStream(
+            "/ai/archer-orbit-neighbors-110f.csv")),java.nio.charset.StandardCharsets.US_ASCII))) {
+      reader.readLine();
+      for(String line; (line=reader.readLine())!=null;) {
+        String[] row=line.replace("\"", "").split(",");
+        String key=row[1]+","+row[2];
+        assertNull(flags.put(key,Integer.parseInt(row[3])),"overlapping room cells");
+        rooms.put(key,row[0]);
+      }
+    }
+    assertEquals(40,flags.size());
+    assertNotEquals(rooms.get("4541,5642"),rooms.get("4541,5639"));
+    NativeTowardPathProbe.Blocked blocked=(x,y) -> {
+      for(int dy=-1;dy<=1;dy++)for(int dx=-1;dx<=1;dx++) {
+        if(dx!=0 && dy!=0)continue; // native size-two footprint
+        Integer value=flags.get((x+dx)+","+(y+dy));
+        assertNotNull(value,"collision query outside recorded coverage");
+        if((value & 0x3FAF)!=0)return true;
+      }
+      return false;
+    };
+    com.riiablo.map.pfa.GraphPath north=NativeTowardPathProbe.orbit(
+        4541,5642,4523,5642,3,2,blocked);
+    assertEquals(2,north.getCount());
+    assertEquals(4541,north.get(1).x);assertEquals(5639,north.get(1).y);
+    com.riiablo.map.pfa.GraphPath south=NativeTowardPathProbe.orbit(
+        4541,5639,4523,5642,3,-2,blocked);
+    assertEquals(2,south.getCount());
+    assertEquals(4541,south.get(1).x);assertEquals(5642,south.get(1).y);
+  }
+
+  @Test
+  void recordedArcherOrbitEndpointsMatchOnAnUnobstructedRoute() {
+    // Original 1.10F run 20261118-165751-85800355, steps 89..120.
+    // This checks direction/step projection only: the collision export starts
+    // at y=5640 and cannot establish the full first orbit's collision queries.
+    com.riiablo.map.pfa.GraphPath north = NativeTowardPathProbe.orbit(
+        4541,5642,4523,5642,3,2,(x,y) -> false);
+    assertEquals(2,north.getCount());
+    assertEquals(4541,north.get(1).x);
+    assertEquals(5639,north.get(1).y);
+    com.riiablo.map.pfa.GraphPath south = NativeTowardPathProbe.orbit(
+        4541,5639,4523,5642,3,-2,(x,y) -> false);
+    assertEquals(2,south.getCount());
+    assertEquals(4541,south.get(1).x);
+    assertEquals(5642,south.get(1).y);
+  }
+
+  @Test
   void fullTowardPointsMatchTheExistingZeroOffsetBooleanProjection() {
     java.util.Random random = new java.util.Random(0x110f);
     int[] budgets = {0, 1, 2, 14, 77};

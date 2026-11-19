@@ -1,0 +1,17 @@
+{
+  "character": "CXSorc",
+  "batches": [
+    {
+      "name": "barbarian-bash-level1",
+      "collector": "native_cast",
+      "scenario": {
+        "class": 1,
+        "skill": 36,
+        "level": 1,
+        "target_class": 0,
+        "target_fire_resist": 0,
+        "target_magic_damage_reduction": 0
+      }
+    }
+  ]
+}

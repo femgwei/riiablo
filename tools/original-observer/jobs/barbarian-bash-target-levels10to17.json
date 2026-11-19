@@ -1,0 +1,62 @@
+{
+  "character": "CXBarb",
+  "lifecycle": "restart",
+  "batches": [
+    {
+      "name": "barbarian-bash-level10",
+      "collector": "barbarian_bash_target",
+      "scenario": {
+        "level": 10
+      }
+    },
+    {
+      "name": "barbarian-bash-level11",
+      "collector": "barbarian_bash_target",
+      "scenario": {
+        "level": 11
+      }
+    },
+    {
+      "name": "barbarian-bash-level12",
+      "collector": "barbarian_bash_target",
+      "scenario": {
+        "level": 12
+      }
+    },
+    {
+      "name": "barbarian-bash-level13",
+      "collector": "barbarian_bash_target",
+      "scenario": {
+        "level": 13
+      }
+    },
+    {
+      "name": "barbarian-bash-level14",
+      "collector": "barbarian_bash_target",
+      "scenario": {
+        "level": 14
+      }
+    },
+    {
+      "name": "barbarian-bash-level15",
+      "collector": "barbarian_bash_target",
+      "scenario": {
+        "level": 15
+      }
+    },
+    {
+      "name": "barbarian-bash-level16",
+      "collector": "barbarian_bash_target",
+      "scenario": {
+        "level": 16
+      }
+    },
+    {
+      "name": "barbarian-bash-level17",
+      "collector": "barbarian_bash_target",
+      "scenario": {
+        "level": 17
+      }
+    }
+  ]
+}

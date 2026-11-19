@@ -1,0 +1,7 @@
+{
+  "character": "CXPortal",
+  "lifecycle": "restart",
+  "entry_visibility": "hidden",
+  "entry_only": true,
+  "batches": []
+}

@@ -1,0 +1,15 @@
+{
+  "character": "CXSorc",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "d2client-animation-callchain-visible",
+      "collector": "native_runtime_trace",
+      "scenario": {
+        "scope": "update-target-damage",
+        "seconds": 8,
+        "input": "client_callchain"
+      }
+    }
+  ]
+}

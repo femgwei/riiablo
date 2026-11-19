@@ -1,0 +1,4 @@
+frame,observer_id,target_id,stages,min_fixed,max_fixed,base_fixed,source_scale,roll,seed_low,seed_high,seed_after_low,seed_after_high,critical_stages,critical_chance,critical_roll,critical_seed_low,critical_seed_high,critical_seed_after_low,critical_seed_after_high,physical_fixed,total_fixed,result_flags,hp_loss_fixed,flat_reduction,resistance,strength,min_damage,max_damage,enhanced_percent,minimum_percent,maximum_percent,normal_damage
+1241346,156,1,2,256,512,0,128,44,1228457000,782876004,3164549164,512380040,2,5,88,1244339812,1319909308,2353715888,519004640,300,300,5,300,0,0,0,1,2,0,0,0,0
+1241794,156,1,2,256,512,0,128,161,2211611903,125907814,1451948961,922446448,2,5,29,1174379861,605596832,2886373129,489824878,417,417,5,417,0,0,0,1,2,0,0,0,0
+1242002,156,1,2,256,512,0,128,135,91627002,49946405,1528287367,38216923,2,5,56,2941291710,637436998,3843666556,1226790327,391,391,5,391,0,0,0,1,2,0,0,0,0

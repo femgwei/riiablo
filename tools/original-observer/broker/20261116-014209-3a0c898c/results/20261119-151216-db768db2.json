@@ -1,0 +1,15 @@
+{
+  "id": "20261119-151216-db768db2",
+  "status": "completed",
+  "started": 1795072336.5449107,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "blaze-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-151216-db768db2\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795072378.4357722
+}

@@ -483,6 +483,26 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  static java.util.List<String> headlessMapSceneSnapshot(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return java.util.Collections.emptyList();
+    java.util.concurrent.CompletableFuture<java.util.List<String>> result =
+        new java.util.concurrent.CompletableFuture<>();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        result.complete(wrapper == null || wrapper.zone == null ? java.util.Collections.emptyList()
+            : MapTourProbe.sceneSnapshot(server.world, wrapper.zone, playerId, server.serverContext.files()));
+      } catch (RuntimeException e) { result.completeExceptionally(e); }
+    });
+    try { return result.get(30, TimeUnit.SECONDS); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+    catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+      throw new IllegalStateException("Map scene snapshot unavailable", e);
+    }
+  }
+
   static java.util.List<String> headlessMapObjectAudit(int playerId) {
     D2GS server = activeHeadlessInstance;
     java.util.concurrent.CompletableFuture<java.util.List<String>> result = new java.util.concurrent.CompletableFuture<>();
@@ -2257,6 +2277,15 @@ public class D2GS extends ApplicationAdapter {
       Thread.currentThread().interrupt();
       return false;
     }
+  }
+
+  /** Number of exported RoomEx entries for a generated level, for diagnostics only. */
+  static int headlessRoomCount(int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.map == null || Riiablo.files == null) return 0;
+    com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+    Map.Zone zone = level == null ? null : server.map.findZone(level);
+    return zone == null ? 0 : zone.getRoomsEx().size;
   }
 
   /** Returns live networked objects, monsters and items owned by one exact RoomEx. */

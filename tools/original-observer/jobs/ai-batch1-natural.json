@@ -1,0 +1,10 @@
+{
+  "character":"CXSorc", "lifecycle":"restart", "fixture":"fallen-survivor", "entry_visibility":"hidden",
+  "batches":[
+    {"name":"zombie1", "collector":"native_ai_batch", "scenario":{"class_id":5}},
+    {"name":"sk_archer1", "collector":"native_ai_batch", "scenario":{"class_id":170}},
+    {"name":"fallen1", "collector":"native_ai_batch", "scenario":{"class_id":19}},
+    {"name":"fallenshaman1", "collector":"native_ai_batch", "scenario":{"class_id":58}},
+    {"name":"goatman1", "collector":"native_ai_batch", "scenario":{"class_id":53}}
+  ]
+}

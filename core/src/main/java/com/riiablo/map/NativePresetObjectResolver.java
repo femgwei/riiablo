@@ -116,6 +116,9 @@ public final class NativePresetObjectResolver {
   }
 
   private static int resolvePresetChest(int act, int levelId, int seed, int x, int y) {
+    // This coordinate hash is a deterministic approximation. Native D2Game
+    // consumes the shared object-control seed in activation order; equal map
+    // seeds alone do not establish equal concrete chest classes here.
     // Act I is the active migration scope.  Other acts retain a safe generic
     // chest until their D2Game object-control seed is bridged.
     if (act != 1) return GENERIC_CHEST;

@@ -1,0 +1,17 @@
+{
+  "character": "aaa",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "rogue-waypoint-open",
+      "collector": "waypoint_open",
+      "scenario": {
+        "level_id": 1,
+        "x": 4419,
+        "y": 5609,
+        "class_id": 119,
+        "nav_offset_y": 12
+      }
+    }
+  ]
+}

@@ -1,0 +1,416 @@
+{
+  "schema": 1,
+  "provider": "manual PE/Capstone bounded disassembly; supplementary to REA",
+  "capstone_version": "5.0.7",
+  "target": "G:\\BaiduNetdiskDownload\\Diablo II 1.10F\\D2CMP.dll",
+  "sha256": "e725036e1118d34b98d2b739525ff75a225e6964b425469e4773c93f0c9cf882",
+  "ranges": [
+    {
+      "rva": "0x11f0",
+      "bytes": "8b44240850e84cf100008b4c240883c404c1e00603c18b0485d0a0e06fc20800",
+      "instructions": [
+        {
+          "address": "0x6fdf11f0",
+          "mnemonic": "mov",
+          "operands": "eax, dword ptr [esp + 8]"
+        },
+        {
+          "address": "0x6fdf11f4",
+          "mnemonic": "push",
+          "operands": "eax"
+        },
+        {
+          "address": "0x6fdf11f5",
+          "mnemonic": "call",
+          "operands": "0x6fe00346"
+        },
+        {
+          "address": "0x6fdf11fa",
+          "mnemonic": "mov",
+          "operands": "ecx, dword ptr [esp + 8]"
+        },
+        {
+          "address": "0x6fdf11fe",
+          "mnemonic": "add",
+          "operands": "esp, 4"
+        },
+        {
+          "address": "0x6fdf1201",
+          "mnemonic": "shl",
+          "operands": "eax, 6"
+        },
+        {
+          "address": "0x6fdf1204",
+          "mnemonic": "add",
+          "operands": "eax, ecx"
+        },
+        {
+          "address": "0x6fdf1206",
+          "mnemonic": "mov",
+          "operands": "eax, dword ptr [eax*4 + 0x6fe0a0d0]"
+        },
+        {
+          "address": "0x6fdf120d",
+          "mnemonic": "ret",
+          "operands": "8"
+        }
+      ]
+    },
+    {
+      "rva": "0x10346",
+      "bytes": "558bec51837d0800750433c0c9c30fbc4508408945fc8b45fcc9c3",
+      "instructions": [
+        {
+          "address": "0x6fe00346",
+          "mnemonic": "push",
+          "operands": "ebp"
+        },
+        {
+          "address": "0x6fe00347",
+          "mnemonic": "mov",
+          "operands": "ebp, esp"
+        },
+        {
+          "address": "0x6fe00349",
+          "mnemonic": "push",
+          "operands": "ecx"
+        },
+        {
+          "address": "0x6fe0034a",
+          "mnemonic": "cmp",
+          "operands": "dword ptr [ebp + 8], 0"
+        },
+        {
+          "address": "0x6fe0034e",
+          "mnemonic": "jne",
+          "operands": "0x6fe00354"
+        },
+        {
+          "address": "0x6fe00350",
+          "mnemonic": "xor",
+          "operands": "eax, eax"
+        },
+        {
+          "address": "0x6fe00352",
+          "mnemonic": "leave",
+          "operands": ""
+        },
+        {
+          "address": "0x6fe00353",
+          "mnemonic": "ret",
+          "operands": ""
+        },
+        {
+          "address": "0x6fe00354",
+          "mnemonic": "bsf",
+          "operands": "eax, dword ptr [ebp + 8]"
+        },
+        {
+          "address": "0x6fe00358",
+          "mnemonic": "inc",
+          "operands": "eax"
+        },
+        {
+          "address": "0x6fe00359",
+          "mnemonic": "mov",
+          "operands": "dword ptr [ebp - 4], eax"
+        },
+        {
+          "address": "0x6fe0035c",
+          "mnemonic": "mov",
+          "operands": "eax, dword ptr [ebp - 4]"
+        },
+        {
+          "address": "0x6fe0035f",
+          "mnemonic": "leave",
+          "operands": ""
+        },
+        {
+          "address": "0x6fe00360",
+          "mnemonic": "ret",
+          "operands": ""
+        }
+      ]
+    },
+    {
+      "rva": "0xbf80",
+      "bytes": "8b460833c98a4d2433d2894e148a55243bc2721868a8f2e06fe8304600008b5c242483c40433ffe9f90000008b46208bfb83f8067513f6461c02740d8b4e0c33c08a4523485051eb1983f802750433c0eb1583f8048b460c740d33d28a55234a5250e80952ffff33c98a4d23493bc17c186858f2e06fe8d34500008b5c242483c40433ffe99c0000008b44852c85c07d15682cf2",
+      "instructions": [
+        {
+          "address": "0x6fdfbf80",
+          "mnemonic": "mov",
+          "operands": "eax, dword ptr [esi + 8]"
+        },
+        {
+          "address": "0x6fdfbf83",
+          "mnemonic": "xor",
+          "operands": "ecx, ecx"
+        },
+        {
+          "address": "0x6fdfbf85",
+          "mnemonic": "mov",
+          "operands": "cl, byte ptr [ebp + 0x24]"
+        },
+        {
+          "address": "0x6fdfbf88",
+          "mnemonic": "xor",
+          "operands": "edx, edx"
+        },
+        {
+          "address": "0x6fdfbf8a",
+          "mnemonic": "mov",
+          "operands": "dword ptr [esi + 0x14], ecx"
+        },
+        {
+          "address": "0x6fdfbf8d",
+          "mnemonic": "mov",
+          "operands": "dl, byte ptr [ebp + 0x24]"
+        },
+        {
+          "address": "0x6fdfbf90",
+          "mnemonic": "cmp",
+          "operands": "eax, edx"
+        },
+        {
+          "address": "0x6fdfbf92",
+          "mnemonic": "jb",
+          "operands": "0x6fdfbfac"
+        },
+        {
+          "address": "0x6fdfbf94",
+          "mnemonic": "push",
+          "operands": "0x6fe0f2a8"
+        },
+        {
+          "address": "0x6fdfbf99",
+          "mnemonic": "call",
+          "operands": "0x6fe005ce"
+        },
+        {
+          "address": "0x6fdfbf9e",
+          "mnemonic": "mov",
+          "operands": "ebx, dword ptr [esp + 0x24]"
+        },
+        {
+          "address": "0x6fdfbfa2",
+          "mnemonic": "add",
+          "operands": "esp, 4"
+        },
+        {
+          "address": "0x6fdfbfa5",
+          "mnemonic": "xor",
+          "operands": "edi, edi"
+        },
+        {
+          "address": "0x6fdfbfa7",
+          "mnemonic": "jmp",
+          "operands": "0x6fdfc0a5"
+        },
+        {
+          "address": "0x6fdfbfac",
+          "mnemonic": "mov",
+          "operands": "eax, dword ptr [esi + 0x20]"
+        },
+        {
+          "address": "0x6fdfbfaf",
+          "mnemonic": "mov",
+          "operands": "edi, ebx"
+        },
+        {
+          "address": "0x6fdfbfb1",
+          "mnemonic": "cmp",
+          "operands": "eax, 6"
+        },
+        {
+          "address": "0x6fdfbfb4",
+          "mnemonic": "jne",
+          "operands": "0x6fdfbfc9"
+        },
+        {
+          "address": "0x6fdfbfb6",
+          "mnemonic": "test",
+          "operands": "byte ptr [esi + 0x1c], 2"
+        },
+        {
+          "address": "0x6fdfbfba",
+          "mnemonic": "je",
+          "operands": "0x6fdfbfc9"
+        },
+        {
+          "address": "0x6fdfbfbc",
+          "mnemonic": "mov",
+          "operands": "ecx, dword ptr [esi + 0xc]"
+        },
+        {
+          "address": "0x6fdfbfbf",
+          "mnemonic": "xor",
+          "operands": "eax, eax"
+        },
+        {
+          "address": "0x6fdfbfc1",
+          "mnemonic": "mov",
+          "operands": "al, byte ptr [ebp + 0x23]"
+        },
+        {
+          "address": "0x6fdfbfc4",
+          "mnemonic": "dec",
+          "operands": "eax"
+        },
+        {
+          "address": "0x6fdfbfc5",
+          "mnemonic": "push",
+          "operands": "eax"
+        },
+        {
+          "address": "0x6fdfbfc6",
+          "mnemonic": "push",
+          "operands": "ecx"
+        },
+        {
+          "address": "0x6fdfbfc7",
+          "mnemonic": "jmp",
+          "operands": "0x6fdfbfe2"
+        },
+        {
+          "address": "0x6fdfbfc9",
+          "mnemonic": "cmp",
+          "operands": "eax, 2"
+        },
+        {
+          "address": "0x6fdfbfcc",
+          "mnemonic": "jne",
+          "operands": "0x6fdfbfd2"
+        },
+        {
+          "address": "0x6fdfbfce",
+          "mnemonic": "xor",
+          "operands": "eax, eax"
+        },
+        {
+          "address": "0x6fdfbfd0",
+          "mnemonic": "jmp",
+          "operands": "0x6fdfbfe7"
+        },
+        {
+          "address": "0x6fdfbfd2",
+          "mnemonic": "cmp",
+          "operands": "eax, 4"
+        },
+        {
+          "address": "0x6fdfbfd5",
+          "mnemonic": "mov",
+          "operands": "eax, dword ptr [esi + 0xc]"
+        },
+        {
+          "address": "0x6fdfbfd8",
+          "mnemonic": "je",
+          "operands": "0x6fdfbfe7"
+        },
+        {
+          "address": "0x6fdfbfda",
+          "mnemonic": "xor",
+          "operands": "edx, edx"
+        },
+        {
+          "address": "0x6fdfbfdc",
+          "mnemonic": "mov",
+          "operands": "dl, byte ptr [ebp + 0x23]"
+        },
+        {
+          "address": "0x6fdfbfdf",
+          "mnemonic": "dec",
+          "operands": "edx"
+        },
+        {
+          "address": "0x6fdfbfe0",
+          "mnemonic": "push",
+          "operands": "edx"
+        },
+        {
+          "address": "0x6fdfbfe1",
+          "mnemonic": "push",
+          "operands": "eax"
+        },
+        {
+          "address": "0x6fdfbfe2",
+          "mnemonic": "call",
+          "operands": "0x6fdf11f0"
+        },
+        {
+          "address": "0x6fdfbfe7",
+          "mnemonic": "xor",
+          "operands": "ecx, ecx"
+        },
+        {
+          "address": "0x6fdfbfe9",
+          "mnemonic": "mov",
+          "operands": "cl, byte ptr [ebp + 0x23]"
+        },
+        {
+          "address": "0x6fdfbfec",
+          "mnemonic": "dec",
+          "operands": "ecx"
+        },
+        {
+          "address": "0x6fdfbfed",
+          "mnemonic": "cmp",
+          "operands": "eax, ecx"
+        },
+        {
+          "address": "0x6fdfbfef",
+          "mnemonic": "jl",
+          "operands": "0x6fdfc009"
+        },
+        {
+          "address": "0x6fdfbff1",
+          "mnemonic": "push",
+          "operands": "0x6fe0f258"
+        },
+        {
+          "address": "0x6fdfbff6",
+          "mnemonic": "call",
+          "operands": "0x6fe005ce"
+        },
+        {
+          "address": "0x6fdfbffb",
+          "mnemonic": "mov",
+          "operands": "ebx, dword ptr [esp + 0x24]"
+        },
+        {
+          "address": "0x6fdfbfff",
+          "mnemonic": "add",
+          "operands": "esp, 4"
+        },
+        {
+          "address": "0x6fdfc002",
+          "mnemonic": "xor",
+          "operands": "edi, edi"
+        },
+        {
+          "address": "0x6fdfc004",
+          "mnemonic": "jmp",
+          "operands": "0x6fdfc0a5"
+        },
+        {
+          "address": "0x6fdfc009",
+          "mnemonic": "mov",
+          "operands": "eax, dword ptr [ebp + eax*4 + 0x2c]"
+        },
+        {
+          "address": "0x6fdfc00d",
+          "mnemonic": "test",
+          "operands": "eax, eax"
+        },
+        {
+          "address": "0x6fdfc00f",
+          "mnemonic": "jge",
+          "operands": "0x6fdfc026"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Instruction decoding and table bytes are static evidence, not runtime observations.",
+    "Cache entry raw values are not claimed to be file offsets."
+  ]
+}

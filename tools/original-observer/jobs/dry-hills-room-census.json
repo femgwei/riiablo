@@ -1,0 +1,13 @@
+{
+  "character": "aaa",
+  "batches": [
+    {
+      "name": "dry-hills-room-census",
+      "collector": "room_census_walk",
+      "scenario": {
+        "level_id": 42,
+        "seconds": 300
+      }
+    }
+  ]
+}

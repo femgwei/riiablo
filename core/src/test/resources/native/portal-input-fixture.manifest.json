@@ -1,0 +1,9 @@
+{
+  "status": "prepared_not_original_load_verified",
+  "character": "CXPortal",
+  "scroll_count": 8,
+  "source": "F:\\3rd_src\\riiablo\\tools\\original-observer\\runs\\CXSorc.d2s",
+  "source_sha256": "f241efd6143eeb2b0e204f5a5878d2b85038f76d6666e7ab51c883f1a29a2ab9",
+  "save_sha256": "746c648231de0b21a30e200e767b92767a641ec06fb830d27daf55a85ba13a89",
+  "original_saves_modified": false
+}

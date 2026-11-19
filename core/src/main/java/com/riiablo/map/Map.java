@@ -332,6 +332,9 @@ public class Map implements Disposable {
   private MapGenerationPolicy generationPolicy = MapGenerationPolicy.nativeDefault();
   private MapPopulationPlan populationPlan = new MapPopulationPlan();
   private java.util.function.IntUnaryOperator warpIndex = entityId -> Integer.MIN_VALUE;
+  /** Shared D2Game monster-region stream and population game seed. */
+  private NativeMonsterRegionState nativeMonsterRegions;
+  private NativeD2SeedRandom nativePopulationRandom;
 
   public Map(int seed, int diff) {
     this(seed, diff, null);
@@ -370,6 +373,32 @@ public class Map implements Disposable {
   /** Policy selected for the current map generation session. */
   public MapGenerationPolicy generationPolicy() { return generationPolicy; }
   public MapPopulationPlan populationPlan() { return populationPlan; }
+
+  NativeMonsterRegionState nativeMonsterRegions() {
+    if (nativeMonsterRegions == null) nativeMonsterRegions = new NativeMonsterRegionState(this);
+    return nativeMonsterRegions;
+  }
+
+  NativeD2SeedRandom nativePopulationRandom() {
+    if (nativePopulationRandom == null) {
+      nativePopulationRandom = new NativeD2SeedRandom(seed, 666);
+      // sub_6FC68110 consumes pGameSeed once to produce dwMonSeed before
+      // D2GAME_PopulateRoom starts rolling MonDen/SparsePopulate.
+      nativePopulationRandom.raw();
+    }
+    return nativePopulationRandom;
+  }
+
+  /** Seed used by the native MONSTERREGION_InitializeAll replay. */
+  public int nativeMonsterSeed() {
+    return nativeMonsterRegions().monsterSeed();
+  }
+
+  private void resetNativePopulationState() {
+    if (nativeMonsterRegions != null) nativeMonsterRegions.reset();
+    nativePopulationRandom = new NativeD2SeedRandom(seed, 666);
+    nativePopulationRandom.raw();
+  }
 
   /** Runtime metadata lookup owned and installed by the assembly adapter. */
   public void bindWarpIndex(java.util.function.IntUnaryOperator warpIndex) {
@@ -582,6 +611,7 @@ public class Map implements Disposable {
       nativeWalkEdges.clear();
       nativeArrowTrapTypes.clear();
     }
+    resetNativePopulationState();
   }
 
   public Array<AssetDescriptor> getDependencies() {
@@ -596,6 +626,7 @@ public class Map implements Disposable {
     // systems that query getAct(); leaving this at -1 skips native collision,
     // warp linking, and pending outdoor monster creation.
     this.act = act;
+    resetNativePopulationState();
     Boolean useNative = null;
     if (cvars() != null) {
       com.riiablo.cvar.Cvar<Boolean> cvar =
@@ -2787,6 +2818,7 @@ public class Map implements Disposable {
     /** Whether this native unit is intended for external ECS materialization. */
     public final boolean externalEntity;
     /** Resolver/classification values populated by MapManager for audits. */
+    public int presetClassId = -1;
     public int resolvedObjectId = -1;
     public String resolverKind = "UNRESOLVED";
     public String creationStatus = "PENDING";
@@ -2991,6 +3023,12 @@ public class Map implements Disposable {
 
     public void setNativePopulationMetadata(com.d2moo.common.drlg.D2DrlgRoom room) {
       runtimeSeedSource = room;
+      if (room.getMazeOrOutdoor() instanceof com.d2moo.common.drlg.D2DrlgPresetRoomStrc) {
+        com.d2moo.common.drlg.D2DrlgPresetRoomStrc preset =
+            (com.d2moo.common.drlg.D2DrlgPresetRoomStrc) room.getMazeOrOutdoor();
+        setPreset(preset.getNLevelPrest(),
+            preset.getPMap() == null ? -1 : preset.getPMap().getNPickedFile());
+      }
       populationRegions = NativeMonsterPopulationRegion.capture(room, x, y);
       // Local room IDs restart at zero in each Zone. Preserve the level as
       // well so native pRoomsNear links survive cross-level seam projection.

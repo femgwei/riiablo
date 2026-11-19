@@ -8,6 +8,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
+import com.riiablo.codec.AnimationTraceProbe;
 import com.riiablo.codec.COF;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.excel.Objects;
@@ -217,6 +218,10 @@ public class CofLayerCacher extends IteratingSystem {
         alteredLayers |= flag;
         if (DEBUG) Gdx.app.debug(TAG, "Loaded[" + Engine.getComposite(c) + "] " + descriptor.fileName);
         DC dc = clientContext.assets().get(descriptor);
+        AnimationTraceProbe.record("LAYER_LOAD", AnimationTraceProbe.values(
+            "component", c,
+            "composite", Engine.getComposite(c),
+            "asset", descriptor.fileName));
         // D2 keeps the active unit graphics ready for all discrete facings.
         // Lazy GL texture creation during a player direction change stalls or
         // briefly blanks a composite layer, which is visible as flashing.

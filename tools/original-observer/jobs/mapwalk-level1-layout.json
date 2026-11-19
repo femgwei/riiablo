@@ -1,0 +1,13 @@
+{
+  "character": "aaa",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "rogue-encampment-layout-audit",
+      "collector": "layout_snapshot",
+      "scenario": {
+        "level_id": 1
+      }
+    }
+  ]
+}

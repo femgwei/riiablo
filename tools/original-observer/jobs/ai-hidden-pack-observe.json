@@ -1,0 +1,10 @@
+{
+  "character": "CXSorc",
+  "entry_visibility": "hidden",
+  "batches": [
+    {"name": "pack-observe-1", "collector": "native_runtime_trace",
+     "scenario": {"scope": "update-target-damage", "seconds": 30}},
+    {"name": "pack-observe-2", "collector": "native_runtime_trace",
+     "scenario": {"scope": "update-target-damage", "seconds": 30}}
+  ]
+}

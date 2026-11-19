@@ -811,9 +811,12 @@ public class ServerSkillSystem extends PassiveSystem {
     float manaCost = bladeFury || isInfernoChannelSkill(skill)
         ? 0f : NativeSkillResolver.manaCost(skill, skillLevel);
     if (event.targetId == Engine.INVALID_ENTITY
-        && NativeSkillResolver.isTargetableOnly(files(), skill)) {
+        && NativeSkillResolver.isTargetableOnly(files(), skill)
+        && skill.srvstfunc != 38) {
       // Shift-forced target-only attacks retain their presentation animation,
       // but no valid skill execution occurred and native D2 spends no mana.
+      // SrvSt38 is different: Whirlwind executes a real coordinate-targeted
+      // skill move even though its native row also has TargetableOnly set.
       manaCost = 0f;
     }
     event.manaCost = manaCost;
@@ -2305,9 +2308,9 @@ public class ServerSkillSystem extends PassiveSystem {
     for (int index = 0; index < NecromancerSkills.getBonePrisonSegmentCount(); index++) {
       NecromancerSkills.getBonePrisonOffset(index, offset);
       Vector2 position = new Vector2(center.x + offset[0], center.y + offset[1]);
-      MonStats.Entry variant = files().monstats.get(summon.hcIdx + (index % 4));
-      if (variant == null) variant = summon;
-      int segment = createBonePrisonSegment(event.entityId, variant, skill, skillLevel,
+      // SrvDo062 summons the same bonewall row at all twelve offsets. The
+      // following hcIdx values are Council Members, not bone art variants.
+      int segment = createBonePrisonSegment(event.entityId, summon, skill, skillLevel,
           duration, position, center, controller);
       if (segment == Engine.INVALID_ENTITY) continue;
       if (controller == Engine.INVALID_ENTITY) {
@@ -2391,6 +2394,13 @@ public class ServerSkillSystem extends PassiveSystem {
       pet.controllerId = controller == Engine.INVALID_ENTITY ? entity : controller;
     }
     applySummonSkillStats(owner, entity, skill, skillLevel, true);
+    if (mAngle.has(entity)) {
+      // Original SrvDo062 faces each segment toward the targeted unit. These
+      // stationary units have no movement update to initialize their facing.
+      Vector2 direction = new Vector2(facing).sub(position);
+      if (direction.isZero(0.0001f)) direction.set(1f, 0f);
+      mAngle.get(entity).set(direction.nor());
+    }
     return entity;
   }
 

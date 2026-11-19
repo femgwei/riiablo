@@ -7,6 +7,8 @@ import com.artemis.World;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Files;
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Stat;
+import com.riiablo.codec.excel.ItemStatCost;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Objects;
@@ -24,6 +26,55 @@ import org.junit.jupiter.api.Test;
 
 /** Exercises production systems with two simultaneous Worlds and no global game host. */
 class ServerSystemIsolationTest {
+  @Test void reusedMissileSnapshotsRebindStatEncodingToTheirWorld() throws Exception {
+    Files previous = Riiablo.files;
+    Files first = files("first", 11), second = files("second", 29);
+    second.ItemStatCost.get(Stat.level).ValShift = 1;
+    Missile projectile = new Missile();
+    Missiles.Entry row = new Missiles.Entry();
+    row.MinDamage = row.MaxDamage = 256;
+    row.HitShift = 8;
+    projectile.missile = row;
+    try {
+      Riiablo.files = null;
+      for (Files selected : new Files[] {first, second, first}) {
+        assertTrue(com.riiablo.engine.server.missile.MissileDamageResolver
+            .initializeTableMissile(selected, projectile, null, 3));
+        ItemStatCost.Entry level = selected.ItemStatCost.get(Stat.level);
+        assertSame(level, projectile.damage.get(Stat.level).entry());
+        assertEquals(3, projectile.damage.get(Stat.level).asInt());
+        assertEquals(3 << level.ValShift, projectile.damage.get(Stat.level).encodedValues());
+        assertEquals(3 << level.ValShift, projectile.damage.base().get(Stat.level).encodedValues());
+        assertSame(level, projectile.damage.table().entry(Stat.level));
+      }
+    } finally { Riiablo.files = previous; }
+  }
+
+  @Test void auraSkillLevelsUseTheirWorldTablesWhenGlobalsAreUnavailable() throws Exception {
+    Files previous = Riiablo.files;
+    Files firstFiles = files("first", 11), secondFiles = files("second", 29);
+    Skills.Entry firstSkill = new Skills.Entry(), secondSkill = new Skills.Entry();
+    firstSkill.Id = 10; secondSkill.Id = 11;
+    when(firstFiles.skills.get("world-aura")).thenReturn(firstSkill);
+    when(secondFiles.skills.get("world-aura")).thenReturn(secondSkill);
+    CharData character = mock(CharData.class);
+    when(character.getBaseSkillLevel(10)).thenReturn(3);
+    when(character.getBaseSkillLevel(11)).thenReturn(7);
+    AuraEcsSystem firstAura = new AuraEcsSystem(), secondAura = new AuraEcsSystem();
+    try (ServerSystemHarness first = new ServerSystemHarness(new ServerGameplayContext(firstFiles, 123),
+            mock(Map.class), firstAura);
+         ServerSystemHarness second = new ServerSystemHarness(new ServerGameplayContext(secondFiles, 456),
+            mock(Map.class), secondAura)) {
+      Riiablo.files = null;
+      int a = first.world().create(), b = second.world().create();
+      first.world().getMapper(com.riiablo.engine.server.component.Player.class).create(a).data = character;
+      second.world().getMapper(com.riiablo.engine.server.component.Player.class).create(b).data = character;
+      assertEquals(3, firstAura.getBaseSkillLevel(a, "world-aura"));
+      assertEquals(7, secondAura.getBaseSkillLevel(b, "world-aura"));
+      assertEquals(3, firstAura.getBaseSkillLevel(a, "world-aura"));
+    } finally { Riiablo.files = previous; }
+  }
+
   @Test void actFiveMessageValidationUsesExplicitMonsterRows() throws Exception {
     Files previous = Riiablo.files;
     Files files = mock(Files.class);
@@ -239,6 +290,17 @@ class ServerSystemIsolationTest {
     Files files = mock(Files.class);
     Skills skills = mock(Skills.class);
     Missiles missiles = mock(Missiles.class);
+    ItemStatCost statCosts = mock(ItemStatCost.class);
+    ItemStatCost.Entry[] statRows = new ItemStatCost.Entry[512];
+    for (int id = 0; id < statRows.length; id++) {
+      ItemStatCost.Entry entry = new ItemStatCost.Entry();
+      entry.ID = id;
+      statRows[id] = entry;
+    }
+    when(statCosts.get(anyInt())).thenAnswer(call -> statRows[call.getArgument(0)]);
+    java.lang.reflect.Field statField = Files.class.getField("ItemStatCost");
+    statField.setAccessible(true);
+    statField.set(files, statCosts);
     java.lang.reflect.Field skillsField = Files.class.getField("skills");
     skillsField.setAccessible(true);
     skillsField.set(files, skills);

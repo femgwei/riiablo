@@ -1,0 +1,14 @@
+{
+  "character": "MapWalk",
+  "lifecycle": "restart",
+  "batches": [
+    {
+      "name": "dry-hills-mapwalk-census",
+      "collector": "room_census_walk",
+      "scenario": {
+        "level_id": 42,
+        "seconds": 300
+      }
+    }
+  ]
+}

@@ -44,6 +44,32 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Exercises the actual start/keyframe/settlement boundary with deterministic draws. */
 class WeaponSkillLifecycleTest extends RiiabloTest {
+  @Test void smiteUsesTheShieldAndHolyShieldInsteadOfWeaponDamage() {
+    for (boolean holyShield : new boolean[] {false, true}) {
+      try (Fixture f = new Fixture(SkillId.SMITE)) {
+        f.attacker.base().put(Stat.mindamage, 999);
+        f.attacker.base().put(Stat.maxdamage, 999);
+        f.attacker.reset();
+        Item shield = new Item(); shield.reset();
+        shield.setBase(Riiablo.files.armor.get("buc"));
+        assertEquals(1, shield.base.mindam); assertEquals(3, shield.base.maxdam);
+        CharData data = f.world.getMapper(Player.class).get(f.player).data;
+        data.getItems().equipItem(BodyLoc.LARM, data.getItems().add(shield));
+        if (holyShield) {
+          com.riiablo.engine.server.state.UnitState state = f.world.getMapper(UnitStates.class)
+              .get(f.player).stateList.addState(com.riiablo.engine.server.state.StateId.HOLYSHIELD,
+                  1000, 1, f.player);
+          state.skillId = SkillId.HOLY_SHIELD;
+        }
+        f.keyframe();
+        // Native level-one Smite +15%; Holy Shield adds 3..6 to 1..3 shield damage.
+        // The explicit minimum draw selects floor(1*1.15)=1 or floor(4*1.15)=4.
+        assertEquals(holyShield ? 996f : 999f, f.hp(f.target));
+        assertEquals(1, f.recorder.applied.size());
+      }
+    }
+  }
+
   @Test void frenzyAlternatesConcreteHandsWithoutCombiningDamageEndpoints() {
     try (Fixture f = new Fixture(SkillId.FRENZY)) {
       f.attacker.base().put(Stat.mindamage, 0); f.attacker.base().put(Stat.maxdamage, 0);
@@ -218,6 +244,7 @@ class WeaponSkillLifecycleTest extends RiiabloTest {
     final Casting casting;
     Fixture(int skillId) {
       MathUtils.random = new RandomXS128() { @Override public int nextInt(int bound) { return 0; } };
+      com.riiablo.engine.server.CombatRandomFixture.bind(actioneer, bound -> MathUtils.random.nextInt(bound));
       DummyFactory factory = new DummyFactory();
       world = new World(new WorldConfigurationBuilder()
           .with(new EventSystem(), actioneer, new Pathfinder(), factory, recorder)

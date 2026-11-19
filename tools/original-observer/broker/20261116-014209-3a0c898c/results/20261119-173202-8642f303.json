@@ -1,0 +1,15 @@
+{
+  "id": "20261119-173202-8642f303",
+  "status": "completed",
+  "started": 1795080722.266238,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "bone-spear-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-173202-8642f303\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795080763.7100923
+}

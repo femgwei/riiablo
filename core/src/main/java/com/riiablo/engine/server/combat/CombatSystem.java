@@ -1715,13 +1715,20 @@ public class CombatSystem {
     return allowed;
   }
 
-  /** Compatibility global RNG entry point; production uses the injected domain stream. */
+  private static final ThreadLocal<com.riiablo.engine.server.NativeRng> MISSILE_COMPAT_RANDOM =
+      ThreadLocal.withInitial(() -> NamedRngStreams.open(0, "combat.missile-compatibility", 0L));
+
+  /** Compatibility stream advances across calls; production uses the injected domain stream. */
   public static int rollNativeMissileDamage(int minimum, int maximum) {
+    return rollNativeMissileDamage(minimum, maximum, MISSILE_COMPAT_RANDOM.get()::nextInt);
+  }
+
+  public static int rollNativeMissileDamage(int minimum, int maximum,
+      java.util.function.IntUnaryOperator random) {
     int min = Math.max(0, minimum);
     int max = Math.max(min, maximum);
     if (max <= min) return min;
-    return min + NamedRngStreams.open(0, "combat.missile-compatibility", 0L)
-        .nextInt(max - min);
+    return min + random.applyAsInt(max - min);
   }
 
   //==========================================================================

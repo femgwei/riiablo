@@ -1,0 +1,13 @@
+{
+  "id": "20261114-060118-f66659fe",
+  "status": "failed",
+  "started": 1794607278.2096992,
+  "broker_pid": 4728,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-bash-compat"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-054548-ed32aaff\\runs\\20261114-060118-f66659fe\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 243, in serve_once\n    if not NAME.fullmatch(key):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 210, in execute\n    player=player, level_id=summary.get(\"scene\", {}).get(\"level_id\"))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-054548-ed32aaff\\runs\\20261114-060118-f66659fe\\orchestrator\n",
+  "finished": 1794607319.3871863
+}

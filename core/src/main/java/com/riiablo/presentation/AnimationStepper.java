@@ -5,6 +5,7 @@ import com.artemis.annotations.All;
 import com.artemis.systems.IntervalIteratingSystem;
 import com.riiablo.engine.SimulationClock;
 import com.riiablo.presentation.component.AnimationWrapper;
+import com.riiablo.codec.AnimationTraceProbe;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Missile;
@@ -39,13 +40,30 @@ public class AnimationStepper extends IntervalIteratingSystem {
     if (wrapper == null || wrapper.animation == null) return;
     // The reference sprite clock applies its own FPS, intro/loop and fade.
     if (mReferenceElementalEffect.has(entityId)) return;
+    int before = wrapper.animation.getFrame();
+    String phase = "update";
+    try {
 
     // Ground items use a standalone DC6 flippy animation.  COF/DCC loading
     // markers belong to composite units only; allowing them to gate a flippy
     // can leave a dropped coin permanently on an intermediate bounce frame.
     if (mItem.has(entityId) || mMissile.has(entityId)) {
+      phase = "standalone";
       if (mMissile.has(entityId)) {
         Missile missile = mMissile.get(entityId);
+        if (MissileLoader.isBoneSpearTrail(missile.missile)
+            || missile.authoritative
+                && com.riiablo.engine.server.missile.NativeBoneSpearMotion.handles(missile.missile)) {
+          // Movement / client lifetime already advanced this tick. Seeking
+          // that age avoids an extra frame after first or delayed DCC load.
+          MissileLoader.initializePlayback(missile, missile.missile,
+              wrapper.animation, missile.missile.RandStart);
+          return;
+        }
+        if (com.riiablo.engine.server.missile.NativeFrozenOrbMotion.handles(missile.missile)) {
+          wrapper.animation.updateNativeFrames(1);
+          return;
+        }
         if (NativeGroundFirePresentation.handles(missile)) {
           int remaining = missile.authoritative && !missile.presentationOnly
               && missile.persistent
@@ -66,7 +84,10 @@ public class AnimationStepper extends IntervalIteratingSystem {
     // an attack's rate advances the previous walk/idle layers while loading.
     com.riiablo.presentation.component.CofWrapper cof = mCofWrapper.get(entityId);
     if (mCofDirty.has(entityId) || mCofLoading.has(entityId)
-        || cof != null && cof.cof != wrapper.animation.getCOF()) return;
+        || cof != null && cof.cof != wrapper.animation.getCOF()) {
+      phase = "waiting_for_cof";
+      return;
+    }
 
     UnitStates states = mUnitStates.get(entityId);
     if (states != null && states.stateList != null
@@ -74,12 +95,14 @@ public class AnimationStepper extends IntervalIteratingSystem {
       // The authoritative server freezes AnimData as well. Keep the client
       // presentation on the current frame instead of continuing to animate
       // a monster whose world position is already stationary.
+      phase = "frozen";
       return;
     }
 
     Sequence sequence = mSequence.get(entityId);
     com.riiablo.engine.server.component.CofReference reference = mCofReference.get(entityId);
     if (reference != null && reference.sequenceFrame >= 0) {
+      phase = "sequence_cursor";
       int count = wrapper.animation.getNumFramesPerDir();
       if (count > 0) wrapper.animation.setFrame(Math.min(count - 1, reference.sequenceFrame));
       return;
@@ -99,6 +122,7 @@ public class AnimationStepper extends IntervalIteratingSystem {
         int frame = Math.max(0, Math.min(frameCount - 1, animData.frame >>> 8));
         wrapper.animation.setFrame(frame);
       }
+      phase = "native_sequence";
       return;
     }
 
@@ -111,5 +135,15 @@ public class AnimationStepper extends IntervalIteratingSystem {
       if (wrapper.animation.getFrameDelta() != rate) wrapper.animation.setFrameDelta(rate);
     }
     wrapper.animation.update(SimulationClock.STEP_SECONDS);
+    } finally {
+      com.riiablo.engine.server.component.CofReference reference = mCofReference.get(entityId);
+      AnimationTraceProbe.record("ANIMATION_STEP", AnimationTraceProbe.values(
+          "phase", phase,
+          "frame_before", before,
+          "frame_after", wrapper.animation.getFrame(),
+          "frame_delta", wrapper.animation.getFrameDelta(),
+          "mode_id", reference == null ? null : reference.mode,
+          "token", reference == null ? null : reference.effectiveToken()));
+    }
   }
 }

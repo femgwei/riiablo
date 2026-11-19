@@ -1,0 +1,12 @@
+# skill session
+character=Sorceress
+skill=Blaze
+level=1
+seed=1397442892
+started=Tue Nov 10 10:26:45 CST 2026
+
+weapon=none weaponRequired=true
+event=skill_selected targetMode=HOSTILE_UNIT
+event=cast skill=Blaze targetMode=HOSTILE_UNIT target=none x=2.3125 y=5.9375
+event=cast skill=Blaze targetMode=HOSTILE_UNIT target=none x=2.624999 y=3.374999
+event=cast skill=Blaze targetMode=HOSTILE_UNIT target=none x=1.625 y=9.5

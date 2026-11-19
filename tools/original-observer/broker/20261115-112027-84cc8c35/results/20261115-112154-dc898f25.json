@@ -1,0 +1,20 @@
+{
+  "id": "20261115-112154-dc898f25",
+  "status": "completed",
+  "started": 1794712914.967476,
+  "broker_pid": 3084,
+  "command": {
+    "op": "client_animation_probe"
+  },
+  "result": {
+    "exit_code": 0,
+    "status": "observed",
+    "summary_path": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-112027-84cc8c35\\runs\\20261115-112154-dc898f25\\client-animation\\summary.json",
+    "trace_path": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-112027-84cc8c35\\runs\\20261115-112154-dc898f25\\client-animation\\samples.jsonl",
+    "samples": 100,
+    "candidate_animation_values": 16,
+    "visual_samples": 100,
+    "canonical_trace": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-112027-84cc8c35\\runs\\20261115-112154-dc898f25\\client-animation\\animation-trace.json"
+  },
+  "finished": 1794712931.857208
+}

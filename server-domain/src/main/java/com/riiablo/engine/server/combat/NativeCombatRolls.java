@@ -42,6 +42,14 @@ public final class NativeCombatRolls {
     return monsterCritical != null ? monsterCritical.getAsBoolean() : percent(chance);
   }
 
+  /** 1.10f FillDamageValues' unfinished burn channel rolls [316,317).
+   * The result is constant but the attacker's shared seed still advances.
+   * This preserves the draw only; burn damage settlement remains unsupported.
+   */
+  public void consumeMeleeBurnPlaceholder() {
+    random.applyAsInt(1);
+  }
+
   /** Melee draws even when the endpoints coincide. */
   public int inclusive(int min, int max) {
     return min + random.applyAsInt(Math.max(1, max - min + 1));

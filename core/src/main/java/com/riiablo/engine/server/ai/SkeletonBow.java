@@ -22,11 +22,13 @@ import com.riiablo.engine.server.component.Sequence;
  * - params[1] = SKELETONBOW_AI_PARAM_STALL_DURATION (idle time)
  * - params[2] = SKELETONBOW_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
  * - params[3] = SKELETONBOW_AI_PARAM_WALK_STEPS (walk steps)
- * - params[4] = SKELETONBOW_AI_PARAM_TARGET_DISTANCE (target distance)
+ * - params[4] = SKELETONBOW_AI_PARAM_TARGET_DISTANCE (approach radius, not shooting range)
  * 
  * Special: Ranged attack AI using bow.
  */
 public class SkeletonBow extends AI {
+  private static final boolean TRACE_DECISIONS = Boolean.getBoolean("riiablo.aiDecisionTrace");
+  private static final float SHOOT_DISTANCE = 20f;
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -97,34 +99,36 @@ public class SkeletonBow extends AI {
     return false;
   }
 
+  private float neutralAiDelay() {
+    // MONSTERMODE_StartNeutral schedules the next AI think after AIdel,
+    // defaulting to 15 frames. The active-action guard keeps this delay
+    // pending until the animation has actually completed.
+    return SLEEP > 0 ? SLEEP : 15 * com.riiablo.codec.Animation.FRAME_DURATION;
+  }
+
+  private void traceDecision(String action, int target, int roll, int secondary, boolean accepted) {
+    if (!TRACE_DECISIONS) return;
+    com.riiablo.engine.server.event.MonsterAiDecisionEvent event =
+        new com.riiablo.engine.server.event.MonsterAiDecisionEvent();
+    event.entityId=entityId;event.targetId=target;event.action=action;
+    event.roll=roll;event.secondaryRoll=secondary;event.accepted=accepted;
+    events.dispatch(event);
+  }
+
   @Override
   public void update(float delta) {
     stateMachine.update();
     if (stateMachine.getCurrentState() == State.DEAD) {
       return;
     }
+    if (mCasting.has(entityId) || mSequence.has(entityId)) return;
 
     nextAction -= delta;
     time -= delta;
 
-    // 远程怪即时反应：玩家进入射程立即攻击，不等到 time 结束
     float[] outDist = { Float.MAX_VALUE };
     int targetId = findNearestTargetWithAidist(outDist);
     float targetDistance = outDist[0];
-    float rangedRange = params.length > 4 ? params[4] : 20f;
-    if (targetId != Engine.INVALID_ENTITY
-        && stateMachine.getCurrentState() != State.ATTACK
-        && targetDistance <= rangedRange) {
-      pathfinder.findPath(entityId, null);
-      lookAt(targetId);
-      stateMachine.changeState(State.ATTACK);
-      Vector2 targetPos = mPosition.get(targetId).position;
-      mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-      mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      playSound(monsound + "_attack_1");
-      time = aiRandom(1f, 2f);
-      return;
-    }
 
     if (time > 0) {
       return;
@@ -168,49 +172,59 @@ public class SkeletonBow extends AI {
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      time = aiRandom(1f, 2);
+      time = neutralAiDelay();
       return;
     }
 
     // D2MOD: If target is within range (distance < 20)
-    float shootDistance = params.length > 4 ? params[4] : 20f;
-    if (targetDistance < shootDistance) {
+    if (targetDistance < SHOOT_DISTANCE) {
       // D2MOD: Check shoot chance
-      if (params.length > 0 && aiRandomBoolean(params[0] / 100f)) {
+      int shootRoll = params.length > 0 ? rollAiPercentage() : -1;
+      if (params.length > 0 && shootRoll < params[0]) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         playSound(monsound + "_attack_1");
-        time = aiRandom(1f, 2);
+        time = neutralAiDelay();
+        traceDecision("SHOOT",targetId,shootRoll,-1,true);
         return;
       }
 
       // D2MOD: 20% chance to circle
-      if (aiRandomBoolean(0.2f)) {
-        // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
-        pathfinder.findPath(entityId, targetPos, false, targetId);
-        stateMachine.changeState(State.APPROACH);
-        time = aiRandom(1f, 2);
+      int circleRoll=rollAiPercentage();
+      if (circleRoll < 20) {
+        boolean moved = pathfinder.findNativeOrbit(entityId, targetId, 3,
+            (rollAiRandomNumber() & 255L) < 128L);
+        stateMachine.changeState(moved ? State.APPROACH : State.IDLE);
+        time = neutralAiDelay();
+        traceDecision("CIRCLE",targetId,shootRoll,circleRoll,moved);
         return;
       }
 
       // D2MOD: Idle
       stateMachine.changeState(State.IDLE);
       time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+      traceDecision("IDLE_NEAR",targetId,shootRoll,circleRoll,true);
       return;
     }
 
     // D2MOD: Too far, approach
-    if (params.length > 2 && aiRandomBoolean(params[2] / 100f)) {
-      pathfinder.findPath(entityId, targetPos, false, targetId);
-      stateMachine.changeState(State.APPROACH);
-      time = aiRandom(1f, 2);
+    int approachRoll=params.length > 2 ? rollAiPercentage() : -1;
+    if (params.length > 2 && approachRoll < params[2]) {
+      int size = mSize.has(entityId) ? mSize.get(entityId).size : 1;
+      Vector2 destination = NativeRadiusDestination.calculate(mPosition.get(entityId).position,
+          targetPos, size, Math.max(0, params[3]), Math.max(0, params[4]));
+      boolean moved = walkTo(destination, Engine.INVALID_ENTITY);
+      stateMachine.changeState(moved ? State.APPROACH : State.IDLE);
+      time = neutralAiDelay();
+      traceDecision("APPROACH",targetId,approachRoll,-1,moved);
       return;
     } else {
       stateMachine.changeState(State.IDLE);
-      time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+      time = 20 * com.riiablo.codec.Animation.FRAME_DURATION;
+      traceDecision("IDLE_FAR",targetId,approachRoll,-1,true);
       return;
     }
   }

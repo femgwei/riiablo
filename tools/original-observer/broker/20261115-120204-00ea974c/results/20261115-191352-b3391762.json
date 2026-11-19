@@ -1,0 +1,15 @@
+{
+  "id": "20261115-191352-b3391762",
+  "status": "completed",
+  "started": 1794741232.0792212,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "winsock-send-trace-burst"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-191352-b3391762\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794741285.825155
+}

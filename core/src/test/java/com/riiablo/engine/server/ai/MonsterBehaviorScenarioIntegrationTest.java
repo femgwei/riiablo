@@ -59,6 +59,7 @@ class MonsterBehaviorScenarioIntegrationTest extends RiiabloTest {
       source.base().put(Stat.damagepercent, enhanced);
       source.reset();
       MathUtils.random = endpointRandom(false);
+      CombatRandomFixture.bind(s.world.getSystem(Actioneer.class), bound -> MathUtils.random.nextInt(bound));
       Attributes target = s.world.getMapper(AttributesWrapper.class).get(s.player).attrs;
       target.base().put(Stat.damageresist, resistance);
       target.base().put(Stat.normal_damage_reduction, flat);
@@ -96,6 +97,7 @@ class MonsterBehaviorScenarioIntegrationTest extends RiiabloTest {
       target.attrs.base().put(Stat.damageresist, resistance);
       target.attrs.reset();
       MathUtils.random = endpointRandom(upper);
+      CombatRandomFixture.bind(s.world.getSystem(Actioneer.class), bound -> MathUtils.random.nextInt(bound));
       for (int i = 0; i < 500 && s.probe.successfulMelee == 0; i++) s.tick(true);
       assertEquals(1, s.probe.successfulMelee, s.diagnostic());
       float expected = expectedFixed / 256f;
@@ -345,6 +347,10 @@ class MonsterBehaviorScenarioIntegrationTest extends RiiabloTest {
 
     Scene(String name, float distance) { this(name, distance, false); }
     Scene(String name, float distance, boolean nativeAnimation) {
+      this(name, distance, nativeAnimation, false, null);
+    }
+
+    Scene(String name, float distance, boolean nativeAnimation, boolean nativeContext, BaseSystem observer) {
       MonStats.Entry found = null;
       for (MonStats.Entry candidate : Riiablo.files.monstats)
         if (name.equals(candidate.AI) && candidate.killable && !candidate.npc) { found = candidate; break; }
@@ -368,7 +374,11 @@ class MonsterBehaviorScenarioIntegrationTest extends RiiabloTest {
         Riiablo.anim = com.riiablo.codec.D2.loadFromFile(Riiablo.mpqs.resolve("data\\global\\eanimdata.d2"));
         builder.with(new AnimDataResolver(), new SequenceHandler(), new AnimStepper());
       }
-      world = new World(builder.build().register("map", map).register("factory", factory));
+      if (observer != null) builder.with(observer);
+      com.artemis.WorldConfiguration configuration = builder.build().register("map", map).register("factory", factory);
+      if (nativeContext) configuration.register("serverContext",
+          new ServerGameplayContext(Riiablo.files, 0x1977, null, Riiablo.anim));
+      world = new World(configuration);
       Riiablo.engine = world;
       Riiablo.gameSeed = 0x1977;
       MathUtils.random = new com.badlogic.gdx.math.RandomXS128(0x1977);

@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "F:\3rd_src\riiablo\tools\original-observer\resident_broker.py", line 299, in main
+    args.queue.mkdir(parents=True, exist_ok=True)
+  File "F:\3rd_src\riiablo\tools\original-observer\resident_broker.py", line 277, in serve_once
+    result["command"] = command
+  File "F:\3rd_src\riiablo\tools\original-observer\resident_broker.py", line 89, in heartbeat
+    atomic_json(self.queue / "status.json", self.state)
+  File "F:\3rd_src\riiablo\tools\original-observer\resident_broker.py", line 44, in atomic_json
+    tmp.replace(path)
+  File "F:\3rd_src\emsdk\python\3.9.2-nuget_64bit\lib\pathlib.py", line 1390, in replace
+    self._accessor.replace(self, target)
+PermissionError: [WinError 5] 拒绝访问。: 'F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-054548-ed32aaff\\status.tmp' -> 'F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-054548-ed32aaff\\status.json'

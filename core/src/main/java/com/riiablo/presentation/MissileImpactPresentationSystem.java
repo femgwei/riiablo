@@ -98,7 +98,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
             || visual.missile.pCltDoFunc == 24
             || visual.missile.pCltDoFunc == 17 || visual.missile.pCltDoFunc == 18
             || visual.missile.pCltDoFunc == 15 || visual.missile.pCltDoFunc == 3
-            || visual.missile.pCltDoFunc == 4 || MissileLoader.isPoisonSmokePuff(visual.missile));
+            || visual.missile.pCltDoFunc == 4 || MissileLoader.isPoisonSmokePuff(visual.missile)
+            || MissileLoader.isBoneSpearTrail(visual.missile));
     if (!mAnimationWrapper.has(entityId) && !callbackClock) return;
     float delta = Math.max(0f, world.delta);
     Vector2 velocity = mVelocity.get(entityId).velocity;

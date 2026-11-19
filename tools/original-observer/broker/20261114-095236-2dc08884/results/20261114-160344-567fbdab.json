@@ -1,0 +1,13 @@
+{
+  "id": "20261114-160344-567fbdab",
+  "status": "failed",
+  "started": 1794643424.3274012,
+  "broker_pid": 20520,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-whirlwind-client-animation-input"
+  },
+  "error": "build collector before launch: F:\\3rd_src\\riiablo\\tools\\original-observer\\native-harness\\d2game_runtime_trace.exe",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 290, in serve_once\n    # result, so the caller can resume without replaying earlier work.\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 242, in execute\n    summary_path = output / \"summary.json\"\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\orchestrator.py\", line 168, in validate_job\n    raise ValueError(\"build collector before launch: \" + str(native))\nValueError: build collector before launch: F:\\3rd_src\\riiablo\\tools\\original-observer\\native-harness\\d2game_runtime_trace.exe\n",
+  "finished": 1794643424.3399138
+}

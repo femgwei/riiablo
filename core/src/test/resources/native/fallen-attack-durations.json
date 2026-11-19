@@ -1,0 +1,6 @@
+{
+  "source": "tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261117-174127-be4dd494\\orchestrator\\process-session\\001-recovery-reengage\\frames.csv",
+  "source_sha256": "74925a916cbcd00c4f74349fe177eb0917ac3477331cc795c550cd1caa70edf4",
+  "fixture_sha256": "afc654b06d186442fce44de57af40159e1bb2e4195502a58f2419ce016bca60d",
+  "scope": "Complete contiguous A1/A2 mode spans only. Final truncated A1 excluded. Mode observations do not locate hit keyframes."
+}

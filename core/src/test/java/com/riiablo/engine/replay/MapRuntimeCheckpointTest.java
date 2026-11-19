@@ -6,6 +6,13 @@ import com.badlogic.gdx.utils.Array;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.map.Map;
+import com.riiablo.engine.server.CofManager;
+import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.NativePathIdentity;
+import com.riiablo.engine.Engine;
+import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -14,6 +21,107 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class MapRuntimeCheckpointTest {
+  @Test void deathHistoryRoundTripPreservesCursorAndReplacesFutureHistory() {
+    try (DeathFixture source = new DeathFixture(); DeathFixture target = new DeathFixture()) {
+      for (int i = 0; i < 4; i++) source.kill(i);
+      target.kill(5);
+      MapRuntimeCheckpoint image = MapRuntimeCheckpoint.capture(source.world, source.ids);
+      image.restore(target.world, (a, b, c, d) -> new MapRuntimeCheckpoint.Binding(target.map, target.zone));
+      assertArrayEquals(source.modes.captureRoomDeathHistory(source.room),
+          target.modes.captureRoomDeathHistory(target.room));
+      assertFalse(target.modes.isRecentRoomDeath(target.room, 5));
+      assertArrayEquals(image.bytes(), MapRuntimeCheckpoint.capture(target.world, target.ids).bytes());
+      target.kill(4);
+      assertFalse(target.modes.isRecentRoomDeath(target.room, 0));
+      assertTrue(target.modes.isRecentRoomDeath(target.room, 1));
+    }
+  }
+
+  @Test void staleDeathLifetimeRemainsStaleAfterPortableRestore() {
+    try (DeathFixture source = new DeathFixture(); DeathFixture target = new DeathFixture()) {
+      source.kill(0);
+      source.world.getMapper(NativePathIdentity.class).get(0).allocated(source.world, 0);
+      MapRuntimeCheckpoint image = MapRuntimeCheckpoint.capture(source.world, source.ids);
+      image.restore(target.world, (a, b, c, d) -> new MapRuntimeCheckpoint.Binding(target.map, target.zone));
+      assertFalse(target.modes.isRecentRoomDeath(target.room, 0));
+      assertArrayEquals(image.bytes(), MapRuntimeCheckpoint.capture(target.world, target.ids).bytes());
+    }
+  }
+
+  @Test void partialCaptureDoesNotBindAnExcludedDeathToARecycledId() {
+    try (DeathFixture source = new DeathFixture(); DeathFixture target = new DeathFixture()) {
+      source.kill(0);
+      MapRuntimeCheckpoint image = MapRuntimeCheckpoint.capture(source.world, new int[] {1});
+      image.restore(target.world, (a, b, c, d) -> new MapRuntimeCheckpoint.Binding(target.map, target.zone));
+      assertFalse(target.modes.isRecentRoomDeath(target.room, 0));
+    }
+  }
+
+  @Test void missingCurrentLifetimeFailsBeforeChangingBindingsOrHistory() {
+    try (DeathFixture source = new DeathFixture(); DeathFixture target = new DeathFixture()) {
+      source.kill(0); target.kill(5);
+      MapRuntimeCheckpoint image = MapRuntimeCheckpoint.capture(source.world, source.ids);
+      target.world.getMapper(NativePathIdentity.class).remove(0);
+      target.world.process();
+      Map replacementMap = new Map(77, 1);
+      assertThrows(IllegalStateException.class, () -> image.restore(target.world,
+          (a, b, c, d) -> new MapRuntimeCheckpoint.Binding(replacementMap, target.zone)));
+      assertSame(target.map, target.world.getMapper(MapWrapper.class).get(0).map);
+      assertTrue(target.modes.isRecentRoomDeath(target.room, 5));
+    }
+  }
+
+  @Test void emptyHistoryClearsFutureDeathsAndMalformedCursorIsRejected() {
+    try (DeathFixture source = new DeathFixture(); DeathFixture target = new DeathFixture()) {
+      MapRuntimeCheckpoint empty = MapRuntimeCheckpoint.capture(source.world, source.ids);
+      target.kill(0);
+      empty.restore(target.world, (a, b, c, d) -> new MapRuntimeCheckpoint.Binding(target.map, target.zone));
+      assertFalse(target.modes.isRecentRoomDeath(target.room, 0));
+      source.kill(0);
+      byte[] corrupt = MapRuntimeCheckpoint.capture(source.world, source.ids).bytes();
+      java.nio.ByteBuffer.wrap(corrupt).putInt(corrupt.length - 36, 4);
+      assertThrows(IllegalArgumentException.class, () -> MapRuntimeCheckpoint.fromBytes(corrupt));
+    }
+  }
+
+  @Test void legacyVersionOneRestoresWithEmptyDeathHistory() throws Exception {
+    try (DeathFixture target = new DeathFixture()) {
+      java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+      java.io.DataOutputStream out = new java.io.DataOutputStream(bytes);
+      out.writeInt(1); out.writeInt(1); out.writeInt(0); out.writeBoolean(true);
+      out.writeInt(77); out.writeInt(1); out.writeInt(target.zone.levelId());
+      out.writeInt(target.zone.levelSeed()); out.writeInt(0); out.writeBoolean(false);
+      target.kill(0);
+      MapRuntimeCheckpoint.fromBytes(bytes.toByteArray()).restore(target.world,
+          (a, b, c, d) -> new MapRuntimeCheckpoint.Binding(target.map, target.zone));
+      assertFalse(target.modes.isRecentRoomDeath(target.room, 0));
+    }
+  }
+
+  private static final class DeathFixture implements AutoCloseable {
+    final World world = new World(new WorldConfigurationBuilder().with(new EventSystem(), new CofManager()).build());
+    final Map map = new Map(77, 1);
+    final Map.Zone zone = new Map.Zone();
+    final Map.RoomEx room = zone.addRoomEx(0, 0, 100, 100);
+    final CofManager modes = world.getSystem(CofManager.class);
+    final int[] ids = new int[6];
+    DeathFixture() {
+      room.setAdjacentRoomIds(new int[0]);
+      for (int i = 0; i < ids.length; i++) {
+        int id = ids[i] = world.create();
+        world.getMapper(Networked.class).create(id);
+        world.getMapper(MapWrapper.class).create(id).set(map, zone).roomId = 0;
+        world.getMapper(Monster.class).create(id).set(null, null);
+        world.getMapper(CofReference.class).create(id).mode = Engine.Monster.MODE_NU;
+        world.getMapper(Position.class).create(id).position.set(10 + i, 10);
+        world.getMapper(NativePathIdentity.class).create(id).allocated(world, id);
+      }
+      world.process();
+    }
+    void kill(int id) { modes.setMode(id, Engine.Monster.MODE_NU); modes.setMode(id, Engine.Monster.MODE_DT); }
+    @Override public void close() { world.dispose(); }
+  }
+
   @Test void capturesStableMapZoneRoomIdentityAndRestoresThroughResolver() {
     try (Fixture source = new Fixture(); Fixture target = new Fixture()) {
       Map sourceMap = new Map(77, 1);

@@ -21,7 +21,7 @@ final class NativeSeedReference implements IntUnaryOperator {
   }
   int nextInt(int bound) { return bound <= 0 ? 0 : draw().and(MASK).mod(BigInteger.valueOf(bound)).intValue(); }
   long nextUnsigned() { return draw().and(MASK).longValue(); }
-  int percentage() { return draw().mod(BigInteger.valueOf(100)).intValue(); }
+  int percentage() { return draw().and(MASK).mod(BigInteger.valueOf(100)).intValue(); }
   @Override public int applyAsInt(int bound) { return nextInt(bound); }
   int state() { return low.intValue(); }
   int high() { return high.intValue(); }

@@ -237,7 +237,8 @@ class SpecialAttackSnapshotMigrationTest extends RiiabloTest {
     UnitState overlay = states.addState(StateId.CONVICTION, 0);
     short[] stats = {Stat.damagepercent, Stat.item_tohit_percent, Stat.armorclass, Stat.toblock,
         Stat.passive_dodge, Stat.damageresist, Stat.fireresist, Stat.maxcoldresist,
-        Stat.item_demondamage_percent, Stat.passive_critical_strike, Stat.lifedrainmindam};
+        Stat.item_demondamage_percent, Stat.passive_critical_strike, Stat.lifedrainmindam,
+        Stat.passive_weaponblock};
     for (short stat : stats) overlay.setNativeModifier(stat, r.nextInt(41) - 20);
     for (int type = DAMAGE_FIRE; type < DAMAGE_TYPE_COUNT; type++) {
       overlay.setNativeModifier(MIN[type], r.nextInt(21) - 10);

@@ -229,6 +229,8 @@ public class Missile extends PooledComponent {
   public final Vector2 frozenOrbOrigin = new Vector2();
   public int frozenOrbTargetX;
   public int frozenOrbTargetY;
+  /** Cast-time native path speed, retained across integer-vector turns and slow effects. */
+  public int frozenOrbVelocity;
 
   /** Native meteorcenter countdown/impact controller (SrvHit14). */
   public boolean meteorCenter;
@@ -407,6 +409,7 @@ public class Missile extends PooledComponent {
     frozenOrbOrigin.setZero();
     frozenOrbTargetX = 0;
     frozenOrbTargetY = 0;
+    frozenOrbVelocity = 0;
     meteorCenter = false;
     druidFissureController = false;
     druidFissureNextFrame = 0;

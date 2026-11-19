@@ -1,0 +1,2 @@
+observer_id,target_id,stages,effective_rating,effective_defense,attacker_level,defender_level,ar_factor,chance,roll,seed_low,seed_high,seed_after_low,seed_after_high,hit_result
+137,1,5,8,6,1,99,57,5,53,1048432921,1086237184,813998653,437293371,0

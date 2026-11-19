@@ -1,0 +1,15 @@
+{
+  "id": "20261115-161430-2f1265f6",
+  "status": "completed",
+  "started": 1794730470.7561727,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "d2net-outbound-trace-visible-entry"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-161430-2f1265f6\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794730507.5395148
+}

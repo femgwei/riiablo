@@ -1,0 +1,13 @@
+# skill session
+character=Sorceress
+skill=Fire Ball
+level=1
+seed=1397442892
+started=Tue Nov 10 14:30:26 CST 2026
+
+weapon=sst weaponRequired=true
+event=skill_selected targetMode=HOSTILE_UNIT
+event=cast skill=Fire Ball targetMode=HOSTILE_UNIT target=monster-41 x=17.4375 y=7.6875
+event=cast_result skillId=47 target=monster-41 accepted=true mode=actioneer
+event=cast skill=Fire Ball targetMode=HOSTILE_UNIT target=monster-41 x=17.4375 y=7.6875
+event=cast_result skillId=47 target=monster-41 accepted=true mode=actioneer

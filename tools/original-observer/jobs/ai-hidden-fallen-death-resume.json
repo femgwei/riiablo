@@ -1,0 +1,13 @@
+{
+  "character": "CXSorc",
+  "entry_visibility": "hidden",
+  "batches": [
+    {
+      "name": "same-room-native-death",
+      "collector": "fallen_death",
+      "scenario": {
+        "profile": "same-room-native-death"
+      }
+    }
+  ]
+}

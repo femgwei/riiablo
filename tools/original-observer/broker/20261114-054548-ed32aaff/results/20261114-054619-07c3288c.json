@@ -1,0 +1,13 @@
+{
+  "id": "20261114-054619-07c3288c",
+  "status": "failed",
+  "started": 1794606379.3048632,
+  "broker_pid": 4728,
+  "command": {
+    "op": "enter",
+    "character": "CXBarb"
+  },
+  "error": "entry not verified: {\"exit_code\": 1, \"summary_path\": \"F:\\\\3rd_src\\\\riiablo\\\\tools\\\\original-observer\\\\broker\\\\20261114-054548-ed32aaff\\\\runs\\\\20261114-054619-07c3288c\\\\entry\\\\summary.json\", \"status\": \"walk_incomplete\", \"error\": null, \"player\": {}, \"level_id\": null}",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 243, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 197, in execute\n    raise RuntimeError(\"entry not verified: \" + json.dumps(result, ensure_ascii=False))\nRuntimeError: entry not verified: {\"exit_code\": 1, \"summary_path\": \"F:\\\\3rd_src\\\\riiablo\\\\tools\\\\original-observer\\\\broker\\\\20261114-054548-ed32aaff\\\\runs\\\\20261114-054619-07c3288c\\\\entry\\\\summary.json\", \"status\": \"walk_incomplete\", \"error\": null, \"player\": {}, \"level_id\": null}\n",
+  "finished": 1794606500.7701137
+}

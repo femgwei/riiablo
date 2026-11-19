@@ -237,7 +237,7 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
       assertTrue(frenzy != null);
       assertEquals(3, frenzy.level);
       assertEquals(1, frenzy.runtimeValue);
-      assertEquals(48, frenzy.velocityModifier);
+      assertEquals(47, frenzy.velocityModifier);
       System.out.println("[FRENZY_HIT_ECS] entity=" + player + " skillLevel=" + frenzy.level
           + " stacks=" + frenzy.runtimeValue + " srvDo=9 status=PASS");
     } finally {

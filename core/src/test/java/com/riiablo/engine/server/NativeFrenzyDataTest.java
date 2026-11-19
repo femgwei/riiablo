@@ -22,7 +22,7 @@ class NativeFrenzyDataTest extends RiiabloTest {
     assertEquals("dm34", player.aurastatcalc[0]);
     assertEquals("dm56", player.aurastatcalc[1]);
     assertEquals(150, BarbarianSkills.getFrenzyDuration(player, 1));
-    assertEquals(48, BarbarianSkills.getFrenzyMovementPercent(player, 1));
+    assertEquals(47, BarbarianSkills.getFrenzyMovementPercent(player, 1));
     assertEquals(7, BarbarianSkills.getFrenzyAnimationRatePercent(player, 1));
     assertEquals(109, monster.srvdofunc);
     assertEquals(200, BarbarianSkills.getFrenzyDuration(monster, 1));

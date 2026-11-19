@@ -1,0 +1,15 @@
+{
+  "id": "20261116-230453-c2ddb70f",
+  "status": "completed",
+  "started": 1794841494.0428002,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "census-dry-hills-entry"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261116-230453-c2ddb70f\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794841549.0594306
+}

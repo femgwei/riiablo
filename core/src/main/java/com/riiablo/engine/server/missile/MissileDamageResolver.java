@@ -7,6 +7,7 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.attributes.StatTable;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Skills;
@@ -1072,8 +1073,14 @@ public final class MissileDamageResolver {
     projectile.nativePhysical = null;
     projectile.ordinaryWeaponSnapshot = false;
     projectile.nativeElemental = null;
+    // Pooled missiles can move between worlds with different stat encodings.
+    // Legacy fixtures without explicit metadata retain their compatibility table.
+    if (files != null && files.ItemStatCost != null) {
+      projectile.damage.clear(new StatTable(files.ItemStatCost));
+    } else {
+      projectile.damage.clear();
+    }
     StatListRef base = projectile.damage.base();
-    base.clear();
     // The level used to evaluate a Skills.txt/Missiles.txt row is not
     // necessarily the attacker's character level (for example, an elemental
     // arrow is initialized with the skill level).  CombatSystem reads
@@ -1457,7 +1464,8 @@ public final class MissileDamageResolver {
     return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, value));
   }
 
-  private static int skillElementalDamageFixed(Skills.Entry skill, int level,
+  /** Native fixed-point elemental range, before mastery and integer truncation. */
+  public static int skillElementalDamageFixed(Skills.Entry skill, int level,
       boolean minimum, ToIntFunction<String> baseSkillLevel) {
     int base = minimum ? skill.EMin : skill.EMax;
     int[] perLevel = minimum ? skill.EMinLev : skill.EMaxLev;

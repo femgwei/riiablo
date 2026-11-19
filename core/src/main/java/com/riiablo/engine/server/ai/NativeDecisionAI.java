@@ -206,23 +206,9 @@ abstract class NativeDecisionAI extends AI {
     // Use the same host cell projection as the live melee predicate. In
     // negative map coordinates, truncation can report zero approach distance
     // while the rounded combat cells are still outside attack range.
-    int sx = Math.round(s.x), sy = Math.round(s.y);
-    int tx = Math.round(t.x), ty = Math.round(t.y);
     int size = mSize.has(entityId) ? mSize.get(entityId).size : 1;
-    int dx = Math.abs(tx - sx), dy = Math.abs(ty - sy);
-    int xSizeDistance = Math.abs(dx - size), ySizeDistance = Math.abs(dy - size);
-    int distance = (Math.min(xSizeDistance, ySizeDistance)
-        + 2 * Math.max(xSizeDistance, ySizeDistance)) / 2;
-    int sign = Integer.compare(distance, desiredDistance);
-    int diff = Math.min(Math.abs(distance - desiredDistance), maxStep);
-    int sum = Math.max(dx + dy, diff), x = 0, y = 0;
-    if (sum > 0) {
-      x = diff * dx / sum; y = diff * dy / sum;
-      while (x + y < diff) { x++; y++; }
-    }
-    com.badlogic.gdx.math.Vector2 destination = new com.badlogic.gdx.math.Vector2(
-        sx + sign * x * Integer.compare(tx, sx),
-        sy + sign * y * Integer.compare(ty, sy));
+    com.badlogic.gdx.math.Vector2 destination = NativeRadiusDestination.calculate(
+        s, t, size, maxStep, desiredDistance);
     return walkToPoint(destination, bonus, Engine.INVALID_ENTITY)
         || recoverRadiusMovement(destination, maxStep, bonus);
   }

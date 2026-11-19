@@ -6,12 +6,45 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.StateId;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class WeaponSkillDamageTest extends RiiabloTest {
+  @Test void bashLevelsOneThroughFortyKeepFractionalBonusAndLateFlatAddition() {
+    Skills.Entry bash = Riiablo.files.skills.get(SkillId.BASH);
+    for (int level = 1; level <= 40; level++) {
+      WeaponSkillAttackProfile p = WeaponSkillAttackProfile.create(bash, level, name -> 0);
+      int expectedPercent = 50 + (level - 1) * 5;
+      assertEquals(expectedPercent, p.enhancedDamage, "Bash level " + level);
+      assertEquals(level, p.flatPhysicalDamage, "Bash level " + level);
+      int expectedFixed = 256 + 256 * expectedPercent / 100 + level * 256;
+      CombatSystem.CombatResult result = hit(attrs(), attrs(), p, null, false, false);
+      assertEquals(expectedFixed, result.physicalDamage,
+          "Bash level " + level + ": calc2 HP is shifted to fixed point after damage bonuses");
+      assertEquals(level * 256, result.latePhysicalDamage);
+      assertEquals((expectedFixed - level * 256) / 256f, result.totalDamageHp(),
+          "Bash calc2 must not change the cached life damage");
+    }
+  }
+
+  @Test void barbarianSrvDo002WeaponSkillsUseTheSkillsTxtDamageFormula() {
+    for (int id : new int[] {SkillId.BASH, SkillId.STUN, SkillId.CONCENTRATE}) {
+      Skills.Entry skill = Riiablo.files.skills.get(id);
+      assertNotNull(skill);
+      WeaponSkillAttackProfile profile = profile(id);
+      assertEquals(SkillFormula.evaluate(skill.calc1, skill, 1, name -> 0),
+          profile.enhancedDamage, skill.skill);
+      assertEquals(SkillFormula.evaluate(skill.calc2, skill, 1, name -> 0),
+          profile.flatPhysicalDamage, skill.skill);
+      assertEquals(128, profile.sourceDamage, skill.skill);
+    }
+    assertEquals(50, profile(SkillId.BASH).enhancedDamage);
+    assertEquals(1, profile(SkillId.BASH).flatPhysicalDamage);
+  }
+
   @Test void sixNativeLevelOneProfilesUseTheirActualDamageFormulaSlots() {
     int[] ids = {SkillId.FRENZY, SkillId.BERSERK, SkillId.ZEAL, SkillId.SACRIFICE, SkillId.JAB, SkillId.FEND};
     int[] ed = {90, 150, 0, 180, -15, 70};

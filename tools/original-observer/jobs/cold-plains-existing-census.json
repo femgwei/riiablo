@@ -1,0 +1,14 @@
+{
+  "character": "aaa",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "cold-plains-existing-census",
+      "collector": "room_census_walk",
+      "scenario": {
+        "level_id": 3,
+        "seconds": 300
+      }
+    }
+  ]
+}

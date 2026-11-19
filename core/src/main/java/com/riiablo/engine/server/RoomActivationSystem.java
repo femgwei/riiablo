@@ -336,6 +336,39 @@ public class RoomActivationSystem extends IteratingSystem {
     return countSpawnedPopulations(zone) - before;
   }
 
+  /**
+   * Diagnostic only: materialize every native RoomEx monster population in a
+   * zone. Production clients keep the normal sight based activation path.
+   */
+  public int diagnosticPrewarmAllRooms(Map.Zone zone) {
+    if (zone == null || !zone.hasNativeRoomTopology()) return 0;
+    int before = countSpawnedPopulations(zone);
+    int pendingBefore = 0;
+    for (int i = 0; i < zone.getRoomsEx().size; i++) {
+      pendingBefore += zone.getRoomsEx().get(i).getPendingMonsterSpawns().size;
+    }
+    for (int i = 0; i < zone.getRoomsEx().size; i++) {
+      zone.enterClientRoom(i);
+      try {
+        spawnActiveRoomPopulations(zone);
+      } finally {
+        zone.leaveClientRoom(i);
+      }
+    }
+    int activated = countSpawnedPopulations(zone) - before;
+    int pendingAfter = 0;
+    for (int i = 0; i < zone.getRoomsEx().size; i++) {
+      pendingAfter += zone.getRoomsEx().get(i).getPendingMonsterSpawns().size;
+    }
+    int entities = world.getAspectSubscriptionManager()
+        .get(com.artemis.Aspect.all(Monster.class, MapWrapper.class)).getEntities().size();
+    System.out.println("[MAP_DIAGNOSTIC] prewarmStats level=" + zone.level.Id
+        + " rooms=" + zone.getRoomsEx().size + " activated=" + activated
+        + " pendingBefore=" + pendingBefore + " pendingAfter=" + pendingAfter
+        + " monsterEntities=" + entities);
+    return activated;
+  }
+
   private static int countSpawnedPopulations(Map.Zone zone) {
     int count = 0;
     final int roomCount = zone.getRoomsEx().size;

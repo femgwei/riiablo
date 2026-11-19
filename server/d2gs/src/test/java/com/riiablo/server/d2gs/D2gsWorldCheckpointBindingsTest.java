@@ -165,6 +165,43 @@ public class D2gsWorldCheckpointBindingsTest {
     } finally { if (child.isAlive()) child.destroyForcibly(); }
   }
 
+  @Test public void roomDeathHistoryResumesAcrossWorldAndJvmRestart() throws Exception {
+    Path path = temporary.getRoot().toPath().resolve("room-deaths.chk"); String expected;
+    try (Fixture source = new Fixture()) {
+      source.populate(); source.populateMonsters();
+      Map.RoomEx room = source.map.getZones().first().addRoomEx(0, 0, 200, 200);
+      CofManager modes = source.server.world.getSystem(CofManager.class);
+      modes.setMode(1, com.riiablo.engine.Engine.Monster.MODE_NU);
+      modes.setMode(1, com.riiablo.engine.Engine.Monster.MODE_DT);
+      assertTrue(modes.isRecentRoomDeath(room, 1));
+      expected = java.util.Arrays.toString(modes.captureRoomDeathHistory(room));
+      source.server.writeReplayCheckpoint(path);
+    }
+    assertEquals(expected, resumeRoomDeaths(path));
+    Path output = temporary.getRoot().toPath().resolve("room-deaths-child.log");
+    Process child = new ProcessBuilder(D2gsCheckpointRecoveryTest.javaBinary(), "-cp",
+        System.getProperty("java.class.path"), Probe.class.getName(), path.toString(), "0",
+        Riiablo.home.path(), "room-deaths").redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    try {
+      assertTrue("room death recovery child JVM timed out", child.waitFor(45, TimeUnit.SECONDS));
+      String log = Files.readString(output, StandardCharsets.UTF_8);
+      assertEquals(log, 0, child.exitValue()); assertTrue(log, log.lines().anyMatch(expected::equals));
+    } finally { if (child.isAlive()) child.destroyForcibly(); }
+  }
+
+  private static String resumeRoomDeaths(Path path) throws Exception {
+    try (Fixture target = new Fixture()) {
+      target.prepareMonsterMap();
+      Map.RoomEx room = target.map.getZones().first().addRoomEx(0, 0, 200, 200);
+      D2gsCheckpointSnapshot archive = D2gsCheckpointStore.read(path);
+      assertTrue(target.server.restoreReplayCheckpoint(archive).success());
+      CofManager modes = target.server.world.getSystem(CofManager.class);
+      assertTrue(modes.isRecentRoomDeath(room, 1));
+      assertEquals(archive.summary().canonical(), target.server.captureReplayCheckpoint().summary().canonical());
+      return java.util.Arrays.toString(modes.captureRoomDeathHistory(room));
+    }
+  }
+
   @Test public void monsterOnlyChangesAlterCanonicalAndNestedCorruptionIsRejected() {
     try (Fixture source = new Fixture()) {
       source.populate(); source.populateMonsters();
@@ -2494,7 +2531,8 @@ public class D2gsWorldCheckpointBindingsTest {
           ? resumeSpiritDecisions(Path.of(args[0])) : args.length > 3 && "trap-decisions".equals(args[3])
           ? resumeTrapDecisions(Path.of(args[0])) : args.length > 3 && "decisions".equals(args[3])
           ? resumeDecisions(Path.of(args[0])) : args.length > 3 && "monsters".equals(args[3])
-          ? resumeMonsters(Path.of(args[0])) : args.length > 3 && "targets".equals(args[3])
+          ? resumeMonsters(Path.of(args[0])) : args.length > 3 && "room-deaths".equals(args[3])
+          ? resumeRoomDeaths(Path.of(args[0])) : args.length > 3 && "targets".equals(args[3])
           ? resumeTargets(Path.of(args[0])) : args.length > 3 && "states".equals(args[3])
           ? resumeStates(Path.of(args[0])) : args.length > 3 && "allocator".equals(args[3])
           ? resumeAllocator(Path.of(args[0])) : args.length > 3 && "projectiles".equals(args[3])

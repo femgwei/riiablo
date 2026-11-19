@@ -1,0 +1,15 @@
+{
+  "id": "20261114-104930-5f8e8a91",
+  "status": "completed",
+  "started": 1794624570.714684,
+  "broker_pid": 20520,
+  "command": {
+    "op": "run_job",
+    "job": "native-runtime-trace"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-095236-2dc08884\\runs\\20261114-104930-5f8e8a91\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794624607.4834065
+}

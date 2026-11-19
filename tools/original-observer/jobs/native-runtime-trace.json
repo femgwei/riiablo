@@ -1,0 +1,6 @@
+{
+  "character": "CXBarb",
+  "batches": [
+    {"name": "natural-runtime-trace", "collector": "native_runtime_trace", "scenario": {}}
+  ]
+}

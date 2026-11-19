@@ -270,7 +270,7 @@ public class FallenShaman extends AI {
     // names seq_shamanresurrect there; every native MonSeq frame is A2. Until
     // MonSeq.txt has a generic runtime stepper, this is its exact backing COF.
     if (useMonsterSkill(1, targetId, targetPos, SHAMAN_SEQUENCE_MODE)) {
-      time = aiRandom(1f, 2f);
+      time = neutralAiDelay();
       return true;
     }
 
@@ -286,16 +286,93 @@ public class FallenShaman extends AI {
     return false;
   }
 
-  /** Approximation of native sub_6FCD0E80: pick a short lateral step around the target. */
+  private float neutralAiDelay() {
+    return SLEEP > 0 ? SLEEP : 15 * com.riiablo.codec.Animation.FRAME_DURATION;
+  }
+
+  /** Native command 1 is copied to the owner's minion list, including distant members. */
+  private void commandMinions(int targetId) {
+    int owner = monster.minionOwnerId >= 0 ? monster.minionOwnerId : entityId;
+    IntBag members = Riiablo.engine.getAspectSubscriptionManager()
+        .get(Aspect.all(Monster.class)).getEntities();
+    ComponentMapper<com.riiablo.engine.server.component.NativeAiCommand> commands =
+        Riiablo.engine.getMapper(com.riiablo.engine.server.component.NativeAiCommand.class);
+    for(int i=0;i<members.size();i++) {
+      int member = members.get(i);
+      if(mMonster.get(member).minionOwnerId != owner) continue;
+      commands.create(member).copy(Riiablo.engine,entityId,
+          com.riiablo.engine.server.component.NativeAiCommand.ATTACK,targetId);
+    }
+  }
+
+  /** Same bounded path-type 5/6 request as the native AI tactic. */
   private void circleTarget(int targetId) {
-    Vector2 entityPos = mPosition.get(entityId).position;
-    Vector2 targetPos = mPosition.get(targetId).position;
-    tmpVec2.set(entityPos).sub(targetPos);
-    if (tmpVec2.isZero(0.0001f)) tmpVec2.set(1f, 0f);
-    tmpVec2.setLength(3f).rotate90(aiRandomBoolean() ? 1 : -1).add(targetPos);
-    walkTo(tmpVec2, Engine.INVALID_ENTITY);
-    stateMachine.changeState(State.APPROACH);
-    time = 10f * com.riiablo.codec.Animation.FRAME_DURATION;
+    boolean moved=pathfinder.findNativeOrbit(entityId,targetId,3,(rollAiRandomNumber() & 255L)<128L);
+    stateMachine.changeState(moved ? State.APPROACH : State.IDLE);
+    time = neutralAiDelay();
+  }
+
+  /** Ordinary visible-target branches of AIUTIL_SelectAiTargetWithCollisionCheck. */
+  int selectBackupTarget(float[] distance) {
+    distance[0]=Float.MAX_VALUE;
+    int primary=Engine.INVALID_ENTITY,second=Engine.INVALID_ENTITY,alternative=Engine.INVALID_ENTITY;
+    int primaryDistance=Integer.MAX_VALUE,secondDistance=Integer.MAX_VALUE,alternativeDistance=Integer.MAX_VALUE;
+    Vector2 origin=mPosition.get(entityId).position;
+    IntBag candidates=getEnemyEntities().getEntities();
+    for(int i=0;i<candidates.size();i++) {
+      int candidate=candidates.get(i);
+      if((!mPlayer.has(candidate) && !mMonster.has(candidate))
+          || !isValidEnemyTargetWithoutAiScope(candidate))continue;
+      Vector2 point=mPosition.get(candidate).position;
+      int size=mSize.has(candidate)?mSize.get(candidate).size:0;
+      // AIUTIL_GetDistanceToCoordinates_FullUnitSize, not centre distance.
+      int dx=Math.abs(Math.abs((int)point.x-(int)origin.x)-size);
+      int dy=Math.abs(Math.abs((int)point.y-(int)origin.y)-size);
+      int d=(Math.min(dx,dy)+2*Math.max(dx,dy))/2;
+      if(d>48)continue;
+      com.riiablo.map.Map map=mMapWrapper.has(entityId)?mMapWrapper.get(entityId).map:null;
+      if(map!=null && map.getZone(origin)!=null) {
+        com.badlogic.gdx.ai.utils.Ray<Vector2> ray=new com.badlogic.gdx.ai.utils.Ray<>(origin.cpy(),point.cpy());
+        com.badlogic.gdx.ai.utils.Collision<Vector2> hit=new com.badlogic.gdx.ai.utils.Collision<>(new Vector2(),new Vector2());
+        if(map.castRay(ray,com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP,0,hit))continue;
+      }
+      boolean high=mPlayer.has(candidate) || mMonster.get(candidate).monstats != null
+          && mMonster.get(candidate).monstats.threat>1;
+      if(high) {
+        if(d<primaryDistance) {
+          second=primary;secondDistance=primaryDistance;
+          primary=candidate;primaryDistance=d;
+        } else if(d<secondDistance) {second=candidate;secondDistance=d;}
+      } else if(d<alternativeDistance) {alternative=candidate;alternativeDistance=d;}
+    }
+    if(primary==Engine.INVALID_ENTITY) {distance[0]=alternativeDistance;return alternative;}
+    if(alternative!=Engine.INVALID_ENTITY && alternativeDistance<=5
+        && Boolean.FALSE.equals(backupApproachHasPoints(primary))) {
+      if(second!=Engine.INVALID_ENTITY && secondDistance<20) {
+        distance[0]=secondDistance;return second;
+      }
+      distance[0]=alternativeDistance;return alternative;
+    }
+    distance[0]=primaryDistance;return primary;
+  }
+
+  /** Read-only zero-offset Toward projection. Unknown terrain retains the primary;
+   * it must never be interpreted as evidence of zero native path points.
+   */
+  Boolean backupApproachHasPoints(int target) {
+    com.riiablo.engine.server.component.MapWrapper wrapper=mMapWrapper.has(entityId)?mMapWrapper.get(entityId):null;
+    if(wrapper==null || wrapper.map==null || wrapper.zone==null)return null;
+    Vector2 source=mPosition.get(entityId).position,point=mPosition.get(target).position;
+    int size=mSize.has(entityId)?mSize.get(entityId).size:1;
+    com.riiablo.engine.server.NativeGroundPathProfile profile=
+        com.riiablo.engine.server.NativeGroundPathProfile.forUnit(false,monster.monstats);
+    boolean doors=monster.monstats.opendoors && profile!=com.riiablo.engine.server.NativeGroundPathProfile.FLYING;
+    com.riiablo.engine.server.DynamicUnitCollisionSystem dynamic=Riiablo.engine.getSystem(
+        com.riiablo.engine.server.DynamicUnitCollisionSystem.class);
+    return NativeTowardPathProbe.hasPathPointsAfterNormalization((int)source.x,(int)source.y,
+        (int)point.x,(int)point.y,14,1,(x,y) ->
+            wrapper.map.isBlockedForPath(wrapper.zone,x,y,profile.terrainFlags,size,doors)
+            || dynamic!=null && !dynamic.isFreeForPath(wrapper.zone,entityId,target,x,y,size));
   }
 
   @Override
@@ -304,6 +381,10 @@ public class FallenShaman extends AI {
     if (stateMachine.getCurrentState() == State.DEAD) {
       return;
     }
+    // The native AI event does not replace a running skill animation.
+    // In particular resurrection must reach srvdofunc=97 at its keyframe.
+    // Keep the post-action delay pending until both action components finish.
+    if (mCasting.has(entityId) || mSequence.has(entityId)) return;
 
     nextAction -= delta;
     time -= delta;
@@ -347,25 +428,28 @@ public class FallenShaman extends AI {
 
     // Native checks melee first, but a failed melee roll continues into
     // resurrection and shooting instead of forcing an idle action.
-    if (bCombat && aiRandomBoolean(params[PARAM_MELEE_AND_CIRCLE_CHANCE] / 100f)) {
+    if (bCombat && rollAiChance(params[PARAM_MELEE_AND_CIRCLE_CHANCE])) {
       stopMovement();
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       playSound(monsound + "_attack_1");
-      time = aiRandom(1f, 2f);
+      time = neutralAiDelay();
       return;
     }
 
     int corpseId = findNearbyCorpse(params[PARAM_RESURRECT_DISTANCE]);
+    // This roll is unconditional after the melee branch, even without a corpse
+    // or any minions. Resurrection has a separate roll below.
+    if (rollAiChance(params[PARAM_RESURRECT_AND_COMMAND_CHANCE])) commandMinions(targetId);
     // D2MOO always invokes MonStats.Skill1 for Fallen Shaman resurrection.
     // Searching arbitrary skill slots can select a non-native helper row and
     // diverges from the original AI table contract.
     int resurrectSkill = (monster.monstats.Skill1 == null
         || monster.monstats.Skill1.isEmpty()) ? -1 : 0;
     boolean resurrectionRoll = corpseId != Engine.INVALID_ENTITY
-        && aiRandomBoolean(params[PARAM_RESURRECT_AND_COMMAND_CHANCE] / 100f);
+        && rollAiChance(params[PARAM_RESURRECT_AND_COMMAND_CHANCE]);
     if (corpseId != Engine.INVALID_ENTITY && resurrectSkill < 0) {
       log.warn("[MONSTER_RAISE] phase=skill_missing source={} target={} monster={} "
               + "skills=[{}, {}, {}, {}, {}, {}, {}, {}]",
@@ -382,7 +466,7 @@ public class FallenShaman extends AI {
       if (useMonsterSkill(
           resurrectSkill, corpseId, mPosition.get(corpseId).position, SHAMAN_SEQUENCE_MODE)) {
         stateMachine.changeState(State.CAST);
-        time = aiRandom(1f, 2f);
+        time = neutralAiDelay();
         // Restoration is deliberately deferred to Actioneer.srvdofunc=97 on
         // the animation keyframe, exactly as D2MOO's sequence skill does.
         log.info("[MONSTER_RAISE] phase=cast source={} target={} monster={} distance={} skill={} mode={} deferred=keyframe",
@@ -397,12 +481,18 @@ public class FallenShaman extends AI {
     }
 
     if (withinShootDistance(targetDistance[0], params[PARAM_SHOOT_DISTANCE])
-        && aiRandomBoolean(params[PARAM_SHOOT_CHANCE] / 100f)
+        && rollAiChance(params[PARAM_SHOOT_CHANCE])
         && castFireball(targetId, targetPos)) {
       return;
     }
 
-    if (aiRandomBoolean(params[PARAM_MELEE_AND_CIRCLE_CHANCE] / 100f)) {
+    int backup=selectBackupTarget(targetDistance);
+    if(backup!=Engine.INVALID_ENTITY
+        && withinShootDistance(targetDistance[0],params[PARAM_SHOOT_DISTANCE])
+        && rollAiChance(params[PARAM_SHOOT_CHANCE])
+        && castFireball(backup,mPosition.get(backup).position))return;
+
+    if (rollAiChance(params[PARAM_MELEE_AND_CIRCLE_CHANCE])) {
       circleTarget(targetId);
       return;
     }

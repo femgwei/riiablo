@@ -1,0 +1,13 @@
+{
+  "id": "20261115-213351-e1b1e221",
+  "status": "failed",
+  "started": 1794749631.1963706,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "lut-gholein-waypoint-cold-plains-layout"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-213351-e1b1e221\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 330, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 297, in execute\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-213351-e1b1e221\\orchestrator\n",
+  "finished": 1794749633.8308282
+}

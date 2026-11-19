@@ -112,7 +112,7 @@ def validate_collector(name, scenario):
         if scenario.get("input") == "client_callchain":
             return ROOT / "native-harness" / "build" / "d2client_animation_trace.exe"
         if scenario.get("input") == "d2gfx_callchain":
-            if scenario.get("render_state") not in (None, "visible_unfocused", "minimized"):
+            if scenario.get("render_state") not in (None, "visible_unfocused", "minimized", "offscreen"):
                 raise ValueError("unsupported D2Gfx render_state")
             return ROOT / "native-harness" / "build" / "d2gfx_export_trace.exe"
         if scenario.get("input") == "whirlwind":

@@ -1,0 +1,13 @@
+{
+  "id": "20261114-063311-b4c2d18e",
+  "status": "failed",
+  "started": 1794609191.9222026,
+  "broker_pid": 7064,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-bash"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-054548-ed32aaff\\runs\\20261114-063311-b4c2d18e\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 266, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 233, in execute\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-054548-ed32aaff\\runs\\20261114-063311-b4c2d18e\\orchestrator\n",
+  "finished": 1794609203.7779856
+}

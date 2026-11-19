@@ -1,0 +1,3280 @@
+{
+  "provenance": "Original Diablo II 1.10f private desktop capture 20261119-105700-8968a7d5; server states, 25 Hz; targets from native ring phase 19 / step 4",
+  "source_sha256": "02c060b34e0ee8cbbc8cca3010646161635fa888ea35538501c75d2fe19bf549",
+  "scenarios": [
+    {
+      "missile": "frozenorb",
+      "original_unit_id": 1,
+      "target_x": 2,
+      "target_y": 0,
+      "states": [
+        {
+          "game_frame": 466,
+          "velocity_x": 30720,
+          "velocity_y": 0,
+          "x_fixed": 296321024,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 467,
+          "velocity_x": 30720,
+          "velocity_y": 0,
+          "x_fixed": 296351744,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 468,
+          "velocity_x": 30720,
+          "velocity_y": 0,
+          "x_fixed": 296382464,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 469,
+          "velocity_x": 30720,
+          "velocity_y": 0,
+          "x_fixed": 296413184,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 470,
+          "velocity_x": 30720,
+          "velocity_y": 0,
+          "x_fixed": 296443904,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 471,
+          "velocity_x": 30720,
+          "velocity_y": 0,
+          "x_fixed": 296474624,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 472,
+          "velocity_x": 30720,
+          "velocity_y": 0,
+          "x_fixed": 296505344,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 473,
+          "velocity_x": 30720,
+          "velocity_y": 0,
+          "x_fixed": 296536064,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 474,
+          "velocity_x": 30720,
+          "velocity_y": 0,
+          "x_fixed": 296566784,
+          "y_fixed": 369786880
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 2,
+      "target_x": 30,
+      "target_y": 0,
+      "states": [
+        {
+          "game_frame": 467,
+          "velocity_x": 55296,
+          "velocity_y": 0,
+          "x_fixed": 296321024,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 468,
+          "velocity_x": 55296,
+          "velocity_y": 0,
+          "x_fixed": 296376320,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 469,
+          "velocity_x": 55296,
+          "velocity_y": 0,
+          "x_fixed": 296431616,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 470,
+          "velocity_x": 55296,
+          "velocity_y": 0,
+          "x_fixed": 296486912,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 471,
+          "velocity_x": 55296,
+          "velocity_y": 0,
+          "x_fixed": 296542208,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 472,
+          "velocity_x": 55296,
+          "velocity_y": 0,
+          "x_fixed": 296597504,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 473,
+          "velocity_x": 55296,
+          "velocity_y": 0,
+          "x_fixed": 296652800,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 474,
+          "velocity_x": 55296,
+          "velocity_y": 0,
+          "x_fixed": 296708096,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 475,
+          "velocity_x": 55296,
+          "velocity_y": 0,
+          "x_fixed": 296763392,
+          "y_fixed": 369786880
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 3,
+      "target_x": -8,
+      "target_y": 28,
+      "states": [
+        {
+          "game_frame": 468,
+          "velocity_x": -15080,
+          "velocity_y": 53190,
+          "x_fixed": 296321024,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 469,
+          "velocity_x": -15080,
+          "velocity_y": 53190,
+          "x_fixed": 296305944,
+          "y_fixed": 369840070
+        },
+        {
+          "game_frame": 470,
+          "velocity_x": -15080,
+          "velocity_y": 53190,
+          "x_fixed": 296290864,
+          "y_fixed": 369893260
+        },
+        {
+          "game_frame": 471,
+          "velocity_x": -15080,
+          "velocity_y": 53190,
+          "x_fixed": 296275784,
+          "y_fixed": 369946450
+        },
+        {
+          "game_frame": 472,
+          "velocity_x": -15080,
+          "velocity_y": 53190,
+          "x_fixed": 296260704,
+          "y_fixed": 369999640
+        },
+        {
+          "game_frame": 473,
+          "velocity_x": -15080,
+          "velocity_y": 53190,
+          "x_fixed": 296245624,
+          "y_fixed": 370052830
+        },
+        {
+          "game_frame": 474,
+          "velocity_x": -15080,
+          "velocity_y": 53190,
+          "x_fixed": 296230544,
+          "y_fixed": 370106020
+        },
+        {
+          "game_frame": 475,
+          "velocity_x": -15080,
+          "velocity_y": 53190,
+          "x_fixed": 296215464,
+          "y_fixed": 370159210
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 4,
+      "target_x": -24,
+      "target_y": -16,
+      "states": [
+        {
+          "game_frame": 469,
+          "velocity_x": -46116,
+          "velocity_y": -30497,
+          "x_fixed": 296386560,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 470,
+          "velocity_x": -46116,
+          "velocity_y": -30497,
+          "x_fixed": 296340444,
+          "y_fixed": 369756383
+        },
+        {
+          "game_frame": 471,
+          "velocity_x": -46116,
+          "velocity_y": -30497,
+          "x_fixed": 296294328,
+          "y_fixed": 369725886
+        },
+        {
+          "game_frame": 472,
+          "velocity_x": -46116,
+          "velocity_y": -30497,
+          "x_fixed": 296248212,
+          "y_fixed": 369695389
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 5,
+      "target_x": 23,
+      "target_y": -19,
+      "states": [
+        {
+          "game_frame": 470,
+          "velocity_x": 42781,
+          "velocity_y": -35033,
+          "x_fixed": 296386560,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 471,
+          "velocity_x": 42781,
+          "velocity_y": -35033,
+          "x_fixed": 296429341,
+          "y_fixed": 369751847
+        },
+        {
+          "game_frame": 472,
+          "velocity_x": 42781,
+          "velocity_y": -35033,
+          "x_fixed": 296472122,
+          "y_fixed": 369716814
+        },
+        {
+          "game_frame": 473,
+          "velocity_x": 42781,
+          "velocity_y": -35033,
+          "x_fixed": 296514903,
+          "y_fixed": 369681781
+        },
+        {
+          "game_frame": 474,
+          "velocity_x": 42781,
+          "velocity_y": -35033,
+          "x_fixed": 296557684,
+          "y_fixed": 369646748
+        },
+        {
+          "game_frame": 475,
+          "velocity_x": 42781,
+          "velocity_y": -35033,
+          "x_fixed": 296600465,
+          "y_fixed": 369611715
+        },
+        {
+          "game_frame": 476,
+          "velocity_x": 42781,
+          "velocity_y": -35033,
+          "x_fixed": 296643246,
+          "y_fixed": 369576682
+        },
+        {
+          "game_frame": 477,
+          "velocity_x": 42781,
+          "velocity_y": -35033,
+          "x_fixed": 296686027,
+          "y_fixed": 369541649
+        },
+        {
+          "game_frame": 478,
+          "velocity_x": 42781,
+          "velocity_y": -35033,
+          "x_fixed": 296728808,
+          "y_fixed": 369506616
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 6,
+      "target_x": 11,
+      "target_y": 27,
+      "states": [
+        {
+          "game_frame": 471,
+          "velocity_x": 20601,
+          "velocity_y": 51300,
+          "x_fixed": 296452096,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 472,
+          "velocity_x": 20601,
+          "velocity_y": 51300,
+          "x_fixed": 296472697,
+          "y_fixed": 369838180
+        },
+        {
+          "game_frame": 473,
+          "velocity_x": 20601,
+          "velocity_y": 51300,
+          "x_fixed": 296493298,
+          "y_fixed": 369889480
+        },
+        {
+          "game_frame": 474,
+          "velocity_x": 20601,
+          "velocity_y": 51300,
+          "x_fixed": 296513899,
+          "y_fixed": 369940780
+        },
+        {
+          "game_frame": 475,
+          "velocity_x": 20601,
+          "velocity_y": 51300,
+          "x_fixed": 296534500,
+          "y_fixed": 369992080
+        },
+        {
+          "game_frame": 476,
+          "velocity_x": 20601,
+          "velocity_y": 51300,
+          "x_fixed": 296555101,
+          "y_fixed": 370043380
+        },
+        {
+          "game_frame": 477,
+          "velocity_x": 20601,
+          "velocity_y": 51300,
+          "x_fixed": 296575702,
+          "y_fixed": 370094680
+        },
+        {
+          "game_frame": 478,
+          "velocity_x": 20601,
+          "velocity_y": 51300,
+          "x_fixed": 296596303,
+          "y_fixed": 370145980
+        },
+        {
+          "game_frame": 479,
+          "velocity_x": 20601,
+          "velocity_y": 51300,
+          "x_fixed": 296616904,
+          "y_fixed": 370197280
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 7,
+      "target_x": -29,
+      "target_y": 2,
+      "states": [
+        {
+          "game_frame": 472,
+          "velocity_x": -55175,
+          "velocity_y": 3469,
+          "x_fixed": 296452096,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 473,
+          "velocity_x": -55175,
+          "velocity_y": 3469,
+          "x_fixed": 296396921,
+          "y_fixed": 369790349
+        },
+        {
+          "game_frame": 474,
+          "velocity_x": -55175,
+          "velocity_y": 3469,
+          "x_fixed": 296341746,
+          "y_fixed": 369793818
+        },
+        {
+          "game_frame": 475,
+          "velocity_x": -55175,
+          "velocity_y": 3469,
+          "x_fixed": 296286571,
+          "y_fixed": 369797287
+        },
+        {
+          "game_frame": 476,
+          "velocity_x": -55175,
+          "velocity_y": 3469,
+          "x_fixed": 296231396,
+          "y_fixed": 369800756
+        },
+        {
+          "game_frame": 477,
+          "velocity_x": -55175,
+          "velocity_y": 3469,
+          "x_fixed": 296176221,
+          "y_fixed": 369804225
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 8,
+      "target_x": 5,
+      "target_y": -29,
+      "states": [
+        {
+          "game_frame": 473,
+          "velocity_x": 9018,
+          "velocity_y": -54554,
+          "x_fixed": 296517632,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 474,
+          "velocity_x": 9018,
+          "velocity_y": -54554,
+          "x_fixed": 296526650,
+          "y_fixed": 369732326
+        },
+        {
+          "game_frame": 475,
+          "velocity_x": 9018,
+          "velocity_y": -54554,
+          "x_fixed": 296535668,
+          "y_fixed": 369677772
+        },
+        {
+          "game_frame": 476,
+          "velocity_x": 9018,
+          "velocity_y": -54554,
+          "x_fixed": 296544686,
+          "y_fixed": 369623218
+        },
+        {
+          "game_frame": 477,
+          "velocity_x": 9018,
+          "velocity_y": -54554,
+          "x_fixed": 296553704,
+          "y_fixed": 369568664
+        },
+        {
+          "game_frame": 478,
+          "velocity_x": 9018,
+          "velocity_y": -54554,
+          "x_fixed": 296562722,
+          "y_fixed": 369514110
+        },
+        {
+          "game_frame": 479,
+          "velocity_x": 9018,
+          "velocity_y": -54554,
+          "x_fixed": 296571740,
+          "y_fixed": 369459556
+        },
+        {
+          "game_frame": 480,
+          "velocity_x": 9018,
+          "velocity_y": -54554,
+          "x_fixed": 296580758,
+          "y_fixed": 369405002
+        },
+        {
+          "game_frame": 481,
+          "velocity_x": 9018,
+          "velocity_y": -54554,
+          "x_fixed": 296589776,
+          "y_fixed": 369350448
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 9,
+      "target_x": 26,
+      "target_y": 14,
+      "states": [
+        {
+          "game_frame": 474,
+          "velocity_x": 48735,
+          "velocity_y": 26095,
+          "x_fixed": 296517632,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 475,
+          "velocity_x": 48735,
+          "velocity_y": 26095,
+          "x_fixed": 296566367,
+          "y_fixed": 369812975
+        },
+        {
+          "game_frame": 476,
+          "velocity_x": 48735,
+          "velocity_y": 26095,
+          "x_fixed": 296615102,
+          "y_fixed": 369839070
+        },
+        {
+          "game_frame": 477,
+          "velocity_x": 48735,
+          "velocity_y": 26095,
+          "x_fixed": 296663837,
+          "y_fixed": 369865165
+        },
+        {
+          "game_frame": 478,
+          "velocity_x": 48735,
+          "velocity_y": 26095,
+          "x_fixed": 296712572,
+          "y_fixed": 369891260
+        },
+        {
+          "game_frame": 479,
+          "velocity_x": 48735,
+          "velocity_y": 26095,
+          "x_fixed": 296761307,
+          "y_fixed": 369917355
+        },
+        {
+          "game_frame": 480,
+          "velocity_x": 48735,
+          "velocity_y": 26095,
+          "x_fixed": 296810042,
+          "y_fixed": 369943450
+        },
+        {
+          "game_frame": 481,
+          "velocity_x": 48735,
+          "velocity_y": 26095,
+          "x_fixed": 296858777,
+          "y_fixed": 369969545
+        },
+        {
+          "game_frame": 482,
+          "velocity_x": 48735,
+          "velocity_y": 26095,
+          "x_fixed": 296907512,
+          "y_fixed": 369995640
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 10,
+      "target_x": -21,
+      "target_y": 21,
+      "states": [
+        {
+          "game_frame": 475,
+          "velocity_x": -39096,
+          "velocity_y": 39096,
+          "x_fixed": 296583168,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 476,
+          "velocity_x": -39096,
+          "velocity_y": 39096,
+          "x_fixed": 296544072,
+          "y_fixed": 369825976
+        },
+        {
+          "game_frame": 477,
+          "velocity_x": -39096,
+          "velocity_y": 39096,
+          "x_fixed": 296504976,
+          "y_fixed": 369865072
+        },
+        {
+          "game_frame": 478,
+          "velocity_x": -39096,
+          "velocity_y": 39096,
+          "x_fixed": 296465880,
+          "y_fixed": 369904168
+        },
+        {
+          "game_frame": 479,
+          "velocity_x": -39096,
+          "velocity_y": 39096,
+          "x_fixed": 296426784,
+          "y_fixed": 369943264
+        },
+        {
+          "game_frame": 480,
+          "velocity_x": -39096,
+          "velocity_y": 39096,
+          "x_fixed": 296387688,
+          "y_fixed": 369982360
+        },
+        {
+          "game_frame": 481,
+          "velocity_x": -39096,
+          "velocity_y": 39096,
+          "x_fixed": 296348592,
+          "y_fixed": 370021456
+        },
+        {
+          "game_frame": 482,
+          "velocity_x": -39096,
+          "velocity_y": 39096,
+          "x_fixed": 296309496,
+          "y_fixed": 370060552
+        },
+        {
+          "game_frame": 483,
+          "velocity_x": -39096,
+          "velocity_y": 39096,
+          "x_fixed": 296270400,
+          "y_fixed": 370099648
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 11,
+      "target_x": -14,
+      "target_y": -26,
+      "states": [
+        {
+          "game_frame": 476,
+          "velocity_x": -26096,
+          "velocity_y": -48735,
+          "x_fixed": 296583168,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 477,
+          "velocity_x": -26096,
+          "velocity_y": -48735,
+          "x_fixed": 296557072,
+          "y_fixed": 369738145
+        },
+        {
+          "game_frame": 478,
+          "velocity_x": -26096,
+          "velocity_y": -48735,
+          "x_fixed": 296530976,
+          "y_fixed": 369689410
+        },
+        {
+          "game_frame": 479,
+          "velocity_x": -26096,
+          "velocity_y": -48735,
+          "x_fixed": 296504880,
+          "y_fixed": 369640675
+        },
+        {
+          "game_frame": 480,
+          "velocity_x": -26096,
+          "velocity_y": -48735,
+          "x_fixed": 296478784,
+          "y_fixed": 369591940
+        },
+        {
+          "game_frame": 481,
+          "velocity_x": -26096,
+          "velocity_y": -48735,
+          "x_fixed": 296452688,
+          "y_fixed": 369543205
+        },
+        {
+          "game_frame": 482,
+          "velocity_x": -26096,
+          "velocity_y": -48735,
+          "x_fixed": 296426592,
+          "y_fixed": 369494470
+        },
+        {
+          "game_frame": 483,
+          "velocity_x": -26096,
+          "velocity_y": -48735,
+          "x_fixed": 296400496,
+          "y_fixed": 369445735
+        },
+        {
+          "game_frame": 484,
+          "velocity_x": -26096,
+          "velocity_y": -48735,
+          "x_fixed": 296374400,
+          "y_fixed": 369397000
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 12,
+      "target_x": 29,
+      "target_y": -5,
+      "states": [
+        {
+          "game_frame": 477,
+          "velocity_x": 54553,
+          "velocity_y": -9018,
+          "x_fixed": 296648704,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 478,
+          "velocity_x": 54553,
+          "velocity_y": -9018,
+          "x_fixed": 296703257,
+          "y_fixed": 369777862
+        },
+        {
+          "game_frame": 479,
+          "velocity_x": 54553,
+          "velocity_y": -9018,
+          "x_fixed": 296757810,
+          "y_fixed": 369768844
+        },
+        {
+          "game_frame": 480,
+          "velocity_x": 54553,
+          "velocity_y": -9018,
+          "x_fixed": 296812363,
+          "y_fixed": 369759826
+        },
+        {
+          "game_frame": 481,
+          "velocity_x": 54553,
+          "velocity_y": -9018,
+          "x_fixed": 296866916,
+          "y_fixed": 369750808
+        },
+        {
+          "game_frame": 482,
+          "velocity_x": 54553,
+          "velocity_y": -9018,
+          "x_fixed": 296921469,
+          "y_fixed": 369741790
+        },
+        {
+          "game_frame": 483,
+          "velocity_x": 54553,
+          "velocity_y": -9018,
+          "x_fixed": 296976022,
+          "y_fixed": 369732772
+        },
+        {
+          "game_frame": 484,
+          "velocity_x": 54553,
+          "velocity_y": -9018,
+          "x_fixed": 297030575,
+          "y_fixed": 369723754
+        },
+        {
+          "game_frame": 485,
+          "velocity_x": 54553,
+          "velocity_y": -9018,
+          "x_fixed": 297085128,
+          "y_fixed": 369714736
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 13,
+      "target_x": -2,
+      "target_y": 29,
+      "states": [
+        {
+          "game_frame": 478,
+          "velocity_x": -3470,
+          "velocity_y": 55174,
+          "x_fixed": 296648704,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 479,
+          "velocity_x": -3470,
+          "velocity_y": 55174,
+          "x_fixed": 296645234,
+          "y_fixed": 369842054
+        },
+        {
+          "game_frame": 480,
+          "velocity_x": -3470,
+          "velocity_y": 55174,
+          "x_fixed": 296641764,
+          "y_fixed": 369897228
+        },
+        {
+          "game_frame": 481,
+          "velocity_x": -3470,
+          "velocity_y": 55174,
+          "x_fixed": 296638294,
+          "y_fixed": 369952402
+        },
+        {
+          "game_frame": 482,
+          "velocity_x": -3470,
+          "velocity_y": 55174,
+          "x_fixed": 296634824,
+          "y_fixed": 370007576
+        },
+        {
+          "game_frame": 483,
+          "velocity_x": -3470,
+          "velocity_y": 55174,
+          "x_fixed": 296631354,
+          "y_fixed": 370062750
+        },
+        {
+          "game_frame": 484,
+          "velocity_x": -3470,
+          "velocity_y": 55174,
+          "x_fixed": 296627884,
+          "y_fixed": 370117924
+        },
+        {
+          "game_frame": 485,
+          "velocity_x": -3470,
+          "velocity_y": 55174,
+          "x_fixed": 296624414,
+          "y_fixed": 370173098
+        },
+        {
+          "game_frame": 486,
+          "velocity_x": -3470,
+          "velocity_y": 55174,
+          "x_fixed": 296620944,
+          "y_fixed": 370228272
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 14,
+      "target_x": -27,
+      "target_y": -11,
+      "states": [
+        {
+          "game_frame": 479,
+          "velocity_x": -51300,
+          "velocity_y": -20601,
+          "x_fixed": 296714240,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 480,
+          "velocity_x": -51300,
+          "velocity_y": -20601,
+          "x_fixed": 296662940,
+          "y_fixed": 369766279
+        },
+        {
+          "game_frame": 481,
+          "velocity_x": -51300,
+          "velocity_y": -20601,
+          "x_fixed": 296611640,
+          "y_fixed": 369745678
+        },
+        {
+          "game_frame": 482,
+          "velocity_x": -51300,
+          "velocity_y": -20601,
+          "x_fixed": 296560340,
+          "y_fixed": 369725077
+        },
+        {
+          "game_frame": 483,
+          "velocity_x": -51300,
+          "velocity_y": -20601,
+          "x_fixed": 296509040,
+          "y_fixed": 369704476
+        },
+        {
+          "game_frame": 484,
+          "velocity_x": -51300,
+          "velocity_y": -20601,
+          "x_fixed": 296457740,
+          "y_fixed": 369683875
+        },
+        {
+          "game_frame": 485,
+          "velocity_x": -51300,
+          "velocity_y": -20601,
+          "x_fixed": 296406440,
+          "y_fixed": 369663274
+        },
+        {
+          "game_frame": 486,
+          "velocity_x": -51300,
+          "velocity_y": -20601,
+          "x_fixed": 296355140,
+          "y_fixed": 369642673
+        },
+        {
+          "game_frame": 487,
+          "velocity_x": -51300,
+          "velocity_y": -20601,
+          "x_fixed": 296303840,
+          "y_fixed": 369622072
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 15,
+      "target_x": 19,
+      "target_y": -23,
+      "states": [
+        {
+          "game_frame": 480,
+          "velocity_x": 35032,
+          "velocity_y": -42782,
+          "x_fixed": 296714240,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 481,
+          "velocity_x": 35032,
+          "velocity_y": -42782,
+          "x_fixed": 296749272,
+          "y_fixed": 369744098
+        },
+        {
+          "game_frame": 482,
+          "velocity_x": 35032,
+          "velocity_y": -42782,
+          "x_fixed": 296784304,
+          "y_fixed": 369701316
+        },
+        {
+          "game_frame": 483,
+          "velocity_x": 35032,
+          "velocity_y": -42782,
+          "x_fixed": 296819336,
+          "y_fixed": 369658534
+        },
+        {
+          "game_frame": 484,
+          "velocity_x": 35032,
+          "velocity_y": -42782,
+          "x_fixed": 296854368,
+          "y_fixed": 369615752
+        },
+        {
+          "game_frame": 485,
+          "velocity_x": 35032,
+          "velocity_y": -42782,
+          "x_fixed": 296889400,
+          "y_fixed": 369572970
+        },
+        {
+          "game_frame": 486,
+          "velocity_x": 35032,
+          "velocity_y": -42782,
+          "x_fixed": 296924432,
+          "y_fixed": 369530188
+        },
+        {
+          "game_frame": 487,
+          "velocity_x": 35032,
+          "velocity_y": -42782,
+          "x_fixed": 296959464,
+          "y_fixed": 369487406
+        },
+        {
+          "game_frame": 488,
+          "velocity_x": 35032,
+          "velocity_y": -42782,
+          "x_fixed": 296994496,
+          "y_fixed": 369444624
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 16,
+      "target_x": 16,
+      "target_y": 24,
+      "states": [
+        {
+          "game_frame": 481,
+          "velocity_x": 30496,
+          "velocity_y": 46116,
+          "x_fixed": 296779776,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 482,
+          "velocity_x": 30496,
+          "velocity_y": 46116,
+          "x_fixed": 296810272,
+          "y_fixed": 369832996
+        },
+        {
+          "game_frame": 483,
+          "velocity_x": 30496,
+          "velocity_y": 46116,
+          "x_fixed": 296840768,
+          "y_fixed": 369879112
+        },
+        {
+          "game_frame": 484,
+          "velocity_x": 30496,
+          "velocity_y": 46116,
+          "x_fixed": 296871264,
+          "y_fixed": 369925228
+        },
+        {
+          "game_frame": 485,
+          "velocity_x": 30496,
+          "velocity_y": 46116,
+          "x_fixed": 296901760,
+          "y_fixed": 369971344
+        },
+        {
+          "game_frame": 486,
+          "velocity_x": 30496,
+          "velocity_y": 46116,
+          "x_fixed": 296932256,
+          "y_fixed": 370017460
+        },
+        {
+          "game_frame": 487,
+          "velocity_x": 30496,
+          "velocity_y": 46116,
+          "x_fixed": 296962752,
+          "y_fixed": 370063576
+        },
+        {
+          "game_frame": 488,
+          "velocity_x": 30496,
+          "velocity_y": 46116,
+          "x_fixed": 296993248,
+          "y_fixed": 370109692
+        },
+        {
+          "game_frame": 489,
+          "velocity_x": 30496,
+          "velocity_y": 46116,
+          "x_fixed": 297023744,
+          "y_fixed": 370155808
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 17,
+      "target_x": -28,
+      "target_y": 8,
+      "states": [
+        {
+          "game_frame": 482,
+          "velocity_x": -53190,
+          "velocity_y": 15079,
+          "x_fixed": 296779776,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 483,
+          "velocity_x": -53190,
+          "velocity_y": 15079,
+          "x_fixed": 296726586,
+          "y_fixed": 369801959
+        },
+        {
+          "game_frame": 484,
+          "velocity_x": -53190,
+          "velocity_y": 15079,
+          "x_fixed": 296673396,
+          "y_fixed": 369817038
+        },
+        {
+          "game_frame": 485,
+          "velocity_x": -53190,
+          "velocity_y": 15079,
+          "x_fixed": 296620206,
+          "y_fixed": 369832117
+        },
+        {
+          "game_frame": 486,
+          "velocity_x": -53190,
+          "velocity_y": 15079,
+          "x_fixed": 296567016,
+          "y_fixed": 369847196
+        },
+        {
+          "game_frame": 487,
+          "velocity_x": -53190,
+          "velocity_y": 15079,
+          "x_fixed": 296513826,
+          "y_fixed": 369862275
+        },
+        {
+          "game_frame": 488,
+          "velocity_x": -53190,
+          "velocity_y": 15079,
+          "x_fixed": 296460636,
+          "y_fixed": 369877354
+        },
+        {
+          "game_frame": 489,
+          "velocity_x": -53190,
+          "velocity_y": 15079,
+          "x_fixed": 296407446,
+          "y_fixed": 369892433
+        },
+        {
+          "game_frame": 490,
+          "velocity_x": -53190,
+          "velocity_y": 15079,
+          "x_fixed": 296354256,
+          "y_fixed": 369907512
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 18,
+      "target_x": 0,
+      "target_y": -30,
+      "states": [
+        {
+          "game_frame": 483,
+          "velocity_x": 0,
+          "velocity_y": -55296,
+          "x_fixed": 296845312,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 484,
+          "velocity_x": 0,
+          "velocity_y": -55296,
+          "x_fixed": 296845312,
+          "y_fixed": 369731584
+        },
+        {
+          "game_frame": 485,
+          "velocity_x": 0,
+          "velocity_y": -55296,
+          "x_fixed": 296845312,
+          "y_fixed": 369676288
+        },
+        {
+          "game_frame": 486,
+          "velocity_x": 0,
+          "velocity_y": -55296,
+          "x_fixed": 296845312,
+          "y_fixed": 369620992
+        },
+        {
+          "game_frame": 487,
+          "velocity_x": 0,
+          "velocity_y": -55296,
+          "x_fixed": 296845312,
+          "y_fixed": 369565696
+        },
+        {
+          "game_frame": 488,
+          "velocity_x": 0,
+          "velocity_y": -55296,
+          "x_fixed": 296845312,
+          "y_fixed": 369510400
+        },
+        {
+          "game_frame": 489,
+          "velocity_x": 0,
+          "velocity_y": -55296,
+          "x_fixed": 296845312,
+          "y_fixed": 369455104
+        },
+        {
+          "game_frame": 490,
+          "velocity_x": 0,
+          "velocity_y": -55296,
+          "x_fixed": 296845312,
+          "y_fixed": 369399808
+        },
+        {
+          "game_frame": 491,
+          "velocity_x": 0,
+          "velocity_y": -55296,
+          "x_fixed": 296845312,
+          "y_fixed": 369344512
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 19,
+      "target_x": 28,
+      "target_y": 8,
+      "states": [
+        {
+          "game_frame": 484,
+          "velocity_x": 53190,
+          "velocity_y": 15079,
+          "x_fixed": 296845312,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 485,
+          "velocity_x": 53190,
+          "velocity_y": 15079,
+          "x_fixed": 296898502,
+          "y_fixed": 369801959
+        },
+        {
+          "game_frame": 486,
+          "velocity_x": 53190,
+          "velocity_y": 15079,
+          "x_fixed": 296951692,
+          "y_fixed": 369817038
+        },
+        {
+          "game_frame": 487,
+          "velocity_x": 53190,
+          "velocity_y": 15079,
+          "x_fixed": 297004882,
+          "y_fixed": 369832117
+        },
+        {
+          "game_frame": 488,
+          "velocity_x": 53190,
+          "velocity_y": 15079,
+          "x_fixed": 297058072,
+          "y_fixed": 369847196
+        },
+        {
+          "game_frame": 489,
+          "velocity_x": 53190,
+          "velocity_y": 15079,
+          "x_fixed": 297111262,
+          "y_fixed": 369862275
+        },
+        {
+          "game_frame": 490,
+          "velocity_x": 53190,
+          "velocity_y": 15079,
+          "x_fixed": 297164452,
+          "y_fixed": 369877354
+        },
+        {
+          "game_frame": 491,
+          "velocity_x": 53190,
+          "velocity_y": 15079,
+          "x_fixed": 297217642,
+          "y_fixed": 369892433
+        },
+        {
+          "game_frame": 492,
+          "velocity_x": 53190,
+          "velocity_y": 15079,
+          "x_fixed": 297270832,
+          "y_fixed": 369907512
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 20,
+      "target_x": -16,
+      "target_y": 24,
+      "states": [
+        {
+          "game_frame": 485,
+          "velocity_x": -30497,
+          "velocity_y": 46116,
+          "x_fixed": 296845312,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 486,
+          "velocity_x": -30497,
+          "velocity_y": 46116,
+          "x_fixed": 296814815,
+          "y_fixed": 369832996
+        },
+        {
+          "game_frame": 487,
+          "velocity_x": -30497,
+          "velocity_y": 46116,
+          "x_fixed": 296784318,
+          "y_fixed": 369879112
+        },
+        {
+          "game_frame": 488,
+          "velocity_x": -30497,
+          "velocity_y": 46116,
+          "x_fixed": 296753821,
+          "y_fixed": 369925228
+        },
+        {
+          "game_frame": 489,
+          "velocity_x": -30497,
+          "velocity_y": 46116,
+          "x_fixed": 296723324,
+          "y_fixed": 369971344
+        },
+        {
+          "game_frame": 490,
+          "velocity_x": -30497,
+          "velocity_y": 46116,
+          "x_fixed": 296692827,
+          "y_fixed": 370017460
+        },
+        {
+          "game_frame": 491,
+          "velocity_x": -30497,
+          "velocity_y": 46116,
+          "x_fixed": 296662330,
+          "y_fixed": 370063576
+        },
+        {
+          "game_frame": 492,
+          "velocity_x": -30497,
+          "velocity_y": 46116,
+          "x_fixed": 296631833,
+          "y_fixed": 370109692
+        },
+        {
+          "game_frame": 493,
+          "velocity_x": -30497,
+          "velocity_y": 46116,
+          "x_fixed": 296601336,
+          "y_fixed": 370155808
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 21,
+      "target_x": -19,
+      "target_y": -23,
+      "states": [
+        {
+          "game_frame": 486,
+          "velocity_x": -35033,
+          "velocity_y": -42782,
+          "x_fixed": 296910848,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 487,
+          "velocity_x": -35033,
+          "velocity_y": -42782,
+          "x_fixed": 296875815,
+          "y_fixed": 369744098
+        },
+        {
+          "game_frame": 488,
+          "velocity_x": -35033,
+          "velocity_y": -42782,
+          "x_fixed": 296840782,
+          "y_fixed": 369701316
+        },
+        {
+          "game_frame": 489,
+          "velocity_x": -35033,
+          "velocity_y": -42782,
+          "x_fixed": 296805749,
+          "y_fixed": 369658534
+        },
+        {
+          "game_frame": 490,
+          "velocity_x": -35033,
+          "velocity_y": -42782,
+          "x_fixed": 296770716,
+          "y_fixed": 369615752
+        },
+        {
+          "game_frame": 491,
+          "velocity_x": -35033,
+          "velocity_y": -42782,
+          "x_fixed": 296735683,
+          "y_fixed": 369572970
+        },
+        {
+          "game_frame": 492,
+          "velocity_x": -35033,
+          "velocity_y": -42782,
+          "x_fixed": 296700650,
+          "y_fixed": 369530188
+        },
+        {
+          "game_frame": 493,
+          "velocity_x": -35033,
+          "velocity_y": -42782,
+          "x_fixed": 296665617,
+          "y_fixed": 369487406
+        },
+        {
+          "game_frame": 494,
+          "velocity_x": -35033,
+          "velocity_y": -42782,
+          "x_fixed": 296630584,
+          "y_fixed": 369444624
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 22,
+      "target_x": 27,
+      "target_y": -11,
+      "states": [
+        {
+          "game_frame": 487,
+          "velocity_x": 51300,
+          "velocity_y": -20601,
+          "x_fixed": 296910848,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 488,
+          "velocity_x": 51300,
+          "velocity_y": -20601,
+          "x_fixed": 296962148,
+          "y_fixed": 369766279
+        },
+        {
+          "game_frame": 489,
+          "velocity_x": 51300,
+          "velocity_y": -20601,
+          "x_fixed": 297013448,
+          "y_fixed": 369745678
+        },
+        {
+          "game_frame": 490,
+          "velocity_x": 51300,
+          "velocity_y": -20601,
+          "x_fixed": 297064748,
+          "y_fixed": 369725077
+        },
+        {
+          "game_frame": 491,
+          "velocity_x": 51300,
+          "velocity_y": -20601,
+          "x_fixed": 297116048,
+          "y_fixed": 369704476
+        },
+        {
+          "game_frame": 492,
+          "velocity_x": 51300,
+          "velocity_y": -20601,
+          "x_fixed": 297167348,
+          "y_fixed": 369683875
+        },
+        {
+          "game_frame": 493,
+          "velocity_x": 51300,
+          "velocity_y": -20601,
+          "x_fixed": 297218648,
+          "y_fixed": 369663274
+        },
+        {
+          "game_frame": 494,
+          "velocity_x": 51300,
+          "velocity_y": -20601,
+          "x_fixed": 297269948,
+          "y_fixed": 369642673
+        },
+        {
+          "game_frame": 495,
+          "velocity_x": 51300,
+          "velocity_y": -20601,
+          "x_fixed": 297321248,
+          "y_fixed": 369622072
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 23,
+      "target_x": 2,
+      "target_y": 29,
+      "states": [
+        {
+          "game_frame": 488,
+          "velocity_x": 3469,
+          "velocity_y": 55174,
+          "x_fixed": 296976384,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 489,
+          "velocity_x": 3469,
+          "velocity_y": 55174,
+          "x_fixed": 296979853,
+          "y_fixed": 369842054
+        },
+        {
+          "game_frame": 490,
+          "velocity_x": 3469,
+          "velocity_y": 55174,
+          "x_fixed": 296983322,
+          "y_fixed": 369897228
+        },
+        {
+          "game_frame": 491,
+          "velocity_x": 3469,
+          "velocity_y": 55174,
+          "x_fixed": 296986791,
+          "y_fixed": 369952402
+        },
+        {
+          "game_frame": 492,
+          "velocity_x": 3469,
+          "velocity_y": 55174,
+          "x_fixed": 296990260,
+          "y_fixed": 370007576
+        },
+        {
+          "game_frame": 493,
+          "velocity_x": 3469,
+          "velocity_y": 55174,
+          "x_fixed": 296993729,
+          "y_fixed": 370062750
+        },
+        {
+          "game_frame": 494,
+          "velocity_x": 3469,
+          "velocity_y": 55174,
+          "x_fixed": 296997198,
+          "y_fixed": 370117924
+        },
+        {
+          "game_frame": 495,
+          "velocity_x": 3469,
+          "velocity_y": 55174,
+          "x_fixed": 297000667,
+          "y_fixed": 370173098
+        },
+        {
+          "game_frame": 496,
+          "velocity_x": 3469,
+          "velocity_y": 55174,
+          "x_fixed": 297004136,
+          "y_fixed": 370228272
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 24,
+      "target_x": -29,
+      "target_y": -5,
+      "states": [
+        {
+          "game_frame": 489,
+          "velocity_x": -54554,
+          "velocity_y": -9018,
+          "x_fixed": 296976384,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 490,
+          "velocity_x": -54554,
+          "velocity_y": -9018,
+          "x_fixed": 296921830,
+          "y_fixed": 369777862
+        },
+        {
+          "game_frame": 491,
+          "velocity_x": -54554,
+          "velocity_y": -9018,
+          "x_fixed": 296867276,
+          "y_fixed": 369768844
+        },
+        {
+          "game_frame": 492,
+          "velocity_x": -54554,
+          "velocity_y": -9018,
+          "x_fixed": 296812722,
+          "y_fixed": 369759826
+        },
+        {
+          "game_frame": 493,
+          "velocity_x": -54554,
+          "velocity_y": -9018,
+          "x_fixed": 296758168,
+          "y_fixed": 369750808
+        },
+        {
+          "game_frame": 494,
+          "velocity_x": -54554,
+          "velocity_y": -9018,
+          "x_fixed": 296703614,
+          "y_fixed": 369741790
+        },
+        {
+          "game_frame": 495,
+          "velocity_x": -54554,
+          "velocity_y": -9018,
+          "x_fixed": 296649060,
+          "y_fixed": 369732772
+        },
+        {
+          "game_frame": 496,
+          "velocity_x": -54554,
+          "velocity_y": -9018,
+          "x_fixed": 296594506,
+          "y_fixed": 369723754
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -54554,
+          "velocity_y": -9018,
+          "x_fixed": 296539952,
+          "y_fixed": 369714736
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 25,
+      "target_x": 14,
+      "target_y": -26,
+      "states": [
+        {
+          "game_frame": 490,
+          "velocity_x": 26095,
+          "velocity_y": -48735,
+          "x_fixed": 297041920,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 491,
+          "velocity_x": 26095,
+          "velocity_y": -48735,
+          "x_fixed": 297068015,
+          "y_fixed": 369738145
+        },
+        {
+          "game_frame": 492,
+          "velocity_x": 26095,
+          "velocity_y": -48735,
+          "x_fixed": 297094110,
+          "y_fixed": 369689410
+        },
+        {
+          "game_frame": 493,
+          "velocity_x": 26095,
+          "velocity_y": -48735,
+          "x_fixed": 297120205,
+          "y_fixed": 369640675
+        },
+        {
+          "game_frame": 494,
+          "velocity_x": 26095,
+          "velocity_y": -48735,
+          "x_fixed": 297146300,
+          "y_fixed": 369591940
+        },
+        {
+          "game_frame": 495,
+          "velocity_x": 26095,
+          "velocity_y": -48735,
+          "x_fixed": 297172395,
+          "y_fixed": 369543205
+        },
+        {
+          "game_frame": 496,
+          "velocity_x": 26095,
+          "velocity_y": -48735,
+          "x_fixed": 297198490,
+          "y_fixed": 369494470
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 26095,
+          "velocity_y": -48735,
+          "x_fixed": 297224585,
+          "y_fixed": 369445735
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 26095,
+          "velocity_y": -48735,
+          "x_fixed": 297250680,
+          "y_fixed": 369397000
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 26,
+      "target_x": 21,
+      "target_y": 21,
+      "states": [
+        {
+          "game_frame": 491,
+          "velocity_x": 39096,
+          "velocity_y": 39096,
+          "x_fixed": 297041920,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 492,
+          "velocity_x": 39096,
+          "velocity_y": 39096,
+          "x_fixed": 297081016,
+          "y_fixed": 369825976
+        },
+        {
+          "game_frame": 493,
+          "velocity_x": 39096,
+          "velocity_y": 39096,
+          "x_fixed": 297120112,
+          "y_fixed": 369865072
+        },
+        {
+          "game_frame": 494,
+          "velocity_x": 39096,
+          "velocity_y": 39096,
+          "x_fixed": 297159208,
+          "y_fixed": 369904168
+        },
+        {
+          "game_frame": 495,
+          "velocity_x": 39096,
+          "velocity_y": 39096,
+          "x_fixed": 297198304,
+          "y_fixed": 369943264
+        },
+        {
+          "game_frame": 496,
+          "velocity_x": 39096,
+          "velocity_y": 39096,
+          "x_fixed": 297237400,
+          "y_fixed": 369982360
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 39096,
+          "velocity_y": 39096,
+          "x_fixed": 297276496,
+          "y_fixed": 370021456
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 39096,
+          "velocity_y": 39096,
+          "x_fixed": 297315592,
+          "y_fixed": 370060552
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": 39096,
+          "velocity_y": 39096,
+          "x_fixed": 297354688,
+          "y_fixed": 370099648
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 27,
+      "target_x": -26,
+      "target_y": 14,
+      "states": [
+        {
+          "game_frame": 492,
+          "velocity_x": -48735,
+          "velocity_y": 26095,
+          "x_fixed": 297107456,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 493,
+          "velocity_x": -48735,
+          "velocity_y": 26095,
+          "x_fixed": 297058721,
+          "y_fixed": 369812975
+        },
+        {
+          "game_frame": 494,
+          "velocity_x": -48735,
+          "velocity_y": 26095,
+          "x_fixed": 297009986,
+          "y_fixed": 369839070
+        },
+        {
+          "game_frame": 495,
+          "velocity_x": -48735,
+          "velocity_y": 26095,
+          "x_fixed": 296961251,
+          "y_fixed": 369865165
+        },
+        {
+          "game_frame": 496,
+          "velocity_x": -48735,
+          "velocity_y": 26095,
+          "x_fixed": 296912516,
+          "y_fixed": 369891260
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -48735,
+          "velocity_y": 26095,
+          "x_fixed": 296863781,
+          "y_fixed": 369917355
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -48735,
+          "velocity_y": 26095,
+          "x_fixed": 296815046,
+          "y_fixed": 369943450
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -48735,
+          "velocity_y": 26095,
+          "x_fixed": 296766311,
+          "y_fixed": 369969545
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -48735,
+          "velocity_y": 26095,
+          "x_fixed": 296717576,
+          "y_fixed": 369995640
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 28,
+      "target_x": -5,
+      "target_y": -29,
+      "states": [
+        {
+          "game_frame": 493,
+          "velocity_x": -9018,
+          "velocity_y": -54554,
+          "x_fixed": 297107456,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 494,
+          "velocity_x": -9018,
+          "velocity_y": -54554,
+          "x_fixed": 297098438,
+          "y_fixed": 369732326
+        },
+        {
+          "game_frame": 495,
+          "velocity_x": -9018,
+          "velocity_y": -54554,
+          "x_fixed": 297089420,
+          "y_fixed": 369677772
+        },
+        {
+          "game_frame": 496,
+          "velocity_x": -9018,
+          "velocity_y": -54554,
+          "x_fixed": 297080402,
+          "y_fixed": 369623218
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -9018,
+          "velocity_y": -54554,
+          "x_fixed": 297071384,
+          "y_fixed": 369568664
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -9018,
+          "velocity_y": -54554,
+          "x_fixed": 297062366,
+          "y_fixed": 369514110
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -9018,
+          "velocity_y": -54554,
+          "x_fixed": 297053348,
+          "y_fixed": 369459556
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -9018,
+          "velocity_y": -54554,
+          "x_fixed": 297044330,
+          "y_fixed": 369405002
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -9018,
+          "velocity_y": -54554,
+          "x_fixed": 297035312,
+          "y_fixed": 369350448
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 29,
+      "target_x": 29,
+      "target_y": 2,
+      "states": [
+        {
+          "game_frame": 494,
+          "velocity_x": 55174,
+          "velocity_y": 3469,
+          "x_fixed": 297172992,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 495,
+          "velocity_x": 55174,
+          "velocity_y": 3469,
+          "x_fixed": 297228166,
+          "y_fixed": 369790349
+        },
+        {
+          "game_frame": 496,
+          "velocity_x": 55174,
+          "velocity_y": 3469,
+          "x_fixed": 297283340,
+          "y_fixed": 369793818
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 55174,
+          "velocity_y": 3469,
+          "x_fixed": 297338514,
+          "y_fixed": 369797287
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 55174,
+          "velocity_y": 3469,
+          "x_fixed": 297393688,
+          "y_fixed": 369800756
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": 55174,
+          "velocity_y": 3469,
+          "x_fixed": 297448862,
+          "y_fixed": 369804225
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": 55174,
+          "velocity_y": 3469,
+          "x_fixed": 297504036,
+          "y_fixed": 369807694
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": 55174,
+          "velocity_y": 3469,
+          "x_fixed": 297559210,
+          "y_fixed": 369811163
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": 55174,
+          "velocity_y": 3469,
+          "x_fixed": 297614384,
+          "y_fixed": 369814632
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 30,
+      "target_x": -11,
+      "target_y": 27,
+      "states": [
+        {
+          "game_frame": 495,
+          "velocity_x": -20601,
+          "velocity_y": 51300,
+          "x_fixed": 297172992,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 496,
+          "velocity_x": -20601,
+          "velocity_y": 51300,
+          "x_fixed": 297152391,
+          "y_fixed": 369838180
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -20601,
+          "velocity_y": 51300,
+          "x_fixed": 297131790,
+          "y_fixed": 369889480
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -20601,
+          "velocity_y": 51300,
+          "x_fixed": 297111189,
+          "y_fixed": 369940780
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -20601,
+          "velocity_y": 51300,
+          "x_fixed": 297090588,
+          "y_fixed": 369992080
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -20601,
+          "velocity_y": 51300,
+          "x_fixed": 297069987,
+          "y_fixed": 370043380
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -20601,
+          "velocity_y": 51300,
+          "x_fixed": 297049386,
+          "y_fixed": 370094680
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": -20601,
+          "velocity_y": 51300,
+          "x_fixed": 297028785,
+          "y_fixed": 370145980
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": -20601,
+          "velocity_y": 51300,
+          "x_fixed": 297008184,
+          "y_fixed": 370197280
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbbolt",
+      "original_unit_id": 31,
+      "target_x": -23,
+      "target_y": -19,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": -42782,
+          "velocity_y": -35033,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -42782,
+          "velocity_y": -35033,
+          "x_fixed": 297195746,
+          "y_fixed": 369751847
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -42782,
+          "velocity_y": -35033,
+          "x_fixed": 297152964,
+          "y_fixed": 369716814
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -42782,
+          "velocity_y": -35033,
+          "x_fixed": 297110182,
+          "y_fixed": 369681781
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -42782,
+          "velocity_y": -35033,
+          "x_fixed": 297067400,
+          "y_fixed": 369646748
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -42782,
+          "velocity_y": -35033,
+          "x_fixed": 297024618,
+          "y_fixed": 369611715
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": -42782,
+          "velocity_y": -35033,
+          "x_fixed": 296981836,
+          "y_fixed": 369576682
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": -42782,
+          "velocity_y": -35033,
+          "x_fixed": 296939054,
+          "y_fixed": 369541649
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": -42782,
+          "velocity_y": -35033,
+          "x_fixed": 296896272,
+          "y_fixed": 369506616
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 32,
+      "target_x": 30,
+      "target_y": 0,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": 73728,
+          "velocity_y": 0,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 52128,
+          "velocity_y": 52128,
+          "x_fixed": 297290656,
+          "y_fixed": 369839008
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 52128,
+          "velocity_y": 52128,
+          "x_fixed": 297342784,
+          "y_fixed": 369891136
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": 1728,
+          "velocity_y": 73692,
+          "x_fixed": 297344512,
+          "y_fixed": 369964828
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": 1728,
+          "velocity_y": 73692,
+          "x_fixed": 297346240,
+          "y_fixed": 370038520
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -49950,
+          "velocity_y": 54216,
+          "x_fixed": 297296290,
+          "y_fixed": 370092736
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": -49950,
+          "velocity_y": 54216,
+          "x_fixed": 297246340,
+          "y_fixed": 370146952
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": -49950,
+          "velocity_y": 54216,
+          "x_fixed": 297196390,
+          "y_fixed": 370201168
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": -49950,
+          "velocity_y": 54216,
+          "x_fixed": 297146440,
+          "y_fixed": 370255384
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 33,
+      "target_x": 27,
+      "target_y": 11,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": 68400,
+          "velocity_y": 27468,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 28386,
+          "velocity_y": 68040,
+          "x_fixed": 297266914,
+          "y_fixed": 369854920
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 28386,
+          "velocity_y": 68040,
+          "x_fixed": 297295300,
+          "y_fixed": 369922960
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -25578,
+          "velocity_y": 69138,
+          "x_fixed": 297269722,
+          "y_fixed": 369992098
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -25578,
+          "velocity_y": 69138,
+          "x_fixed": 297244144,
+          "y_fixed": 370061236
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -68040,
+          "velocity_y": 28386,
+          "x_fixed": 297176104,
+          "y_fixed": 370089622
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": -68040,
+          "velocity_y": 28386,
+          "x_fixed": 297108064,
+          "y_fixed": 370118008
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": -68040,
+          "velocity_y": 28386,
+          "x_fixed": 297040024,
+          "y_fixed": 370146394
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": -68040,
+          "velocity_y": 28386,
+          "x_fixed": 296971984,
+          "y_fixed": 370174780
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 34,
+      "target_x": 21,
+      "target_y": 21,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": 52128,
+          "velocity_y": 52128,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 0,
+          "velocity_y": 73728,
+          "x_fixed": 297238528,
+          "y_fixed": 369860608
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 0,
+          "velocity_y": 73728,
+          "x_fixed": 297238528,
+          "y_fixed": 369934336
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -52956,
+          "velocity_y": 51282,
+          "x_fixed": 297185572,
+          "y_fixed": 369985618
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -52956,
+          "velocity_y": 51282,
+          "x_fixed": 297132616,
+          "y_fixed": 370036900
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -73710,
+          "velocity_y": 1152,
+          "x_fixed": 297058906,
+          "y_fixed": 370038052
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": -73710,
+          "velocity_y": 1152,
+          "x_fixed": 296985196,
+          "y_fixed": 370039204
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": -73710,
+          "velocity_y": 1152,
+          "x_fixed": 296911486,
+          "y_fixed": 370040356
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": -73710,
+          "velocity_y": 1152,
+          "x_fixed": 296837776,
+          "y_fixed": 370041508
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 35,
+      "target_x": 11,
+      "target_y": 27,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": 27468,
+          "velocity_y": 68400,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -28386,
+          "velocity_y": 68040,
+          "x_fixed": 297210142,
+          "y_fixed": 369854920
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -28386,
+          "velocity_y": 68040,
+          "x_fixed": 297181756,
+          "y_fixed": 369922960
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -69138,
+          "velocity_y": 25578,
+          "x_fixed": 297112618,
+          "y_fixed": 369948538
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -69138,
+          "velocity_y": 25578,
+          "x_fixed": 297043480,
+          "y_fixed": 369974116
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -67842,
+          "velocity_y": -28836,
+          "x_fixed": 296975638,
+          "y_fixed": 369945280
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": -67842,
+          "velocity_y": -28836,
+          "x_fixed": 296907796,
+          "y_fixed": 369916444
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": -67842,
+          "velocity_y": -28836,
+          "x_fixed": 296839954,
+          "y_fixed": 369887608
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": -67842,
+          "velocity_y": -28836,
+          "x_fixed": 296772112,
+          "y_fixed": 369858772
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 36,
+      "target_x": 0,
+      "target_y": 30,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": 0,
+          "velocity_y": 73728,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -52128,
+          "velocity_y": 52128,
+          "x_fixed": 297186400,
+          "y_fixed": 369839008
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -52128,
+          "velocity_y": 52128,
+          "x_fixed": 297134272,
+          "y_fixed": 369891136
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -73692,
+          "velocity_y": 1728,
+          "x_fixed": 297060580,
+          "y_fixed": 369892864
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -73692,
+          "velocity_y": 1728,
+          "x_fixed": 296986888,
+          "y_fixed": 369894592
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -54216,
+          "velocity_y": -49950,
+          "x_fixed": 296932672,
+          "y_fixed": 369844642
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": -54216,
+          "velocity_y": -49950,
+          "x_fixed": 296878456,
+          "y_fixed": 369794692
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": -54216,
+          "velocity_y": -49950,
+          "x_fixed": 296824240,
+          "y_fixed": 369744742
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": -54216,
+          "velocity_y": -49950,
+          "x_fixed": 296770024,
+          "y_fixed": 369694792
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 37,
+      "target_x": -11,
+      "target_y": 27,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": -27468,
+          "velocity_y": 68400,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -68040,
+          "velocity_y": 28386,
+          "x_fixed": 297170488,
+          "y_fixed": 369815266
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -68040,
+          "velocity_y": 28386,
+          "x_fixed": 297102448,
+          "y_fixed": 369843652
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -69138,
+          "velocity_y": -25578,
+          "x_fixed": 297033310,
+          "y_fixed": 369818074
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -69138,
+          "velocity_y": -25578,
+          "x_fixed": 296964172,
+          "y_fixed": 369792496
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -28386,
+          "velocity_y": -68040,
+          "x_fixed": 296935786,
+          "y_fixed": 369724456
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": -28386,
+          "velocity_y": -68040,
+          "x_fixed": 296907400,
+          "y_fixed": 369656416
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": -28386,
+          "velocity_y": -68040,
+          "x_fixed": 296879014,
+          "y_fixed": 369588376
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": -28386,
+          "velocity_y": -68040,
+          "x_fixed": 296850628,
+          "y_fixed": 369520336
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 38,
+      "target_x": -21,
+      "target_y": 21,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": -52128,
+          "velocity_y": 52128,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -73728,
+          "velocity_y": 0,
+          "x_fixed": 297164800,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -73728,
+          "velocity_y": 0,
+          "x_fixed": 297091072,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -51282,
+          "velocity_y": -52956,
+          "x_fixed": 297039790,
+          "y_fixed": 369733924
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -51282,
+          "velocity_y": -52956,
+          "x_fixed": 296988508,
+          "y_fixed": 369680968
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -1152,
+          "velocity_y": -73710,
+          "x_fixed": 296987356,
+          "y_fixed": 369607258
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": -1152,
+          "velocity_y": -73710,
+          "x_fixed": 296986204,
+          "y_fixed": 369533548
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": -1152,
+          "velocity_y": -73710,
+          "x_fixed": 296985052,
+          "y_fixed": 369459838
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": -1152,
+          "velocity_y": -73710,
+          "x_fixed": 296983900,
+          "y_fixed": 369386128
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 39,
+      "target_x": -27,
+      "target_y": 11,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": -68400,
+          "velocity_y": 27468,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -68040,
+          "velocity_y": -28386,
+          "x_fixed": 297170488,
+          "y_fixed": 369758494
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -68040,
+          "velocity_y": -28386,
+          "x_fixed": 297102448,
+          "y_fixed": 369730108
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -25578,
+          "velocity_y": -69138,
+          "x_fixed": 297076870,
+          "y_fixed": 369660970
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -25578,
+          "velocity_y": -69138,
+          "x_fixed": 297051292,
+          "y_fixed": 369591832
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": 28836,
+          "velocity_y": -67842,
+          "x_fixed": 297080128,
+          "y_fixed": 369523990
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": 28836,
+          "velocity_y": -67842,
+          "x_fixed": 297108964,
+          "y_fixed": 369456148
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": 28836,
+          "velocity_y": -67842,
+          "x_fixed": 297137800,
+          "y_fixed": 369388306
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": 28836,
+          "velocity_y": -67842,
+          "x_fixed": 297166636,
+          "y_fixed": 369320464
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 40,
+      "target_x": -30,
+      "target_y": 0,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": -73728,
+          "velocity_y": 0,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -52128,
+          "velocity_y": -52128,
+          "x_fixed": 297186400,
+          "y_fixed": 369734752
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -52128,
+          "velocity_y": -52128,
+          "x_fixed": 297134272,
+          "y_fixed": 369682624
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": -1728,
+          "velocity_y": -73692,
+          "x_fixed": 297132544,
+          "y_fixed": 369608932
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": -1728,
+          "velocity_y": -73692,
+          "x_fixed": 297130816,
+          "y_fixed": 369535240
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": 49950,
+          "velocity_y": -54216,
+          "x_fixed": 297180766,
+          "y_fixed": 369481024
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": 49950,
+          "velocity_y": -54216,
+          "x_fixed": 297230716,
+          "y_fixed": 369426808
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": 49950,
+          "velocity_y": -54216,
+          "x_fixed": 297280666,
+          "y_fixed": 369372592
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": 49950,
+          "velocity_y": -54216,
+          "x_fixed": 297330616,
+          "y_fixed": 369318376
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 41,
+      "target_x": -27,
+      "target_y": -11,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": -68400,
+          "velocity_y": -27468,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": -28386,
+          "velocity_y": -68040,
+          "x_fixed": 297210142,
+          "y_fixed": 369718840
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": -28386,
+          "velocity_y": -68040,
+          "x_fixed": 297181756,
+          "y_fixed": 369650800
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": 25578,
+          "velocity_y": -69138,
+          "x_fixed": 297207334,
+          "y_fixed": 369581662
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": 25578,
+          "velocity_y": -69138,
+          "x_fixed": 297232912,
+          "y_fixed": 369512524
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": 68040,
+          "velocity_y": -28386,
+          "x_fixed": 297300952,
+          "y_fixed": 369484138
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": 68040,
+          "velocity_y": -28386,
+          "x_fixed": 297368992,
+          "y_fixed": 369455752
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": 68040,
+          "velocity_y": -28386,
+          "x_fixed": 297437032,
+          "y_fixed": 369427366
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": 68040,
+          "velocity_y": -28386,
+          "x_fixed": 297505072,
+          "y_fixed": 369398980
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 42,
+      "target_x": -21,
+      "target_y": -21,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": -52128,
+          "velocity_y": -52128,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 0,
+          "velocity_y": -73728,
+          "x_fixed": 297238528,
+          "y_fixed": 369713152
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 0,
+          "velocity_y": -73728,
+          "x_fixed": 297238528,
+          "y_fixed": 369639424
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": 52956,
+          "velocity_y": -51282,
+          "x_fixed": 297291484,
+          "y_fixed": 369588142
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": 52956,
+          "velocity_y": -51282,
+          "x_fixed": 297344440,
+          "y_fixed": 369536860
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": 73710,
+          "velocity_y": -1152,
+          "x_fixed": 297418150,
+          "y_fixed": 369535708
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": 73710,
+          "velocity_y": -1152,
+          "x_fixed": 297491860,
+          "y_fixed": 369534556
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": 73710,
+          "velocity_y": -1152,
+          "x_fixed": 297565570,
+          "y_fixed": 369533404
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": 73710,
+          "velocity_y": -1152,
+          "x_fixed": 297639280,
+          "y_fixed": 369532252
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 43,
+      "target_x": -11,
+      "target_y": -27,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": -27468,
+          "velocity_y": -68400,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 28386,
+          "velocity_y": -68040,
+          "x_fixed": 297266914,
+          "y_fixed": 369718840
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 28386,
+          "velocity_y": -68040,
+          "x_fixed": 297295300,
+          "y_fixed": 369650800
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": 69138,
+          "velocity_y": -25578,
+          "x_fixed": 297364438,
+          "y_fixed": 369625222
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": 69138,
+          "velocity_y": -25578,
+          "x_fixed": 297433576,
+          "y_fixed": 369599644
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": 67842,
+          "velocity_y": 28836,
+          "x_fixed": 297501418,
+          "y_fixed": 369628480
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": 67842,
+          "velocity_y": 28836,
+          "x_fixed": 297569260,
+          "y_fixed": 369657316
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": 67842,
+          "velocity_y": 28836,
+          "x_fixed": 297637102,
+          "y_fixed": 369686152
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": 67842,
+          "velocity_y": 28836,
+          "x_fixed": 297704944,
+          "y_fixed": 369714988
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 44,
+      "target_x": 0,
+      "target_y": -30,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": 0,
+          "velocity_y": -73728,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 52128,
+          "velocity_y": -52128,
+          "x_fixed": 297290656,
+          "y_fixed": 369734752
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 52128,
+          "velocity_y": -52128,
+          "x_fixed": 297342784,
+          "y_fixed": 369682624
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": 73692,
+          "velocity_y": -1728,
+          "x_fixed": 297416476,
+          "y_fixed": 369680896
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": 73692,
+          "velocity_y": -1728,
+          "x_fixed": 297490168,
+          "y_fixed": 369679168
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": 54216,
+          "velocity_y": 49950,
+          "x_fixed": 297544384,
+          "y_fixed": 369729118
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": 54216,
+          "velocity_y": 49950,
+          "x_fixed": 297598600,
+          "y_fixed": 369779068
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": 54216,
+          "velocity_y": 49950,
+          "x_fixed": 297652816,
+          "y_fixed": 369829018
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": 54216,
+          "velocity_y": 49950,
+          "x_fixed": 297707032,
+          "y_fixed": 369878968
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 45,
+      "target_x": 11,
+      "target_y": -27,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": 27468,
+          "velocity_y": -68400,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 68040,
+          "velocity_y": -28386,
+          "x_fixed": 297306568,
+          "y_fixed": 369758494
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 68040,
+          "velocity_y": -28386,
+          "x_fixed": 297374608,
+          "y_fixed": 369730108
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": 69138,
+          "velocity_y": 25578,
+          "x_fixed": 297443746,
+          "y_fixed": 369755686
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": 69138,
+          "velocity_y": 25578,
+          "x_fixed": 297512884,
+          "y_fixed": 369781264
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": 28386,
+          "velocity_y": 68040,
+          "x_fixed": 297541270,
+          "y_fixed": 369849304
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": 28386,
+          "velocity_y": 68040,
+          "x_fixed": 297569656,
+          "y_fixed": 369917344
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": 28386,
+          "velocity_y": 68040,
+          "x_fixed": 297598042,
+          "y_fixed": 369985384
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": 28386,
+          "velocity_y": 68040,
+          "x_fixed": 297626428,
+          "y_fixed": 370053424
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 46,
+      "target_x": 21,
+      "target_y": -21,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": 52128,
+          "velocity_y": -52128,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 73728,
+          "velocity_y": 0,
+          "x_fixed": 297312256,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 73728,
+          "velocity_y": 0,
+          "x_fixed": 297385984,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": 51282,
+          "velocity_y": 52956,
+          "x_fixed": 297437266,
+          "y_fixed": 369839836
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": 51282,
+          "velocity_y": 52956,
+          "x_fixed": 297488548,
+          "y_fixed": 369892792
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": 1152,
+          "velocity_y": 73710,
+          "x_fixed": 297489700,
+          "y_fixed": 369966502
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": 1152,
+          "velocity_y": 73710,
+          "x_fixed": 297490852,
+          "y_fixed": 370040212
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": 1152,
+          "velocity_y": 73710,
+          "x_fixed": 297492004,
+          "y_fixed": 370113922
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": 1152,
+          "velocity_y": 73710,
+          "x_fixed": 297493156,
+          "y_fixed": 370187632
+        }
+      ]
+    },
+    {
+      "missile": "frozenorbnova",
+      "original_unit_id": 47,
+      "target_x": 27,
+      "target_y": -11,
+      "states": [
+        {
+          "game_frame": 496,
+          "velocity_x": 68400,
+          "velocity_y": -27468,
+          "x_fixed": 297238528,
+          "y_fixed": 369786880
+        },
+        {
+          "game_frame": 497,
+          "velocity_x": 68040,
+          "velocity_y": 28386,
+          "x_fixed": 297306568,
+          "y_fixed": 369815266
+        },
+        {
+          "game_frame": 498,
+          "velocity_x": 68040,
+          "velocity_y": 28386,
+          "x_fixed": 297374608,
+          "y_fixed": 369843652
+        },
+        {
+          "game_frame": 499,
+          "velocity_x": 25578,
+          "velocity_y": 69138,
+          "x_fixed": 297400186,
+          "y_fixed": 369912790
+        },
+        {
+          "game_frame": 500,
+          "velocity_x": 25578,
+          "velocity_y": 69138,
+          "x_fixed": 297425764,
+          "y_fixed": 369981928
+        },
+        {
+          "game_frame": 501,
+          "velocity_x": -28836,
+          "velocity_y": 67842,
+          "x_fixed": 297396928,
+          "y_fixed": 370049770
+        },
+        {
+          "game_frame": 502,
+          "velocity_x": -28836,
+          "velocity_y": 67842,
+          "x_fixed": 297368092,
+          "y_fixed": 370117612
+        },
+        {
+          "game_frame": 503,
+          "velocity_x": -28836,
+          "velocity_y": 67842,
+          "x_fixed": 297339256,
+          "y_fixed": 370185454
+        },
+        {
+          "game_frame": 504,
+          "velocity_x": -28836,
+          "velocity_y": 67842,
+          "x_fixed": 297310420,
+          "y_fixed": 370253296
+        }
+      ]
+    }
+  ]
+}

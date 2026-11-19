@@ -1,0 +1,6 @@
+{
+  "character": "CXBarb",
+  "batches": [
+    {"name": "barbarian-bash-level1", "collector": "barbarian_bash", "scenario": {}}
+  ]
+}

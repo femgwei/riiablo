@@ -1,0 +1,14 @@
+{
+  "character": "MapWalk",
+  "batches": [
+    {
+      "name": "d2net-outbound-trace-mapwalk-move",
+      "collector": "native_net_trace",
+      "scenario": {
+        "scope": "d2net-outbound-call",
+        "seconds": 20,
+        "input": "move"
+      }
+    }
+  ]
+}

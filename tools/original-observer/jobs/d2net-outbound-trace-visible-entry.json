@@ -1,0 +1,16 @@
+{
+  "character": "CXSorc",
+  "lifecycle": "restart",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "d2net-outbound-trace-visible-move",
+      "collector": "native_net_trace",
+      "scenario": {
+        "scope": "d2net-outbound-call",
+        "seconds": 20,
+        "input": "move"
+      }
+    }
+  ]
+}

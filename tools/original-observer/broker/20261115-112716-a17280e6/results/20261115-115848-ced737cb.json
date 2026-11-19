@@ -1,0 +1,12 @@
+{
+  "id": "20261115-115848-ced737cb",
+  "status": "failed",
+  "started": 1794715128.147584,
+  "broker_pid": 13684,
+  "command": {
+    "op": "controls"
+  },
+  "error": "expected exactly one original loader, got [17712, 27600]",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 330, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 209, in execute\n    pid = self.target()\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 112, in target\n    raise ValueError(\"expected exactly one original loader, got \" + str(pids))\nValueError: expected exactly one original loader, got [17712, 27600]\n",
+  "finished": 1794715128.1715848
+}

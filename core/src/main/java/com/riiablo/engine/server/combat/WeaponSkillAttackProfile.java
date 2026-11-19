@@ -7,7 +7,8 @@ import java.util.function.ToIntFunction;
 
 /** Explicitly audited weapon skills, not a replacement for every special profile. */
 public final class WeaponSkillAttackProfile {
-  public final int enhancedDamage, toHitPercent, sourceDamage, conversionPercent, conversionType;
+  public final int enhancedDamage, flatPhysicalDamage, toHitPercent, sourceDamage,
+      conversionPercent, conversionType;
   public final boolean sacrifice;
 
   private WeaponSkillAttackProfile(Skills.Entry skill, int level, ToIntFunction<String> hardPoints) {
@@ -20,6 +21,12 @@ public final class WeaponSkillAttackProfile {
     int paramPerLevel = skill.Param != null && skill.Param.length > 3 ? skill.Param[3] : 0;
     enhancedDamage = formulaDamage != 0 || skill.Id != SkillId.ZEAL
         ? formulaDamage : Math.max(0, paramBase + (level - 1) * paramPerLevel);
+    // SrvSt32 appends calc2 << 8 as physical damage after AllocCombat. The
+    // shared row uses calc2 for other state durations (notably Berserk), so
+    // only the SrvSt32 Barbarian weapon skills opt into this packet field.
+    flatPhysicalDamage = skill.Id == SkillId.BASH || skill.Id == SkillId.STUN
+        || skill.Id == SkillId.CONCENTRATE
+        ? SkillFormula.evaluate(skill.calc2, skill, level, hardPoints) : 0;
     toHitPercent = skill.ToHit + (level - 1) * skill.LevToHit;
     // Sacrifice passes its raw SrcDam to ApplyDamageBonuses; other callbacks default zero to 128.
     sourceDamage = skill.SrcDam == 0 && !sacrifice ? 128 : skill.SrcDam;
@@ -36,6 +43,7 @@ public final class WeaponSkillAttackProfile {
       ToIntFunction<String> hardPoints) {
     if (skill == null) throw new IllegalArgumentException("missing weapon skill");
     switch (skill.Id) {
+      case SkillId.BASH: case SkillId.STUN: case SkillId.CONCENTRATE:
       case SkillId.FRENZY: case SkillId.BERSERK: case SkillId.ZEAL:
       case SkillId.SACRIFICE: case SkillId.JAB: case SkillId.FEND:
         return new WeaponSkillAttackProfile(skill, Math.max(1, level), hardPoints);

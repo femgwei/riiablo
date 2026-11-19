@@ -28,14 +28,23 @@ class NativeUnitRandomTest {
     }
   }
 
-  @Test void aiUsesFull64AndCombatUsesLow32OfTheSamePersistentStream() {
+  @Test void aiAndCombatUseLow32OfTheSamePersistentStream() {
     Monster unit = new Monster(); unit.rngState = 1;
     Brain ai = new Brain(42,unit);
     assertEquals(51,ai.decide());
     assertEquals(31,NativeUnitRandom.monster(unit,999,42).nextInt(100));
-    assertEquals(84,ai.decide());
+    assertEquals(12,ai.decide());
     assertEquals(93,NativeUnitRandom.monster(unit,999,42).nextInt(100));
-    assertEquals(59,ai.decide());
+    assertEquals(47,ai.decide());
+  }
+
+  @Test void originalArcherOrbitCheckpointUsesUnsignedLowWordPercentage() {
+    D2Seed seed = new D2Seed(423202256,1109836705);
+    assertEquals(89,Seed.rollPercentage(seed));
+    assertEquals(0,Seed.rollPercentage(seed));
+    assertEquals(120,Seed.rollRandomNumber(seed) & 255L);
+    assertEquals(3063969912L,Integer.toUnsignedLong(seed.getNLowSeed()));
+    assertEquals(622133184,seed.getNHighSeed());
   }
 
   @Test void checkpointRestoresBothNativeSeedWords() {

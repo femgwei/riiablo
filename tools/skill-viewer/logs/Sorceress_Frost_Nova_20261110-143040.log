@@ -1,0 +1,11 @@
+# skill session
+character=Sorceress
+skill=Frost Nova
+level=1
+seed=1397442892
+started=Tue Nov 10 14:30:40 CST 2026
+
+weapon=sst weaponRequired=true
+event=skill_selected targetMode=HOSTILE_UNIT
+event=cast skill=Frost Nova targetMode=HOSTILE_UNIT target=monster-41 x=1.09375 y=-6.84375
+event=cast_result skillId=44 target=monster-41 accepted=true mode=actioneer

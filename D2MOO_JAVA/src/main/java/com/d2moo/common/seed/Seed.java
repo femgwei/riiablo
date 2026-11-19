@@ -142,7 +142,9 @@ public class Seed {
         if (seed == null) {
             return 0;
         }
-        return (int) Long.remainderUnsigned(rollRandomNumber(seed), 100);
+        // D2Seed.h: ((uint32_t) SEED_RollRandomNumber(pSeed) % 100).
+        // The high word is persisted, but is not part of this remainder.
+        return (int) ((rollRandomNumber(seed) & 0xFFFFFFFFL) % 100);
     }
     
     /**

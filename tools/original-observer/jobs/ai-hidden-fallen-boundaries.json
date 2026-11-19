@@ -1,0 +1,41 @@
+{
+  "character": "CXSorc",
+  "entry_visibility": "hidden",
+  "batches": [
+    {
+      "name": "distance-14",
+      "collector": "fallen_death",
+      "scenario": {
+        "profile": "distance-14"
+      }
+    },
+    {
+      "name": "distance-15",
+      "collector": "fallen_death",
+      "scenario": {
+        "profile": "distance-15"
+      }
+    },
+    {
+      "name": "ring-4",
+      "collector": "fallen_death",
+      "scenario": {
+        "profile": "ring-4"
+      }
+    },
+    {
+      "name": "ring-5",
+      "collector": "fallen_death",
+      "scenario": {
+        "profile": "ring-5"
+      }
+    },
+    {
+      "name": "adjacent-room",
+      "collector": "fallen_death",
+      "scenario": {
+        "profile": "adjacent-room"
+      }
+    }
+  ]
+}

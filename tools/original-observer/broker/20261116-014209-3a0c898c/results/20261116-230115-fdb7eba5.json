@@ -1,0 +1,15 @@
+{
+  "id": "20261116-230115-fdb7eba5",
+  "status": "completed",
+  "started": 1794841275.696103,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "census-cold-plains-port-navigation-final-check"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261116-230115-fdb7eba5\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794841281.4593267
+}

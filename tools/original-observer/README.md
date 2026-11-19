@@ -1,5 +1,7 @@
 # 原版差分测试与后台观测
 
+冰封球后台客户端采集已通过独立桌面验证，记录见 [`docs/frozen-orb-background-capture-2026-11-19.md`](../../docs/frozen-orb-background-capture-2026-11-19.md)。可用 `broker_client.py submit --op run_job --job frozen-orb-private-desktop` 复跑；采集真实客户端路径方向、动画游标及图形原始字段，不切换输入桌面。最终贴图方向/资源字段仍需进一步定位。
+
 当前研究与交接入口：[`docs/original-client-animation-research-2026-11-15.md`](../../docs/original-client-animation-research-2026-11-15.md)。该记录汇总原版 1.10f 后台观测、broker、native harness、Riiablo 客户端动画 trace 和旋风斩当前结论。当前主目标是功能性技能客户端动画重构；不要把视觉哈希差异直接解释为资源或绘制错误。
 
 在仓库根目录执行：

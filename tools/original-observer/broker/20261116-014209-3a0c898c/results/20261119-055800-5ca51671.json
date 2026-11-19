@@ -1,0 +1,15 @@
+{
+  "id": "20261119-055800-5ca51671",
+  "status": "completed",
+  "started": 1795039080.6109319,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "ai-shaman-hydra"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-055800-5ca51671\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795039155.8534045
+}

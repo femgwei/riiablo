@@ -1,0 +1,9 @@
+{
+  "id": "20261114-212500-1faa55ef",
+  "status": "failed",
+  "started": 1794662700.3838334,
+  "broker_pid": 20520,
+  "error": "unknown operation; no arbitrary command execution",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 286, in serve_once\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 79, in read_command\n    raise ValueError(\"invalid queue file\")\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 59, in validate\n    if not isinstance(command, dict) or command.get(\"op\") not in SCHEMAS:\nValueError: unknown operation; no arbitrary command execution\n",
+  "finished": 1794662700.3988352
+}

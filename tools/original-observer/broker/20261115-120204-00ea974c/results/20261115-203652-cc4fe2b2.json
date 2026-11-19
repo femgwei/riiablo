@@ -1,0 +1,15 @@
+{
+  "id": "20261115-203652-cc4fe2b2",
+  "status": "completed",
+  "started": 1794746212.2280352,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "lut-gholein-waypoint-probe"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-203652-cc4fe2b2\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794746230.9441955
+}

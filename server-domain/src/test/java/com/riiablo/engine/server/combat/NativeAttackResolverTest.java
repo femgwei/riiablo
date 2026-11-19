@@ -10,6 +10,52 @@ import org.junit.jupiter.api.Test;
 
 /** Executes complete attacks without core, ECS, MPQs or global RNG. */
 class NativeAttackResolverTest {
+  @Test void bashLevelFortyKeepsObservedPhysicalPacketSeparateFromLifeDamage() {
+    // Original run 20261114-142024-f7c556d8 / level40: physical=14628,
+    // cached total=4388, HP delta=4388. Supply that base draw explicitly;
+    // this validates settlement ordering, not the original RNG sequence.
+    NativeAttackData a = guaranteedAttack(17);
+    a.maxDamage = 18;
+    a.fixedPointPhysical = true;
+    a.skillFlatPhysicalDamage = 40;
+    NativeDamagePacket hit = new NativeAttackResolver(new NativeCombatRolls(
+        bound -> bound == 256 ? 36 : 0)).resolve(a, new NativeDefenseData());
+    assertTrue(hit.hit);
+    assertEquals(14628, hit.physicalDamage);
+    assertEquals(10240, hit.latePhysicalDamage);
+    assertEquals(4388 / 256f, hit.totalDamageHp());
+  }
+
+  @Test void bashMissKeepsLatePacketFieldWithoutDamagingLifeAndClearsItOnReuse() {
+    // Original level38 miss: physical=9728, total=0, unchanged target HP.
+    NativeAttackData a = new NativeAttackData();
+    a.fixedPointPhysical = true;
+    a.skillFlatPhysicalDamage = 38;
+    NativeAttackResolver resolver = new NativeAttackResolver(new NativeCombatRolls(bound -> bound - 1));
+    NativeDamagePacket out = resolver.resolve(a, new NativeDefenseData());
+    assertFalse(out.hit);
+    assertEquals(9728, out.physicalDamage);
+    assertEquals(9728, out.latePhysicalDamage);
+    assertEquals(0f, out.totalDamageHp());
+    a.skillFlatPhysicalDamage = 0;
+    resolver.resolve(a, new NativeDefenseData(), out, null);
+    assertEquals(0, out.latePhysicalDamage);
+    assertEquals(0, out.physicalDamage);
+  }
+
+  @Test void lateBashAdditionRunsAfterMitigationAndCachedTotal() {
+    for (boolean fixed : new boolean[] {false, true}) {
+      NativeAttackData a = guaranteedAttack(10);
+      a.fixedPointPhysical = fixed;
+      a.skillFlatPhysicalDamage = 40;
+      NativeDefenseData d = new NativeDefenseData();
+      d.damageReducedPercent = 50;
+      NativeDamagePacket hit = zeroRolls(new ArrayList<>()).resolve(a, d);
+      assertEquals(45f, hit.physicalDamageHp());
+      assertEquals(5f, hit.totalDamageHp());
+    }
+  }
+
   @Test void preResolvedMonsterChargeSkipsHitAndDefenseRollsButStillAppliesResistance() {
     for (boolean nativeSchedule : new boolean[] {false, true}) {
       List<Integer> bounds = new ArrayList<>();

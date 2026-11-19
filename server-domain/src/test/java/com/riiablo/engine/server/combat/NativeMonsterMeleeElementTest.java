@@ -42,10 +42,11 @@ class NativeMonsterMeleeElementTest {
     }
     a.poisonLength = 20;
     List<Integer> bounds = new ArrayList<>(); resolve(a, defender(), bounds);
-    assertEquals(java.util.Arrays.asList(100, 512, 768, 1024, 1536, 5), bounds);
+    // Shipped FillDamageValues additionally draws the constant burn range before MonStats.Crit.
+    assertEquals(java.util.Arrays.asList(100, 512, 768, 1024, 1536, 5, 1), bounds);
     a.elementalMinDamage[1] = a.elementalMaxDamage[1];
     bounds.clear(); resolve(a, defender(), bounds);
-    assertEquals(java.util.Arrays.asList(100, 768, 1024, 1536, 5), bounds);
+    assertEquals(java.util.Arrays.asList(100, 768, 1024, 1536, 5, 1), bounds);
   }
 
   @Test void sourcePoisonIsRateNotTotalOrInstantDamageAndLengthAveragesBeforeResistance() {
@@ -105,6 +106,6 @@ class NativeMonsterMeleeElementTest {
     assertEquals((2815 * 2) - 256,p.physicalDamage);
     assertEquals((767 * 2) - 256,p.elementalDamage[1]);
     assertEquals(1022 / 256f,p.poisonDamagePerFrame); assertEquals(100,p.poisonDuration);
-    assertEquals(java.util.Arrays.asList(100,256,256,256,100),bounds);
+    assertEquals(java.util.Arrays.asList(100,256,256,256,1,100),bounds);
   }
 }

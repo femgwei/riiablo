@@ -1,0 +1,15 @@
+{
+  "id": "20261115-220350-764b0e9b",
+  "status": "completed",
+  "started": 1794751431.1647303,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "cold-plains-pointer-probe"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-220350-764b0e9b\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794751434.348274
+}

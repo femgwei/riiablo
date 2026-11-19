@@ -212,8 +212,11 @@ class SorceressNovaIntegrationTest extends RiiabloTest {
     int raw = (int) (resistanceSample(0, 0) * 256);
     float absorbed = (raw * 40 / 100) / 256f;
     float damage = raw / 256f - absorbed;
-    assertTrue(damage > 4f, "without absorb healing this target would die");
-    assertEquals(4f + absorbed - damage, absorbSample(4f, 40, 0, false, damage), EPSILON);
+    // Derive the threatened life from this cast's roll: a fixed 4 HP can
+    // remain below the native 1 HP death threshold even after absorb healing.
+    float initialLife = damage - absorbed + 2f;
+    assertTrue(damage > initialLife, "without absorb healing this target would die");
+    assertEquals(2f, absorbSample(initialLife, 40, 0, false, damage), EPSILON);
   }
 
   @Test

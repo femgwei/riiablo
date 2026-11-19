@@ -1,0 +1,13 @@
+{
+  "character": "CXSorc",
+  "entry_visibility": "hidden",
+  "batches": [
+    {
+      "name": "recovery-reengage",
+      "collector": "fallen_death",
+      "scenario": {
+        "profile": "recovery-reengage"
+      }
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2common_smoke.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2common_smoke.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2common_seed.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2common_seed.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2common_rng.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2common_rng.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2game_controller.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2game_controller.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2game_cast.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2game_cast.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2game_barbarian.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2game_barbarian.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2game_barbarian_cast.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2game_barbarian_cast.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2game_barbarian_target.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2game_barbarian_target.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2game_runtime_trace.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\d2game_controller.cpp(222): warning C4505: "validateGame": 已删除具有内部链接的未引用函数
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\d2game_runtime_trace.exe
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+recover-runtime-trace.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\build\recover-runtime-trace.exe

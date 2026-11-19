@@ -1,0 +1,19 @@
+# skill session
+character=Sorceress
+skill=Lightning
+level=1
+seed=1397442892
+started=Tue Nov 10 14:30:02 CST 2026
+
+weapon=sst weaponRequired=true
+event=skill_selected targetMode=HOSTILE_UNIT
+event=cast skill=Lightning targetMode=HOSTILE_UNIT target=none x=-0.625 y=6.125
+event=cast_result skillId=49 target=none accepted=true mode=actioneer
+event=cast skill=Lightning targetMode=HOSTILE_UNIT target=monster-41 x=17.8125 y=7.5625
+event=cast_result skillId=49 target=monster-41 accepted=true mode=actioneer
+event=cast skill=Lightning targetMode=HOSTILE_UNIT target=monster-41 x=17.75 y=7.5
+event=cast_result skillId=49 target=monster-41 accepted=true mode=actioneer
+event=cast skill=Lightning targetMode=HOSTILE_UNIT target=monster-41 x=17.53125 y=9.09375
+event=cast_result skillId=49 target=monster-41 accepted=true mode=actioneer
+event=cast skill=Lightning targetMode=HOSTILE_UNIT target=monster-41 x=15.03125 y=6.96875
+event=cast_result skillId=49 target=monster-41 accepted=true mode=actioneer

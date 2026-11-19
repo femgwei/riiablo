@@ -1,0 +1,26 @@
+{
+  "character": "aaa",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "waypoint-act1-cold-plains",
+      "collector": "waypoint_select",
+      "scenario": {
+        "level_id": 1,
+        "destination_level": 3,
+        "act": 1,
+        "tab_x": 35,
+        "tab_y": 16,
+        "row_x": 150,
+        "row_y": 112
+      }
+    },
+    {
+      "name": "cold-plains-layout-audit",
+      "collector": "layout_snapshot",
+      "scenario": {
+        "level_id": 3
+      }
+    }
+  ]
+}

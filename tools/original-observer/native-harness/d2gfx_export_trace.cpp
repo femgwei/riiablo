@@ -173,6 +173,7 @@ int wmain(int argc, wchar_t** argv) {
     // single stepping is used. This proves repeated frame attempts without
     // trapping thousands of sprite calls per second.
     U frameReturn = 0; DWORD frameThread = 0; U frameStarts = 0;
+    U textureReturn = 0; DWORD textureThread = 0; U textureEntry = 0; U textureCalls = 0;
     for (const auto& candidate : candidates) {
       U address = gfx.base + candidate.rva;
       require(address >= gfx.base && address < gfx.base + gfx.size,
@@ -219,7 +220,8 @@ int wmain(int argc, wchar_t** argv) {
       U address = reinterpret_cast<U>(exception.ExceptionAddress);
       auto found = labels.find(address);
       const bool atFrameReturn = frameReturn && address == frameReturn && d.event.dwThreadId == frameThread;
-      if (exception.ExceptionCode != EXCEPTION_BREAKPOINT || (found == labels.end() && !atFrameReturn)) {
+      const bool atTextureReturn = textureReturn && address == textureReturn && d.event.dwThreadId == textureThread;
+      if (exception.ExceptionCode != EXCEPTION_BREAKPOINT || (found == labels.end() && !atFrameReturn && !atTextureReturn)) {
         d.resume(); continue;
       }
       // Open for this event instead of retaining handles across thread exits.
@@ -240,6 +242,13 @@ int wmain(int argc, wchar_t** argv) {
               << ',' << windowState(d.pid, window.window) << "}\n" << std::flush;
         frameReturn = 0;
         d.arm(gfx.base + 0x3c90);
+        d.resume(); continue;
+      }
+      if (atTextureReturn) {
+        trace << "{\"type\":\"event\",\"kind\":\"ORIGINAL_D2GFX_TEXTURE_RETURN\",\"elapsed_ms\":"
+              << (GetTickCount64() - started) << ',' << windowState(d.pid, window.window) << "}\n" << std::flush;
+        textureReturn = 0;
+        if (textureEntry && textureCalls < 5000) d.arm(textureEntry);
         d.resume(); continue;
       }
       std::array<U, 16> stack{};
@@ -269,7 +278,15 @@ int wmain(int argc, wchar_t** argv) {
         frameStarts++;
         frameReturn = stack[0]; frameThread = d.event.dwThreadId;
         d.arm(frameReturn);
-      } else labels.erase(found);
+      } else if (address - gfx.base >= 0x4270 && address - gfx.base <= 0x4380 &&
+                 address - gfx.base != 0x43a0 && bytes >= 8 && stack[0] &&
+                 !textureReturn && !d.patches.count(stack[0])) {
+        textureReturn = stack[0];
+        textureThread = d.event.dwThreadId;
+        textureEntry = address;
+        textureCalls++;
+        d.arm(textureReturn);
+      } else if (found != labels.end()) labels.erase(found);
       d.resume();
     }
     trace.close();

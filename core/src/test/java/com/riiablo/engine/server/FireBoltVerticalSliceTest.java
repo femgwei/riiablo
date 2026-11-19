@@ -36,6 +36,66 @@ import org.junit.jupiter.api.Test;
 
 /** M5 batch 1: the authoritative Fire Bolt command-to-hit vertical slice. */
 class FireBoltVerticalSliceTest extends RiiabloTest {
+  /** Captured original 1.10f execution, runs/20261113-cast-session/010-cast.
+   * Replays the impact boundary using the observed missile's two seed words.
+   * Cast/Do are dispatched explicitly here; animation timing is not compared.
+   */
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+  void levelOneImpactReplaysOriginalMissileSeedAndExactHpLoss(boolean unrelatedDraws) {
+    RecordingFactory factory = new RecordingFactory();
+    ReplayProbe probe = new ReplayProbe();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(false), new MissileCollisionSystem(), probe, factory)
+        .build().register("factory", factory).register("map", new Map(0, 0))
+        .register("serverContext", new ServerGameplayContext(Riiablo.files, 127897359)));
+    try {
+      int caster = player(world, 1000f);
+      int target = monster(world, 7f);
+      Attributes owner = world.getMapper(AttributesWrapper.class).get(caster).attrs;
+      owner.base().put(Stat.level, 99); owner.reset();
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.FIRE_BOLT);
+      SkillCastEvent cast = SkillCastEvent.obtain(caster, skill.Id, target, new Vector2(7, 0));
+      world.getSystem(EventSystem.class).dispatch(cast);
+      assertTrue(cast.accepted);
+      assertEquals(2.5f, cast.manaCost, 0f);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          caster, skill.Id, target, new Vector2(7, 0), skill.srvdofunc, skill.cltdofunc));
+      assertEquals(1, factory.created);
+      Missile missile = factory.last;
+      // This restores captured INPUT state, not a mocked roll or damage result.
+      missile.nativeSeed = new com.d2moo.common.drlg.D2Seed(564996791, 666);
+      missile.rngState = 564996791;
+      if (unrelatedDraws) {
+        com.riiablo.engine.server.NativeRng shared = world.getSystem(MissileCollisionSystem.class)
+            .checkpointCombatRng();
+        assertNotNull(shared);
+        for (int i = 0; i < 37; i++) shared.nextInt(1000);
+      }
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 20 && life(world, target) == 1000f; i++) world.process();
+      assertEquals(1, probe.hits);
+      assertEquals(1389, probe.fireFixed, "original SUNITDMG packet in 8.8");
+      assertEquals(254611, world.getMapper(AttributesWrapper.class).get(target).attrs
+          .get(Stat.hitpoints).encodedValues(), "original target HP after settlement");
+      assertEquals(567464301, probe.low, "original missile seed after damage roll");
+      assertEquals(235655850, probe.high, "original missile seed carry word");
+      System.out.println("ORIGINAL_FIREBOLT_REPLAY skill=36 level=1 fire_fixed=" + probe.fireFixed
+          + " hp_after_fixed=254611 seed_after_low=" + probe.low + " seed_after_high=" + probe.high);
+    } finally { world.dispose(); }
+  }
+
+  private static final class ReplayProbe extends net.mostlyoriginal.api.system.core.PassiveSystem {
+    int hits, fireFixed, low, high;
+    @net.mostlyoriginal.api.event.common.Subscribe
+    public void damage(com.riiablo.engine.server.event.DamageEvent event) {
+      Missile missile = world.getMapper(Missile.class).get(event.missileId);
+      hits++; fireFixed = Math.round(event.fireDamage * 256f);
+      assertNotNull(missile.nativeSeed);
+      low = missile.nativeSeed.getNLowSeed(); high = missile.nativeSeed.getNHighSeed();
+    }
+  }
+
   @Test
   void acceptedCastConsumesManaOnceAndRejectedCastDoesNot() {
     RecordingFactory factory = new RecordingFactory();

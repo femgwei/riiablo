@@ -1,0 +1,16 @@
+{
+  "character": "CXSorc",
+  "lifecycle": "restart",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "winsock-send-burst",
+      "collector": "native_socket_trace",
+      "scenario": {
+        "scope": "winsock-send-call",
+        "seconds": 20,
+        "input": "move-burst"
+      }
+    }
+  ]
+}

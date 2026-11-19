@@ -1,0 +1,15 @@
+{
+  "id": "20261118-084928-541fd1fc",
+  "status": "completed",
+  "started": 1794962968.6299007,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "ai-hidden-fallen-attack-repeat"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261118-084928-541fd1fc\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794963016.165088
+}

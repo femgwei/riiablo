@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
@@ -86,17 +85,20 @@ class ChillingArmorGoldenDamageTest extends RiiabloTest {
 
   @Test
   void nativeMissileRollTreatsGetterMaximumAsExclusive() {
-    MathUtils.random.setSeed(0xC4111A6L);
+    NativeRng random = new NativeRng(0xC4111A6);
     boolean sawMinimum = false;
     boolean sawMaximumMinusOne = false;
     for (int i = 0; i < 256; i++) {
-      int rolled = CombatSystem.rollNativeMissileDamage(4, 6);
+      int rolled = CombatSystem.rollNativeMissileDamage(4, 6, random::nextInt);
       assertTrue(rolled >= 4 && rolled < 6);
       sawMinimum |= rolled == 4;
       sawMaximumMinusOne |= rolled == 5;
     }
     assertTrue(sawMinimum);
     assertTrue(sawMaximumMinusOne);
+    java.util.Set<Integer> compatibility = new java.util.HashSet<>();
+    for (int i = 0; i < 256; i++) compatibility.add(CombatSystem.rollNativeMissileDamage(4, 6));
+    assertEquals(java.util.Set.of(4, 5), compatibility, "compatibility calls must advance their stream");
     assertEquals(4, CombatSystem.rollNativeMissileDamage(4, 4));
     assertEquals(4, CombatSystem.rollNativeMissileDamage(4, 5));
   }

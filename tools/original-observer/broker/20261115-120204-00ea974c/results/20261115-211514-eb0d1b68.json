@@ -1,0 +1,15 @@
+{
+  "id": "20261115-211514-eb0d1b68",
+  "status": "completed",
+  "started": 1794748514.6158707,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "lut-gholein-waypoint-cold-plains"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-211514-eb0d1b68\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794748529.8288321
+}

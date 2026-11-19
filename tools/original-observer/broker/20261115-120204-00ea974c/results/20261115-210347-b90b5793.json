@@ -1,0 +1,13 @@
+{
+  "id": "20261115-210347-b90b5793",
+  "status": "failed",
+  "started": 1794747827.4588747,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "lut-gholein-waypoint-probe"
+  },
+  "error": "waypoint_open is pinned to the observed class-156 waypoint",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 330, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 282, in execute\n    validate_job(read_json(job), HOME)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\orchestrator.py\", line 168, in validate_job\n    native = validate_collector(collector, batch.get(\"scenario\", {}))\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\collector_specs.py\", line 131, in validate_collector\n    raise ValueError(\"waypoint_open is pinned to the observed class-156 waypoint\")\nValueError: waypoint_open is pinned to the observed class-156 waypoint\n",
+  "finished": 1794747827.4878778
+}

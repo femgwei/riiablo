@@ -72,7 +72,7 @@ public final class NativeUnitRandom implements IntUnaryOperator {
   public long nextUnsigned() {
     long value = Seed.rollRandomNumber(seed) & 0xFFFFFFFFL; mirror(); return value;
   }
-  /** AI uses SEED_RollPercentage (full uint64), not ITEMS' truncated uint32. */
+  /** SEED_RollPercentage uses the unsigned low word; both seed words advance. */
   public int percentage() {
     int value = Seed.rollPercentage(seed); mirror(); return value;
   }

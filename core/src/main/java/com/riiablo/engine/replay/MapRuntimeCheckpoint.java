@@ -5,6 +5,7 @@ import com.artemis.World;
 import com.artemis.utils.IntBag;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Networked;
+import com.riiablo.engine.server.CofManager;
 import com.riiablo.map.Map;
 
 import java.io.ByteArrayInputStream;
@@ -15,6 +16,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
@@ -25,7 +27,7 @@ import java.util.TreeMap;
  * recorded stable identity against already prepared map runtime.
  */
 public final class MapRuntimeCheckpoint {
-  private static final int VERSION = 1;
+  private static final int VERSION = 2;
   public static final int MAX_BYTES = 16 * 1024 * 1024;
   private final byte[] bytes;
 
@@ -51,6 +53,9 @@ public final class MapRuntimeCheckpoint {
     if (world == null) throw new NullPointerException("world");
     if (ids == null) throw new NullPointerException("ids");
     TreeMap<Integer, EntryState> entries = new TreeMap<>();
+    TreeMap<Integer, ZoneHistory> histories = new TreeMap<>();
+    IdentityHashMap<Map.Zone, Integer> seenZones = new IdentityHashMap<>();
+    CofManager modes = world.getSystem(CofManager.class);
     int previous = -1;
     com.artemis.ComponentMapper<MapWrapper> wrappers = world.getMapper(MapWrapper.class);
     for (int id : ids) {
@@ -73,10 +78,26 @@ public final class MapRuntimeCheckpoint {
       }
       entries.put(id, new EntryState(true, wrapper.map.seed(), wrapper.map.getDifficulty(),
           wrapper.zone.levelId(), wrapper.zone.levelSeed(), roomId, wrapper.roomIdPinned));
+      if (!seenZones.containsKey(wrapper.zone)) {
+        seenZones.put(wrapper.zone, id);
+        ZoneHistory history = new ZoneHistory(wrapper.zone.getRoomsEx().size);
+        if (modes != null) for (int r = 0; r < history.roomCount; r++) {
+          int[] ring = modes.captureRoomDeathHistory(wrapper.zone.getRoomsEx().get(r));
+          if (ring == null) continue;
+          // A partial entity image must never bind an outside lifetime to an
+          // unrelated entity allocated at the same id in the restored world.
+          for (int slot = 0; slot < 4; slot++) {
+            if (ring[1 + slot] >= 0 && Arrays.binarySearch(ids, ring[1 + slot]) < 0)
+              ring[5 + slot] = 2;
+          }
+          history.rooms.put(r, ring);
+        }
+        histories.put(id, history);
+      }
     }
     boolean any = false;
     for (EntryState state : entries.values()) if (state.present) { any = true; break; }
-    return any ? encode(entries) : null;
+    return any ? encode(entries, histories) : null;
   }
 
   /** Convenience capture for all current networked entities. */
@@ -111,6 +132,7 @@ public final class MapRuntimeCheckpoint {
     Decoded decoded = decode();
     com.artemis.ComponentMapper<MapWrapper> wrappers = world.getMapper(MapWrapper.class);
     TreeMap<Integer, Binding> resolved = new TreeMap<>();
+    java.util.Map<String, Binding> resolvedZones = new java.util.HashMap<>();
     for (Entry<Integer, EntryState> entry : decoded.entries.entrySet()) {
       if (!isActive(world, entry.getKey())) throw new IllegalStateException("map runtime host missing: " + entry.getKey());
       EntryState state = entry.getValue();
@@ -122,7 +144,20 @@ public final class MapRuntimeCheckpoint {
           || state.roomId >= binding.zone.getRoomsEx().size) {
         throw new IllegalStateException("map zone identity mismatch: " + entry.getKey());
       }
+      Binding previousBinding = resolvedZones.putIfAbsent(state.zoneKey(), binding);
+      if (previousBinding != null && (previousBinding.zone != binding.zone || previousBinding.map != binding.map))
+        throw new IllegalStateException("inconsistent map zone resolver");
       resolved.put(entry.getKey(), binding);
+    }
+    CofManager modes = world.getSystem(CofManager.class);
+    for (Entry<Integer, ZoneHistory> history : decoded.histories.entrySet()) {
+      Binding binding = resolved.get(history.getKey());
+      if (binding == null || binding.zone.getRoomsEx().size != history.getValue().roomCount)
+        throw new IllegalStateException("death history room coverage mismatch");
+      if (modes == null && !history.getValue().rooms.isEmpty())
+        throw new IllegalStateException("death history requires CofManager");
+      if (modes != null) for (int[] ring : history.getValue().rooms.values())
+        modes.validateRoomDeathHistory(ring);
     }
     for (Entry<Integer, EntryState> entry : decoded.entries.entrySet()) {
       int id = entry.getKey();
@@ -146,9 +181,21 @@ public final class MapRuntimeCheckpoint {
         current.zone.enterClientRoom(current.roomId);
       }
     }
+    if (modes != null) {
+      // Empty images (including legacy v1) must clear future history too.
+      IdentityHashMap<Map.Zone, Boolean> cleared = new IdentityHashMap<>();
+      for (Binding binding : resolved.values()) if (cleared.put(binding.zone, true) == null)
+        for (Map.RoomEx room : binding.zone.getRoomsEx()) modes.clearRoomDeathHistory(room);
+      for (Entry<Integer, ZoneHistory> history : decoded.histories.entrySet()) {
+        Map.Zone zone = resolved.get(history.getKey()).zone;
+        for (Entry<Integer, int[]> ring : history.getValue().rooms.entrySet())
+          modes.restoreRoomDeathHistory(zone.getRoomsEx().get(ring.getKey()), ring.getValue());
+      }
+    }
   }
 
-  private static MapRuntimeCheckpoint encode(TreeMap<Integer, EntryState> entries) {
+  private static MapRuntimeCheckpoint encode(TreeMap<Integer, EntryState> entries,
+      TreeMap<Integer, ZoneHistory> histories) {
     try {
       ByteArrayOutputStream bytes = new ByteArrayOutputStream();
       DataOutputStream out = new DataOutputStream(bytes);
@@ -167,6 +214,16 @@ public final class MapRuntimeCheckpoint {
           out.writeBoolean(state.roomIdPinned);
         }
       }
+      out.writeInt(histories.size());
+      for (Entry<Integer, ZoneHistory> entry : histories.entrySet()) {
+        out.writeInt(entry.getKey());
+        out.writeInt(entry.getValue().roomCount);
+        out.writeInt(entry.getValue().rooms.size());
+        for (Entry<Integer, int[]> ring : entry.getValue().rooms.entrySet()) {
+          out.writeInt(ring.getKey());
+          for (int word : ring.getValue()) out.writeInt(word);
+        }
+      }
       out.flush();
       return fromBytes(bytes.toByteArray());
     } catch (IOException impossible) {
@@ -177,7 +234,8 @@ public final class MapRuntimeCheckpoint {
   private Decoded decode() {
     try {
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
-      if (in.readInt() != VERSION) throw new IllegalArgumentException("map runtime version");
+      int version = in.readInt();
+      if (version != 1 && version != VERSION) throw new IllegalArgumentException("map runtime version");
       int count = CheckpointIO.count(in, 1_000_000);
       TreeMap<Integer, EntryState> entries = new TreeMap<>();
       int previous = -1;
@@ -196,8 +254,45 @@ public final class MapRuntimeCheckpoint {
         }
         entries.put(id, state);
       }
+      TreeMap<Integer, ZoneHistory> histories = new TreeMap<>();
+      if (version >= 2) {
+        int zones = CheckpointIO.count(in, count);
+        int previousAnchor = -1;
+        for (int z = 0; z < zones; z++) {
+          int anchor = in.readInt();
+          if (anchor <= previousAnchor || !entries.containsKey(anchor) || !entries.get(anchor).present)
+            throw new IllegalArgumentException("death history anchor");
+          previousAnchor = anchor;
+          ZoneHistory history = new ZoneHistory(CheckpointIO.count(in, 1_000_000));
+          int rooms = CheckpointIO.count(in, history.roomCount), previousRoom = -1;
+          for (int r = 0; r < rooms; r++) {
+            int room = in.readInt();
+            if (room <= previousRoom || room >= history.roomCount)
+              throw new IllegalArgumentException("death history room ordering");
+            previousRoom = room;
+            int[] ring = new int[9];
+            for (int i = 0; i < 9; i++) ring[i] = in.readInt();
+            if (ring[0] < 0 || ring[0] > 3) throw new IllegalArgumentException("death history cursor");
+            for (int i = 0; i < 4; i++) {
+              int id = ring[1 + i], kind = ring[5 + i];
+              if (id < -1 || kind < 0 || kind > 2 || id < 0 && kind != 0
+                  || kind == 1 && !entries.containsKey(id))
+                throw new IllegalArgumentException("death history lifetime");
+            }
+            history.rooms.put(room, ring);
+          }
+          histories.put(anchor, history);
+        }
+        java.util.Set<String> zoneKeys = new java.util.HashSet<>();
+        for (int anchor : histories.keySet())
+          if (!zoneKeys.add(entries.get(anchor).zoneKey()))
+            throw new IllegalArgumentException("duplicate death history zone");
+        for (EntryState state : entries.values())
+          if (state.present && !zoneKeys.contains(state.zoneKey()))
+            throw new IllegalArgumentException("missing death history zone");
+      }
       if (in.read() != -1) throw new IllegalArgumentException("trailing map runtime");
-      return new Decoded(entries);
+      return new Decoded(entries, histories);
     } catch (EOFException e) {
       throw new IllegalArgumentException("truncated map runtime", e);
     } catch (IOException e) {
@@ -215,7 +310,16 @@ public final class MapRuntimeCheckpoint {
 
   private static final class Decoded {
     final TreeMap<Integer, EntryState> entries;
-    Decoded(TreeMap<Integer, EntryState> entries) { this.entries = entries; }
+    final TreeMap<Integer, ZoneHistory> histories;
+    Decoded(TreeMap<Integer, EntryState> entries, TreeMap<Integer, ZoneHistory> histories) {
+      this.entries = entries; this.histories = histories;
+    }
+  }
+
+  private static final class ZoneHistory {
+    final int roomCount;
+    final TreeMap<Integer, int[]> rooms = new TreeMap<>();
+    ZoneHistory(int roomCount) { this.roomCount = roomCount; }
   }
 
   private static final class EntryState {
@@ -229,5 +333,6 @@ public final class MapRuntimeCheckpoint {
       this.roomIdPinned = roomIdPinned;
     }
     static EntryState absent() { return new EntryState(false, 0, 0, -1, 0, -1, false); }
+    String zoneKey() { return mapSeed + ":" + difficulty + ":" + levelId + ":" + levelSeed; }
   }
 }

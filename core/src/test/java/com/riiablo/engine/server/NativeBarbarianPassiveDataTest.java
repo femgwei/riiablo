@@ -69,11 +69,11 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
     assertPassive("Increased Stamina", 141, "increasedstamina", "skill_passive_staminapercent", 30, 45);
     assertPassive("Iron Skin", 145, "ironskin", "skill_armor_percent", 30, 40);
     assertPassive("Increased Speed", 148, "increasedspeed", "velocitypercent", 13, 18);
-    assertPassive("Natural Resistance", 153, "naturalresistance", "fireresist", 12, 22);
+    assertPassive("Natural Resistance", 153, "naturalresistance", "fireresist", 12, 21);
     assertEquals(45, BarbarianSkills.calculateIncreasedStaminaBonus(2));
     assertEquals(40, BarbarianSkills.calculateIronSkinDefenseBonus(2));
     assertEquals(18, BarbarianSkills.calculateIncreasedSpeedBonus(2));
-    assertEquals(22, BarbarianSkills.calculateNaturalResistanceBonus(2));
+    assertEquals(21, BarbarianSkills.calculateNaturalResistanceBonus(2));
   }
 
   @Test
@@ -255,10 +255,10 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
     UnitState natural = BarbarianSkills.applyPassiveState(
         states, skill("Natural Resistance"), 2, 7);
     assertNotNull(natural);
-    assertEquals(22, natural.fireResistModifier);
-    assertEquals(22, natural.coldResistModifier);
-    assertEquals(22, natural.lightResistModifier);
-    assertEquals(22, natural.poisonResistModifier);
+    assertEquals(21, natural.fireResistModifier);
+    assertEquals(21, natural.coldResistModifier);
+    assertEquals(21, natural.lightResistModifier);
+    assertEquals(21, natural.poisonResistModifier);
   }
 
   @Test
@@ -291,7 +291,7 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
       assertEquals(40, states.getTotalDefenseModifier());
       assertEquals(18, states.getTotalVelocityModifier());
       for (int resist = 0; resist < 4; resist++) {
-        assertEquals(22, states.getTotalResistModifier(resist));
+        assertEquals(21, states.getTotalResistModifier(resist));
       }
       assertEquals(145f, attributes.get(Stat.maxstamina).asFixed(), 0.001f);
       assertEquals(1.18f, velocity.stateSpeedMultiplier, 0.001f);

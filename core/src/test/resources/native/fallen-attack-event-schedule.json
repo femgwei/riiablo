@@ -1,0 +1,6 @@
+{
+  "source": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261118-014314-2b4a9367\\orchestrator\\process-session\\001-recovery-reengage\\frames.csv",
+  "source_sha256": "23235755402253536e2b88cfa9178a30a3da876a29dc324918bb17da8e3a4bd4",
+  "fixture_sha256": "8bf847eccce05fa28e5a8b730a09396242215b02deb9a11e026b1762ba482006",
+  "scope": "Native planned MODECHANGE id1 / ENDANIM offsets, not callback execution or damage. Cleanup/detach confirmed in source summary."
+}

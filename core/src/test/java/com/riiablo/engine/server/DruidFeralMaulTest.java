@@ -138,6 +138,7 @@ class DruidFeralMaulTest extends RiiabloTest {
   @Test
   void srvSt56ResultIsConsumedOnceAndMissDoesNotBuildAStack() {
     Actioneer actioneer = new Actioneer();
+    CombatRandomFixture.bind(actioneer, bound -> 0);
     DummyFactory factory = new DummyFactory();
     World world = world(actioneer, factory);
     try {

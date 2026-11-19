@@ -33,6 +33,8 @@ public final class OffscreenRenderClient {
         .addOption(Option.builder().longOpt("shrine-difficulty").hasArg().build())
         .addOption(Option.builder().longOpt("hackmap").hasArg(false).build())
         .addOption(Option.builder().longOpt("character").hasArg().build())
+        .addOption(Option.builder().longOpt("schedule").hasArg().build())
+        .addOption(Option.builder().longOpt("whirlwind-rewind").hasArg(false).build())
         .addOption(Option.builder().longOpt("automap-mode").hasArg().build())
         .addOption(Option.builder().longOpt("d2-version").hasArg().build());
     CommandLine command = new DefaultParser().parse(options, args);
@@ -41,12 +43,15 @@ public final class OffscreenRenderClient {
     if (!"visual".equals(mode) && !"camp".equals(mode)
         && !"object-audit".equals(mode) && !"shrine-audit".equals(mode)
         && !"dialog-resources".equals(mode) && !"font-baseline".equals(mode)
-        && !"hire-mercenaries".equals(mode) && !"menus".equals(mode)) {
+        && !"hire-mercenaries".equals(mode) && !"menus".equals(mode)
+        && !"whirlwind-animation".equals(mode)) {
       throw new IllegalArgumentException("Unsupported offscreen mode: " + mode);
     }
     FileHandle saves = new FileHandle(command.getOptionValue("saves"));
     saves.mkdirs();
     System.setProperty("riiablo.offscreen-render", Boolean.toString("visual".equals(mode)));
+    System.setProperty("riiablo.offscreen-whirlwind-animation",
+        Boolean.toString("whirlwind-animation".equals(mode)));
     System.setProperty("riiablo.offscreen-menu-lifecycle", Boolean.toString("menus".equals(mode)));
     System.setProperty("riiablo.offscreen-hire-mercenaries", Boolean.toString("hire-mercenaries".equals(mode)));
     System.setProperty("riiablo.offscreen-font-baseline",
@@ -60,6 +65,11 @@ public final class OffscreenRenderClient {
     System.setProperty("riiablo.offscreen-dialog-resources",
         Boolean.toString(command.hasOption("dialog-resources") || "dialog-resources".equals(mode)));
     System.setProperty("riiablo.offscreen-output", output);
+    if (command.hasOption("schedule")) {
+      System.setProperty("riiablo.offscreen-schedule", command.getOptionValue("schedule"));
+    }
+    System.setProperty("riiablo.offscreen-whirlwind-rewind",
+        Boolean.toString(command.hasOption("whirlwind-rewind")));
     System.setProperty("riiablo.offscreen-level",
         command.getOptionValue("level", "-1"));
     System.setProperty("riiablo.offscreen-warp-graph",

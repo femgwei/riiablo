@@ -1,0 +1,13 @@
+{
+  "id": "20261114-060007-243b619d",
+  "status": "failed",
+  "started": 1794607207.617222,
+  "broker_pid": 4728,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-bash-compat"
+  },
+  "error": "unsupported scenario for native_cast; this collector has a fixed contract",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 243, in serve_once\n    if not NAME.fullmatch(key):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 202, in execute\n    arguments += [\"--auto-single-player\", \"--character\", command[\"character\"],\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\orchestrator.py\", line 132, in validate_job\n    native = validate_collector(collector, batch.get(\"scenario\", {}))\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\collector_specs.py\", line 25, in validate_collector\n    if not isinstance(scenario, dict):\nValueError: unsupported scenario for native_cast; this collector has a fixed contract\n",
+  "finished": 1794607207.6272237
+}

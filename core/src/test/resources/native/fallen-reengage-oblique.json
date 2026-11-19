@@ -1,0 +1,26 @@
+{
+  "source_run": "20261117-174127-be4dd494",
+  "source": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261117-174127-be4dd494\\orchestrator\\process-session\\001-recovery-reengage\\frames.csv",
+  "source_sha256": "74925a916cbcd00c4f74349fe177eb0917ac3477331cc795c550cd1caa70edf4",
+  "fixture_sha256": "d7f3ebad083580edb10eddc16d3174f5f2a41d31b394c87fb0d948d058f1d6c1",
+  "native_summary": {
+    "status": "passed",
+    "detached": true,
+    "cleanup_confirmed": true,
+    "fixtures_removed": true,
+    "native_death_observed": true,
+    "room_ring_verified": true,
+    "samples": 601,
+    "first_frame": 24996,
+    "ai_parity": "untested",
+    "restart_required": false
+  },
+  "intervention": {
+    "step": 100,
+    "frame": 25096,
+    "action": "native walk-to-player",
+    "observer_id": 92,
+    "target_id": 1
+  },
+  "scope": "Controlled native walk-to-player, step100 to attack entry at178. Path last point is movement endpoint, distinct from player target."
+}

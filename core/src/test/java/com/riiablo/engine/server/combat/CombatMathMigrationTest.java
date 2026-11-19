@@ -81,10 +81,16 @@ class CombatMathMigrationTest {
         assertEquals(Previous.calculateHitChance(a, d), host.calculateHitChance(a, d), "hit snapshot " + i);
       }
       assertEquals(Previous.calculateBlockChance(d), host.calculateBlockChance(d), "block snapshot " + i);
-      assertEquals(Previous.applyPhysicalDamageReduction(damage, d, false),
-          NativeCombatMath.physicalReduction(damage, d.immunePhysical, d.damageReducedPercent, d.damageReduced, false));
-      assertEquals(Previous.applyPhysicalDamageReduction(damage, d, true),
-          NativeCombatMath.physicalReduction(damage, d.immunePhysical, d.damageReducedPercent, d.damageReduced, true));
+      // SUNITDMG_ApplyResistances subtracts flat DR before percent resistance.
+      // The frozen pre-migration implementation has the opposite order; use
+      // an explicit native oracle here and retain it for the unchanged rules.
+      int afterFlat = Math.max(0, damage - Math.max(0, d.damageReduced));
+      int nativeReduced = damage <= 0 || d.immunePhysical ? 0
+          : Math.max(1, afterFlat * (100 - d.damageReducedPercent) / 100);
+      assertEquals(nativeReduced,
+          NativeCombatMath.physicalReduction(damage, d.immunePhysical, d.damageReducedPercent, d.damageReduced, false), "native DR snapshot " + i);
+      assertEquals(damage <= 0 ? 0 : Math.max(1, afterFlat),
+          NativeCombatMath.physicalReduction(damage, d.immunePhysical, d.damageReducedPercent, d.damageReduced, true), "native bypass snapshot " + i);
       int maximum = d.maxResistances[type] > 0 ? d.maxResistances[type] : 75;
       assertEquals(Previous.applyElementalResistance(damage, d, type, pierce, scale),
           NativeCombatMath.legacyElementalResistance(damage, d.immuneElemental[type], d.resistances[type],

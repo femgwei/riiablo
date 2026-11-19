@@ -1,0 +1,13 @@
+{
+  "id": "20261116-000222-c7676eb6",
+  "status": "failed",
+  "started": 1794758542.694789,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "census-cold-plains-census"
+  },
+  "error": "previous native helper cleanup is unresolved; refusing another game task",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 330, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 196, in execute\n    raise RuntimeError(\"previous native helper cleanup is unresolved; refusing another game task\")\nRuntimeError: previous native helper cleanup is unresolved; refusing another game task\n",
+  "finished": 1794758542.7197862
+}

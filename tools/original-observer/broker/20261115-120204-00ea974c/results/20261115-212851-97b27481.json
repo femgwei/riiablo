@@ -1,0 +1,15 @@
+{
+  "id": "20261115-212851-97b27481",
+  "status": "completed",
+  "started": 1794749331.5406716,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "mapwalk-reload"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-212851-97b27481\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794749593.5144749
+}

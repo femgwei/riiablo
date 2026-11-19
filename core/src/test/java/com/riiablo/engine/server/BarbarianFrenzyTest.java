@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Test;
 class BarbarianFrenzyTest extends RiiabloTest {
   @Test void ordinaryAttackKeyframesUseConcreteHandsAndKeepFractionalLife() {
     Actioneer actioneer = new Actioneer();
+    CombatRandomFixture.bind(actioneer, bound -> 0);
     DummyFactory factory = new DummyFactory();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), actioneer, new Pathfinder(), factory)
@@ -75,7 +76,7 @@ class BarbarianFrenzyTest extends RiiabloTest {
     }
     UnitState one = levelOne.getState(StateId.FRENZY);
     assertEquals(1, one.runtimeValue);
-    assertEquals(48, one.velocityModifier);
+    assertEquals(47, one.velocityModifier);
     assertEquals(7, one.animationRateModifier);
     assertEquals(150, one.duration);
 
@@ -92,6 +93,7 @@ class BarbarianFrenzyTest extends RiiabloTest {
   @Test
   void twoSequenceEventsUseBothWeaponsRetargetAndDelayTheFirstStack() {
     Actioneer actioneer = new Actioneer();
+    CombatRandomFixture.bind(actioneer, bound -> 0);
     DummyFactory factory = new DummyFactory();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), actioneer, new Pathfinder(), factory)

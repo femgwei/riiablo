@@ -1,0 +1,11 @@
+# skill session
+character=Sorceress
+skill=Chilling Armor
+level=1
+seed=1397442892
+started=Tue Nov 10 14:30:33 CST 2026
+
+weapon=sst weaponRequired=true
+event=skill_selected targetMode=HOSTILE_UNIT
+event=cast skill=Chilling Armor targetMode=HOSTILE_UNIT target=monster-41 x=3.0 y=2.125
+event=cast_result skillId=60 target=monster-41 accepted=true mode=actioneer

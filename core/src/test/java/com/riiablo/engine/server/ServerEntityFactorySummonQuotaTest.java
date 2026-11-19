@@ -25,6 +25,27 @@ import org.junit.jupiter.api.Test;
 /** Direct authoritative ServerEntityFactory coverage for native PetMax rules. */
 class ServerEntityFactorySummonQuotaTest extends RiiabloTest {
   @Test
+  void allThreeHydraVariantsUseOriginalNonAttackableSummonFlags() {
+    Fixture fixture=new Fixture();
+    try {
+      int owner=fixture.owner();
+      for(String row:new String[]{"hydra1","hydra2","hydra3"}) {
+        MonStats.Entry summon=Riiablo.files.monstats.get(row);
+        assertNotNull(summon);
+        int id=fixture.factory.createSummonedPet(owner,summon,"hydra",62,1,3,false,250,10,10);
+        assertTrue(id>=0);
+        NativeUnitFlags flags=fixture.world.getMapper(NativeUnitFlags.class).get(id);
+        assertTrue(flags.has(NativeUnitFlags.TARGETABLE),row);
+        assertTrue(flags.has(NativeUnitFlags.IS_VALID_TARGET),row);
+        // All three native heads in run 20261119-060424-2f71e3e1
+        // had dwFlags=2147614730 (0x8002000A), without bit 0x4.
+        org.junit.jupiter.api.Assertions.assertFalse(flags.has(NativeUnitFlags.CAN_BE_ATTACKED),row);
+        fixture.world.process();
+      }
+    } finally {fixture.world.dispose();}
+  }
+
+  @Test
   void skeletonPetMaxEvictsOldestMatchingPetThroughNativeDismissal() {
     Fixture fixture = new Fixture();
     World world = fixture.world;
@@ -67,6 +88,8 @@ class ServerEntityFactorySummonQuotaTest extends RiiabloTest {
 
       assertEquals("golem", world.getMapper(SummonedPet.class).get(clay).petType);
       assertEquals("golem", world.getMapper(SummonedPet.class).get(fire).petType);
+      assertTrue(world.getMapper(NativeUnitFlags.class).get(fire).has(NativeUnitFlags.CAN_BE_ATTACKED),
+          "ordinary golems retain the native attackable flag");
       assertTrue(world.getMapper(SummonedPet.class).get(clay).unsummonPending,
           "a new golem must replace the previous golem regardless of row name");
       assertTrue(!world.getMapper(SummonedPet.class).get(fire).unsummonPending);

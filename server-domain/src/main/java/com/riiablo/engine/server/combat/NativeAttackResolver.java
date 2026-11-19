@@ -80,7 +80,7 @@ public final class NativeAttackResolver {
     if (runningMelee) { result.hit = true; result.hitChance = 100; result.hitRoll = -1; }
 
     if (!result.hit) {
-      return result;
+      return appendLatePhysicalDamage(attacker, result);
     }
 
     // HandleMissileCollision: owner AR first, FillDamageParams second,
@@ -106,7 +106,7 @@ public final class NativeAttackResolver {
         result.defenseType = NativeCombatConstants.DEFENSE_BLOCK;
         result.blockAnimationAllowed = gates == null
             ? advanceBlockAnimation(defender) : gates.blockAnimation();
-        return result;
+        return appendLatePhysicalDamage(attacker, result);
       }
     }
 
@@ -122,7 +122,7 @@ public final class NativeAttackResolver {
       result.blocked = true;
       result.defenseType = passiveDefense;
       if (nativeMissileSchedule) result.monsterCritical = rollMonsterCritical(attacker);
-      return result;
+      return appendLatePhysicalDamage(attacker, result);
     }
 
     // 3. 计算基础物理伤害
@@ -184,6 +184,12 @@ public final class NativeAttackResolver {
       result.lifeDrainFixed = drains[0];
       result.manaDrainFixed = drains[1];
       result.staminaDrainFixed = drains[2];
+    }
+    // Shipped 1.10f FillDamageValues also visits its unfinished burn channel.
+    // Even with no burn stats it consumes a bound=1 draw before MonStats.Crit.
+    // Keep this on the audited source-stat melee path, excluding missile policies.
+    if (attacker.nativeMonsterMeleeElements && !attacker.isMissile) {
+      rolls.consumeMeleeBurnPlaceholder();
     }
     // MonsterMode::ApplyCriticalDamage is after source rolls/conversion, before
     // resistances; doubles ALL five channels (including poison RATE), not lengths.
@@ -253,11 +259,25 @@ public final class NativeAttackResolver {
       }
     }
 
+    // SrvSt32 runs after AllocCombat has cached total damage. The original
+    // keeps calc2 << 8 in physical/leech but does not recalculate life damage.
+    // Native level-40 capture: physical=14628, total=4388, difference=40*256.
+    appendLatePhysicalDamage(attacker, result);
+
     // 9. 计算偷取
     result.lifeStolen = calculateLifeLeech(result.physicalDamage, attacker);
     result.manaStolen = calculateManaLeech(result.physicalDamage, attacker);
 
 
+    return result;
+  }
+
+  private static <T extends NativeDamagePacket> T appendLatePhysicalDamage(
+      NativeAttackData attacker, T result) {
+    int before = result.physicalDamage;
+    result.physicalDamage = saturatingInt((long) before
+        + (long) attacker.skillFlatPhysicalDamage * result.physicalScale);
+    result.latePhysicalDamage = result.physicalDamage - before;
     return result;
   }
 

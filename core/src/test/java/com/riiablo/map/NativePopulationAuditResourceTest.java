@@ -5,6 +5,8 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.codec.excel.ObjGroup;
 import com.riiablo.codec.excel.Excel;
 import com.riiablo.drlg.TileGrid;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -40,7 +42,12 @@ class NativePopulationAuditResourceTest extends RiiabloTest {
         if (act == 3) map.act4Builder().generate(map, seed, 0);
         if (act == 4) map.act5Builder().generate(map, seed, 0);
         NativeObjectPopulation objects = new NativeObjectPopulation();
-        for (Map.Zone zone : map.getZones()) {
+        // Map generation and native population may touch the same pooled
+        // arrays. Snapshot the zone list before auditing it so a diagnostic
+        // population pass cannot trigger libGDX's nested iterator guard.
+        List<Map.Zone> zones = new ArrayList<>();
+        for (Map.Zone zone : map.getZones()) zones.add(zone);
+        for (Map.Zone zone : zones) {
           int id = zone.levelId();
           if (zone.isTown()) continue;
           TileGrid grid = zone.nativeTileGrid();

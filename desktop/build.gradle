@@ -64,6 +64,23 @@ task offscreenBlockRender(type: JavaExec) {
   ignoreExitValue = false
 }
 
+task offscreenWhirlwindAnimation(type: JavaExec) {
+  group = 'verification'
+  description = 'Capture the production Barbarian Whirlwind COF and FBO animation trace in a hidden client.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-whirlwind-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/whirlwind-animation',
+       '--mode', 'whirlwind-animation', '--width', '1', '--height', '1',
+       '--d2-version', project.findProperty('d2Version') ?: '1.10f'
+  if (project.findProperty('schedule') != null)
+    args '--schedule', project.findProperty('schedule')
+  if (project.findProperty('whirlwindRewind') == 'true')
+    args '--whirlwind-rewind'
+  ignoreExitValue = false
+}
+
 task offscreenCamp(type: JavaExec) {
   group = 'verification'
   description = 'Load and render the real Act I Rogue Encampment through a 1x1 hidden client.'

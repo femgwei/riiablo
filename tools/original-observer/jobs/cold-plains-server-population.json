@@ -1,0 +1,11 @@
+{
+  "character": "aaa",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "cold-plains-server-population",
+      "collector": "native_server_population",
+      "scenario": {}
+    }
+  ]
+}

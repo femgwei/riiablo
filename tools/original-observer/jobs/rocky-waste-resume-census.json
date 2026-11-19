@@ -1,0 +1,13 @@
+{
+  "character": "aaa",
+  "batches": [
+    {
+      "name": "rocky-waste-resume-census",
+      "collector": "room_census_walk",
+      "scenario": {
+        "level_id": 40,
+        "seconds": 300
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "20261115-045525-1123182a",
+  "status": "completed",
+  "started": 1794689725.4521775,
+  "broker_pid": 20520,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-whirlwind-client-animation-input"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-095236-2dc08884\\runs\\20261115-045525-1123182a\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794689815.757392
+}

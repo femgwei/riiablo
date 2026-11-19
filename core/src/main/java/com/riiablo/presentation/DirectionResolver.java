@@ -7,6 +7,7 @@ import com.artemis.systems.IteratingSystem;
 import com.riiablo.presentation.component.AnimationWrapper;
 import com.riiablo.presentation.component.ReferenceElementalEffect;
 import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.Direction;
 import com.badlogic.gdx.utils.IntIntMap;
@@ -24,6 +25,9 @@ public class DirectionResolver extends IteratingSystem {
 
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<com.riiablo.engine.server.component.SummonedPet> mSummonedPet;
+  protected ComponentMapper<com.riiablo.engine.server.component.CofReference> mCofReference;
 
   private final IntIntMap pendingDirection = new IntIntMap();
   private final IntIntMap pendingFrames = new IntIntMap();
@@ -33,7 +37,31 @@ public class DirectionResolver extends IteratingSystem {
     float radians = mAngle.get(entityId).angle.angleRad();
     Animation animation = mAnimationWrapper.get(entityId).animation;
     int d = Direction.radiansToDirection(radians, animation.getNumDirections());
+    com.riiablo.engine.server.component.SummonedPet pet = mSummonedPet.get(entityId);
+    com.riiablo.engine.server.component.CofReference reference = mCofReference.get(entityId);
+    if (pet != null
+        && pet.skillId == com.riiablo.engine.server.skill.SkillId.BONE_PRISON
+        && reference != null && "BW".equals(reference.effectiveToken())
+        && (reference.mode == com.riiablo.engine.Engine.Monster.MODE_NU
+            || reference.mode == com.riiablo.engine.Engine.Monster.MODE_DT)) {
+      // 1.10f's captured BW TR submissions select DCC direction zero in
+      // NU/DT, even though SrvDo062 faces each server path toward the centre.
+      // Keep gameplay facing without rotating these stationary client bones.
+      animation.setDirection(0);
+      pendingDirection.remove(entityId, -1);
+      pendingFrames.remove(entityId, 0);
+      return;
+    }
     int current = animation.getDirection();
+    // Frozen Orb's final nova ring changes direction at native callback
+    // boundaries. Waiting for two stable frames makes the ice bolt render
+    // with its previous tangent immediately after each radial turn.
+    if (mMissile.has(entityId) && mMissile.get(entityId).frozenOrbNova) {
+      animation.setDirection(d);
+      pendingDirection.remove(entityId, -1);
+      pendingFrames.remove(entityId, 0);
+      return;
+    }
     if (d == current) {
       pendingDirection.remove(entityId, -1);
       pendingFrames.remove(entityId, 0);

@@ -28,7 +28,7 @@ import com.riiablo.presentation.component.ReferenceElementalEmitter;
  * Pixel offsets use the APK's downward screen Y, converted once at the boundary.
  */
 @All(Position.class)
-public class ReferenceElementalPresentationSystem extends IteratingSystem {
+public class ReferenceElementalPresentationSystem extends IteratingSystem implements com.riiablo.map.RenderEffectProvider {
   private static final float VOLCANO_DURATION_SECONDS = 5.5f;
   private static final float VOLCANO_FIRST_ROCK_DELAY = .3f;
   private static final float VOLCANO_ROCK_INTERVAL = .2f;
@@ -41,6 +41,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
   private static final class BlazeTrail {
     double birthTime;
     double duration = 2.0;
+    int visualId = -1;
     final Vector2 screen = new Vector2();
   }
   protected ComponentMapper<Position> mPosition;
@@ -76,9 +77,24 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
 
   @Override protected void begin() {
     presentationTime += Math.max(0f, world.delta);
-    blazeTrails.entrySet().removeIf(entry ->
-        presentationTime - entry.getValue().birthTime >= entry.getValue().duration
-            || !world.getEntityManager().isActive(entry.getKey()));
+    java.util.Iterator<java.util.Map.Entry<Integer, BlazeTrail>> it =
+        blazeTrails.entrySet().iterator();
+    while (it.hasNext()) {
+      java.util.Map.Entry<Integer, BlazeTrail> entry = it.next();
+      BlazeTrail trail = entry.getValue();
+      boolean expired = presentationTime - trail.birthTime >= trail.duration;
+      boolean sourceGone = entry.getKey() >= 0
+          && !world.getEntityManager().isActive(entry.getKey());
+      if (expired || sourceGone) {
+        // The normal effect pass also expires this entity.  Delete here as a
+        // safety boundary so a skipped presentation tick, a late snapshot, or
+        // a missing Position component cannot leave a Blaze sprite forever.
+        if (trail.visualId >= 0 && world.getEntityManager().isActive(trail.visualId)) {
+          world.delete(trail.visualId);
+        }
+        it.remove();
+      }
+    }
   }
 
   @Override protected void process(int id) {
@@ -324,6 +340,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
     }
     trail.birthTime = birth;
     trail.duration = duration;
+    trail.visualId = effect.entityId;
     trail.screen.set(screen);
   }
 
@@ -334,7 +351,22 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem {
         ? missile.nativeLifetimeFrames / 25f : 2f;
   }
 
-  public boolean hideOriginal(int id) {
+  @Override public boolean ground(int id) {
+    ReferenceElementalEffect effect = mEffect.get(id);
+    return effect != null && effect.ground;
+  }
+
+  @Override public boolean orbit(int id) {
+    ReferenceElementalEffect effect = mEffect.get(id);
+    return effect != null && effect.orbit;
+  }
+
+  @Override public Vector2 screenOffset(int id) {
+    ReferenceElementalEffect effect = mEffect.get(id);
+    return effect == null ? null : effect.offset;
+  }
+
+  @Override public boolean hideOriginal(int id) {
     if (mEffect.has(id) || !mMissile.has(id)) return false;
     Missile m = mMissile.get(id);
     if (isFireWallNative(m)) return true;

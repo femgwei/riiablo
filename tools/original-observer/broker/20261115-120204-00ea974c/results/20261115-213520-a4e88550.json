@@ -1,0 +1,15 @@
+{
+  "id": "20261115-213520-a4e88550",
+  "status": "completed",
+  "started": 1794749721.030446,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "mapwalk-level1-layout"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-213520-a4e88550\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794749723.6712716
+}

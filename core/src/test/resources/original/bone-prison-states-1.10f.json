@@ -1,0 +1,1181 @@
+{
+  "schema": 1,
+  "run_id": "20261119-164730-e51b4876",
+  "source_capture": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-164730-e51b4876\\orchestrator\\worker\\capture",
+  "source_sha256": "2d8054eecd90f0c4de831eba9ea5ffbe705e6366f7886ab9ebf029f9a80329e7",
+  "identity": {
+    "character": "CXPrison",
+    "class_id": 2,
+    "skill_id": 88,
+    "level": 1,
+    "target_id": 18,
+    "target_x": 4530,
+    "target_y": 5650,
+    "cast_method": "server target-mode; normal scheduler"
+  },
+  "background_verified": true,
+  "owned_game_closed": true,
+  "frame_count": 681,
+  "server_samples": 8076,
+  "client_samples": 8076,
+  "units": [
+    {
+      "side": "client",
+      "unit_id": 19,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -1,
+      "cell_offset_y": -4,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 20,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 1,
+      "cell_offset_y": -4,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 21,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 3,
+      "cell_offset_y": -3,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 22,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 4,
+      "cell_offset_y": -1,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 23,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 4,
+      "cell_offset_y": 1,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 24,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 3,
+      "cell_offset_y": 3,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 25,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -1,
+      "cell_offset_y": 4,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 26,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 1,
+      "cell_offset_y": 4,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 27,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -3,
+      "cell_offset_y": 3,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 28,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -4,
+      "cell_offset_y": -1,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 29,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -4,
+      "cell_offset_y": 1,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "client",
+      "unit_id": 30,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -3,
+      "cell_offset_y": -3,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        0,
+        256,
+        512,
+        768,
+        1024,
+        1280,
+        1536,
+        1792,
+        2048,
+        2304,
+        2560,
+        2816,
+        3072,
+        3328,
+        3584
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 19,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -1,
+      "cell_offset_y": -4,
+      "path_direction": 5,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 20,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 1,
+      "cell_offset_y": -4,
+      "path_direction": 10,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 21,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 3,
+      "cell_offset_y": -3,
+      "path_direction": 15,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 22,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 4,
+      "cell_offset_y": -1,
+      "path_direction": 21,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 23,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 4,
+      "cell_offset_y": 1,
+      "path_direction": 26,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 24,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 3,
+      "cell_offset_y": 3,
+      "path_direction": 32,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 25,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -1,
+      "cell_offset_y": 4,
+      "path_direction": 42,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 26,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": 1,
+      "cell_offset_y": 4,
+      "path_direction": 37,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 27,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -3,
+      "cell_offset_y": 3,
+      "path_direction": 47,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 28,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -4,
+      "cell_offset_y": -1,
+      "path_direction": 58,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 29,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -4,
+      "cell_offset_y": 1,
+      "path_direction": 53,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    },
+    {
+      "side": "server",
+      "unit_id": 30,
+      "class_id": 344,
+      "first_frame": 460,
+      "last_frame": 1132,
+      "cell_offset_x": -3,
+      "cell_offset_y": -3,
+      "path_direction": 0,
+      "transitions": [
+        {
+          "game_frame": 460,
+          "mode": 1,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1070,
+          "mode": 0,
+          "animation_frames_raw": 3840,
+          "animation_rate_raw": 256
+        },
+        {
+          "game_frame": 1085,
+          "mode": 12,
+          "animation_frames_raw": 256,
+          "animation_rate_raw": 256
+        }
+      ],
+      "death_animation_cursors": [
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920,
+        273920
+      ],
+      "still_present_at_capture_end": true
+    }
+  ],
+  "limitations": [
+    "Unit-state animation clock; not an actual COF/DCC draw trace",
+    "Server target-mode cast; local client skill-input callback not exercised",
+    "Corpses still present at end; final corpse deletion time not measured",
+    "No controlled collision/movement or damage/HP verification"
+  ]
+}

@@ -82,6 +82,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     public String monster, ai, actualAi = "", scenario, status = "NOT_RUN", error = "";
     public String acts, sources, helpers = "", log;
     public int seed, difficulty, arenaLevel, ticks, actions, damageEvents, moves, warnings, errors;
+    public int classId;
     public boolean fallback, specialAssert, specialPassed;
     public String special = "NOT_IMPLEMENTED", coverage = "BASELINE_ONLY";
     public float damage;
@@ -93,7 +94,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
     String home = System.getenv("D2_HOME");
     Path output;
     int ticks = 500, seed = 1, difficulty;
-    boolean catalogOnly, attackTiming;
+    boolean catalogOnly, attackTiming, stateTrace;
     Set<String> monsters = new TreeSet<>();
     static Config parse(String[] args) {
       Config config = new Config();
@@ -101,6 +102,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
         String arg = args[i];
         if (arg.equals("--catalog-only")) { config.catalogOnly = true; continue; }
         if (arg.equals("--attack-timing")) { config.attackTiming = true; continue; }
+        if (arg.equals("--state-trace")) { config.stateTrace = true; continue; }
         if (++i == args.length) throw new IllegalArgumentException("Missing value for " + arg);
         String value = args[i];
         switch (arg) {
@@ -226,6 +228,7 @@ public final class MonsterAiArena extends ApplicationAdapter {
   private Result result(MonsterAiCatalog.Row row, String scenario) {
     Result result = new Result();
     result.monster = row.monster.Id;
+    result.classId = row.monster.hcIdx;
     result.ai = row.monster.AI;
     result.acts = row.acts.toString();
     result.sources = row.sources.toString();
@@ -416,6 +419,16 @@ public final class MonsterAiArena extends ApplicationAdapter {
         }
         simulation.tick(null, null);
         probe.observeAction();
+        if (config.stateTrace) {
+          Position actor = world.getMapper(Position.class).get(subject);
+          Position target = world.getMapper(Position.class).get(playerId);
+          CofReference cof = world.getMapper(CofReference.class).get(subject);
+          if (actor != null && target != null && cof != null) {
+            capture.line("State class_id=" + result.classId + " mode=" + cof.mode
+                + " x=" + actor.position.x + " y=" + actor.position.y
+                + " player_x=" + target.position.x + " player_y=" + target.position.y);
+          }
+        }
         result.ticks++;
         if (!world.getEntityManager().isActive(subject)) {
           if (result.scenario.equals("orphan")) { result.specialPassed = true; break; }
@@ -687,6 +700,11 @@ public final class MonsterAiArena extends ApplicationAdapter {
   }
 
   static final class Probe extends PassiveSystem {
+    @Subscribe public void decision(com.riiablo.engine.server.event.MonsterAiDecisionEvent event) {
+      if(event.entityId != subject) return;
+      capture.line("AiDecision action="+event.action+" target="+event.targetId
+          +" roll="+event.roll+" secondary="+event.secondaryRoll+" accepted="+event.accepted);
+    }
     final MonsterActionTiming timing = new MonsterActionTiming();
     final Set<String> timingProfiles = new TreeSet<>();
     void observeAction() {

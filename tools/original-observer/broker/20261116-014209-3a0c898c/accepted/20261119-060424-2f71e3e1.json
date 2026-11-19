@@ -1,0 +1,7 @@
+{
+  "op": "run_jobs",
+  "jobs": [
+    "ai-shaman-hydra-clear",
+    "ai-shaman-hydra-wall"
+  ]
+}

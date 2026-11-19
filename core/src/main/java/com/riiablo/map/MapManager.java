@@ -493,6 +493,7 @@ public class MapManager extends PassiveSystem {
       int objectId = object.ds1Raw
           ? resolveDs1ObjectId(files(), objectAct, object.presetIndex)
           : object.presetIndex;
+      object.presetClassId = objectId;
       boolean clientRiverPresentation = shouldMaterializeSpawnedObject(objectId,
           object.spawned,
           clientPresentationOnly

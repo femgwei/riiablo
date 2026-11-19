@@ -1,0 +1,6 @@
+{
+  "source": "tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261118-021209-ab4afca5\\orchestrator\\process-session\\001-attack-direct\\attack-hit-roll.jsonl",
+  "source_sha256": "bb07f95569238ae99bbb45db6d2fb4d90e93333d9fbd33425949845a97bdc17d",
+  "fixture_sha256": "447992aa929cabf01e9d6693b9a0c7df0a7f12307c16f23b71d152fc78645f65",
+  "scope": "One direct native A1, unchanged combat stats and RNG. Effective hit inputs only; no successful damage evidence."
+}

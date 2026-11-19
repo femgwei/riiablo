@@ -1,0 +1,38 @@
+{
+  "character": "MapWalk",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "rogue-waypoint-open",
+      "collector": "waypoint_open",
+      "scenario": {
+        "level_id": 1,
+        "x": 4419,
+        "y": 5609,
+        "class_id": 119,
+        "nav_offset_y": 12
+      }
+    },
+    {
+      "name": "waypoint-act1-cold-plains",
+      "collector": "waypoint_select",
+      "scenario": {
+        "level_id": 1,
+        "destination_level": 3,
+        "act": 1,
+        "tab_x": 35,
+        "tab_y": 16,
+        "row_x": 150,
+        "row_y": 112
+      }
+    },
+    {
+      "name": "cold-plains-mapwalk-census",
+      "collector": "room_census_walk",
+      "scenario": {
+        "level_id": 3,
+        "seconds": 300
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "character": "aaa",
+  "batches": [
+    {
+      "name": "lut-gholein-waypoint-probe",
+      "collector": "waypoint_open",
+      "scenario": {
+        "level_id": 40,
+        "x": 5069,
+        "y": 5084
+      }
+    }
+  ]
+}

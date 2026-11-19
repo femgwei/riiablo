@@ -1,0 +1,15 @@
+{
+  "id": "20261119-091403-aa38a37f",
+  "status": "completed",
+  "started": 1795050843.669845,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-whirlwind-d2gfx-unfocused"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-091403-aa38a37f\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795050874.5929308
+}

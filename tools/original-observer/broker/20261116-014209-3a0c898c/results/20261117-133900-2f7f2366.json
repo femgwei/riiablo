@@ -1,0 +1,15 @@
+{
+  "id": "20261117-133900-2f7f2366",
+  "status": "completed",
+  "started": 1794893940.8826156,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "ai-hidden-update-smoke"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261117-133900-2f7f2366\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794894007.2971816
+}

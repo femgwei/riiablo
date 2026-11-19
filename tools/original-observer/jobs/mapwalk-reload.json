@@ -1,0 +1,7 @@
+{
+  "character": "MapWalk",
+  "lifecycle": "restart",
+  "entry_visibility": "visible",
+  "entry_only": true,
+  "batches": []
+}

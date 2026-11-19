@@ -18,6 +18,41 @@ import org.junit.jupiter.api.Test;
 class MissileAnimationCatchupTest extends RiiabloTest {
   @BeforeEach void initializeColors() { Riiablo.colors = new com.riiablo.Colors(); }
 
+  @Test void frozenOrbRealAssetsLoopAtTheCapturedClientRateThroughTheStepper() {
+    com.artemis.World world = new com.artemis.World(new com.artemis.WorldConfigurationBuilder()
+        .with(new AnimationStepper()).build());
+    try {
+      for (String name : new String[] {"frozenorb", "frozenorbbolt", "frozenorbnova"}) {
+        int id = world.create();
+        Missile missile = world.getMapper(Missile.class).create(id);
+        missile.missile = Riiablo.files.Missiles.get(name);
+        DCC dcc = DCC.loadFromFile(Riiablo.mpqs.resolve(
+            "data\\global\\missiles\\" + missile.missile.CelFile + ".dcc"));
+        int frames = "frozenorb".equals(name) ? 16 : 6;
+        assertEquals(frames, dcc.getNumFramesPerDir(), name);
+        assertEquals(256, MissileLoader.nativeFrameDelta(null, missile), name);
+        Animation animation = world.getMapper(com.riiablo.presentation.component.AnimationWrapper.class)
+            .create(id).animation;
+        animation.edit().layer(dcc).build();
+        animation.setMode(Animation.Mode.LOOP);
+        animation.setFrameDelta(MissileLoader.nativeFrameDelta(null, missile));
+        MissileLoader.initializePlayback(missile, missile.missile, animation, 0);
+        assertEquals(0, animation.getFrame());
+        world.setDelta(1f / 25f);
+        for (int tick = 1; tick <= frames * 3; tick++) {
+          world.process();
+          assertEquals(tick % frames, animation.getFrame(), name + " tick " + tick);
+        }
+        missile.nativeFrame = 6;
+        MissileLoader.initializePlayback(missile, missile.missile, animation, 0);
+        assertEquals(6 % frames, animation.getFrame(), name + " delayed asset publication");
+        world.process();
+        assertEquals(7 % frames, animation.getFrame(), name + " after publication");
+        world.delete(id);
+      }
+    } finally { world.dispose(); }
+  }
+
   @Test void delayedMonsterProjectileRetainsFractionalNativeProgress() {
     Missile missile = missile(5);
     Animation animation = animation(8, 128, Animation.Mode.LOOP);

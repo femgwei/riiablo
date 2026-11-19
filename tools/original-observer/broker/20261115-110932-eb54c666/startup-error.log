@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "F:\3rd_src\riiablo\tools\original-observer\resident_broker.py", line 355, in main
+    raise RuntimeError("another resident receiver is already running")
+RuntimeError: another resident receiver is already running

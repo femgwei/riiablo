@@ -902,7 +902,7 @@ public class AssassinTrapSystem extends IteratingSystem {
 
   /** Compatibility entry point for legacy callers without a server world. */
   static Skills.Entry resolveAttackSkill(Monster monster, Skills.Entry fallback) {
-    return resolveAttackSkill(Riiablo.files, monster, fallback);
+    return resolveAttackSkill(ServerGameplayContext.files(null), monster, fallback);
   }
 
   static Skills.Entry resolveAttackSkill(com.riiablo.Files files, Monster monster, Skills.Entry fallback) {

@@ -1,0 +1,15 @@
+{
+  "id": "20261119-061305-16ad0eb1",
+  "status": "completed",
+  "started": 1795039985.8466692,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "ai-shaman-target-baseline"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-061305-16ad0eb1\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795040033.7957523
+}

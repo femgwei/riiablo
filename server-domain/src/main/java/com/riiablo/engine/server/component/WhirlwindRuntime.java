@@ -14,6 +14,8 @@ public class WhirlwindRuntime extends PooledComponent {
   public final Vector2 lastPosition = new Vector2();
   public boolean positionInitialized;
   public float elapsedFrames;
+  /** Native SQ startup lead-in before the first movement frame (game frames). */
+  public float startupDelayFrames;
   /** Current visual spin angle in radians, synchronized through Angle. */
   public float spinRadians;
   public boolean spinInitialized;
@@ -33,9 +35,11 @@ public class WhirlwindRuntime extends PooledComponent {
     lastPosition.set(start);
     positionInitialized = true;
     elapsedFrames = 0f;
+    startupDelayFrames = 3f;
     spinRadians = new Vector2(destination).sub(start).angleRad();
     spinInitialized = true;
-    nextAttackFrame = 4f;
+    // Original SQ startup reaches SrvDo076 at relative frame 3.
+    nextAttackFrame = 3f;
     attackTimerInitialized = false;
     previousTargetId = Engine.INVALID_ENTITY;
     strikeIndex = 0;
@@ -52,6 +56,7 @@ public class WhirlwindRuntime extends PooledComponent {
     lastPosition.setZero();
     positionInitialized = false;
     elapsedFrames = 0f;
+    startupDelayFrames = 0f;
     spinRadians = 0f;
     spinInitialized = false;
     nextAttackFrame = 0f;

@@ -1,0 +1,13 @@
+{
+  "id": "20261115-225358-15680220",
+  "status": "failed",
+  "started": 1794754439.1016586,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "aaa-cold-plains-census"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-225358-15680220\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 330, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 297, in execute\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-225358-15680220\\orchestrator\n",
+  "finished": 1794754482.7142859
+}

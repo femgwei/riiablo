@@ -1,0 +1,33 @@
+{
+  "pid": 7064,
+  "elevated": true,
+  "status": "ready",
+  "started": 1794607874.0923483,
+  "session": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-054548-ed32aaff",
+  "operations": [
+    "enter",
+    "get_registry",
+    "install_cxbarb",
+    "launch",
+    "ping",
+    "run_job",
+    "run_jobs",
+    "shutdown",
+    "snapshot"
+  ],
+  "jobs": [
+    "barbarian-bash",
+    "barbarian-bash-compat",
+    "barbarian-bash-target",
+    "barbarian-formulas",
+    "firebolt-smoke",
+    "native-runtime-trace"
+  ],
+  "active": null,
+  "persistence": "until shutdown, process exit or Windows restart; no scheduled task",
+  "heartbeat": 1794614872.0989819,
+  "child_pid": null,
+  "last_task": "20261114-080647-faa796c9",
+  "last_task_status": "completed",
+  "cleanup_blocked": false
+}

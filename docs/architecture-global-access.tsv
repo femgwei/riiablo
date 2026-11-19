@@ -39,7 +39,7 @@ com/riiablo/engine/server/ai/Wraith.java	5
 com/riiablo/engine/server/ai/Zombie.java	6
 com/riiablo/engine/server/AnimStepper.java	1
 com/riiablo/engine/server/AssassinTrapSystem.java	3
-com/riiablo/engine/server/AuraEcsSystem.java	9
+com/riiablo/engine/server/AuraEcsSystem.java	1
 com/riiablo/engine/server/combat/CombatSystem.java	2
 com/riiablo/engine/server/combat/DamageCalculator.java	8
 com/riiablo/engine/server/combat/DefenseCalculator.java	1

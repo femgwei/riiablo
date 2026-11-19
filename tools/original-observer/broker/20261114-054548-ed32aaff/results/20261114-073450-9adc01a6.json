@@ -1,0 +1,31 @@
+{
+  "id": "20261114-073450-9adc01a6",
+  "status": "completed",
+  "started": 1794612890.3217394,
+  "broker_pid": 7064,
+  "command": {
+    "op": "get_registry"
+  },
+  "result": {
+    "operations": [
+      "enter",
+      "get_registry",
+      "install_cxbarb",
+      "launch",
+      "ping",
+      "run_job",
+      "run_jobs",
+      "shutdown",
+      "snapshot"
+    ],
+    "jobs": [
+      "barbarian-bash",
+      "barbarian-bash-compat",
+      "barbarian-bash-target",
+      "barbarian-formulas",
+      "firebolt-smoke"
+    ],
+    "pid": 7064
+  },
+  "finished": 1794612890.3337393
+}

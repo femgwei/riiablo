@@ -55,6 +55,12 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
   @Wire(name = "serverContext", failOnNull = false)
   protected ServerGameplayContext serverContext;
 
+  private com.riiablo.Files files() { return ServerGameplayContext.files(serverContext); }
+
+  private int gameSeed() {
+    return serverContext != null ? serverContext.gameSeed() : Riiablo.gameSeed;
+  }
+
   private com.riiablo.engine.server.combat.NativeCombatContext nativeDifficultyContext() {
     int difficulty = map != null ? map.getDifficulty() : 0;
     return serverContext != null ? serverContext.combatContext(difficulty)
@@ -152,12 +158,12 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     }
   }
 
-  private static void collectEquipmentAuras(Iterable<StatRef> stats, IntIntMap levels) {
-    if (Riiablo.files == null || Riiablo.files.skills == null) return;
+  private void collectEquipmentAuras(Iterable<StatRef> stats, IntIntMap levels) {
+    if (files() == null || files().skills == null) return;
     for (StatRef stat : stats) {
       if (stat.id() != Stat.item_aura || stat.asInt() <= 0) continue;
       int skillId = stat.encodedParams();
-      Skills.Entry skill = Riiablo.files.skills.get(skillId);
+      Skills.Entry skill = files().skills.get(skillId);
       if (skill != null && skill.aura) levels.getAndIncrement(skillId, 0, stat.asInt());
     }
   }
@@ -182,9 +188,9 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
   public boolean restoreSelectedAura(int entityId) {
     if (!mPlayer.has(entityId)) return false;
     Player player = mPlayer.get(entityId);
-    if (player.data == null || Riiablo.files == null || Riiablo.files.skills == null) return false;
+    if (player.data == null || files() == null || files().skills == null) return false;
     int skillId = player.data.getAction(com.badlogic.gdx.Input.Buttons.RIGHT);
-    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    Skills.Entry skill = files().skills.get(skillId);
     return skill != null && skill.aura && selectAura(entityId, skillId);
   }
 
@@ -267,8 +273,8 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
 
   @Override public int getBaseSkillLevel(int entityId, String skillName) {
     if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null
-        || skillName == null || Riiablo.files == null || Riiablo.files.skills == null) return 0;
-    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skillName);
+        || skillName == null || files() == null || files().skills == null) return 0;
+    com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(skillName);
     return skill == null ? 0 : Math.max(0,
         mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id));
   }
@@ -441,7 +447,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     if (target == null) return;
     NativeRng rng = damageRng.get(casterId);
     if (rng == null) {
-      rng = NamedRngStreams.open(Riiablo.gameSeed ^ skillId, "aura.damage", casterId);
+      rng = NamedRngStreams.open(gameSeed() ^ skillId, "aura.damage", casterId);
       damageRng.put(casterId, rng);
     }
     int raw = minimum + rng.nextInt(Math.max(1, maximum - minimum + 1));
@@ -473,7 +479,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     if (component.stateList == null) component.init(world, targetId);
     NativeRng rng = holyFreezeRng.get(targetId);
     if (rng == null) {
-      rng = NamedRngStreams.open(Riiablo.gameSeed ^ skillId, "aura.holy-freeze", targetId);
+      rng = NamedRngStreams.open(gameSeed() ^ skillId, "aura.holy-freeze", targetId);
       holyFreezeRng.put(targetId, rng);
     }
     boolean shatter = rng.roll(20, 100);
@@ -506,8 +512,8 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     if (mCorpse == null || mMonster == null || mPosition == null || mAttributes == null
         || !mAttributes.has(casterId) || !mPosition.has(casterId)
         || isInTown(casterId)) return false;
-    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-        ? Riiablo.files.skills.get(skillId) : null;
+    Skills.Entry skill = files() != null && files().skills != null
+        ? files().skills.get(skillId) : null;
     if (skill == null) return false;
     int chance = Math.max(0, SkillFormula.evaluate(skill.calc1, skill, skillLevel));
     int hpGain = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, skillLevel));
@@ -531,7 +537,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
       // The native roll uses the owner's seed. A stable per-pulse hash keeps
       // headless and network simulations deterministic without introducing a
       // second random source in the presentation layer.
-      int roll = Math.floorMod((int) (Riiablo.gameSeed ^ ((long) casterId * 31)
+      int roll = Math.floorMod((int) (gameSeed() ^ ((long) casterId * 31)
           ^ ((long) corpseId * 131) ^ redemptionRollCounter++), 100);
       if (roll >= chance) continue;
       if (corpseStates == null) {

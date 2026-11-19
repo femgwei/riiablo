@@ -1,0 +1,13 @@
+{
+  "id": "20261116-071421-3c8d7a50",
+  "status": "failed",
+  "started": 1794784461.816255,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "census-cold-plains-teleport-probe"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261116-071421-3c8d7a50\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 330, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 297, in execute\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261116-071421-3c8d7a50\\orchestrator\n",
+  "finished": 1794784720.7285507
+}

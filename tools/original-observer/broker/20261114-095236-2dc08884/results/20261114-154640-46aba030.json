@@ -1,0 +1,41 @@
+{
+  "id": "20261114-154640-46aba030",
+  "status": "completed",
+  "started": 1794642400.6077259,
+  "broker_pid": 20520,
+  "command": {
+    "op": "get_registry"
+  },
+  "result": {
+    "operations": [
+      "enter",
+      "get_registry",
+      "install_cxbarb",
+      "launch",
+      "ping",
+      "run_job",
+      "run_jobs",
+      "shutdown",
+      "snapshot"
+    ],
+    "jobs": [
+      "barbarian-bash",
+      "barbarian-bash-compat",
+      "barbarian-bash-fresh",
+      "barbarian-bash-target",
+      "barbarian-bash-target-levels10to17",
+      "barbarian-bash-target-levels18to25",
+      "barbarian-bash-target-levels1to40",
+      "barbarian-bash-target-levels26to33",
+      "barbarian-bash-target-levels34to40",
+      "barbarian-formulas",
+      "barbarian-formulas-fresh",
+      "barbarian-whirlwind",
+      "barbarian-whirlwind-animation",
+      "firebolt-smoke",
+      "native-runtime-trace"
+    ],
+    "pid": 20520
+  },
+  "finished": 1794642400.620728
+}

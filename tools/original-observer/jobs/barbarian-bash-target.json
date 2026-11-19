@@ -1,0 +1,11 @@
+{
+  "character": "CXBarb",
+  "lifecycle": "restart",
+  "batches": [
+    {
+      "name": "barbarian-bash-target-id-level1",
+      "collector": "barbarian_bash_target",
+      "scenario": {"level": 1}
+    }
+  ]
+}

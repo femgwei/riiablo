@@ -1,0 +1,15 @@
+{
+  "id": "20261116-232740-3ba08d77",
+  "status": "completed",
+  "started": 1794842860.7173548,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "census-dry-hills-port-navigation-resume2"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261116-232740-3ba08d77\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794843028.164295
+}

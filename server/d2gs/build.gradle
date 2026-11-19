@@ -45,6 +45,10 @@ tasks.register('monsterAiArena', JavaExec) {
   if (project.hasProperty('arenaMonsters')) args '--monsters', project.property('arenaMonsters')
   if (project.hasProperty('arenaCatalogOnly')) args '--catalog-only'
   if (project.hasProperty('arenaAttackTiming')) args '--attack-timing'
+  if (project.hasProperty('arenaStateTrace')) {
+    args '--state-trace'
+    jvmArgs '-Driiablo.aiDecisionTrace=true'
+  }
 }
 
 run {
@@ -81,6 +85,13 @@ tasks.register('headlessMapTour', JavaExec) {
   }
   if (project.hasProperty('tourTownRoundTrip')) args '--tour-town-round-trip'
   if (project.hasProperty('tourObjectLoads')) args '--tour-object-loads'
+  if (project.hasProperty('tourRoomSweep')) args '--tour-room-sweep'
+  if (project.hasProperty('tourNavigationExport')) {
+    systemProperty 'riiablo.map.exportNavigation', 'true'
+  }
+  if (project.hasProperty('tourPopulationExport')) {
+    systemProperty 'riiablo.map.exportPopulation', 'true'
+  }
     if (project.hasProperty('tourAllSeams')) args '--tour-all-seams'
   ignoreExitValue = false
 }

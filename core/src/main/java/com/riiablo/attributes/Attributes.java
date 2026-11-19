@@ -310,6 +310,16 @@ public final class Attributes implements Iterable<StatRef> {
     aggregateRevision++;
   }
 
+  /** Clears a reused snapshot and binds every backing list to its new data set. */
+  public void clear(StatTable table) {
+    java.util.Objects.requireNonNull(table, "table");
+    clear();
+    list.bind(table);
+    base.stats.bind(table);
+    agg.stats.bind(table);
+    rem.stats.bind(table);
+  }
+
   @Override
   public Iterator<StatRef> iterator() {
     return agg.statIterator();

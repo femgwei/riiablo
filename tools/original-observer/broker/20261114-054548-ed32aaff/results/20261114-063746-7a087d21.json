@@ -1,0 +1,13 @@
+{
+  "id": "20261114-063746-7a087d21",
+  "status": "failed",
+  "started": 1794609466.403224,
+  "broker_pid": 7064,
+  "command": {
+    "op": "enter",
+    "character": "CXBarb"
+  },
+  "error": "entry not verified: {\"exit_code\": 1, \"summary_path\": \"F:\\\\3rd_src\\\\riiablo\\\\tools\\\\original-observer\\\\broker\\\\20261114-054548-ed32aaff\\\\runs\\\\20261114-063746-7a087d21\\\\entry\\\\summary.json\", \"status\": \"error\", \"error\": \"Player projection is inconsistent with camera/client size: {'camera': [0, 0], 'projected': [-19760, 80176], 'client': [640, 480]}\", \"player\": {\"status\": \"player\", \"pointer\": 106582784, \"type\": 0, \"class_id\": 4, \"unit_id\": 1, \"mode\": 5, \"act\": 0, \"animation_frame_raw\": 0, \"seed\": [3064641593, 280084454], \"name\": \"CXBarb\", \"position\": {\"x\": 4393, \"y\": 5628}}, \"level_id\": 1}",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 266, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 213, in execute\n    raise RuntimeError(\"entry not verified: \" + json.dumps(result, ensure_ascii=False))\nRuntimeError: entry not verified: {\"exit_code\": 1, \"summary_path\": \"F:\\\\3rd_src\\\\riiablo\\\\tools\\\\original-observer\\\\broker\\\\20261114-054548-ed32aaff\\\\runs\\\\20261114-063746-7a087d21\\\\entry\\\\summary.json\", \"status\": \"error\", \"error\": \"Player projection is inconsistent with camera/client size: {'camera': [0, 0], 'projected': [-19760, 80176], 'client': [640, 480]}\", \"player\": {\"status\": \"player\", \"pointer\": 106582784, \"type\": 0, \"class_id\": 4, \"unit_id\": 1, \"mode\": 5, \"act\": 0, \"animation_frame_raw\": 0, \"seed\": [3064641593, 280084454], \"name\": \"CXBarb\", \"position\": {\"x\": 4393, \"y\": 5628}}, \"level_id\": 1}\n",
+  "finished": 1794609482.17092
+}

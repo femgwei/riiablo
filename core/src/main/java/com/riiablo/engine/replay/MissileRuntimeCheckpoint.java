@@ -21,7 +21,7 @@ import java.util.*;
  * shared cast hit sets are rebound only after every entity has been assembled.
  */
 public final class MissileRuntimeCheckpoint {
-  private static final int VERSION = 3;
+  private static final int VERSION = 4;
   public static final int MAX_BYTES = 1024 * 1024;
   private static final int MAX_TARGETS = 65536;
   private final byte[] bytes;
@@ -41,7 +41,7 @@ public final class MissileRuntimeCheckpoint {
   /** Schema audit includes explicit omission policies, not only persisted fields. */
   public static Set<String> coveredFields() {
     return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-      "range", "ownerId", "nativeBaalWave", "rngState", "roomId",
+      "range", "ownerId", "nativeBaalWave", "rngState", "roomId", "fireWallNextFrame", "recyclerRecovered",
       "presentationSeed", "presentationSeedKnown", "clientSnapshotKnown",
       "clientSampleFrame", "clientSamplePosition",
       "authoritative", "presentationOnly", "distanceTraveled", "attackMinDamage", "attackMaxDamage",
@@ -63,7 +63,7 @@ public final class MissileRuntimeCheckpoint {
       "blessedHammerPath", "blessedHammerPointIndex", "fistOfHeavensDelay", "fistOfHeavensTriggered", "chainHitsRemaining",
       "moltenBoulderCellKnown", "moltenBoulderCellX", "moltenBoulderCellY",
       "blizzardCenter", "blizzardSeed", "frozenOrbController", "frozenOrbTargetPhase", "frozenOrbNova",
-      "frozenOrbTargetX", "frozenOrbTargetY", "meteorCenter", "druidFissureController", "druidFissureNextFrame",
+      "frozenOrbTargetX", "frozenOrbTargetY", "frozenOrbVelocity", "meteorCenter", "druidFissureController", "druidFissureNextFrame",
       "druidFissureSeed", "druidVolcanoController", "druidVolcanoNextFrame", "druidVolcanoSeed", "thunderStormStrike",
       "thunderStormResolved", "chaosIcePath", "chaosIceSeed", "chaosIceX", "chaosIceY",
       "chaosIceNextTurnFrame", "hitFunctionTriggered", "impactPresentationTriggered", "rabiesController", "rabiesSourceId",
@@ -105,6 +105,9 @@ public final class MissileRuntimeCheckpoint {
         out.writeBoolean(missile.moltenBoulderCellKnown);
         out.writeInt(missile.moltenBoulderCellX);
         out.writeInt(missile.moltenBoulderCellY);
+        out.writeInt(missile.frozenOrbVelocity);
+        out.writeInt(missile.fireWallNextFrame);
+        out.writeBoolean(missile.recyclerRecovered);
         out.flush();
         result.put(id, fromBytes(bytes.toByteArray()));
       } catch (IOException impossible) { throw new IllegalStateException(impossible); }
@@ -513,6 +516,9 @@ public final class MissileRuntimeCheckpoint {
       m.moltenBoulderCellKnown = version >= 3 && presence(in);
       m.moltenBoulderCellX = version >= 3 ? in.readInt() : 0;
       m.moltenBoulderCellY = version >= 3 ? in.readInt() : 0;
+      m.frozenOrbVelocity = version >= 4 ? in.readInt() : 0;
+      m.fireWallNextFrame = version >= 4 ? in.readInt() : 0;
+      m.recyclerRecovered = version >= 4 && presence(in);
       if (d.ownerLifetime > 2 || (d.ownerLifetime != 0 && m.ownerId < 0)
           || m.ownerId < -1 || m.nativeFrame < 0 || m.nativeLifetimeFrames < 0) {
         throw new IllegalArgumentException("missile runtime identity/clock");

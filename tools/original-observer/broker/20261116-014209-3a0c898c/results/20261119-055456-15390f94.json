@@ -1,0 +1,13 @@
+{
+  "id": "20261119-055456-15390f94",
+  "status": "failed",
+  "started": 1795038896.57465,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "ai-shaman-hydra"
+  },
+  "error": "native_ai_batch supports only the five batch-one monster classes",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 330, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 282, in execute\n    validate_job(read_json(job), HOME)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\orchestrator.py\", line 175, in validate_job\n    native = validate_collector(collector, batch.get(\"scenario\", {}))\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\collector_specs.py\", line 65, in validate_collector\n    raise ValueError(\"native_ai_batch supports only the five batch-one monster classes\")\nValueError: native_ai_batch supports only the five batch-one monster classes\n",
+  "finished": 1795038896.6226485
+}

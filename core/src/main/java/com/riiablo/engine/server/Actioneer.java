@@ -1321,6 +1321,8 @@ public class Actioneer extends PassiveSystem {
           // cancel the bear's sequence.
           log.debug("[DRUID_BEAR_SMITE] phase=start entity={} target={} skill={}",
               entityId, targetId, skill.Id);
+        } else if (isBarbarianSrvDo002Skill(skill)) {
+          prepareBarbarianWeaponSkill(entityId, targetId);
         } else {
           prepareConversion(entityId, targetId);
         }
@@ -2001,6 +2003,7 @@ public class Actioneer extends PassiveSystem {
         boolean jab = amazonJab && activeCasting.jabRemainingStrikes > 0;
         boolean berserk = activeSkill != null && activeSkill.srvstfunc == 39
             && activeSkill.srvdofunc == 2;
+        boolean barbarianWeaponSkill = isBarbarianSrvDo002Skill(activeSkill);
         boolean fireClaws = activeSkill != null && DruidSkills.isFireClaws(activeSkill);
         boolean lightningStrike = activeSkill != null
             && (activeSkill.Id == SkillId.LIGHTNING_STRIKE
@@ -2265,6 +2268,15 @@ public class Actioneer extends PassiveSystem {
           berserkWeapon = whirlwindPrimaryWeapon(entityId);
           if (!activeCasting.weaponSkillPrepared || activeCasting.weaponSkillProcessed
               || activeCasting.weaponSkillTargetId != targetId) break;
+          combat = activeCasting.weaponSkillCombat;
+          activeCasting.weaponSkillCombat = null;
+          activeCasting.weaponSkillPrepared = false;
+          activeCasting.weaponSkillProcessed = true;
+        } else if (barbarianWeaponSkill) {
+          if (activeCasting == null || !activeCasting.weaponSkillPrepared
+              || activeCasting.weaponSkillProcessed
+              || activeCasting.weaponSkillTargetId != targetId
+              || activeCasting.weaponSkillCombat == null) break;
           combat = activeCasting.weaponSkillCombat;
           activeCasting.weaponSkillCombat = null;
           activeCasting.weaponSkillPrepared = false;
@@ -2616,6 +2628,15 @@ public class Actioneer extends PassiveSystem {
               attackingMonster.resurrectedBy, attackingMonster.playerRevive);
         }
         if (hpAfter > 0f) queueHitReaction(targetId, false);
+
+        // Bash carries the native knockback result flag. Apply it only after
+        // a successful, unblocked hit so misses never move the target.
+        if (barbarianWeaponSkill && activeSkill.Id == SkillId.BASH
+            && mPosition.has(entityId) && mPosition.has(targetId)) {
+          StatusEffectApplier.forWorld(world).applyKnockback(entityId, targetId,
+              mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
+              mPosition.get(targetId).position.x, mPosition.get(targetId).position.y);
+        }
 
         if (progressiveRelease != null && progressiveRelease.hasEffects()) {
           applyAssassinProgressiveStageEffects(
@@ -4519,6 +4540,46 @@ public class Actioneer extends PassiveSystem {
             skill, level, name -> baseSkillLevel(entityId, name)),
         BarbarianSkills.getBerserkMagicConversion(
             skill, level, name -> baseSkillLevel(entityId, name)));
+  }
+
+  /** Native SrvSt32 setup for player Bash/Stun/Concentrate. */
+  private void prepareBarbarianWeaponSkill(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? files().skills.get(casting.skillId) : null;
+    if (casting == null || !isBarbarianSrvDo002Skill(skill)
+        || targetId == Engine.INVALID_ENTITY || !mPosition.has(entityId)
+        || !mPosition.has(targetId) || !isAlive(entityId) || !isAlive(targetId)
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || mAttributesWrapper.get(entityId).attrs == null
+        || mAttributesWrapper.get(targetId).attrs == null
+        || !canDamageRelation(entityId, targetId,
+            mPlayer.has(entityId) || mMercenary.has(entityId) || mSummonedPet.has(entityId),
+            mPlayer.has(targetId) || mMercenary.has(targetId) || mSummonedPet.has(targetId))
+        || !isInMeleeRangeAtTick(entityId, targetId, 0, casting.positionSnapshotTick)) {
+      log.info("[BARBARIAN_MELEE] phase=start_reject source={} target={} reason=invalid_target",
+          entityId, targetId);
+      if (mCasting.has(entityId)) mCasting.remove(entityId);
+      if (mSequence.has(entityId)) mSequence.remove(entityId);
+      return;
+    }
+    if (casting.weaponSkillPrepared || casting.weaponSkillProcessed) return;
+    int level = Math.max(1, skillLevel(entityId, casting.skillId));
+    casting.weaponSkillCombat = rollWeaponSkill(entityId, targetId, skill, level, false);
+    casting.weaponSkillTargetId = targetId;
+    casting.weaponSkillPrepared = true;
+    log.info("[BARBARIAN_MELEE] phase=start source={} target={} skill={} level={} "
+            + "damagePercent={} attackRating={} chance={} hit={}",
+        entityId, targetId, skill.skill, level,
+        com.riiablo.engine.server.combat.WeaponSkillAttackProfile.create(
+            skill, level, name -> baseSkillLevel(entityId, name)).enhancedDamage,
+        casting.weaponSkillCombat.attackRating, casting.weaponSkillCombat.hitChance,
+        casting.weaponSkillCombat.hit);
+  }
+
+  private static boolean isBarbarianSrvDo002Skill(Skills.Entry skill) {
+    if (skill == null || skill.srvdofunc != 2) return false;
+    return skill.Id == SkillId.BASH || skill.Id == SkillId.STUN
+        || skill.Id == SkillId.CONCENTRATE;
   }
 
   private void rejectBerserk(int entityId, String reason) {

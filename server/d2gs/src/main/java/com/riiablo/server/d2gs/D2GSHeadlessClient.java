@@ -5203,8 +5203,33 @@ public final class D2GSHeadlessClient {
               + " entities=" + loaded.entities + " synthetic=" + loaded.synthetic
               + " nativeTerrain=" + loaded.nativeTerrain
               + " pendingMonsters=" + loaded.pendingMonsters + " spawnedMonsters=" + loaded.spawnedMonsters
+              + " currentVisibleMonsters=" + loaded.currentVisibleMonsters
+              + " cumulativeVisibleMonsters=" + loaded.cumulativeVisibleMonsters
               + " spawnedObjects=" + loaded.spawnedObjects + " groundItems=" + loaded.groundItems
               + " position=" + loaded.position + " blocked=" + loaded.blocked);
+          if (config.tourRoomSweep) {
+            int roomCount = D2GS.headlessRoomCount(level);
+            int movedRooms = 0;
+            for (int roomId = 0; roomId < roomCount; roomId++) {
+              if (!D2GS.headlessMovePlayerToRoom(playerId, level, roomId)) {
+                tourLog(report, "ROOM_SWEEP_STOP", "level=" + level + " room=" + roomId
+                    + " expectedRooms=" + roomCount);
+                break;
+              }
+              MapTourProbe.Sample roomSample = D2GS.headlessMapTourSample(playerId, -1, true);
+              movedRooms++;
+              tourLog(report, "ROOM_SWEEP", "level=" + level + " room=" + roomId
+                  + " currentVisibleMonsters=" + roomSample.currentVisibleMonsters
+                  + " cumulativeVisibleMonsters=" + roomSample.cumulativeVisibleMonsters
+                  + " spawnedMonsters=" + roomSample.spawnedMonsters);
+            }
+            MapTourProbe.Sample sweepEnd = D2GS.headlessMapTourSample(playerId, -1, true);
+            tourLog(report, "ROOM_SWEEP_SUMMARY", "level=" + level + " rooms=" + movedRooms
+                + " expectedRooms=" + roomCount
+                + " spawnedMonsters=" + sweepEnd.spawnedMonsters
+                + " currentVisibleMonsters=" + sweepEnd.currentVisibleMonsters
+                + " cumulativeVisibleMonsters=" + sweepEnd.cumulativeVisibleMonsters);
+          }
           java.util.List<String> objectEvidence = D2GS.headlessMapObjectAudit(playerId);
           for (String evidence : objectEvidence) {
             report.println("[MAP_TOUR] " + evidence);
@@ -5214,6 +5239,10 @@ public final class D2GSHeadlessClient {
           if (objectEvidence.get(objectEvidence.size() - 1).endsWith("result=FAIL")) {
             throw new IOException("Native object loading audit failed level=" + level);
           }
+          java.util.List<String> sceneSnapshot = D2GS.headlessMapSceneSnapshot(playerId);
+          Files.write(directory.resolve("scene-level-" + level + ".txt"), sceneSnapshot, StandardCharsets.UTF_8);
+          for (String evidence : sceneSnapshot) report.println("[MAP_TOUR] " + evidence);
+          report.flush();
           if (config.tourObjectLoads) {
             tourLog(report, "OBJECT_LOAD_PASS", "level=" + level
                 + " mode=FULL_LEVEL_MATERIALIZATION walkingEvidence=false");
@@ -13449,6 +13478,7 @@ public final class D2GSHeadlessClient {
     boolean mapTour;
     boolean tourTownRoundTrip;
     boolean tourObjectLoads;
+    boolean tourRoomSweep;
     boolean tourAllSeams;
     boolean tourAiObserve;
     boolean tourMonsterPursuit;
@@ -13558,6 +13588,7 @@ public final class D2GSHeadlessClient {
         else if ("--map-tour".equals(arg)) config.mapTour = true;
         else if ("--tour-town-round-trip".equals(arg)) config.tourTownRoundTrip = true;
         else if ("--tour-object-loads".equals(arg)) config.tourObjectLoads = true;
+        else if ("--tour-room-sweep".equals(arg)) config.tourRoomSweep = true;
         else if ("--tour-all-seams".equals(arg)) config.tourAllSeams = true;
         else if ("--tour-ai-observe".equals(arg)) config.tourAiObserve = true;
         else if ("--tour-monster-pursuit".equals(arg)) config.tourMonsterPursuit = true;

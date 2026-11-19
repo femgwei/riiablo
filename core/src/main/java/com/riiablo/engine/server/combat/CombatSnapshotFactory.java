@@ -417,6 +417,7 @@ final class CombatSnapshotFactory {
         a.enhancedDamagePercent += skill.enhancedDamage;
         if (attackerPlayer) a.attackRatingPercent += skill.toHitPercent;
         a.weaponSourceDamage = skill.sourceDamage;
+        a.skillFlatPhysicalDamage = skill.flatPhysicalDamage;
         a.physicalConversionPercent = skill.conversionPercent;
         a.physicalConversionType = skill.conversionType;
         a.suppressWeaponCritical = skill.sacrifice;

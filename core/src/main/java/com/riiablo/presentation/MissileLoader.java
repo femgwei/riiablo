@@ -32,6 +32,10 @@ public class MissileLoader extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Missile missile = mMissile.get(entityId);
+    // Original Bone Spear trails first draw at age 1, after the head has
+    // advanced away. Publishing age 0 here (including loadNow's warm-cache
+    // path) draws a fresh trail over the head at the same position.
+    if (isBoneSpearTrail(missile.missile) && missile.nativeFrame == 0) return;
     if (world.getSystem(ReferenceElementalPresentationSystem.class) != null
         && ReferenceElementalPresentationSystem.isBlazeTrail(missile)) return;
     // Fire Wall makers are invisible native path controllers. Their server
@@ -272,9 +276,18 @@ public class MissileLoader extends IteratingSystem {
     // Ordinary missiles, including reconstructed monster projectiles, retain
     // fractional native animation progress across asynchronous asset loading.
     if (!isGroundFire(entry) && missile.nativeFrame > 0) {
+      if (com.riiablo.engine.server.missile.NativeFrozenOrbMotion.handles(entry)
+          && animation.getFrameDelta() == 256 && animation.isLooping()) {
+        animation.setFrame(Math.floorMod(start + missile.nativeFrame, frames));
+        return;
+      }
       animation.seek(start * animation.getFrameDuration()
           + missile.nativeFrame / 25f);
     }
+  }
+
+  static boolean isBoneSpearTrail(Missiles.Entry entry) {
+    return entry != null && "bonespeartrail".equalsIgnoreCase(entry.Missile);
   }
 
   /** Cold-loaded or reconstructed smoke starts at its actual simulation age. */

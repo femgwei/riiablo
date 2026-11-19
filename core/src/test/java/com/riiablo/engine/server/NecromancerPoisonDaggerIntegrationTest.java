@@ -115,8 +115,7 @@ class NecromancerPoisonDaggerIntegrationTest extends RiiabloTest {
       assertTrue(casting.poisonDaggerCombat.poisonDamagePerFrame > 0f);
       int duration = casting.poisonDaggerCombat.poisonDuration;
 
-      long durabilitySeed = durabilitySeed();
-      MathUtils.random.setSeed(durabilitySeed);
+      CombatRandomFixture.nextWeaponDurabilityLoss(actioneer);
       float before = hp(world, target);
       int durabilityBefore = dagger.attrs.get(Stat.durability).asInt();
       actioneer.onAnimDataKeyframe(

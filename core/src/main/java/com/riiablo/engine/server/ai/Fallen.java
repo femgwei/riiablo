@@ -17,6 +17,7 @@ import com.riiablo.logger.Logger;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.NativeAiCommand;
 import com.riiablo.engine.server.component.NativeTargeting;
 import com.riiablo.engine.server.component.Position;
@@ -95,7 +96,7 @@ public class Fallen extends AI {
   }
 
   /**
-   * Check if there's a nearby Fallen in death animation (MODE_DT) within 15 tiles.
+   * Check for a monster in death animation (MODE_DT) at native distance < 15.
    * D2MOD: Checks adjacent rooms for corpses in MONMODE_DEATH within 15 tiles.
    * D2MOD checks ppRoomList[j]->nLastDeadGUIDs[i] which are monsters in MODE_DT.
    */
@@ -103,19 +104,15 @@ public class Fallen extends AI {
     if (!mPosition.has(entityId)) return false;
     Vector2 entityPos = mPosition.get(entityId).position;
     
-    // Check all monsters for death animation (MODE_DT)
-    // D2MOD checks for monsters in MODE_DT, not corpses with Corpse component
+    // Native-topology maps also require membership in the room's four killed
+    // GUID slots. Detached/legacy fixtures retain coordinate-only behavior.
     IntBag monsters = monsterEntities.getEntities();
     for (int i = 0, size = monsters.size(); i < size; i++) {
       int monsterId = monsters.get(i);
       if (monsterId == entityId) continue; // Skip self
       if (!mPosition.has(monsterId)) continue;
       if (!mMonster.has(monsterId)) continue;
-      if (mMapWrapper.has(entityId) && mMapWrapper.has(monsterId)) {
-        com.riiablo.map.Map.Zone sourceZone = mMapWrapper.get(entityId).zone;
-        com.riiablo.map.Map.Zone corpseZone = mMapWrapper.get(monsterId).zone;
-        if (sourceZone != null && corpseZone != null && sourceZone != corpseZone) continue;
-      }
+      if (!isDeathInRoomScope(monsterId, entityPos)) continue;
       
       // Native D2 checks the room's last-dead list without restricting the
       // corpse to the Fallen AI class. Any nearby monster death can trigger
@@ -125,7 +122,7 @@ public class Fallen extends AI {
         byte mode = mCofReference.get(monsterId).mode;
         if (mode == Engine.Monster.MODE_DT) {
           Vector2 corpsePos = mPosition.get(monsterId).position;
-          float distance = entityPos.dst(corpsePos);
+          float distance = nativeAiDistance(entityPos, corpsePos);
           if (distance < 15f) {
             // Debug log disabled
             // log.debug("Fallen {} detected nearby Fallen corpse: monsterId={}, distance={}", 
@@ -138,34 +135,27 @@ public class Fallen extends AI {
     return false;
   }
 
-  /**
-   * Check if this monster is a leader (has minions).
-   * D2MOD: AIGENERAL_GetMinionOwner(pUnit) == pUnit means it's a leader.
-   * For now, we'll use a simplified check based on monster type.
-   */
-  private boolean isLeader() {
-    return electedLeader() == entityId;
+  /** Native ppRoomList scope; detached fixtures retain coordinate-only checks. */
+  private boolean isDeathInRoomScope(int corpseId, Vector2 origin) {
+    if (!mMapWrapper.has(entityId) || !mMapWrapper.has(corpseId)) return true;
+    MapWrapper source = mMapWrapper.get(entityId);
+    MapWrapper corpse = mMapWrapper.get(corpseId);
+    if (source.map != null && corpse.map != null && source.map != corpse.map) return false;
+    if (source.zone == null || corpse.zone == null) return true;
+    if (source.zone != corpse.zone) return false;
+    if (!source.zone.hasNativeRoomTopology()) return true;
+    Vector2 position = mPosition.get(corpseId).position;
+    if (!source.zone.areRoomsAdjacent(origin.x, origin.y, position.x, position.y)) return false;
+    com.riiablo.map.Map.RoomEx room = source.zone.findRoomEx(position.x, position.y);
+    com.riiablo.engine.server.CofManager modes = Riiablo.engine.getSystem(
+        com.riiablo.engine.server.CofManager.class);
+    return room != null && modes != null && modes.isRecentRoomDeath(room, corpseId);
   }
 
-  /**
-   * D2MOO stores an explicit minion owner. Legacy map exports currently retain
-   * the native clustered placement but not that pointer, so elect the lowest
-   * entity id in the local Fallen cluster as its stable owner.
-   */
-  private int electedLeader() {
-    if (!mPosition.has(entityId)) return Engine.INVALID_ENTITY;
-    int leader = entityId;
-    int members = 0;
-    Vector2 position = mPosition.get(entityId).position;
-    IntBag candidates = monsterEntities.getEntities();
-    for (int i = 0, size = candidates.size(); i < size; i++) {
-      int candidate = candidates.get(i);
-      if (!isFallenPackMember(candidate) || !sameNativeZone(candidate)) continue;
-      if (position.dst2(mPosition.get(candidate).position) > 15f * 15f) continue;
-      members++;
-      leader = Math.min(leader, candidate);
-    }
-    return members > 1 ? leader : Engine.INVALID_ENTITY;
+  /** Use spawn ownership; nearby independent packs must never elect each other. */
+  private boolean isLeader() {
+    return monster.minionOwnerId == entityId
+        || (monster.minionOwnerId < 0 && monster.nativePackLeader);
   }
 
   private boolean isFallenPackMember(int candidate) {
@@ -183,12 +173,11 @@ public class Fallen extends AI {
 
   private int commandMinions(int targetId) {
     int commanded = 0;
-    Vector2 position = mPosition.get(entityId).position;
     IntBag candidates = monsterEntities.getEntities();
     for (int i = 0, size = candidates.size(); i < size; i++) {
       int candidate = candidates.get(i);
       if (!isFallenPackMember(candidate) || !sameNativeZone(candidate)) continue;
-      if (position.dst2(mPosition.get(candidate).position) > 15f * 15f) continue;
+      if (candidate != entityId && mMonster.get(candidate).minionOwnerId != entityId) continue;
       mNativeAiCommand.create(candidate).copy(
           Riiablo.engine, entityId, NativeAiCommand.ATTACK, targetId);
       commanded++;
@@ -201,15 +190,13 @@ public class Fallen extends AI {
   private boolean executeCommand(int targetId, Vector2 targetPos, boolean inCombat) {
     if (!mNativeAiCommand.has(entityId)) return false;
     NativeAiCommand command = mNativeAiCommand.get(entityId);
-    if (!command.isAttack() || command.targetId < 0 || !mPosition.has(command.targetId)
-        || !command.targetIsCurrent(Riiablo.engine) || !command.ownerIsCurrent(Riiablo.engine)
-        || !isLivingCommandOwner(command.ownerId)) {
+    // Fn006 command 1 carries an action, not a bound target or issuer
+    // lifetime. Use this think's already validated target/combat result.
+    // Do not dereference the diagnostic ids stored when the order was copied.
+    if (!command.isAttack()) {
       if (!command.pop()) mNativeAiCommand.remove(entityId);
       return false;
     }
-    targetId = command.targetId;
-    targetPos = mPosition.get(targetId).position;
-    inCombat = isInCombat(targetId);
     if (!inCombat) {
       if (!moveTo(targetPos, false, 0, true, targetId)) {
         if (!command.pop()) mNativeAiCommand.remove(entityId);
@@ -221,9 +208,10 @@ public class Fallen extends AI {
       time = 5f * com.riiablo.codec.Animation.FRAME_DURATION;
       return true;
     }
-    if (!command.pop()) mNativeAiCommand.remove(entityId);
+    // Fn006 keeps command 1 across successful attacks. It is released by
+    // invalidation or a failed approach, not consumed as a one-shot action.
     aiParam0 = false;
-    pathfinder.findPath(entityId, null);
+    stopForAttack();
     lookAt(targetId);
     stateMachine.changeState(State.ATTACK);
     byte mode = aiRandomBoolean(params[3] / 100f)
@@ -233,16 +221,6 @@ public class Fallen extends AI {
     playSound(monsound + "_attack_1");
     time = aiRandom(1f, 2);
     return true;
-  }
-
-  private boolean isLivingCommandOwner(int ownerId) {
-    if (ownerId == Engine.INVALID_ENTITY || !mMonster.has(ownerId)) return false;
-    if (!mAttributesWrapper.has(ownerId)) return true;
-    com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(ownerId).attrs;
-    com.riiablo.attributes.StatRef hp = attrs == null ? null
-        : attrs.get(com.riiablo.attributes.Stat.hitpoints,
-            com.riiablo.attributes.StatRef.obtain());
-    return hp == null || hp.asFixed() > 0f;
   }
 
   /**
@@ -286,12 +264,14 @@ public class Fallen extends AI {
     Vector2 entityPos = mPosition.get(entityId).position;
     Vector2 targetPos = mPosition.get(targetId).position;
     
-    // Calculate escape direction (away from target)
-    // Use separate vectors to avoid modifying the same vector
-    Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
-    float escapeDistance = 12f;
-    // Calculate escape position: entityPos + escapeDir * escapeDistance
-    Vector2 escapePos = tmpVec2_2.set(escapeDir).scl(escapeDistance).add(entityPos);
+    // The shipped 1.10f Escape routine (D2Game RVA 0xA0560) compares
+    // integer coordinates independently and adds sign(delta) * 12 on each
+    // axis. A normalized vector shortens diagonal escape destinations and
+    // invents a fractional direction when native coordinates are aligned.
+    int x = (int) entityPos.x, y = (int) entityPos.y;
+    Vector2 escapePos = tmpVec2_2.set(
+        x + Integer.compare(x, (int) targetPos.x) * 12,
+        y + Integer.compare(y, (int) targetPos.y) * 12);
     
     // Debug log disabled
     // log.info("Fallen {} attempting to escape: target={}, escapeDistance={}, escapePos=({}, {})", 
@@ -321,6 +301,14 @@ public class Fallen extends AI {
     }
 
     nextAction -= delta;
+    // The native escape action owns movement until its path completes;
+    // neither the corpse reaching DD nor a think timer replaces that path.
+    if (stateMachine.getCurrentState() == State.ESCAPE) {
+      if (mPathfind.has(entityId)) return;
+      if (mVelocity.has(entityId)) mVelocity.get(entityId).clearModeSpeedBonus();
+      stateMachine.changeState(State.IDLE);
+      time = 0;
+    }
     time -= delta;
     if (time > 0) {
       return;
@@ -340,14 +328,14 @@ public class Fallen extends AI {
     // This check happens every AI update, so it will catch nearby Fallen deaths quickly
     if (checkNearbyCorpse()) {
       aiParam0 = true;  // Set flag like D2MOD's dwAiParam[0] = 1
-      if (mNativeAiCommand.has(entityId)) mNativeAiCommand.remove(entityId);
+      if (mNativeAiCommand.has(entityId)) {
+        NativeAiCommand command = mNativeAiCommand.get(entityId);
+        if (!command.pop()) mNativeAiCommand.remove(entityId);
+      }
       
       // Find target to escape from (player)
       float[] escapeDistance = { Float.MAX_VALUE };
       int targetId = findNearestTargetWithAidist(escapeDistance);
-      
-      // D2MOD: AIGENERAL_FreeCurrentAiCommand - clear any current AI command
-      // We don't have AI commands yet, so skip this
       
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 50, 0) and D2GAME_AICORE_Escape
       // Debug log disabled
@@ -367,7 +355,9 @@ public class Fallen extends AI {
           int fleeSoundIndex = aiRandom(1, 5);
           playSound(monsound + "_flee_" + fleeSoundIndex);
         }
-        time = aiRandom(1f, 2);
+        // Movement completion releases ESCAPE above. Native Fn006 does not
+        // roll an additional random 1..2 second cooldown after Escape.
+        time = 0;
         // Debug log disabled
         // log.info("Fallen {} escape state activated", entityId);
         return;
@@ -546,7 +536,7 @@ public class Fallen extends AI {
 
     // Attack (A1 or A2 based on params[3])
     aiParam0 = false;
-    pathfinder.findPath(entityId, null);
+    stopForAttack();
     lookAt(targetId);
     stateMachine.changeState(State.ATTACK);
     byte attackMode = aiRandomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
@@ -556,8 +546,23 @@ public class Fallen extends AI {
     time = aiRandom(1f, 2);
   }
 
+  /** Recorded native WL -> A2 entry clears the path and fits the current cell. */
+  private void stopForAttack() {
+    stopMovement();
+    Position position = mPosition.get(entityId);
+    if (position != null && position.hasNativePrecision()) {
+      // Do not infer native coordinates from legacy floating-point positions.
+      // Fitting low words preserves the occupied cell and its collision footprint.
+      position.setNativePrecision(
+          com.d2moo.common.path.D2PathStep.fitToFp16Center(position.nativePrecisionX()),
+          com.d2moo.common.path.D2PathStep.fitToFp16Center(position.nativePrecisionY()));
+      invalidateNativePathCache();
+    }
+  }
+
   @Override
   public String getState() {
     return stateMachine.getCurrentState().name();
   }
 }
+

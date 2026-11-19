@@ -1,0 +1,15 @@
+{
+  "id": "20261119-164730-e51b4876",
+  "status": "completed",
+  "started": 1795078051.040575,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "bone-prison-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-164730-e51b4876\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795078115.4468162
+}

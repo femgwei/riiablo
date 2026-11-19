@@ -1,0 +1,11 @@
+{
+  "character": "CXSorc",
+  "lifecycle": "restart",
+  "fixture": "fallen-survivor",
+  "entry_visibility": "hidden",
+  "batches": [{
+    "name": "fallen-encounter",
+    "collector": "native_runtime_trace",
+    "scenario": {"scope": "update-target-damage", "seconds": 30, "input": "encounter"}
+  }]
+}

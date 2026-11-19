@@ -1,0 +1,16 @@
+{
+  "character": "CensusSorc",
+  "entry_visibility": "visible",
+  "batches": [
+    {
+      "name": "riiablo-navigation-dry-hills",
+      "collector": "room_census_walk",
+      "scenario": {
+        "level_id": 42,
+        "seconds": 600,
+        "navigation_plan": "dry-hills-seed127897359",
+        "resume_census": "dry-hills-resume-230825"
+      }
+    }
+  ]
+}

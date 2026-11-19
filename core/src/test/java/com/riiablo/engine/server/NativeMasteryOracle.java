@@ -16,7 +16,7 @@ final class NativeMasteryOracle {
     assertEquals("dm56", skill.passivecalc[2], "native mastery critical formula");
     int minimum = skill.Param[4];
     int maximum = skill.Param[5];
-    return Math.min(maximum,
-        minimum + (maximum - minimum) * 110 * level / (level + 6) / 100);
+    int scaledLevel = 110 * level / (level + 6);
+    return Math.min(maximum, minimum + (maximum - minimum) * scaledLevel / 100);
   }
 }

@@ -1,0 +1,15 @@
+{
+  "id": "20261115-214802-db5cc5a5",
+  "status": "completed",
+  "started": 1794750482.2432466,
+  "broker_pid": 876,
+  "command": {
+    "op": "run_job",
+    "job": "rogue-waypoint-open"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261115-120204-00ea974c\\runs\\20261115-214802-db5cc5a5\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794750498.8491886
+}

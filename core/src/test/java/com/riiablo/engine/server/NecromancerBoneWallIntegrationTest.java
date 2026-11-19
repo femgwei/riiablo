@@ -9,6 +9,8 @@ import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.JsonReader;
+import com.badlogic.gdx.utils.JsonValue;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
@@ -18,6 +20,7 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
@@ -72,6 +75,29 @@ class NecromancerBoneWallIntegrationTest extends RiiabloTest {
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           owner, skill.Id, target, new Vector2(20, 20), skill.srvdofunc, skill.cltdofunc));
       assertEquals(12, pets(world).size());
+      JsonValue original = new JsonReader().parse(getClass().getResourceAsStream(
+          "/original/bone-prison-states-1.10f.json"));
+      java.util.Set<String> originalPositions = new java.util.HashSet<>();
+      for (JsonValue unit : original.get("units")) {
+        if ("server".equals(unit.getString("side"))) {
+          assertEquals(344, unit.getInt("class_id"));
+          originalPositions.add(unit.getInt("cell_offset_x") + "," + unit.getInt("cell_offset_y"));
+        }
+      }
+      java.util.Set<String> actualPositions = new java.util.HashSet<>();
+      for (int i = 0; i < pets(world).size(); i++) {
+        int id = pets(world).get(i);
+        MonStats.Entry row = world.getMapper(Monster.class).get(id).monstats;
+        assertEquals(344, row.hcIdx, "every segment must use the original bonewall row");
+        assertEquals("BW", row.Code);
+        Vector2 at = world.getMapper(Position.class).get(id).position;
+        actualPositions.add((int) (at.x - 20) + "," + (int) (at.y - 20));
+        Vector2 towardCenter = new Vector2(20, 20).sub(at).nor();
+        Angle angle = world.getMapper(Angle.class).get(id);
+        assertTrue(angle.angle.epsilonEquals(towardCenter, .0001f), "initial visible facing");
+        assertTrue(angle.target.epsilonEquals(towardCenter, .0001f), "stationary facing target");
+      }
+      assertEquals(originalPositions, actualPositions);
 
       int townTarget = monster(world, 40, 40);
       world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
@@ -188,6 +214,7 @@ class NecromancerBoneWallIntegrationTest extends RiiabloTest {
       monster.monstats = summon;
       monster.monstats2 = Riiablo.files.monstats2.get(summon.MonStatsEx);
       world.getMapper(Position.class).create(id).position.set(x, y);
+      world.getMapper(Angle.class).create(id);
       world.getMapper(AttributesWrapper.class).create(id).attrs = attributes(100);
       world.getMapper(SummonedPet.class).create(id)
           .set(ownerId, petType, skillId, skillLevel, passive, durationFrames);

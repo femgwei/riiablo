@@ -173,7 +173,7 @@ task playerCombatRegression(type: Test) {
   filter {
     ['*GoldenDamageTest', '*Sorceress*', '*Necromancer*', '*Amazon*', '*Assassin*',
      '*Druid*', '*Paladin*', '*Barbarian*', '*Aura*', '*Trap*', '*Vitals*',
-     '*BlessedHammer*', '*NativePlayerCombat110fAuditTest', '*DamagePresentationBoundaryTest',
+     '*BlessedHammer*', '*FireBolt*', '*NativePlayerCombat110fAuditTest', '*DamagePresentationBoundaryTest',
      '*ServerClientCombatSyncEcsScenarioTest', 'com.riiablo.engine.server.combat.*',
      'com.riiablo.architecture.*'].each { includeTestsMatching it }
   }
@@ -187,6 +187,29 @@ task playerCombatRegression(type: Test) {
 }
 
 // One gate for session isolation, loading/navigation, resources and representative server behavior.
+task barbarianRegression(type: Test) {
+  group = 'verification'
+  description = 'Barbarian 30-skill data export, lifecycle, shared combat and visual resource checks; not native runtime parity.'
+  dependsOn testClasses, ':verifyModuleBoundaries'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform { excludeTags 'visual' }
+  filter {
+    ['*Barbarian*', '*Frenzy*', '*Whirlwind*', '*Leap*', '*WarCry*',
+     'com.riiablo.engine.server.combat.*'].each { includeTestsMatching it }
+  }
+  def selectedD2Home = project.findProperty('d2Home') ?: System.getenv('D2_HOME') ?: ''
+  inputs.property 'd2Home', selectedD2Home
+  if (selectedD2Home) environment 'D2_HOME', selectedD2Home
+  def exportPath = project.findProperty('barbarianExport') ?: file('build/barbarian-batch').absolutePath
+  systemProperty 'barbarian.export', exportPath
+  outputs.dir exportPath
+  maxHeapSize = test.maxHeapSize
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
+  testLogging { events 'failed'; exceptionFormat 'full' }
+}
+
 task subsystemRegression(type: Test) {
   group = 'verification'
   description = 'Tests subsystem ownership and lifecycle boundaries without starting game clients.'

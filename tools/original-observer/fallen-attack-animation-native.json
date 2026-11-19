@@ -1,0 +1,2251 @@
+{
+  "status": "controlled_death_observed",
+  "ai_parity": "untested",
+  "samples": 601,
+  "identity": {
+    "map_seed": 127897359,
+    "observer_id": 102,
+    "corpse_id": 106,
+    "reengage_step": 100,
+    "observation_frames": 600,
+    "death_count": 1,
+    "requested_distance": 0,
+    "observer_class": 19,
+    "corpse_class": 0,
+    "room": 110908032,
+    "death_room": 110908032,
+    "adjacent_room_fixture": false,
+    "player_id": 1,
+    "player_x": 4523,
+    "player_y": 5642,
+    "observer_x": 4525,
+    "observer_y": 5644,
+    "corpse_x": 4523,
+    "corpse_y": 5646,
+    "adjacent_rooms": [
+      105682688,
+      110907648,
+      105682816,
+      110910336,
+      110914560,
+      110908032,
+      110908288,
+      110910464,
+      110910592
+    ]
+  },
+  "death_step": 1,
+  "death_frame": 737592,
+  "corpse_dd_step": 25,
+  "param0_one_during_dt_steps": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24
+  ],
+  "walking_with_param0_one_steps": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24
+  ],
+  "first_displacement_step": 4,
+  "limitations": [
+    "Native DT is forced through the original mode-change functions; damage and kill attribution are not exercised.",
+    "No exact think-call, target, escape-path or RNG parity with riiablo is established.",
+    "No response is inconclusive when no AI think occurs during DT."
+  ],
+  "attack_animation": {
+    "status": "captured",
+    "spans": [
+      {
+        "mode": 5,
+        "start_step": 144,
+        "duration_ticks": 15,
+        "complete": true,
+        "frame_state_fp8": [
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160,
+          188860160
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 144,
+            "modechange_frame": 737743,
+            "endanim_frame": 737750,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 145,
+            "modechange_frame": 737743,
+            "endanim_frame": 737750,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 146,
+            "modechange_frame": 737743,
+            "endanim_frame": 737750,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 147,
+            "modechange_frame": 737743,
+            "endanim_frame": 737750,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 148,
+            "modechange_frame": 737743,
+            "endanim_frame": 737750,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 149,
+            "modechange_frame": 737743,
+            "endanim_frame": 737750,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 150,
+            "modechange_frame": 737743,
+            "endanim_frame": 737750,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 151,
+            "modechange_frame": 737743,
+            "endanim_frame": 737750,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 152,
+            "modechange_frame": 0,
+            "endanim_frame": 737750,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 153,
+            "modechange_frame": 0,
+            "endanim_frame": 737750,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 154,
+            "modechange_frame": 0,
+            "endanim_frame": 737750,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 155,
+            "modechange_frame": 0,
+            "endanim_frame": 737750,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 156,
+            "modechange_frame": 0,
+            "endanim_frame": 737750,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 157,
+            "modechange_frame": 0,
+            "endanim_frame": 737750,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 158,
+            "modechange_frame": 0,
+            "endanim_frame": 737750,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 174,
+        "duration_ticks": 15,
+        "complete": true,
+        "frame_state_fp8": [
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840,
+          188867840
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 174,
+            "modechange_frame": 737773,
+            "endanim_frame": 737780,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 175,
+            "modechange_frame": 737773,
+            "endanim_frame": 737780,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 176,
+            "modechange_frame": 737773,
+            "endanim_frame": 737780,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 177,
+            "modechange_frame": 737773,
+            "endanim_frame": 737780,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 178,
+            "modechange_frame": 737773,
+            "endanim_frame": 737780,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 179,
+            "modechange_frame": 737773,
+            "endanim_frame": 737780,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 180,
+            "modechange_frame": 737773,
+            "endanim_frame": 737780,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 181,
+            "modechange_frame": 737773,
+            "endanim_frame": 737780,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 182,
+            "modechange_frame": 0,
+            "endanim_frame": 737780,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 183,
+            "modechange_frame": 0,
+            "endanim_frame": 737780,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 184,
+            "modechange_frame": 0,
+            "endanim_frame": 737780,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 185,
+            "modechange_frame": 0,
+            "endanim_frame": 737780,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 186,
+            "modechange_frame": 0,
+            "endanim_frame": 737780,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 187,
+            "modechange_frame": 0,
+            "endanim_frame": 737780,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 188,
+            "modechange_frame": 0,
+            "endanim_frame": 737780,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 209,
+        "duration_ticks": 15,
+        "complete": true,
+        "frame_state_fp8": [
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800,
+          188876800
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 209,
+            "modechange_frame": 737808,
+            "endanim_frame": 737815,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 210,
+            "modechange_frame": 737808,
+            "endanim_frame": 737815,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 211,
+            "modechange_frame": 737808,
+            "endanim_frame": 737815,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 212,
+            "modechange_frame": 737808,
+            "endanim_frame": 737815,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 213,
+            "modechange_frame": 737808,
+            "endanim_frame": 737815,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 214,
+            "modechange_frame": 737808,
+            "endanim_frame": 737815,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 215,
+            "modechange_frame": 737808,
+            "endanim_frame": 737815,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 216,
+            "modechange_frame": 737808,
+            "endanim_frame": 737815,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 217,
+            "modechange_frame": 0,
+            "endanim_frame": 737815,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 218,
+            "modechange_frame": 0,
+            "endanim_frame": 737815,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 219,
+            "modechange_frame": 0,
+            "endanim_frame": 737815,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 220,
+            "modechange_frame": 0,
+            "endanim_frame": 737815,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 221,
+            "modechange_frame": 0,
+            "endanim_frame": 737815,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 222,
+            "modechange_frame": 0,
+            "endanim_frame": 737815,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 223,
+            "modechange_frame": 0,
+            "endanim_frame": 737815,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          }
+        ]
+      },
+      {
+        "mode": 4,
+        "start_step": 239,
+        "duration_ticks": 10,
+        "complete": true,
+        "frame_state_fp8": [
+          188884480,
+          188884480,
+          188884480,
+          188884480,
+          188884480,
+          188884480,
+          188884480,
+          188884480,
+          188884480,
+          188884480
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          2560
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 239,
+            "modechange_frame": 737837,
+            "endanim_frame": 737840,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 240,
+            "modechange_frame": 737837,
+            "endanim_frame": 737840,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 241,
+            "modechange_frame": 737837,
+            "endanim_frame": 737840,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 242,
+            "modechange_frame": 737837,
+            "endanim_frame": 737840,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 243,
+            "modechange_frame": 737837,
+            "endanim_frame": 737840,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 244,
+            "modechange_frame": 737837,
+            "endanim_frame": 737840,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 245,
+            "modechange_frame": 737837,
+            "endanim_frame": 737840,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 246,
+            "modechange_frame": 0,
+            "endanim_frame": 737840,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 247,
+            "modechange_frame": 0,
+            "endanim_frame": 737840,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 248,
+            "modechange_frame": 0,
+            "endanim_frame": 737840,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          }
+        ]
+      },
+      {
+        "mode": 4,
+        "start_step": 264,
+        "duration_ticks": 10,
+        "complete": true,
+        "frame_state_fp8": [
+          188890880,
+          188890880,
+          188890880,
+          188890880,
+          188890880,
+          188890880,
+          188890880,
+          188890880,
+          188890880,
+          188890880
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          2560
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 264,
+            "modechange_frame": 737862,
+            "endanim_frame": 737865,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 265,
+            "modechange_frame": 737862,
+            "endanim_frame": 737865,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 266,
+            "modechange_frame": 737862,
+            "endanim_frame": 737865,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 267,
+            "modechange_frame": 737862,
+            "endanim_frame": 737865,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 268,
+            "modechange_frame": 737862,
+            "endanim_frame": 737865,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 269,
+            "modechange_frame": 737862,
+            "endanim_frame": 737865,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 270,
+            "modechange_frame": 737862,
+            "endanim_frame": 737865,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 271,
+            "modechange_frame": 0,
+            "endanim_frame": 737865,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 272,
+            "modechange_frame": 0,
+            "endanim_frame": 737865,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 273,
+            "modechange_frame": 0,
+            "endanim_frame": 737865,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 294,
+        "duration_ticks": 15,
+        "complete": true,
+        "frame_state_fp8": [
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560,
+          188898560
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 294,
+            "modechange_frame": 737893,
+            "endanim_frame": 737900,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 295,
+            "modechange_frame": 737893,
+            "endanim_frame": 737900,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 296,
+            "modechange_frame": 737893,
+            "endanim_frame": 737900,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 297,
+            "modechange_frame": 737893,
+            "endanim_frame": 737900,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 298,
+            "modechange_frame": 737893,
+            "endanim_frame": 737900,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 299,
+            "modechange_frame": 737893,
+            "endanim_frame": 737900,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 300,
+            "modechange_frame": 737893,
+            "endanim_frame": 737900,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 301,
+            "modechange_frame": 737893,
+            "endanim_frame": 737900,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 302,
+            "modechange_frame": 0,
+            "endanim_frame": 737900,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 303,
+            "modechange_frame": 0,
+            "endanim_frame": 737900,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 304,
+            "modechange_frame": 0,
+            "endanim_frame": 737900,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 305,
+            "modechange_frame": 0,
+            "endanim_frame": 737900,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 306,
+            "modechange_frame": 0,
+            "endanim_frame": 737900,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 307,
+            "modechange_frame": 0,
+            "endanim_frame": 737900,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 308,
+            "modechange_frame": 0,
+            "endanim_frame": 737900,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 324,
+        "duration_ticks": 15,
+        "complete": true,
+        "frame_state_fp8": [
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240,
+          188906240
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 324,
+            "modechange_frame": 737923,
+            "endanim_frame": 737930,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 325,
+            "modechange_frame": 737923,
+            "endanim_frame": 737930,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 326,
+            "modechange_frame": 737923,
+            "endanim_frame": 737930,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 327,
+            "modechange_frame": 737923,
+            "endanim_frame": 737930,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 328,
+            "modechange_frame": 737923,
+            "endanim_frame": 737930,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 329,
+            "modechange_frame": 737923,
+            "endanim_frame": 737930,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 330,
+            "modechange_frame": 737923,
+            "endanim_frame": 737930,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 331,
+            "modechange_frame": 737923,
+            "endanim_frame": 737930,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 332,
+            "modechange_frame": 0,
+            "endanim_frame": 737930,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 333,
+            "modechange_frame": 0,
+            "endanim_frame": 737930,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 334,
+            "modechange_frame": 0,
+            "endanim_frame": 737930,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 335,
+            "modechange_frame": 0,
+            "endanim_frame": 737930,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 336,
+            "modechange_frame": 0,
+            "endanim_frame": 737930,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 337,
+            "modechange_frame": 0,
+            "endanim_frame": 737930,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 338,
+            "modechange_frame": 0,
+            "endanim_frame": 737930,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          }
+        ]
+      },
+      {
+        "mode": 4,
+        "start_step": 354,
+        "duration_ticks": 10,
+        "complete": true,
+        "frame_state_fp8": [
+          188913920,
+          188913920,
+          188913920,
+          188913920,
+          188913920,
+          188913920,
+          188913920,
+          188913920,
+          188913920,
+          188913920
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          2560
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 354,
+            "modechange_frame": 737952,
+            "endanim_frame": 737955,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 355,
+            "modechange_frame": 737952,
+            "endanim_frame": 737955,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 356,
+            "modechange_frame": 737952,
+            "endanim_frame": 737955,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 357,
+            "modechange_frame": 737952,
+            "endanim_frame": 737955,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 358,
+            "modechange_frame": 737952,
+            "endanim_frame": 737955,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 359,
+            "modechange_frame": 737952,
+            "endanim_frame": 737955,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 360,
+            "modechange_frame": 737952,
+            "endanim_frame": 737955,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 361,
+            "modechange_frame": 0,
+            "endanim_frame": 737955,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 362,
+            "modechange_frame": 0,
+            "endanim_frame": 737955,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 363,
+            "modechange_frame": 0,
+            "endanim_frame": 737955,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 379,
+        "duration_ticks": 15,
+        "complete": true,
+        "frame_state_fp8": [
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320,
+          188920320
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 379,
+            "modechange_frame": 737978,
+            "endanim_frame": 737985,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 380,
+            "modechange_frame": 737978,
+            "endanim_frame": 737985,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 381,
+            "modechange_frame": 737978,
+            "endanim_frame": 737985,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 382,
+            "modechange_frame": 737978,
+            "endanim_frame": 737985,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 383,
+            "modechange_frame": 737978,
+            "endanim_frame": 737985,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 384,
+            "modechange_frame": 737978,
+            "endanim_frame": 737985,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 385,
+            "modechange_frame": 737978,
+            "endanim_frame": 737985,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 386,
+            "modechange_frame": 737978,
+            "endanim_frame": 737985,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 387,
+            "modechange_frame": 0,
+            "endanim_frame": 737985,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 388,
+            "modechange_frame": 0,
+            "endanim_frame": 737985,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 389,
+            "modechange_frame": 0,
+            "endanim_frame": 737985,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 390,
+            "modechange_frame": 0,
+            "endanim_frame": 737985,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 391,
+            "modechange_frame": 0,
+            "endanim_frame": 737985,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 392,
+            "modechange_frame": 0,
+            "endanim_frame": 737985,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 393,
+            "modechange_frame": 0,
+            "endanim_frame": 737985,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 419,
+        "duration_ticks": 15,
+        "complete": true,
+        "frame_state_fp8": [
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560,
+          188930560
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 419,
+            "modechange_frame": 738018,
+            "endanim_frame": 738025,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 420,
+            "modechange_frame": 738018,
+            "endanim_frame": 738025,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 421,
+            "modechange_frame": 738018,
+            "endanim_frame": 738025,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 422,
+            "modechange_frame": 738018,
+            "endanim_frame": 738025,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 423,
+            "modechange_frame": 738018,
+            "endanim_frame": 738025,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 424,
+            "modechange_frame": 738018,
+            "endanim_frame": 738025,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 425,
+            "modechange_frame": 738018,
+            "endanim_frame": 738025,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 426,
+            "modechange_frame": 738018,
+            "endanim_frame": 738025,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 427,
+            "modechange_frame": 0,
+            "endanim_frame": 738025,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 428,
+            "modechange_frame": 0,
+            "endanim_frame": 738025,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 429,
+            "modechange_frame": 0,
+            "endanim_frame": 738025,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 430,
+            "modechange_frame": 0,
+            "endanim_frame": 738025,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 431,
+            "modechange_frame": 0,
+            "endanim_frame": 738025,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 432,
+            "modechange_frame": 0,
+            "endanim_frame": 738025,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 433,
+            "modechange_frame": 0,
+            "endanim_frame": 738025,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          }
+        ]
+      },
+      {
+        "mode": 4,
+        "start_step": 449,
+        "duration_ticks": 10,
+        "complete": true,
+        "frame_state_fp8": [
+          188938240,
+          188938240,
+          188938240,
+          188938240,
+          188938240,
+          188938240,
+          188938240,
+          188938240,
+          188938240,
+          188938240
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          2560
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 449,
+            "modechange_frame": 738047,
+            "endanim_frame": 738050,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 450,
+            "modechange_frame": 738047,
+            "endanim_frame": 738050,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 451,
+            "modechange_frame": 738047,
+            "endanim_frame": 738050,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 452,
+            "modechange_frame": 738047,
+            "endanim_frame": 738050,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 453,
+            "modechange_frame": 738047,
+            "endanim_frame": 738050,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 454,
+            "modechange_frame": 738047,
+            "endanim_frame": 738050,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 455,
+            "modechange_frame": 738047,
+            "endanim_frame": 738050,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 456,
+            "modechange_frame": 0,
+            "endanim_frame": 738050,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 457,
+            "modechange_frame": 0,
+            "endanim_frame": 738050,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 458,
+            "modechange_frame": 0,
+            "endanim_frame": 738050,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          }
+        ]
+      },
+      {
+        "mode": 4,
+        "start_step": 479,
+        "duration_ticks": 10,
+        "complete": true,
+        "frame_state_fp8": [
+          188945920,
+          188945920,
+          188945920,
+          188945920,
+          188945920,
+          188945920,
+          188945920,
+          188945920,
+          188945920,
+          188945920
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          2560
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 479,
+            "modechange_frame": 738077,
+            "endanim_frame": 738080,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 480,
+            "modechange_frame": 738077,
+            "endanim_frame": 738080,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 481,
+            "modechange_frame": 738077,
+            "endanim_frame": 738080,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 482,
+            "modechange_frame": 738077,
+            "endanim_frame": 738080,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 483,
+            "modechange_frame": 738077,
+            "endanim_frame": 738080,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 484,
+            "modechange_frame": 738077,
+            "endanim_frame": 738080,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 485,
+            "modechange_frame": 738077,
+            "endanim_frame": 738080,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 486,
+            "modechange_frame": 0,
+            "endanim_frame": 738080,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 487,
+            "modechange_frame": 0,
+            "endanim_frame": 738080,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 488,
+            "modechange_frame": 0,
+            "endanim_frame": 738080,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 504,
+        "duration_ticks": 15,
+        "complete": true,
+        "frame_state_fp8": [
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320,
+          188952320
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 504,
+            "modechange_frame": 738103,
+            "endanim_frame": 738110,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 505,
+            "modechange_frame": 738103,
+            "endanim_frame": 738110,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 506,
+            "modechange_frame": 738103,
+            "endanim_frame": 738110,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 507,
+            "modechange_frame": 738103,
+            "endanim_frame": 738110,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 508,
+            "modechange_frame": 738103,
+            "endanim_frame": 738110,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 509,
+            "modechange_frame": 738103,
+            "endanim_frame": 738110,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 510,
+            "modechange_frame": 738103,
+            "endanim_frame": 738110,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 511,
+            "modechange_frame": 738103,
+            "endanim_frame": 738110,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 512,
+            "modechange_frame": 0,
+            "endanim_frame": 738110,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 513,
+            "modechange_frame": 0,
+            "endanim_frame": 738110,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 514,
+            "modechange_frame": 0,
+            "endanim_frame": 738110,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 515,
+            "modechange_frame": 0,
+            "endanim_frame": 738110,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 516,
+            "modechange_frame": 0,
+            "endanim_frame": 738110,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 517,
+            "modechange_frame": 0,
+            "endanim_frame": 738110,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 518,
+            "modechange_frame": 0,
+            "endanim_frame": 738110,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 534,
+        "duration_ticks": 15,
+        "complete": true,
+        "frame_state_fp8": [
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000,
+          188960000
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 534,
+            "modechange_frame": 738133,
+            "endanim_frame": 738140,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 535,
+            "modechange_frame": 738133,
+            "endanim_frame": 738140,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 536,
+            "modechange_frame": 738133,
+            "endanim_frame": 738140,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 537,
+            "modechange_frame": 738133,
+            "endanim_frame": 738140,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 538,
+            "modechange_frame": 738133,
+            "endanim_frame": 738140,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 539,
+            "modechange_frame": 738133,
+            "endanim_frame": 738140,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 540,
+            "modechange_frame": 738133,
+            "endanim_frame": 738140,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 541,
+            "modechange_frame": 738133,
+            "endanim_frame": 738140,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 542,
+            "modechange_frame": 0,
+            "endanim_frame": 738140,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 543,
+            "modechange_frame": 0,
+            "endanim_frame": 738140,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 544,
+            "modechange_frame": 0,
+            "endanim_frame": 738140,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 545,
+            "modechange_frame": 0,
+            "endanim_frame": 738140,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 546,
+            "modechange_frame": 0,
+            "endanim_frame": 738140,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 547,
+            "modechange_frame": 0,
+            "endanim_frame": 738140,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 548,
+            "modechange_frame": 0,
+            "endanim_frame": 738140,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 569,
+        "duration_ticks": 15,
+        "complete": true,
+        "frame_state_fp8": [
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960,
+          188968960
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 569,
+            "modechange_frame": 738168,
+            "endanim_frame": 738175,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 570,
+            "modechange_frame": 738168,
+            "endanim_frame": 738175,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 571,
+            "modechange_frame": 738168,
+            "endanim_frame": 738175,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 572,
+            "modechange_frame": 738168,
+            "endanim_frame": 738175,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 573,
+            "modechange_frame": 738168,
+            "endanim_frame": 738175,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 574,
+            "modechange_frame": 738168,
+            "endanim_frame": 738175,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 575,
+            "modechange_frame": 738168,
+            "endanim_frame": 738175,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 576,
+            "modechange_frame": 738168,
+            "endanim_frame": 738175,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 577,
+            "modechange_frame": 0,
+            "endanim_frame": 738175,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 578,
+            "modechange_frame": 0,
+            "endanim_frame": 738175,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 579,
+            "modechange_frame": 0,
+            "endanim_frame": 738175,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 580,
+            "modechange_frame": 0,
+            "endanim_frame": 738175,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 581,
+            "modechange_frame": 0,
+            "endanim_frame": 738175,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 582,
+            "modechange_frame": 0,
+            "endanim_frame": 738175,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          },
+          {
+            "step": 583,
+            "modechange_frame": 0,
+            "endanim_frame": 738175,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 15
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 599,
+        "duration_ticks": 2,
+        "complete": false,
+        "frame_state_fp8": [
+          188976640,
+          188976640
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 599,
+            "modechange_frame": 738198,
+            "endanim_frame": 738205,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 600,
+            "modechange_frame": 738198,
+            "endanim_frame": 738205,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          }
+        ]
+      }
+    ],
+    "scope": "Server pre-update state and planned events, not callback execution, damage or client presentation. Frame state is not assumed to be a relative animation cursor."
+  },
+  "recovery": {
+    "status": "movement_phase_observed",
+    "initial_walk_step": 2,
+    "initial_target": [
+      4526,
+      5646
+    ],
+    "initial_path_velocity_raw": 1600,
+    "first_movement_phase_change_step": 9,
+    "at_initial_target_on_phase_change": true,
+    "next_path_velocity_raw": 1600,
+    "next_target": [
+      4528,
+      5648
+    ],
+    "first_attack_step": 144,
+    "attack_recovery": "observed_attack_mode",
+    "player_stationary": true,
+    "scope": "mode/path changes; a later WL segment is not automatically classified as fleeing; explicit native walk-to-player intervention, not spontaneous return",
+    "reengage_intervention_step": 100,
+    "intervention": {
+      "step": 100,
+      "frame": 737691,
+      "action": "native walk-to-player",
+      "observer_id": 102,
+      "target_id": 1
+    }
+  },
+  "native_death_events": [
+    {
+      "frame": 737592,
+      "guid": 106,
+      "cursor": 0,
+      "ring": [
+        91,
+        96,
+        101,
+        106
+      ]
+    }
+  ],
+  "source": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261118-014314-2b4a9367\\orchestrator\\process-session\\001-recovery-reengage\\frames.csv",
+  "source_sha256": "23235755402253536e2b88cfa9178a30a3da876a29dc324918bb17da8e3a4bd4"
+}

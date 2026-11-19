@@ -1,0 +1,14 @@
+{
+  "character": "CXBarb",
+  "lifecycle": "restart",
+  "batches": [
+    {
+      "name": "whirlwind-single-axe-level1",
+      "collector": "barbarian_whirlwind",
+      "scenario": {
+        "class": 4, "skill": 151, "level": 1, "target_class": 0,
+        "profile": "single-hand-axe-stationary-target"
+      }
+    }
+  ]
+}

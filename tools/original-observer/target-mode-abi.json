@@ -1,0 +1,43 @@
+{
+  "target": "D2Game.dll 1.10f",
+  "function": {
+    "rva": "0x51A00",
+    "symbol": "D2GAME_PLAYERMODE_Change_6FC81A00",
+    "calling_convention": "fastcall",
+    "ecx": "D2GameStrc* pGame",
+    "edx": "D2UnitStrc* pPlayer",
+    "stack": [
+      "D2SkillStrc* pSkill",
+      "BYTE nMode",
+      "int32 nUnitType",
+      "int32 nTargetGUID",
+      "int32 bAllowReEnter"
+    ],
+    "stack_cleanup": "ret 0x14",
+    "instruction_signature": "53 55 56 57 8B F9 33 DB 3B FB"
+  },
+  "mode_table": {
+    "4": "GetHit (no pfnStartID)",
+    "7": "Attack1 (pfnStartID_AttackCastThrowKickSpecialSequence)",
+    "10": "Cast"
+  },
+  "static_reference": "F:/3rd_src/D2MOO/source/D2Game/src/PLAYER/PlrModes.cpp:1683-1710",
+  "observed_run": "tools/original-observer/broker/20261114-095236-2dc08884/runs/20261114-131357-2f8069e9/orchestrator/process-session/001-barbarian-bash-target-id-level1",
+  "observed": {
+    "cast_started": true,
+    "target_binding": "verified",
+    "damage_events": 1,
+    "target_hp_before_fixed": 256000,
+    "target_hp_after_fixed": 254226,
+    "damage_total_fixed": 1774,
+    "hp_delta_equals_damage": true,
+    "target_moved_after_hit": true,
+    "detached": true,
+    "cleanup_confirmed": true
+  },
+  "limitations": [
+    "This proves the original entity-targeted Bash ABI and one level-one normal attack sample only.",
+    "It does not prove all Barbarian skills, all levels, RNG parity, or visual parity.",
+    "The coordinate-only Bash collector remains unsupported for Attack1 in this character state; entity-target mode is the validated path."
+  ]
+}

@@ -17,6 +17,8 @@ public class NativeDamagePacket {
   public boolean deadlyStrike;
   public boolean crushingBlow;
   public int physicalDamage;
+  /** SrvSt32 addition after AllocCombat; included in physical/leech, excluded from cached life damage. */
+  public int latePhysicalDamage;
   /** Physical damage and physical leech use this scale; consumers must use HP accessors. */
   public int physicalScale = 1;
   public int[] elementalDamage = new int[NativeCombatConstants.DAMAGE_TYPE_COUNT];
@@ -64,7 +66,7 @@ public class NativeDamagePacket {
 
   public float totalDamageHp() {
     if (elementalScale == 1 && physicalScale == 1 && !fixedMonsterDrain) return totalDamage;
-    float total = physicalDamageHp();
+    float total = (physicalDamage - latePhysicalDamage) / (float) physicalScale;
     if (fixedMonsterDrain) total += lifeDrainFixed / 256f;
     for (int i = 1; i < NativeCombatConstants.DAMAGE_TYPE_COUNT; i++) {
       if (i != NativeCombatConstants.DAMAGE_POISON || poisonDuration <= 0) {
@@ -90,6 +92,7 @@ public class NativeDamagePacket {
     deadlyStrike = false;
     crushingBlow = false;
     physicalDamage = 0;
+    latePhysicalDamage = 0;
     physicalScale = 1;
     for (int i = 0; i < NativeCombatConstants.DAMAGE_TYPE_COUNT; i++) elementalDamage[i] = 0;
     totalDamage = 0;

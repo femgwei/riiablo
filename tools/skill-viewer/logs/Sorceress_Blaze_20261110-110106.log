@@ -1,0 +1,11 @@
+# skill session
+character=Sorceress
+skill=Blaze
+level=1
+seed=1397442892
+started=Tue Nov 10 11:01:06 CST 2026
+
+weapon=sst weaponRequired=true
+event=skill_selected targetMode=HOSTILE_UNIT
+event=cast skill=Blaze targetMode=HOSTILE_UNIT target=none x=4.625 y=0.25
+event=cast_result skillId=46 target=none accepted=true mode=actioneer

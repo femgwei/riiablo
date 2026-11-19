@@ -2053,6 +2053,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     com.riiablo.engine.server.component.Missile projectile = missiles.get(missileId);
     projectile.persistent = true;
     projectile.remainingFrames = nativeMissileRange(row, state.level);
+    // Blaze is a persistent stationary area missile.  Its combat countdown is
+    // also the client-visible lifetime; leaving nativeLifetimeFrames at the
+    // row's default lets a replica lose the authoritative expiry boundary.
+    projectile.nativeLifetimeFrames = projectile.remainingFrames;
     projectile.tickInterval = 1;
     projectile.range = 0f;
     if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();

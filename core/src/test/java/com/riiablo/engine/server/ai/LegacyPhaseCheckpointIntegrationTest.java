@@ -12,6 +12,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.replay.UnitStateRuntimeCheckpoint;
 import com.riiablo.engine.server.ai.Act1NativeAiIntegrationTest.Fixture;
+import com.riiablo.engine.server.NativeUnitRandom;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.skill.SkillCodes;
@@ -74,15 +75,24 @@ class LegacyPhaseCheckpointIntegrationTest extends RiiabloTest {
       ai.aiParam0 = 2; ai.aiParam1 = 37; ai.aiParam2 = 2; ai.time = .2f;
       ai.params = new int[] {100, 0, 3, 0, 37, 0, 0, 0};
       ai.stateMachine.changeState(SandMaggot.State.APPROACH);
+      // AI decisions now use the checkpointed unit stream, not MathUtils.random.
+      // Seed 1's first draw skips the 20% circle branch (398751 / 1000000).
+      NativeUnitRandom.monster(ai.monster, Riiablo.gameSeed, f.actor)
+          .restore(new NativeUnitRandom.Snapshot(1, 666));
       image = UnitStateRuntimeCheckpoint.capture(f.world, new int[] {0, 1});
     }
     java.util.Random previous = MathUtils.random; RandomXS128 external = mock(RandomXS128.class);
-    when(external.nextFloat()).thenReturn(.99f); // No circle/spit/melee; lay succeeds.
     try (Fixture f = fixture("SandMaggot", 8)) {
       MathUtils.random = external;
+      // A different destination seed must be replaced by the saved unit image.
+      NativeUnitRandom.monster(f.ai.monster, Riiablo.gameSeed, f.actor)
+          .restore(new NativeUnitRandom.Snapshot(9, 7));
       UnitStateRuntimeCheckpoint.restore(f.world, image); SandMaggot ai = (SandMaggot) f.ai;
+      assertEquals(1, ai.monster.nativeSeed.getNLowSeed());
+      assertEquals(666, ai.monster.nativeSeed.getNHighSeed());
       assertEquals(0, f.probe.starts);
       ai.update(.1f); assertEquals(2, ai.aiParam2); assertNull(f.casting());
+      assertEquals(1, ai.monster.nativeSeed.getNLowSeed(), "waiting must not consume RNG");
       ai.update(.15f);
       assertEquals("LAY_EGG", ai.getState()); assertEquals(1, ai.aiParam0);
       assertEquals(37, ai.aiParam1); assertEquals(3, ai.aiParam2);
@@ -93,6 +103,7 @@ class LegacyPhaseCheckpointIntegrationTest extends RiiabloTest {
       ai.update(ai.time + .01f);
       assertEquals("IDLE", ai.getState()); assertEquals(3, ai.aiParam2);
       assertEquals(1, f.probe.starts); assertNull(f.casting());
+      verifyNoInteractions(external);
     } finally { MathUtils.random = previous; }
   }
 

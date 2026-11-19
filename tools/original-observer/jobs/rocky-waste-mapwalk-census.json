@@ -1,0 +1,14 @@
+{
+  "character": "MapWalk",
+  "lifecycle": "restart",
+  "batches": [
+    {
+      "name": "rocky-waste-mapwalk-census",
+      "collector": "room_census_walk",
+      "scenario": {
+        "level_id": 40,
+        "seconds": 240
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "op": "run_jobs",
+  "jobs": [
+    "barbarian-bash-target-levels10to17",
+    "barbarian-bash-target-levels18to25",
+    "barbarian-bash-target-levels26to33",
+    "barbarian-bash-target-levels34to40"
+  ]
+}

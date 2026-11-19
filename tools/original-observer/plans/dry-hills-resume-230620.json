@@ -1,0 +1,2379 @@
+{
+  "pid": 11780,
+  "map_seed": 127897359,
+  "difficulty": 0,
+  "room_pointers": [
+    {
+      "pointer": 61387520,
+      "local_subtiles": [
+        360,
+        360,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61387008,
+      "local_subtiles": [
+        320,
+        360,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61386496,
+      "local_subtiles": [
+        280,
+        360,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61385984,
+      "local_subtiles": [
+        240,
+        360,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61385472,
+      "local_subtiles": [
+        200,
+        360,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61384960,
+      "local_subtiles": [
+        160,
+        360,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61384448,
+      "local_subtiles": [
+        120,
+        360,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61383936,
+      "local_subtiles": [
+        80,
+        360,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61383424,
+      "local_subtiles": [
+        40,
+        360,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61382912,
+      "local_subtiles": [
+        360,
+        320,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61382656,
+      "local_subtiles": [
+        320,
+        320,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61398784,
+      "local_subtiles": [
+        280,
+        320,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61398272,
+      "local_subtiles": [
+        240,
+        320,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61397760,
+      "local_subtiles": [
+        200,
+        320,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61397504,
+      "local_subtiles": [
+        160,
+        320,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61397248,
+      "local_subtiles": [
+        120,
+        320,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61396992,
+      "local_subtiles": [
+        80,
+        320,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61396480,
+      "local_subtiles": [
+        40,
+        320,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61395968,
+      "local_subtiles": [
+        360,
+        280,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61395456,
+      "local_subtiles": [
+        320,
+        280,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61395200,
+      "local_subtiles": [
+        280,
+        280,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61394688,
+      "local_subtiles": [
+        240,
+        280,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61394176,
+      "local_subtiles": [
+        200,
+        280,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61393664,
+      "local_subtiles": [
+        160,
+        280,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61393152,
+      "local_subtiles": [
+        120,
+        280,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61392896,
+      "local_subtiles": [
+        80,
+        280,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61392384,
+      "local_subtiles": [
+        40,
+        280,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61391872,
+      "local_subtiles": [
+        0,
+        280,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61391360,
+      "local_subtiles": [
+        360,
+        240,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61390848,
+      "local_subtiles": [
+        320,
+        240,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61406720,
+      "local_subtiles": [
+        280,
+        240,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61406208,
+      "local_subtiles": [
+        240,
+        240,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61405696,
+      "local_subtiles": [
+        200,
+        240,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61405184,
+      "local_subtiles": [
+        160,
+        240,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61404928,
+      "local_subtiles": [
+        120,
+        240,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61404416,
+      "local_subtiles": [
+        80,
+        240,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61404160,
+      "local_subtiles": [
+        40,
+        240,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61403648,
+      "local_subtiles": [
+        0,
+        240,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61403136,
+      "local_subtiles": [
+        360,
+        200,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61402624,
+      "local_subtiles": [
+        320,
+        200,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61402112,
+      "local_subtiles": [
+        280,
+        200,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61401600,
+      "local_subtiles": [
+        240,
+        200,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61401344,
+      "local_subtiles": [
+        200,
+        200,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61400832,
+      "local_subtiles": [
+        160,
+        200,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61400320,
+      "local_subtiles": [
+        120,
+        200,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61399808,
+      "local_subtiles": [
+        80,
+        200,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 61399296,
+      "local_subtiles": [
+        40,
+        200,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135218688,
+      "local_subtiles": [
+        0,
+        200,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135217664,
+      "local_subtiles": [
+        360,
+        160,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135217152,
+      "local_subtiles": [
+        320,
+        160,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135233024,
+      "local_subtiles": [
+        280,
+        160,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135232512,
+      "local_subtiles": [
+        240,
+        160,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135232000,
+      "local_subtiles": [
+        200,
+        160,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135231488,
+      "local_subtiles": [
+        160,
+        160,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135230976,
+      "local_subtiles": [
+        120,
+        160,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135230464,
+      "local_subtiles": [
+        80,
+        160,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135229952,
+      "local_subtiles": [
+        40,
+        160,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 135229440,
+      "local_subtiles": [
+        0,
+        160,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102047488,
+      "local_subtiles": [
+        360,
+        120,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102046976,
+      "local_subtiles": [
+        320,
+        120,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102046464,
+      "local_subtiles": [
+        280,
+        120,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102046208,
+      "local_subtiles": [
+        240,
+        120,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102045696,
+      "local_subtiles": [
+        200,
+        120,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102045440,
+      "local_subtiles": [
+        160,
+        120,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102045184,
+      "local_subtiles": [
+        120,
+        120,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102044928,
+      "local_subtiles": [
+        80,
+        120,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102044672,
+      "local_subtiles": [
+        40,
+        120,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102044160,
+      "local_subtiles": [
+        0,
+        120,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102043648,
+      "local_subtiles": [
+        360,
+        80,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102043136,
+      "local_subtiles": [
+        320,
+        80,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102042624,
+      "local_subtiles": [
+        280,
+        80,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102042112,
+      "local_subtiles": [
+        240,
+        80,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102041856,
+      "local_subtiles": [
+        200,
+        80,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102041344,
+      "local_subtiles": [
+        160,
+        80,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102040832,
+      "local_subtiles": [
+        120,
+        80,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102040320,
+      "local_subtiles": [
+        80,
+        80,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102039808,
+      "local_subtiles": [
+        40,
+        80,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102055424,
+      "local_subtiles": [
+        0,
+        80,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102054912,
+      "local_subtiles": [
+        360,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102054400,
+      "local_subtiles": [
+        320,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102053888,
+      "local_subtiles": [
+        280,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102053376,
+      "local_subtiles": [
+        240,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102052864,
+      "local_subtiles": [
+        200,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102052352,
+      "local_subtiles": [
+        160,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102051840,
+      "local_subtiles": [
+        120,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102051328,
+      "local_subtiles": [
+        80,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102051072,
+      "local_subtiles": [
+        40,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102050560,
+      "local_subtiles": [
+        0,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102050048,
+      "local_subtiles": [
+        280,
+        0,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102049536,
+      "local_subtiles": [
+        240,
+        0,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102049024,
+      "local_subtiles": [
+        200,
+        0,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102048512,
+      "local_subtiles": [
+        120,
+        0,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102048000,
+      "local_subtiles": [
+        80,
+        0,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102063872,
+      "local_subtiles": [
+        40,
+        0,
+        40,
+        40
+      ]
+    },
+    {
+      "pointer": 102063360,
+      "local_subtiles": [
+        0,
+        0,
+        40,
+        40
+      ]
+    }
+  ],
+  "visited_rooms": [
+    61399296,
+    61403648,
+    61404160,
+    135218688
+  ],
+  "units": {
+    "1:222:61368832": {
+      "pointer": 61368832,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 222,
+      "mode": 1,
+      "animation": 273,
+      "position": {
+        "x": 4883,
+        "y": 4529
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:221:61368576": {
+      "pointer": 61368576,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 221,
+      "mode": 1,
+      "animation": 1003,
+      "position": {
+        "x": 4881,
+        "y": 4526
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:220:61368320": {
+      "pointer": 61368320,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 220,
+      "mode": 1,
+      "animation": 160,
+      "position": {
+        "x": 4900,
+        "y": 4526
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:219:61368064": {
+      "pointer": 61368064,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 219,
+      "mode": 1,
+      "animation": 950,
+      "position": {
+        "x": 4889,
+        "y": 4525
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:218:102059008": {
+      "pointer": 102059008,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 218,
+      "mode": 1,
+      "animation": 709,
+      "position": {
+        "x": 4830,
+        "y": 4365
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:217:102058752": {
+      "pointer": 102058752,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 217,
+      "mode": 1,
+      "animation": 511,
+      "position": {
+        "x": 4803,
+        "y": 4360
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:216:102058240": {
+      "pointer": 102058240,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 216,
+      "mode": 1,
+      "animation": 1038,
+      "position": {
+        "x": 4809,
+        "y": 4389
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:215:102057984": {
+      "pointer": 102057984,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 215,
+      "mode": 1,
+      "animation": 71,
+      "position": {
+        "x": 4832,
+        "y": 4395
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "2:23:61461504": {
+      "pointer": 61461504,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 146,
+      "unit_id": 23,
+      "mode": 0,
+      "animation": 0,
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:20:61457408": {
+      "pointer": 61457408,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 111,
+      "unit_id": 20,
+      "mode": 1,
+      "animation": 1219,
+      "position": {
+        "x": 4858,
+        "y": 4496
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:18:61458432": {
+      "pointer": 61458432,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 111,
+      "unit_id": 18,
+      "mode": 1,
+      "animation": 2637,
+      "position": {
+        "x": 4858,
+        "y": 4499
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:19:61457920": {
+      "pointer": 61457920,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 111,
+      "unit_id": 19,
+      "mode": 1,
+      "animation": 4051,
+      "position": {
+        "x": 4860,
+        "y": 4502
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:14:61460480": {
+      "pointer": 61460480,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 394,
+      "unit_id": 14,
+      "mode": 1,
+      "animation": 1497,
+      "position": {
+        "x": 4868,
+        "y": 4503
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:13:61460992": {
+      "pointer": 61460992,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 394,
+      "unit_id": 13,
+      "mode": 1,
+      "animation": 209,
+      "position": {
+        "x": 4868,
+        "y": 4506
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:17:61458944": {
+      "pointer": 61458944,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 394,
+      "unit_id": 17,
+      "mode": 1,
+      "animation": 902,
+      "position": {
+        "x": 4865,
+        "y": 4509
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:15:61459968": {
+      "pointer": 61459968,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 394,
+      "unit_id": 15,
+      "mode": 1,
+      "animation": 1576,
+      "position": {
+        "x": 4868,
+        "y": 4509
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:16:61459456": {
+      "pointer": 61459456,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 394,
+      "unit_id": 16,
+      "mode": 1,
+      "animation": 124,
+      "position": {
+        "x": 4870,
+        "y": 4509
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "2:24:61457152": {
+      "pointer": 61457152,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 178,
+      "unit_id": 24,
+      "mode": 0,
+      "animation": 0,
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "2:25:61456896": {
+      "pointer": 61456896,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 103,
+      "unit_id": 25,
+      "mode": 0,
+      "animation": 936,
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "0:1:102060800": {
+      "pointer": 102060800,
+      "level_id": 42,
+      "type": 0,
+      "class_id": 1,
+      "unit_id": 1,
+      "mode": 1,
+      "animation": 896,
+      "position": {
+        "x": 4818,
+        "y": 4458
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "2:31:61471744": {
+      "pointer": 61471744,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 156,
+      "unit_id": 31,
+      "mode": 2,
+      "animation": 640,
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "2:29:61456384": {
+      "pointer": 61456384,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 37,
+      "unit_id": 29,
+      "mode": 2,
+      "animation": 1700,
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "2:30:61472256": {
+      "pointer": 61472256,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 37,
+      "unit_id": 30,
+      "mode": 2,
+      "animation": 1255,
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "2:26:61471488": {
+      "pointer": 61471488,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 178,
+      "unit_id": 26,
+      "mode": 0,
+      "animation": 0,
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "2:28:61470464": {
+      "pointer": 61470464,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 87,
+      "unit_id": 28,
+      "mode": 0,
+      "animation": 0,
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:21:61469952": {
+      "pointer": 61469952,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 84,
+      "unit_id": 21,
+      "mode": 1,
+      "animation": 1039,
+      "position": {
+        "x": 4833,
+        "y": 4405
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:23:61468928": {
+      "pointer": 61468928,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 84,
+      "unit_id": 23,
+      "mode": 1,
+      "animation": 1309,
+      "position": {
+        "x": 4830,
+        "y": 4408
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "2:27:61470720": {
+      "pointer": 61470720,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 269,
+      "unit_id": 27,
+      "mode": 2,
+      "animation": 0,
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:22:61469440": {
+      "pointer": 61469440,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 84,
+      "unit_id": 22,
+      "mode": 1,
+      "animation": 136,
+      "position": {
+        "x": 4836,
+        "y": 4406
+      },
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "4:6:61471232": {
+      "pointer": 61471232,
+      "level_id": 42,
+      "type": 4,
+      "class_id": 523,
+      "unit_id": 6,
+      "mode": 3,
+      "animation": 4096,
+      "first_seen_elapsed_ms": 62,
+      "first_seen_room": 61404160
+    },
+    "1:229:135256064": {
+      "pointer": 135256064,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 229,
+      "mode": 1,
+      "animation": 446,
+      "position": {
+        "x": 4837,
+        "y": 4324
+      },
+      "first_seen_elapsed_ms": 9234,
+      "first_seen_room": 135218688
+    },
+    "1:228:135255808": {
+      "pointer": 135255808,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 228,
+      "mode": 1,
+      "animation": 880,
+      "position": {
+        "x": 4813,
+        "y": 4322
+      },
+      "first_seen_elapsed_ms": 9234,
+      "first_seen_room": 135218688
+    },
+    "1:227:135255552": {
+      "pointer": 135255552,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 227,
+      "mode": 1,
+      "animation": 108,
+      "position": {
+        "x": 4834,
+        "y": 4346
+      },
+      "first_seen_elapsed_ms": 9234,
+      "first_seen_room": 135218688
+    },
+    "1:226:135255296": {
+      "pointer": 135255296,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 226,
+      "mode": 1,
+      "animation": 15,
+      "position": {
+        "x": 4812,
+        "y": 4355
+      },
+      "first_seen_elapsed_ms": 9234,
+      "first_seen_room": 135218688
+    },
+    "1:225:135255040": {
+      "pointer": 135255040,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 225,
+      "mode": 1,
+      "animation": 658,
+      "position": {
+        "x": 4798,
+        "y": 4337
+      },
+      "first_seen_elapsed_ms": 9234,
+      "first_seen_room": 135218688
+    },
+    "1:224:135254784": {
+      "pointer": 135254784,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 224,
+      "mode": 1,
+      "animation": 626,
+      "position": {
+        "x": 4798,
+        "y": 4358
+      },
+      "first_seen_elapsed_ms": 9234,
+      "first_seen_room": 135218688
+    },
+    "1:223:135254528": {
+      "pointer": 135254528,
+      "level_id": 42,
+      "type": 1,
+      "class_id": 269,
+      "unit_id": 223,
+      "mode": 1,
+      "animation": 856,
+      "position": {
+        "x": 4795,
+        "y": 4329
+      },
+      "first_seen_elapsed_ms": 9234,
+      "first_seen_room": 135218688
+    },
+    "2:32:135241728": {
+      "pointer": 135241728,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 178,
+      "unit_id": 32,
+      "mode": 0,
+      "animation": 0,
+      "first_seen_elapsed_ms": 10859,
+      "first_seen_room": 61399296
+    },
+    "2:33:135257856": {
+      "pointer": 135257856,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 103,
+      "unit_id": 33,
+      "mode": 0,
+      "animation": 1848,
+      "first_seen_elapsed_ms": 10859,
+      "first_seen_room": 61399296
+    },
+    "2:34:135257600": {
+      "pointer": 135257600,
+      "level_id": 42,
+      "type": 2,
+      "class_id": 178,
+      "unit_id": 34,
+      "mode": 0,
+      "animation": 0,
+      "first_seen_elapsed_ms": 10859,
+      "first_seen_room": 61399296
+    },
+    "3:258:135222784": {
+      "pointer": 135222784,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 258,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4440
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:255:135222016": {
+      "pointer": 135222016,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 255,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4828,
+        "y": 4441
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:234:135226880": {
+      "pointer": 135226880,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 234,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4440
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:257:135222528": {
+      "pointer": 135222528,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 257,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4441
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:256:135222272": {
+      "pointer": 135222272,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 256,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4828,
+        "y": 4441
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:254:135221760": {
+      "pointer": 135221760,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 254,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4828,
+        "y": 4442
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:253:135221504": {
+      "pointer": 135221504,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 253,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4829,
+        "y": 4442
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:252:135221248": {
+      "pointer": 135221248,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 252,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4829,
+        "y": 4442
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:251:135220992": {
+      "pointer": 135220992,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 251,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4829,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:250:135220736": {
+      "pointer": 135220736,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 250,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4830,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:249:135220480": {
+      "pointer": 135220480,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 249,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4831,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:248:135220224": {
+      "pointer": 135220224,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 248,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4831,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:247:135219968": {
+      "pointer": 135219968,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 247,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4832,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:246:135219712": {
+      "pointer": 135219712,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 246,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4832,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:245:135219456": {
+      "pointer": 135219456,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 245,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4832,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:244:135219200": {
+      "pointer": 135219200,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 244,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4833,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:243:135218944": {
+      "pointer": 135218944,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 243,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4833,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:242:135228928": {
+      "pointer": 135228928,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 242,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4834,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:235:135227136": {
+      "pointer": 135227136,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 235,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4441
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:241:135228672": {
+      "pointer": 135228672,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 241,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4835,
+        "y": 4443
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:236:135227392": {
+      "pointer": 135227392,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 236,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4836,
+        "y": 4441
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:240:135228416": {
+      "pointer": 135228416,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 240,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4835,
+        "y": 4442
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:237:135227648": {
+      "pointer": 135227648,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 237,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4836,
+        "y": 4441
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:239:135228160": {
+      "pointer": 135228160,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 239,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4835,
+        "y": 4442
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:238:135227904": {
+      "pointer": 135227904,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 238,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4836,
+        "y": 4442
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:289:135214336": {
+      "pointer": 135214336,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 289,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4435
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:288:135214080": {
+      "pointer": 135214080,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 288,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4836,
+        "y": 4435
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:287:135213824": {
+      "pointer": 135213824,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 287,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4836,
+        "y": 4435
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:286:135213568": {
+      "pointer": 135213568,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 286,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4836,
+        "y": 4434
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:285:135213312": {
+      "pointer": 135213312,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 285,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4835,
+        "y": 4434
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:284:135213056": {
+      "pointer": 135213056,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 284,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4835,
+        "y": 4434
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:283:135212800": {
+      "pointer": 135212800,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 283,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4835,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:282:135212544": {
+      "pointer": 135212544,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 282,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4834,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:281:135212288": {
+      "pointer": 135212288,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 281,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4833,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:280:135212032": {
+      "pointer": 135212032,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 280,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4833,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:279:135211776": {
+      "pointer": 135211776,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 279,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4832,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:278:135211520": {
+      "pointer": 135211520,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 278,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4832,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:277:135211264": {
+      "pointer": 135211264,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 277,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4832,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:276:135211008": {
+      "pointer": 135211008,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 276,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4831,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:275:135210752": {
+      "pointer": 135210752,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 275,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4831,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:274:135210496": {
+      "pointer": 135210496,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 274,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4830,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:273:135210240": {
+      "pointer": 135210240,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 273,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4829,
+        "y": 4433
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:272:135209984": {
+      "pointer": 135209984,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 272,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4829,
+        "y": 4434
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:271:135209728": {
+      "pointer": 135209728,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 271,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4829,
+        "y": 4434
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:270:135209472": {
+      "pointer": 135209472,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 270,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4828,
+        "y": 4434
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:269:135209216": {
+      "pointer": 135209216,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 269,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4828,
+        "y": 4435
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:268:135208960": {
+      "pointer": 135208960,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 268,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4828,
+        "y": 4435
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:267:135225088": {
+      "pointer": 135225088,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 267,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4435
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:266:135224832": {
+      "pointer": 135224832,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 266,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4436
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:265:135224576": {
+      "pointer": 135224576,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 265,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4437
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:264:135224320": {
+      "pointer": 135224320,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 264,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4437
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:263:135224064": {
+      "pointer": 135224064,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 263,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4438
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:262:135223808": {
+      "pointer": 135223808,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 262,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4438
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:261:135223552": {
+      "pointer": 135223552,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 261,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4438
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:260:135223296": {
+      "pointer": 135223296,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 260,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4439
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:259:135223040": {
+      "pointer": 135223040,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 259,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4827,
+        "y": 4439
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:290:135214592": {
+      "pointer": 135214592,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 290,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4436
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:291:135214848": {
+      "pointer": 135214848,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 291,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4437
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:292:135215104": {
+      "pointer": 135215104,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 292,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4437
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:293:135215360": {
+      "pointer": 135215360,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 293,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4438
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:231:135226112": {
+      "pointer": 135226112,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 231,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4438
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:230:135225856": {
+      "pointer": 135225856,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 230,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4438
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:232:135226368": {
+      "pointer": 135226368,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 232,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4439
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    },
+    "3:233:135226624": {
+      "pointer": 135226624,
+      "level_id": 42,
+      "type": 3,
+      "class_id": 90,
+      "unit_id": 233,
+      "mode": 3,
+      "animation": 1280,
+      "position": {
+        "x": 4837,
+        "y": 4439
+      },
+      "first_seen_elapsed_ms": 18484,
+      "first_seen_room": 61399296
+    }
+  },
+  "source": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261116-230620-6b24c7b5\\orchestrator\\process-session\\001-riiablo-navigation-dry-hills\\room-census.json"
+}

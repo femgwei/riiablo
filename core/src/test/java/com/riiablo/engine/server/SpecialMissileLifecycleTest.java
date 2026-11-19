@@ -182,17 +182,18 @@ class SpecialMissileLifecycleTest {
     nova.frozenOrbTargetY = -2;
     Velocity velocity = new Velocity();
     velocity.velocity.set(3, 0);
-    MissileCollisionSystem.processFrozenOrbNova(nova, velocity, 0);
+    Position position = new Position();
+    MissileCollisionSystem.processFrozenOrbNova(nova, position, velocity, 0);
     assertEquals(3, nova.frozenOrbTargetX);
     assertEquals(1, nova.frozenOrbTargetY);
-    assertEquals(3f, velocity.velocity.len(), 0.0001f);
+    assertEquals(3f, velocity.velocity.len(), 0.003f, "native integer speed quantization");
     assertTrue(velocity.velocity.y > 0f);
-    MissileCollisionSystem.processFrozenOrbNova(nova, velocity, 1);
+    MissileCollisionSystem.processFrozenOrbNova(nova, position, velocity, 1);
     assertEquals(3, nova.frozenOrbTargetX);
-    MissileCollisionSystem.processFrozenOrbNova(nova, velocity, 2);
+    MissileCollisionSystem.processFrozenOrbNova(nova, position, velocity, 2);
     assertEquals(1, nova.frozenOrbTargetX);
     assertEquals(2, nova.frozenOrbTargetY);
-    MissileCollisionSystem.processFrozenOrbNova(nova, velocity, 4);
+    MissileCollisionSystem.processFrozenOrbNova(nova, position, velocity, 4);
     assertEquals(1, nova.frozenOrbTargetX, "window excludes elapsed=Param1");
     assertEquals(2, nova.frozenOrbTargetY);
   }

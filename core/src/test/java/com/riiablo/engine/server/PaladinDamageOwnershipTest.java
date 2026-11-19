@@ -24,12 +24,14 @@ import org.junit.jupiter.api.Test;
 /** Completeness gate for the DMG-03B Paladin damage-owner audit. */
 class PaladinDamageOwnershipTest extends RiiabloTest {
   private static final String FILE = "skill-damage-paladin-ownership.tsv";
-  private static final Set<Integer> CONFIRMED_GAPS = Set.of(96, 97, 106, 107, 117);
+  // Smite 97 is covered by the player shield/Holy Shield lifecycle regression.
+  private static final Set<Integer> CONFIRMED_GAPS = Set.of(96, 106, 107, 117);
   private static final Set<Integer> TEST_GAPS = Set.of(116, 123);
 
   @Test
   void everyPaladinSkillHasOneEvidenceBackedOwnerDecision() throws IOException {
     List<String> lines = Files.readAllLines(resolveAuditFile(), StandardCharsets.UTF_8);
+    lines.removeIf(line -> line.trim().isEmpty());
     assertEquals(31, lines.size(), "header plus 30 Paladin skills");
 
     String[] header = lines.get(0).split("\\t", -1);

@@ -1,0 +1,13 @@
+{
+  "character": "CXSorc",
+  "entry_visibility": "hidden",
+  "batches": [
+    {
+      "name": "adjacent-room",
+      "collector": "fallen_death",
+      "scenario": {
+        "profile": "adjacent-room"
+      }
+    }
+  ]
+}

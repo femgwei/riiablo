@@ -1,0 +1,408 @@
+{
+  "status": "controlled_death_observed",
+  "ai_parity": "untested",
+  "samples": 601,
+  "identity": {
+    "map_seed": 127897359,
+    "observer_id": 112,
+    "corpse_id": 115,
+    "reengage_step": 100,
+    "observation_frames": 600,
+    "death_count": 1,
+    "requested_distance": 0,
+    "observer_class": 19,
+    "corpse_class": 0,
+    "room": 110908032,
+    "death_room": 110908032,
+    "adjacent_room_fixture": false,
+    "player_id": 1,
+    "player_x": 4523,
+    "player_y": 5642,
+    "observer_x": 4525,
+    "observer_y": 5644,
+    "corpse_x": 4523,
+    "corpse_y": 5646,
+    "adjacent_rooms": [
+      105682688,
+      110907648,
+      105682816,
+      110910336,
+      110914560,
+      110908032,
+      110908288,
+      110910464,
+      110910592
+    ]
+  },
+  "death_step": 1,
+  "death_frame": 755077,
+  "corpse_dd_step": 25,
+  "param0_one_during_dt_steps": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24
+  ],
+  "walking_with_param0_one_steps": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24
+  ],
+  "first_displacement_step": 4,
+  "limitations": [
+    "Native DT is forced through the original mode-change functions; damage and kill attribution are not exercised.",
+    "No exact think-call, target, escape-path or RNG parity with riiablo is established.",
+    "No response is inconclusive when no AI think occurs during DT."
+  ],
+  "attack_animation": {
+    "status": "captured",
+    "spans": [
+      {
+        "mode": 4,
+        "start_step": 544,
+        "duration_ticks": 10,
+        "complete": true,
+        "frame_state_fp8": [
+          193438720,
+          193438720,
+          193438720,
+          193438720,
+          193438720,
+          193438720,
+          193438720,
+          193438720,
+          193438720,
+          193438720
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          2560
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 544,
+            "modechange_frame": 755627,
+            "endanim_frame": 755630,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 545,
+            "modechange_frame": 755627,
+            "endanim_frame": 755630,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 546,
+            "modechange_frame": 755627,
+            "endanim_frame": 755630,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 547,
+            "modechange_frame": 755627,
+            "endanim_frame": 755630,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 548,
+            "modechange_frame": 755627,
+            "endanim_frame": 755630,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 549,
+            "modechange_frame": 755627,
+            "endanim_frame": 755630,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 550,
+            "modechange_frame": 755627,
+            "endanim_frame": 755630,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 551,
+            "modechange_frame": 0,
+            "endanim_frame": 755630,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 552,
+            "modechange_frame": 0,
+            "endanim_frame": 755630,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 553,
+            "modechange_frame": 0,
+            "endanim_frame": 755630,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          }
+        ]
+      },
+      {
+        "mode": 4,
+        "start_step": 569,
+        "duration_ticks": 10,
+        "complete": true,
+        "frame_state_fp8": [
+          193445120,
+          193445120,
+          193445120,
+          193445120,
+          193445120,
+          193445120,
+          193445120,
+          193445120,
+          193445120,
+          193445120
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          2560
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 569,
+            "modechange_frame": 755652,
+            "endanim_frame": 755655,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 570,
+            "modechange_frame": 755652,
+            "endanim_frame": 755655,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 571,
+            "modechange_frame": 755652,
+            "endanim_frame": 755655,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 572,
+            "modechange_frame": 755652,
+            "endanim_frame": 755655,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 573,
+            "modechange_frame": 755652,
+            "endanim_frame": 755655,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 574,
+            "modechange_frame": 755652,
+            "endanim_frame": 755655,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 575,
+            "modechange_frame": 755652,
+            "endanim_frame": 755655,
+            "modechange_id": 1,
+            "modechange_offset": 7,
+            "endanim_offset": 10
+          },
+          {
+            "step": 576,
+            "modechange_frame": 0,
+            "endanim_frame": 755655,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 577,
+            "modechange_frame": 0,
+            "endanim_frame": 755655,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          },
+          {
+            "step": 578,
+            "modechange_frame": 0,
+            "endanim_frame": 755655,
+            "modechange_id": 0,
+            "modechange_offset": null,
+            "endanim_offset": 10
+          }
+        ]
+      },
+      {
+        "mode": 5,
+        "start_step": 599,
+        "duration_ticks": 2,
+        "complete": false,
+        "frame_state_fp8": [
+          193452800,
+          193452800
+        ],
+        "valid_relative_cursor": false,
+        "length_fp8": [
+          3840
+        ],
+        "speed": [
+          256
+        ],
+        "action_samples": [],
+        "scheduled_events": [
+          {
+            "step": 599,
+            "modechange_frame": 755683,
+            "endanim_frame": 755690,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          },
+          {
+            "step": 600,
+            "modechange_frame": 755683,
+            "endanim_frame": 755690,
+            "modechange_id": 1,
+            "modechange_offset": 8,
+            "endanim_offset": 15
+          }
+        ]
+      }
+    ],
+    "scope": "Server pre-update state and planned events, not callback execution, damage or client presentation. Frame state is not assumed to be a relative animation cursor."
+  },
+  "attack_callbacks": {
+    "status": "observed",
+    "scheduled_callbacks": 4,
+    "observed_callbacks": 4,
+    "attack_callbacks": 2,
+    "end_callbacks": 2,
+    "attack_callbacks_with_hp_bracket": 2,
+    "callback_bracket_hp_decreases": [],
+    "scope": "Actual per-mode callback entry and dispatcher return. HP bracket covers only this callback plus dispatcher epilogue. No RNG/damage-formula parity or client rendering claim.",
+    "source_sha256": "10669cae1375418e173f3fc28026e694e682af8042ac5385aaba2b4b208d982a"
+  },
+  "recovery": {
+    "status": "movement_phase_observed",
+    "initial_walk_step": 2,
+    "initial_target": [
+      4537,
+      5656
+    ],
+    "initial_path_velocity_raw": 1600,
+    "first_movement_phase_change_step": 46,
+    "at_initial_target_on_phase_change": true,
+    "next_path_velocity_raw": 960,
+    "next_target": [
+      4540,
+      5655
+    ],
+    "first_attack_step": 544,
+    "attack_recovery": "observed_attack_mode",
+    "player_stationary": true,
+    "scope": "mode/path changes; a later WL segment is not automatically classified as fleeing; explicit native walk-to-player intervention, not spontaneous return",
+    "reengage_intervention_step": 100,
+    "intervention": {
+      "step": 100,
+      "frame": 755176,
+      "action": "native walk-to-player",
+      "observer_id": 112,
+      "target_id": 1
+    }
+  },
+  "native_death_events": [
+    {
+      "frame": 755077,
+      "guid": 115,
+      "cursor": 2,
+      "ring": [
+        111,
+        115,
+        101,
+        106
+      ]
+    }
+  ],
+  "source": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261118-015503-e5338c02\\orchestrator\\process-session\\001-recovery-reengage\\frames.csv",
+  "source_sha256": "2128987d6e2ebdaaac7c256174912aec109433dc56462a2c91070b4600ded89e"
+}

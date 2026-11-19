@@ -17,6 +17,9 @@ import com.riiablo.map.MapTourPlan;
 
 /** Read-only probe. All access is on the authoritative simulation thread. */
 final class MapTourProbe {
+  private static final java.util.IdentityHashMap<Map.Zone, java.util.Set<Integer>> seenMonstersByZone =
+      new java.util.IdentityHashMap<>();
+
   static final class Sample {
     java.util.List<String> monsterEvidence = java.util.Collections.emptyList();
     int level = -1;
@@ -27,6 +30,7 @@ final class MapTourProbe {
     String name = "missing";
     int[] diagnostics = new int[0];
     int objects, monsters, entities, pendingMonsters, spawnedMonsters, spawnedObjects, groundItems;
+    int currentVisibleMonsters, cumulativeVisibleMonsters;
     boolean synthetic, walking, blocked, actionReady;
     boolean nativeTerrain;
     boolean blockedByDynamic;
@@ -40,6 +44,135 @@ final class MapTourProbe {
     boolean meleeReady;
     String transition = "JUMP_DETACHED";
   }
+
+  /** Deterministic scene manifest captured on the authoritative simulation thread. */
+  static java.util.List<String> sceneSnapshot(World world, Map.Zone zone, int playerId,
+      com.riiablo.Files files) {
+    java.util.ArrayList<String> lines = new java.util.ArrayList<>();
+    lines.add("SCENE_SNAPSHOT version=1 level=" + zone.levelId() + " name="
+        + safe(zone.level == null ? null : zone.level.LevelName) + " rooms=" + zone.getRoomsEx().size
+        + " nativeObjects=" + zone.getNativeObjects().size + " nativeMonsters=" + zone.getNativeMonsters().size);
+    MapWrapper playerMap = world.getMapper(MapWrapper.class).get(playerId);
+    lines.add("SCENE_CONTEXT version=2 level=" + zone.levelId()
+        + " seed=" + (playerMap == null || playerMap.map == null ? "unknown" : playerMap.map.seed())
+        + " difficulty=" + (playerMap == null || playerMap.map == null ? "unknown" : playerMap.map.getDifficulty())
+        + " monsterSeed=" + (playerMap == null || playerMap.map == null ? "unknown" : playerMap.map.nativeMonsterSeed())
+        + " originX=" + zone.x() + " originY=" + zone.y()
+        + " width=" + zone.width() + " height=" + zone.height()
+        + " roomCoordinates=world nativePresetCoordinates=level_local runtimeCoordinates=world");
+    if (Boolean.getBoolean("riiablo.map.exportPopulation")) {
+      for (com.riiablo.codec.excel.MonStats.Entry entry : files.monstats) {
+        lines.add("MONSTER_CLASS class=" + entry.hcIdx + " id=" + safe(entry.Id)
+            + " align=" + entry.Align + " npc=" + entry.npc + " killable=" + entry.killable
+            + " spawn=" + safe(entry.spawn) + " minGroup=" + entry.MinGrp + " maxGroup=" + entry.MaxGrp
+            + " partyMin=" + entry.PartyMin + " partyMax=" + entry.PartyMax
+            + " rarity=" + entry.Rarity);
+      }
+      for (Map.RoomEx room : zone.getRoomsEx()) {
+        for (Map.MonsterSpawn spawn : room.getPendingMonsterSpawns()) {
+          lines.add("POPULATION_MONSTER room=" + room.id + " class=" + spawn.monsterId
+              + " pos=" + spawn.x + "," + spawn.y + " rank=" + spawn.rank
+              + " pack=" + spawn.packId + " roomMaterialized=" + room.isMonsterPopulationSpawned());
+        }
+      }
+    }
+    if (Boolean.getBoolean("riiablo.map.exportNavigation")) {
+      if (playerMap == null || playerMap.map == null) throw new IllegalStateException("Navigation needs map seed");
+      int width = zone.width(), height = zone.height();
+      if ((long) width * height > 4_000_000L) throw new IllegalStateException("Navigation footprint too large");
+      // Export production terrain collision, excluding moving units. A planner
+      // may use this as a hint; the original process must validate every move.
+      lines.add("NAV_CONTEXT version=1 footprint=2 encoding=local_row_free_spans dynamicUnits=false"
+          + " terrainMask=" + com.riiablo.engine.server.NativeGroundPathProfile.PLAYER.terrainFlags);
+      for (int y = 0; y < height; y++) {
+        StringBuilder spans = new StringBuilder();
+        int start = -1;
+        for (int x = 0; x <= width; x++) {
+          boolean free = x < width && clear(playerMap.map, zone, zone.x() + x, zone.y() + y, 2);
+          if (free && start < 0) start = x;
+          if (!free && start >= 0) {
+            if (spans.length() > 0) spans.append(',');
+            spans.append(start).append(':').append(x);
+            start = -1;
+          }
+        }
+        lines.add("NAV_ROW y=" + y + " spans=" + (spans.length() == 0 ? "-" : spans.toString()));
+      }
+    }
+    com.riiablo.codec.excel.Skills.Entry fireBolt = files.skills.get(36);
+    for (int level = 1; level <= 20; level++) {
+      lines.add("SKILL_FORMULA skill=36 level=" + level
+          + " min_fixed=" + com.riiablo.engine.server.missile.MissileDamageResolver
+              .skillElementalDamageFixed(fireBolt, level, true, name -> 0)
+          + " max_fixed=" + com.riiablo.engine.server.missile.MissileDamageResolver
+              .skillElementalDamageFixed(fireBolt, level, false, name -> 0)
+          + " min_integer=" + com.riiablo.engine.server.missile.MissileDamageResolver
+              .skillElementalDamage(fireBolt, level, true, name -> 0)
+          + " max_integer=" + com.riiablo.engine.server.missile.MissileDamageResolver
+              .skillElementalDamage(fireBolt, level, false, name -> 0)
+          + " synergy=0 mastery=0 scope=base_elemental_getter");
+    }
+    for (int i = 0; i < zone.getRoomsEx().size; i++) {
+      Map.RoomEx room = zone.getRoomsEx().get(i);
+      lines.add("ROOM id=" + room.id + " x=" + room.x + " y=" + room.y + " width=" + room.width
+          + " height=" + room.height + " preset=" + room.presetDef() + ":" + room.pickedFile()
+          + " adjacent=" + java.util.Arrays.toString(room.getAdjacentRoomIds())
+          + " populationSeed=" + room.populationSeed() + ":" + room.populationSeedHigh()
+          + " activation=" + room.getActivationStatus() + " monstersSpawned=" + room.isMonsterPopulationSpawned());
+    }
+    for (Map.NativeMonster monster : zone.getNativeMonsters()) {
+      lines.add("NATIVE_MONSTER room=" + monster.roomId + " class=" + monster.monsterId
+          + " pos=" + monster.x + "," + monster.y + " mode=" + monster.mode + " rank=" + monster.rank
+          + " super=" + monster.superUniqueId + ":" + safe(monster.superUniqueKey)
+          + " spawned=" + monster.spawned + " group=" + monster.populationGroupSize);
+    }
+    for (Map.NativeObject object : zone.getNativeObjects()) {
+      lines.add("NATIVE_OBJECT room=" + object.roomId + " class=" + object.resolvedObjectId
+          + " presetClass=" + object.presetClassId + " resolver=" + object.resolverKind
+          + " ds1Raw=" + object.ds1Raw + " spawned=" + object.spawned
+          + " raw=" + object.presetIndex + " pos=" + object.x + "," + object.y + " mode=" + object.mode
+          + " source=" + safe(object.sourceFile) + " status=" + safe(object.creationStatus));
+    }
+    com.artemis.utils.IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(MapWrapper.class)).getEntities();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = entities.get(i);
+      MapWrapper owner = world.getMapper(MapWrapper.class).get(id);
+      if (owner == null || owner.zone != zone) continue;
+      Position position = world.getMapper(Position.class).get(id);
+      com.riiablo.engine.server.component.Object object = world.getMapper(
+          com.riiablo.engine.server.component.Object.class).get(id);
+      if (object != null && object.base != null) {
+        lines.add("RUNTIME_OBJECT entity=" + id + " room=" + owner.roomId
+            + " class=" + object.base.Id + " mode=" + object.mode + " pos=" + positionText(position));
+      }
+      Monster monster = world.getMapper(Monster.class).get(id);
+      if (monster != null && monster.monstats != null) {
+        lines.add("RUNTIME_MONSTER entity=" + id + " room=" + (owner.roomId)
+            + " id=" + safe(monster.monstats.Id) + " hcIdx=" + monster.monstats.hcIdx
+            + " pos=" + positionText(position) + " rank=" + monster.rank + " champion=" + monster.championType
+            + " affixes=" + monster.affixes + " super=" + monster.uniqueId + " minionOwner=" + monster.minionOwnerId);
+      }
+      com.riiablo.engine.server.component.Item item = world.getMapper(
+          com.riiablo.engine.server.component.Item.class).get(id);
+      if (item != null && item.item != null) {
+        lines.add("GROUND_ITEM entity=" + id + " room=" + owner.roomId + " pos=" + positionText(position)
+            + " code=" + safe(item.item.code) + " ilvl=" + item.item.ilvl + " quality=" + item.item.quality
+            + " qualityId=" + item.item.qualityId + " owner=" + item.dropOwnerId);
+      }
+    }
+    java.util.Collections.sort(lines);
+    lines.add("SCENE_COUNTS level=" + zone.levelId() + " rooms=" + zone.getRoomsEx().size
+        + " nativeObjects=" + zone.getNativeObjects().size + " nativeMonsters=" + zone.getNativeMonsters().size
+        + " runtimeEntities=" + entities.size());
+    return lines;
+  }
+
+  private static String positionText(Position position) {
+    return position == null ? "missing" : position.position.x + "," + position.position.y;
+  }
+
+  private static String safe(String value) { return value == null ? "" : value.replace(' ', '_'); }
 
   /** Only nearby hostile blockers, never town NPCs, pets or units across walls. */
   static Sample blocker(World world, Map map, int playerId, Vector2 destination) {
@@ -178,6 +311,15 @@ final class MapTourProbe {
     sample.objects = zone.getNativeObjects().size;
     sample.monsters = zone.getNativeMonsters().size;
     sample.entities = zone.getEntities().size;
+    if (Boolean.getBoolean("riiablo.map.prewarmAllRooms")) {
+      com.riiablo.engine.server.RoomActivationSystem activation =
+          world.getSystem(com.riiablo.engine.server.RoomActivationSystem.class);
+      if (activation != null) {
+        int rooms = activation.diagnosticPrewarmAllRooms(zone);
+        System.out.println("[MAP_DIAGNOSTIC] prewarmAllRooms level=" + zone.level.Id
+            + " activated=" + rooms);
+      }
+    }
     for (Map.RoomEx room : zone.getRoomsEx()) sample.pendingMonsters += room.getPendingMonsterSpawns().size;
     com.artemis.utils.IntBag units = world.getAspectSubscriptionManager()
         .get(Aspect.all(MapWrapper.class)).getEntities();
@@ -187,6 +329,34 @@ final class MapTourProbe {
       if (world.getMapper(com.riiablo.engine.server.component.Monster.class).has(id)) sample.spawnedMonsters++;
       if (world.getMapper(com.riiablo.engine.server.component.Object.class).has(id)) sample.spawnedObjects++;
       if (world.getMapper(com.riiablo.engine.server.component.Item.class).has(id)) sample.groundItems++;
+    }
+    NetworkSynchronizer synchronizer = world.getSystem(NetworkSynchronizer.class);
+    if (synchronizer != null) {
+      java.util.Set<Integer> visible = synchronizer.visibleMonsterIds(0);
+      sample.currentVisibleMonsters = visible.size();
+      java.util.Set<Integer> seen = seenMonstersByZone.get(zone);
+      if (seen == null) {
+        seen = new java.util.HashSet<>();
+        seenMonstersByZone.put(zone, seen);
+      }
+      seen.addAll(visible);
+      sample.cumulativeVisibleMonsters = seen.size();
+    }
+    if (Boolean.getBoolean("riiablo.map.prewarmAllRooms")) {
+      int activeMonsters = 0;
+      for (int i = 0; i < units.size(); i++) {
+        int id = units.get(i);
+        MapWrapper mapping = world.getMapper(MapWrapper.class).get(id);
+        if (mapping == null || mapping.zone != zone
+            || !world.getMapper(com.riiablo.engine.server.component.Monster.class).has(id)) continue;
+        com.riiablo.map.Map.RoomEx room = zone.findRoomEx(
+            world.getMapper(com.riiablo.engine.server.component.Position.class).get(id).position.x,
+            world.getMapper(com.riiablo.engine.server.component.Position.class).get(id).position.y);
+        if (room != null && room.getActivationStatus() <= Map.RoomEx.CLIENT_IN_SIGHT) activeMonsters++;
+      }
+      System.out.println("[MAP_DIAGNOSTIC] monsterScopes level=" + zone.level.Id
+          + " native=" + sample.monsters + " pending=" + sample.pendingMonsters
+          + " ecsZone=" + sample.spawnedMonsters + " ecsActive=" + activeMonsters);
     }
     sample.synthetic = zone.isSyntheticArena();
     sample.nativeTerrain = zone.nativeTileGrid() != null || zone.isTown()

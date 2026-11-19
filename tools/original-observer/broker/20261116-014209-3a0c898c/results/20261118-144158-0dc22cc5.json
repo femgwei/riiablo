@@ -1,0 +1,15 @@
+{
+  "id": "20261118-144158-0dc22cc5",
+  "status": "completed",
+  "started": 1794984118.8712459,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "cxportal-hidden-entry"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261118-144158-0dc22cc5\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1794984172.3082542
+}

@@ -67,6 +67,8 @@ import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.component.ZoneAware;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.missile.NativeFrozenOrbMotion;
+import com.riiablo.engine.server.missile.NativeBoneSpearMotion;
 import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
@@ -847,8 +849,10 @@ public class ServerEntityFactory extends EntityFactory {
         .set(ownerId, nativePetType, skillId, skillLevel,
         passive, durationFrames);
     mNativeUnitFlags.get(entityId).reset().set(NativeUnitFlags.PLAYER_SUMMON);
-    // Ravens are native untargetable pets (SrvDo114 clears 0x4).
-    if (summon != null && "druidhawk".equalsIgnoreCase(summon.Id)) {
+    // SrvDo114 (Raven) and SrvDo144 (Hydra) clear CAN_BE_ATTACKED.
+    // Keep TARGETABLE/IS_VALID_TARGET: selection and attackability are
+    // separate native flags. The generic player-summon defaults include 0x4.
+    if ("druidhawk".equalsIgnoreCase(summon.Id) || "hydra".equals(nativePetType)) {
       mNativeUnitFlags.get(entityId).clear(NativeUnitFlags.CAN_BE_ATTACKED);
     }
     if ("skeletonmage".equals(nativePetType) && "necromage".equals(summon.Id)) {
@@ -1630,6 +1634,16 @@ public class ServerEntityFactory extends EntityFactory {
     Position missilePosition = mPosition.create(id);
     missilePosition.invalidateNativePrecision();
     missilePosition.position.set(position);
+    if (NativeFrozenOrbMotion.handles(missile) || NativeBoneSpearMotion.handles(missile)) {
+      int cellX = com.badlogic.gdx.math.MathUtils.floor(position.x + .5f);
+      int cellY = com.badlogic.gdx.math.MathUtils.floor(position.y + .5f);
+      // MISSILES_CreateMissileFromParams allocates at the origin's integer cell centre.
+      if (cellX >= 0 && cellX <= 0xFFFF && cellY >= 0 && cellY <= 0xFFFF) {
+        missilePosition.initializeNativeCell(cellX, cellY);
+      } else {
+        missilePosition.position.set(cellX, cellY);
+      }
+    }
     MapWrapper ownerMap = !restoring && ownerId >= 0 && mMapWrapper.has(ownerId)
         ? mMapWrapper.get(ownerId) : null;
     Map.Zone missileZone = ownerMap != null && ownerMap.zone != null
@@ -1642,13 +1656,26 @@ public class ServerEntityFactory extends EntityFactory {
     float velocity = missile.Vel;
     int slowPercent = restoring ? 0 : slowMissileVelocityPercent(ownerId, missile);
     if (slowPercent > 0) velocity = velocity * slowPercent / 100f;
-    mVelocity.create(id).velocity.set(angle).setLength(velocity);
+    Vector2 missileVelocity = mVelocity.create(id).velocity;
+    if (NativeFrozenOrbMotion.handles(missile)) {
+      missileComponent.frozenOrbVelocity =
+          NativeFrozenOrbMotion.nativeVelocity(missile, damageLevel, slowPercent);
+      NativeFrozenOrbMotion.initialVelocity(angle, missileComponent.frozenOrbVelocity, missileVelocity);
+    } else if (NativeBoneSpearMotion.handles(missile)) {
+      NativeBoneSpearMotion.initialVelocity(missile, damageLevel, slowPercent, angle, missileVelocity);
+    } else {
+      missileVelocity.set(angle).setLength(velocity);
+    }
     missileComponent.acceleration.initialize(missile.Accel, missile.MaxVel);
     if (missile.pSrvDoFunc == 20 || missile.pSrvDoFunc == 21) {
       missileComponent.attached = true;
       missileComponent.attachedEntityId = ownerId;
     }
     mAngle.create(id).set(angle);
+    if ((NativeFrozenOrbMotion.handles(missile) || NativeBoneSpearMotion.handles(missile))
+        && !missileVelocity.isZero()) {
+      mAngle.get(id).set(new Vector2(missileVelocity).nor());
+    }
     mSize.create(id).size = Size.SMALL;
     DynamicUnitCollisionSystem spawnCollision = world.getSystem(DynamicUnitCollisionSystem.class);
     if (spawnCollision != null) spawnCollision.reserveMissileSpawn(id);

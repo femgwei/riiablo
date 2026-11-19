@@ -1,0 +1,29 @@
+{
+  "id": "20261119-060109-0f9a041d",
+  "status": "completed",
+  "started": 1795039270.0123148,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_jobs",
+    "jobs": [
+      "ai-shaman-hydra-wall",
+      "ai-shaman-target-baseline"
+    ]
+  },
+  "result": {
+    "status": "completed",
+    "jobs": [
+      {
+        "job": "ai-shaman-hydra-wall",
+        "status": "passed",
+        "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-060109-0f9a041d\\batch-001-ai-shaman-hydra-wall\\orchestrator\\orchestrator.json"
+      },
+      {
+        "job": "ai-shaman-target-baseline",
+        "status": "passed",
+        "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261119-060109-0f9a041d\\batch-002-ai-shaman-target-baseline\\orchestrator\\orchestrator.json"
+      }
+    ]
+  },
+  "finished": 1795039327.7667289
+}

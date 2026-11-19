@@ -1,0 +1,13 @@
+{
+  "id": "20261114-154430-668136b0",
+  "status": "failed",
+  "started": 1794642270.6937022,
+  "broker_pid": 20520,
+  "command": {
+    "op": "run_job",
+    "job": "barbarian-bash-animation"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-095236-2dc08884\\runs\\20261114-154430-668136b0\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 290, in serve_once\n    # result, so the caller can resume without replaying earlier work.\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 257, in execute\n    if op == \"run_job\":\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261114-095236-2dc08884\\runs\\20261114-154430-668136b0\\orchestrator\n",
+  "finished": 1794642335.539047
+}
