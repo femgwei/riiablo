@@ -311,7 +311,7 @@ CXBarb 的 Blood Moor，并在 `d2game_whirlwind` 触发窗口前启动只读
 
 ## 2026-11-19 旋风斩可见调用链验证
 
-在 `CXBarbWW`、Blood Moor、800x600 窗口可见但不抢前台的条件下，原版
+在 `CXBarbWW`、Blood Moor、窗口可见的条件下，原版
 D2Client 断点采样得到两次真实调用：
 
 - `overlay_create`（RVA `0xBBA70`，约 1187 ms）；
@@ -332,6 +332,23 @@ Riiablo 同一旋风斩语义样本有 300 帧、2424 个事件：`SEQUENCE_CURS
 `runs/semantic-whirlwind-20261119b/client-callchain-diff.json`。
 报告状态为 `partial`：已确认技能回调和 Overlay 创建，但仍需补充 D2Gfx
 帧提交入口后，才能把原版未命中的四个候选与 Riiablo 的图层提交做严格对应。
+
+### 2026-11-19 D2Gfx 帧提交边界
+
+在失去前台但保持可见的窗口中，D2Gfx 探针记录到 23 个一次性导出入口，
+所有事件状态均为 `visible_unfocused`；同批客户端采样仍观察到 `SQ`。
+`10044 StartDraw`、`10072 CelDraw`、`10075 CelDrawShadow` 和 `10045 EndScene`
+均有命中。精灵入口的首个可解码参数包含 `frame`、`direction`、`component`、
+`unit_type`、`unit_index`、`mode` 和 token 字段，可用于后续建立组件身份映射。
+
+在最小化窗口中，探针记录了 375 次 `StartDraw` 返回配对和 375 次帧返回，
+所有事件状态均为 `minimized`，`StartDraw` 返回值为 1，调试器确认脱离且临时
+断点已清理。这证明原版在最小化状态仍运行 CPU 侧帧提交；它不证明屏幕上有
+可见画面，也不等于 DirectDraw 后端成功呈现。
+
+这些采样使用软件断点，会临时写入指令字节并修正线程 EIP，退出时恢复；
+因此报告描述为观察性探针，而不是零内存写入工具。每个导出入口仍以一次命中
+为主，`StartDraw` 另有返回配对，不能把导出首次命中顺序当作完整图层顺序。
 ## 2026-11-19 语义调用链差分
 
 Riiablo 的离屏 JSONL 现在额外写出有序事件：`ANIMATION_MODE_CHANGE`、
@@ -344,7 +361,8 @@ COF 组件，事件顺序就是本帧的绘制顺序，可以直接定位少画�
 的 1.10f D2Client.dll 在静态核实的技能分派 `0x6FABC6B0`、通用单位动画更新
 `0x6FB3D880`、Overlay 创建 `0x6FB5BA70` 和绘制 `0x6FB57E2A` 设置一次性
 断点，只读取 EIP、返回地址和栈，命中后恢复断点并继续。它不调用目标函数，
-不写目标内存；入口未命中时保持 `incomplete`，不会把静态地址当作运行时证据。
+软件断点会临时写入指令字节并修正 EIP，退出前恢复；它不主动改写业务状态。
+入口未命中时保持 `incomplete`，不会把静态地址当作运行时证据。
 
 ```powershell
 $pid = (Get-CimInstance Win32_Process |

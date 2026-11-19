@@ -72,3 +72,19 @@ bounds that must not advance the seed, a bound of one that does advance it,
 powers of two, ordinary modulo bounds, unsigned carry and boundary seed words.
 Inputs, stdout/stderr, hashes and mismatches are retained in `runs/*-rng/`.
 This establishes RNG-function parity only, not live AI/skill/combat parity.
+# D2Client animation call-chain observer
+
+`d2client_animation_trace.exe` is the observational client-side companion to the
+D2Game probes. It is built x86, verifies the shipped 1.10f D2Client SHA-256 and
+uses one-shot breakpoints at four statically verified entry points. Each hit
+records the module-relative RVA, return address, thread and a bounded stack,
+then restores the original instruction byte before continuing. It does not
+invoke a target function or inject a DLL.
+Software breakpoints temporarily write executable bytes and adjust EIP;
+observational does not mean zero target-memory mutation. The recorded stack
+words are raw memory, not a fully unwound call stack.
+
+Build with `build-x86.ps1`. Run it only against the already-running loader
+instance, with a fresh output directory. A successful detach is required; an
+`incomplete` summary means the selected action did not reach one or more
+entries during the bounded observation window.

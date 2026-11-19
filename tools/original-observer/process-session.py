@@ -282,6 +282,40 @@ def run(args):
                     target=list(target_pos), camera=list(camera),
                     client=[client.right, client.bottom], click=[int(tx), int(ty)])
 
+    def post_skill_ground(window, state, visible_client_size=None):
+        """Post one right-click on a visible ground point near the player.
+
+        Whirlwind is a ground-targeted client skill. Requiring a loaded,
+        screen-visible monster here conflates target acquisition with skill
+        activation and can report a real SQ transition as an input failure.
+        """
+        player = state["player"]
+        if player.get("status") != "player" or state["scene"].get("status") != "scene":
+            raise ValueError("ground skill input requires a verified player scene")
+        current_modules = win.modules(args.pid)
+        camera = TownExitWalker(win, process, current_modules, args.output).camera()
+        project = lambda p: (16 * (p[0] - p[1]) - camera[0],
+                             8 * (p[0] + p[1]) + 8 - camera[1])
+        client = W.RECT()
+        win.checked(win.get_rect(window["hwnd"], C.byref(client)))
+        if visible_client_size and (client.right <= 0 or client.bottom <= 0):
+            client.right, client.bottom = visible_client_size
+        px, py = project((player["position"]["x"], player["position"]["y"]))
+        tx, ty = int(px + 48), int(py + 24)
+        if not (8 <= tx < client.right - 8 and 8 <= ty < client.bottom - 8):
+            tx, ty = int(px), int(py)
+        if not (8 <= tx < client.right - 8 and 8 <= ty < client.bottom - 8):
+            raise ValueError("player projection is outside client bounds")
+        post = api(win.u, "PostMessageW", W.BOOL, W.HWND, W.UINT, C.c_size_t, C.c_ssize_t)
+        lparam = tx | (ty << 16)
+        win.checked(post(window["hwnd"], 0x204, 2, lparam))
+        time.sleep(0.08)
+        win.checked(post(window["hwnd"], 0x205, 0, lparam))
+        return dict(kind="ground", button="right", delivery="PostMessageW",
+                    hwnd=window["hwnd"], player=[player["position"]["x"], player["position"]["y"]],
+                    camera=list(camera), client=[client.right, client.bottom],
+                    click=[tx, ty])
+
     try:
         process = win.checked(api(win.k, "OpenProcess", W.HANDLE, W.DWORD, W.BOOL, W.DWORD)(
             0x400 | 0x10 | 0x100000, False, args.pid))
@@ -821,7 +855,7 @@ def run(args):
                         # visual/callchain collectors; all other sessions keep
                         # their requested hidden/visible policy.
                         if (collector_op == "native_runtime_trace"
-                                and command.get("scenario", {}).get("input") in ("client_callchain", "whirlwind", "bash")) \
+                                and command.get("scenario", {}).get("input") in ("client_callchain", "d2gfx_callchain", "whirlwind", "bash")) \
                                 or op == "barbarian_whirlwind_animation":
                             user32 = C.WinDLL("user32", use_last_error=True)
                             show = user32.ShowWindow
@@ -831,6 +865,23 @@ def run(args):
                             game_window = resume_game_window()
                             action["render_window_forced_visible"] = True
                             action["render_window_visible"] = bool(game_window.get("visible"))
+                            render_state = command.get("scenario", {}).get("render_state")
+                            if render_state in ("visible_unfocused", "minimized"):
+                                visible_rect = W.RECT()
+                                win.checked(win.get_rect(game_window["hwnd"], C.byref(visible_rect)))
+                                action["visible_client_size"] = [visible_rect.right, visible_rect.bottom]
+                                # Minimize without activating another application;
+                                # restoring with SW_SHOWNOACTIVATE must not be
+                                # confused with proof of actual foreground state.
+                                show(game_window["hwnd"], 6)  # SW_MINIMIZE yields foreground
+                                time.sleep(0.3)
+                                if render_state == "visible_unfocused":
+                                    show(game_window["hwnd"], 4)
+                                    time.sleep(0.3)
+                                action["requested_render_state"] = render_state
+                                action["foreground_at_render_setup"] = win.foreground()
+                                action["target_hwnd"] = game_window["hwnd"]
+                                game_window = resume_game_window()
                         if collector_op == "native_net_trace":
                             if state["player"].get("status") != "player":
                                 raise ValueError("D2Net trace requires an existing player scene")
@@ -871,6 +922,8 @@ def run(args):
                         if (op == "barbarian_whirlwind_animation" or
                                 (collector_op == "native_runtime_trace" and
                                  command.get("scenario", {}).get("input") == "client_callchain") or
+                                 (collector_op == "native_runtime_trace" and
+                                  command.get("scenario", {}).get("input") == "d2gfx_callchain") or
                                 (collector_op == "native_runtime_trace" and
                                  command.get("scenario", {}).get("input") in ("bash", "whirlwind"))):
                             # Start the read-only D2Client sampler before the
@@ -898,7 +951,7 @@ def run(args):
                                     native_args.append(command["scenario"]["profile"])
                             if collector_op in ("native_net_trace", "native_socket_trace"):
                                 native_args.append(str(command.get("scenario", {}).get("seconds", 20)))
-                            if collector_op == "native_runtime_trace" and command.get("scenario", {}).get("input") == "client_callchain":
+                            if collector_op == "native_runtime_trace" and command.get("scenario", {}).get("input") in ("client_callchain", "d2gfx_callchain"):
                                 # Keep the debugger armed for the whole bounded
                                 # visual sample.  Five seconds was enough for
                                 # the initial callback but often expired before
@@ -921,7 +974,7 @@ def run(args):
                                 input_mode = command.get("scenario", {}).get("input")
                                 scenario = command.get("scenario", {})
                                 whirlwind_input = (input_mode == "whirlwind"
-                                                   or (input_mode == "client_callchain"
+                                                   or (input_mode in ("client_callchain", "d2gfx_callchain")
                                                        and scenario.get("skill") == 151
                                                        and scenario.get("class", 4) == 4))
                                 if whirlwind_input:
@@ -934,7 +987,16 @@ def run(args):
                                     send_key(hwnd, 0x0100, 0x70, 0x003B0001)
                                     send_key(hwnd, 0x0101, 0x70, 0xC03B0001)
                                     time.sleep(0.2)
-                                if collector_op == "native_runtime_trace" and input_mode is not None:
+                                if (collector_op == "native_runtime_trace" and
+                                        input_mode == "d2gfx_callchain"):
+                                    try:
+                                        action["skill_input"] = post_skill_ground(
+                                            game_window, snapshot(), action.get("visible_client_size"))
+                                    except (OSError, ValueError) as error:
+                                        # Always await the bounded debugger and
+                                        # confirm cleanup even if input fails.
+                                        action["input_error"] = str(error)
+                                elif collector_op == "native_runtime_trace" and input_mode is not None:
                                     input_error = None
                                     for attempt in range(8):
                                         refreshed = snapshot()
@@ -958,7 +1020,7 @@ def run(args):
                                         input_error = "approach did not bring a monster into view"
                                     # Do not leave the bounded debugger child
                                     # unobserved when input delivery fails.
-                                    if input_error:
+                                    if input_error and input_mode != "d2gfx_callchain":
                                         action["input_error"] = input_error
                                 elif input_mode in ("move", "move-burst"):
                                     count = 5 if input_mode == "move-burst" else 1
