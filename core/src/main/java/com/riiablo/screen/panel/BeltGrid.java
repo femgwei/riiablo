@@ -152,6 +152,7 @@ public class BeltGrid extends ItemGrid {
     // The belt expands above row zero. ClickListener.isOver() only tracks the
     // compact row that opened it, so moving into an upper row used to collapse
     // the belt before the pointer could click or drop an item there.
+    // Only the currently visible rows may open or keep the belt expanded.
     setHidden(!isPointerOver());
     if (!hidden) {
       float x = getX() - 1;
@@ -180,6 +181,6 @@ public class BeltGrid extends ItemGrid {
     getStage().screenToStageCoordinates(point);
     stageToLocalCoordinates(point);
     return point.x >= 0 && point.x < getWidth()
-        && point.y >= 0 && point.y < rows * boxHeight;
+        && point.y >= 0 && point.y < getHeight();
   }
 }
