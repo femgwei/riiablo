@@ -1,0 +1,192 @@
+{
+  "date": "2026-11-20",
+  "status": "regression_passed_original_differences_remain",
+  "skill": 25,
+  "original_version": "1.10f",
+  "run_id": "20261120-104511-b36f705e",
+  "native_capture_passed": true,
+  "background_verified": true,
+  "new_uac": false,
+  "owned_game_closed": true,
+  "production_skill_fixes_applied": false,
+  "python_syntax": "passed",
+  "suites": [
+    {
+      "name": "com.riiablo.engine.replay.MissileRuntimeCheckpointTest",
+      "timestamp": "2026-11-20T02:57:09",
+      "xml_sha256": "1d814db4109fa81a9a36029baa3f4095559eaad7e0a0004f397b2899aba59505",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.ai.TrapPoisonAiIntegrationTest",
+      "timestamp": "2026-11-20T02:57:28",
+      "xml_sha256": "3199be501155c6ab36ae91856cf0b601b7dc16e2dfb66405a326f51e23993763",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.AmazonSkillSpecializationTest",
+      "timestamp": "2026-11-20T02:57:12",
+      "xml_sha256": "633cd0bdd67054b28c2b72d308b8f9055a69f7bd66e9e6dbd422a630eb52da22",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.BoneSpearOriginalMotionTest",
+      "timestamp": "2026-11-20T02:57:15",
+      "xml_sha256": "7acf6f85b3b23b2eeb054f49f047cb0cb92000ab4bc549a0a4113bc375d837a8",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.NativeAmazonPoisonJavelinDataTest",
+      "timestamp": "2026-11-20T02:57:17",
+      "xml_sha256": "d271710b3d918dba87362289a32ffb437db3c3a010d42aab245df2cb3b995605",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.PlagueJavelinGoldenDamageTest",
+      "timestamp": "2026-11-20T02:57:20",
+      "xml_sha256": "b6079cb0100b70177c74021e384b4161961dcc743018c7d63cc08eceb6b9527b",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.PoisonJavelinGoldenDamageTest",
+      "timestamp": "2026-11-20T02:57:23",
+      "xml_sha256": "bdee34e92085a7d2cd23bd9fa688698f9f34802d5c12f22c8e88a81b1c797a12",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.PoisonJavelinOriginalMotionTest",
+      "timestamp": "2026-11-20T02:57:25",
+      "xml_sha256": "f738c79897c9fbf92e4a6e9304630df5f75e5e3792dd9b33861b39225082b806",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.BoneSpearOriginalSpriteTest",
+      "timestamp": "2026-11-20T02:57:34",
+      "xml_sha256": "2a669f32554874b4b463087dfa36d13f3da5effd64a001917ca778b3c2b6f00d",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.BoneSpearOriginalTrailTest",
+      "timestamp": "2026-11-20T02:57:38",
+      "xml_sha256": "44d3b5210b1870d729082d020f9cd6d04aef2ab93404de612dfe7fe171bb84a3",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.PlagueJavelinPresentationLifecycleTest",
+      "timestamp": "2026-11-20T02:57:41",
+      "xml_sha256": "049a708ba039851c045bc6f41feb6371d558fb2a8f0cd73b21bbf34c487cb1ee",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.PoisonCloudPresentationTest",
+      "timestamp": "2026-11-20T02:57:44",
+      "xml_sha256": "cfdd38299b9b65a6976656800093f51cc6325d309b4969b9b467ff071fff11f4",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.PoisonJavelinOriginalClientTrailTest",
+      "timestamp": "2026-11-20T02:57:47",
+      "xml_sha256": "20fecbb886a7889239834ad9a44c23cdbeac0c11a4623f059e59cf820c0a2cc6",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.PoisonJavelinOriginalSpriteTest",
+      "timestamp": "2026-11-20T02:57:50",
+      "xml_sha256": "2d62dd83b58f4b2c52615851bd9930dd3b27d68db913a4871e0dd01c2608b636",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.save.OriginalPoisonJavelinFixtureTest",
+      "timestamp": "2026-11-20T02:57:55",
+      "xml_sha256": "aeca727f27131293c22ca893394461eb5224ff39e9ad6b5d3af4a36569e128e9",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "evidence": [
+    {
+      "path": "tools/original-observer/plague-javelin-analysis-2026-11-20.json",
+      "sha256": "d6398f95c7671e053738ebebcf56f08c6f909062c09e1c906e88be3cb2dd57d7"
+    },
+    {
+      "path": "tools/original-observer/plague-javelin-comparison-1.10f.json",
+      "sha256": "ad1fb271b765ed5bd1c3e92035c8ceb35dcfdd70b9e4bce4355453f7d5fb311c"
+    },
+    {
+      "path": "tools/original-observer/plague-javelin-assets-1.10f.json",
+      "sha256": "015954eafcab1f471e0d143e58890d92103b43a1e43eb0c5e3441d56240ee155"
+    },
+    {
+      "path": "core/src/test/resources/original/plague-javelin-1.10f.json",
+      "sha256": "1849747eff6324610197a75d8cfb140cd9bbf18007ace07940c0151c8b720a19"
+    },
+    {
+      "path": "tools/original-observer/native-harness/d2game_poison_javelin.cpp",
+      "sha256": "f3d50a2585b2ebaaf723d61675eda5064848907a4f68b9a6933f7c2e00b95591"
+    },
+    {
+      "path": "tools/original-observer/prepare_poison_javelin_fixture.py",
+      "sha256": "35d2a3b2cefa1e3220b5e6d37dd7931c44bdb153f2e00ce6cb99922eb7b9e74f"
+    },
+    {
+      "path": "tools/original-observer/poison_javelin_background.py",
+      "sha256": "4f411f462357a22c916db2bc89e07182f1940aec0adb7929846271baca1d17ea"
+    },
+    {
+      "path": "tools/original-observer/export_poison_javelin.py",
+      "sha256": "858f9077448cfd175e1b897ed18c74b10499642c350f560dac7ac3aba685ecb2"
+    },
+    {
+      "path": "tools/original-observer/jobs/plague-javelin-private-desktop.json",
+      "sha256": "0c97c2cb63d2a8f368e76342f2415d1e05161003277f9e16cff789f98157eddd"
+    }
+  ],
+  "tests": 51,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0
+}

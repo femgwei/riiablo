@@ -1,0 +1,226 @@
+{
+  "status": "analysis_complete_differences_found",
+  "skill": 25,
+  "version": "1.10f",
+  "run_id": "20261120-104511-b36f705e",
+  "level": 1,
+  "direction_index": 0,
+  "background": {
+    "verified": true,
+    "switched_desktop": false,
+    "owned_game_closed": true,
+    "input_desktop_before": "Default",
+    "input_desktop_after": "Default",
+    "screen_before": [
+      1920,
+      1080
+    ],
+    "screen_after": [
+      1920,
+      1080
+    ],
+    "foreground_before": 3480222,
+    "foreground_after": 3480222,
+    "isolation_checks": 112
+  },
+  "native": {
+    "server_burst_clouds": 23,
+    "client_stationary_trail_clouds": 13,
+    "client_burst_clouds": 23,
+    "observed_client_smoke": 107,
+    "head_lifetime": 15,
+    "paired_draws": 2734,
+    "verified_dcc_selections": 2721
+  },
+  "confirmed_differences": {
+    "head_speed": {
+      "original_subtiles_per_tick": 1.125,
+      "riiablo_subtiles_per_tick": 0.96,
+      "slower_percent": 14.666666666666671
+    },
+    "burst_center": {
+      "original": [
+        4539.0,
+        5642.0
+      ],
+      "riiablo": [
+        4536.3994,
+        5642
+      ],
+      "delta_x": -2.6005999999997584
+    },
+    "trail_motion": {
+      "original": "stationary",
+      "riiablo": "inherits head velocity"
+    },
+    "trail_sprite": {
+      "original": "actual DCC selections observed",
+      "riiablo": "all presentation-only plaguejavcloud DCCs suppressed"
+    },
+    "cloud_animation": {
+      "original": "wrap at age 19 to frame 10; exit loop near expiry",
+      "riiablo": "generic full-pass subloop plus float animation stepping"
+    },
+    "burst_direction": {
+      "original": "direction follows native path",
+      "riiablo": "Angle remains X after changing Velocity"
+    }
+  },
+  "matched_components": {
+    "server_burst_count": true,
+    "server_burst_velocity_multiset": true,
+    "server_burst_lifetime": true
+  },
+  "diagnostic_sprite_counts": {
+    "burst": {
+      "samples": 959,
+      "frame_mismatches": 897,
+      "direction_mismatches": 876
+    },
+    "plaguejavelin": {
+      "samples": 12,
+      "frame_mismatches": 0,
+      "direction_mismatches": 0
+    },
+    "poisonpuff": {
+      "samples": 1342,
+      "frame_mismatches": 0,
+      "direction_mismatches": 38
+    },
+    "trail": {
+      "samples": 408,
+      "frame_mismatches": 338,
+      "direction_mismatches": 408
+    },
+    "examples": [
+      {
+        "riiablo_frame": 2,
+        "riiablo_direction": 3,
+        "age": 2,
+        "native_direction": 4,
+        "native_frame": 2,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 3,
+        "riiablo_direction": 3,
+        "age": 3,
+        "native_direction": 4,
+        "native_frame": 3,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 4,
+        "riiablo_direction": 3,
+        "age": 4,
+        "native_direction": 4,
+        "native_frame": 4,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 5,
+        "riiablo_direction": 3,
+        "age": 5,
+        "native_direction": 4,
+        "native_frame": 5,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 5,
+        "riiablo_direction": 3,
+        "age": 6,
+        "native_direction": 4,
+        "native_frame": 6,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 6,
+        "riiablo_direction": 3,
+        "age": 7,
+        "native_direction": 4,
+        "native_frame": 7,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 7,
+        "riiablo_direction": 3,
+        "age": 8,
+        "native_direction": 4,
+        "native_frame": 8,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 8,
+        "riiablo_direction": 3,
+        "age": 9,
+        "native_direction": 4,
+        "native_frame": 9,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 10,
+        "riiablo_direction": 3,
+        "age": 11,
+        "native_direction": 4,
+        "native_frame": 11,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 11,
+        "riiablo_direction": 3,
+        "age": 12,
+        "native_direction": 4,
+        "native_frame": 12,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 13,
+        "riiablo_direction": 3,
+        "age": 14,
+        "native_direction": 4,
+        "native_frame": 14,
+        "group": "trail"
+      },
+      {
+        "riiablo_frame": 16,
+        "riiablo_direction": 3,
+        "age": 16,
+        "native_direction": 4,
+        "native_frame": 16,
+        "group": "trail"
+      }
+    ],
+    "trail_animation_forced_for_diagnosis": true,
+    "scope": "Warm animation from birth; trail DCC is actually hidden by production loader. Not GPU pixels."
+  },
+  "limitations": [
+    "One level-one no-synergy cardinal cast, natural range expiry; no controlled monster hit",
+    "Sprite comparison drives existing warm animation from birth; suppressed trail is forcibly attached for diagnosis",
+    "38 smoke direction mismatches are unresolved quantization/path-direction reconstruction evidence, not attributed to RNG",
+    "Ring velocity and lifetime agreement does not prove full native collision or damage parity",
+    "No GPU pixel comparison; compatibility SCREEN blending was not changed",
+    "No production gameplay/presentation fixes applied in this analysis"
+  ],
+  "evidence": [
+    {
+      "path": "core/src/test/resources/original/plague-javelin-1.10f.json",
+      "sha256": "1849747eff6324610197a75d8cfb140cd9bbf18007ace07940c0151c8b720a19"
+    },
+    {
+      "path": "tools/original-observer/plague-javelin-comparison-1.10f.json",
+      "sha256": "ad1fb271b765ed5bd1c3e92035c8ceb35dcfdd70b9e4bce4355453f7d5fb311c"
+    },
+    {
+      "path": "tools/original-observer/plague-javelin-assets-1.10f.json",
+      "sha256": "015954eafcab1f471e0d143e58890d92103b43a1e43eb0c5e3441d56240ee155"
+    },
+    {
+      "path": "core/src/test/java/com/riiablo/presentation/PlagueJavelinOriginalAnalysis.java",
+      "sha256": "05207856cb19f11b6f06fc2b3d437bba7bf70d4760fdb01cb0dc16386ed18d35"
+    },
+    {
+      "path": "tools/original-observer/analyze_plague_javelin.py",
+      "sha256": "d3b8331b279d9ede07d1af00ac539355b9b0255e804b849dc59927ce7cdd3d44"
+    }
+  ]
+}

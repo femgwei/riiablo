@@ -2,12 +2,27 @@ package com.riiablo.engine.server.missile;
 
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats2;
+import com.badlogic.gdx.math.Vector2;
 
 /** Native Molten Boulder SrvHit47/48 and SrvDmg14 data policies. */
 public final class NativeMoltenBoulder {
   public static final int[] FIRE_X = {2,-2,0,0,-3,0,3,-1,1,-1,2,-4,-3,-1,0,1,3,4};
   public static final int[] FIRE_Y = {-2,-2,2,5,3,3,3,2,1,-1,-1,-2,-2,-3,-4,-3,-3,-2};
   private NativeMoltenBoulder() {}
+
+  public static boolean moves(Missiles.Entry row) {
+    return isEmerge(row) || isRolling(row);
+  }
+
+  public static Vector2 velocity(Missiles.Entry row, int level, Vector2 facing, Vector2 out) {
+    return NativeFirestormMotion.initialVelocity(row, level, facing, out);
+  }
+
+  /** UNITS_GetDistanceToCoordinates, used by CltHit52's ten candidate targets. */
+  public static int distance(int dx, int dy) {
+    int x = Math.abs(dx), y = Math.abs(dy);
+    return Math.max(x, y) + Math.min(x, y) / 2;
+  }
 
   public static boolean isEmerge(Missiles.Entry row) {
     return row != null && row.pSrvHitFunc == 48;

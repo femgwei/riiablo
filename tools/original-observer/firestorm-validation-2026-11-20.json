@@ -1,0 +1,200 @@
+{
+  "date": "2026-11-20",
+  "status": "fix_applied_original_frame_and_path_parity_passed",
+  "skill": 225,
+  "original_version": "1.10f",
+  "source_run_id": "20261120-114630-68996c25",
+  "production_skill_fixes_applied": true,
+  "native_capture_passed": true,
+  "background_verified": true,
+  "new_uac": false,
+  "owned_game_closed": true,
+  "detached": true,
+  "cleanup_confirmed": true,
+  "background": {
+    "private_desktop": "riiablo_poison_5c098db594f3",
+    "private_desktop_not_input_checks": 86,
+    "switched_desktop": false,
+    "input_desktop_before": "Default",
+    "input_desktop_after": "Default",
+    "foreground_before": 38472606,
+    "foreground_after": 38472606,
+    "screen_before": [
+      1920,
+      1080
+    ],
+    "screen_after": [
+      1920,
+      1080
+    ]
+  },
+  "production_summary": {
+    "head_births": [
+      {
+        "velocity": [
+          9.375,
+          0
+        ],
+        "lifetime": 40,
+        "position": [
+          4523,
+          5642
+        ],
+        "charged_bolt_path": false
+      },
+      {
+        "velocity": [
+          9.375,
+          0
+        ],
+        "lifetime": 40,
+        "position": [
+          4523,
+          5642
+        ],
+        "charged_bolt_path": true
+      },
+      {
+        "velocity": [
+          9.375,
+          0
+        ],
+        "lifetime": 40,
+        "position": [
+          4523,
+          5642
+        ],
+        "charged_bolt_path": true
+      }
+    ],
+    "heads_at_age39": [
+      {
+        "velocity": [
+          9.375,
+          0
+        ],
+        "position": [
+          4537.625,
+          5642
+        ],
+        "age": 39
+      },
+      {
+        "velocity": [
+          6.628418,
+          -6.628418
+        ],
+        "position": [
+          4533,
+          5634
+        ],
+        "age": 39
+      },
+      {
+        "velocity": [
+          6.628418,
+          6.628418
+        ],
+        "position": [
+          4533.5303,
+          5640.5303
+        ],
+        "age": 39
+      }
+    ],
+    "damage_ground_fire_births": 36,
+    "visual_ground_fire_births": 34,
+    "maker_sprite_samples": 68,
+    "maker_frame_mismatches": 0,
+    "ground_fire_sprite_samples": 136,
+    "ground_fire_frame_mismatches": 0
+  },
+  "tests": 42,
+  "suites": [
+    {
+      "name": "com.riiablo.engine.replay.MissileRuntimeCheckpointTest",
+      "timestamp": "2026-11-20T05:54:49",
+      "xml_sha256": "75baad4ddbe9d319ff23f8c04b1a3401a00df589bc5bf9dce876add5e6f852d4",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.DruidFirestormIntegrationTest",
+      "timestamp": "2026-11-20T05:54:55",
+      "xml_sha256": "f759f4edbe1401615d4659a35d20dafa48560d8206ea0eceacbad2d7e0104a3a",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.FirestormGroundDamageTest",
+      "timestamp": "2026-11-20T05:55:01",
+      "xml_sha256": "e9894a239ba9051cc6c1590c00b94e787687acc66225aa14e681c1646a45b25a",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.FirestormOriginalParityTest",
+      "timestamp": "2026-11-20T05:55:09",
+      "xml_sha256": "f10b2d8d6898533e1e287f8a9fb0571bf2ac6e1fe4bdbc6074f2db8f0c2b78b2",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.OriginalFirestormFixtureTest",
+      "timestamp": "2026-11-20T05:55:17",
+      "xml_sha256": "02474959b299ad2d69e47f707b2a43362425002f96ab3f3ec3cce951a545989d",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.ReferenceElementalPresentationTest",
+      "timestamp": "2026-11-20T05:55:25",
+      "xml_sha256": "83f2fd8e795085c07c71612cae81fbab363d528099e0212603a0ea454e134d53",
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "python_syntax": "passed",
+  "git_diff_check": "passed",
+  "limitations": [
+    "No GPU pixel/colour/alpha comparison",
+    "No monster-target original damage differential in this repair run",
+    "Client visual count varies with update timing; do not hard-code 34 or original 17",
+    "Original maker CellFile names were unobserved by capture filter; DCC headers and table mapping checked"
+  ],
+  "sha256": {
+    "core/src/main/java/com/riiablo/engine/server/missile/NativeFirestormMotion.java": "cbf353f28490dc39077c37ebb7c26d64d3e1b6e4277ba155a32d72c175a22e63",
+    "core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java": "d042f9316105da65904fdb55183cd8a69b1fa23c6e74aad2d7604287a83f56ea",
+    "core/src/main/java/com/riiablo/engine/server/ServerEntityFactory.java": "c204f4c72001b402f91fcaa3ff0f28c9e4244bf96e133f46ac2e460bbbf7e2c0",
+    "core/src/main/java/com/riiablo/engine/server/MissileCollisionSystem.java": "e9791f45528328d23c5ba96011d572a849e7ec84eccd7da9176c5e7632acbea0",
+    "core/src/main/java/com/riiablo/presentation/NativeFirestormPresentation.java": "72b993f751d706409512fe67d3e86078d30ce8563a2f67c7e649e74094649135",
+    "core/src/main/java/com/riiablo/presentation/MissileImpactPresentationSystem.java": "39d07dfb972f7194c68b1e9b227479a3db83e2eb18aae77d54cfdf94cf0474ac",
+    "core/src/main/java/com/riiablo/presentation/MissileLoader.java": "b440b37fadb7b29c718c22009eb8711d6bf54b6a04e210261422093aee1a9803",
+    "core/src/main/java/com/riiablo/presentation/AnimationStepper.java": "ae84f73803b3285a156c278e49f1c159a7e56c1bd024c752ce3230c9f9077511",
+    "core/src/main/java/com/riiablo/presentation/ReferenceElementalPresentationSystem.java": "9e0d1d1c3aab0c89aee60f4487f84a0bf521ab7ce3487621c99ce1129b8402f7",
+    "core/src/main/java/com/riiablo/map/RenderSystem.java": "26cf78347c55ada2e01cb955f4cba2f2613b4068d148058d82d9fa64c20409d8",
+    "core/src/test/java/com/riiablo/presentation/FirestormOriginalParityTest.java": "dc1b0b37ac94ab8ed338212995b4ddb9617ff8bdda8156a0428f064e421ddf26",
+    "core/src/test/java/com/riiablo/engine/server/FirestormGroundDamageTest.java": "fbbaedfb98cc10a8104d83a50fabdaa3db8451f462d2aaadc7674bb1c3b0f061",
+    "core/src/test/java/com/riiablo/presentation/OriginalFirestormFixtureTest.java": "26f93419c61f3831765744c9964aec6ab214d49ecbc5c4aebc4828effb96cd63",
+    "core/src/test/java/com/riiablo/engine/server/DruidFirestormIntegrationTest.java": "0dae8a70b789d98a99e318c9fc8690ab33dae9e47ac81e024bca7a691d55fbf3",
+    "docs/firestorm-background-analysis-2026-11-20.md": "cccef77aa758229ef9d9e0e16f96a3bcf6066891aef4d730fb2bf423344c772f",
+    "tools/original-observer/firestorm-comparison-after-fix-1.10f.json": "35a52cc9d95717ca036958e7a334421c7163f905ec33f78e19c243390edd2d58",
+    "core/src/test/resources/original/firestorm-1.10f.json": "704b7d968689bf7f8ce006c2970bc9fb5925b5f63bc1fcf1bd670bb645d26a24",
+    "core/src/test/java/com/riiablo/presentation/FirestormOriginalAnalysis.java": "931b7dc4237d4a5a02eb73a2921cf500353114ae64975861714906ae19a777a4",
+    "tools/original-observer/asset-probe.init.gradle": "d403cc2e34abffae8fef3334568a67c258f47d60d8771e186a73306bfbc2f00e",
+    "tools/original-observer/firestorm-assets-1.10f.json": "9619ff0288696774c97cccf554cdf32101c572b162f44452f02dc0ea5fe8922a",
+    "tools/original-observer/firestorm-static-client-1.10f.txt": "4603307a143436439d2accdbf9fbd249760163eec1e150db6633a4c9e6b69b1f"
+  }
+}

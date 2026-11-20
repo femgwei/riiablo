@@ -1,5 +1,6 @@
 package com.riiablo.engine.server;
 
+import com.riiablo.engine.server.missile.NativeFirestormMotion;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -4669,14 +4670,11 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     Vector2 target = resolveTargetPoint(event, start, new Vector2());
-    Vector2 base = target.sub(start);
+    Vector2 base = new Vector2(target).sub(start);
     if (base.isZero(0.0001f)) base.set(Vector2.X);
     base.nor();
 
-    // SrvDo117 passes the negative Calc1 sub-missile count to the native
-    // ChargedBolt path.  Converted rows occasionally expose a positive
-    // count, so accept either representation and retain the native five-ray
-    // fallback when the formula is absent.
+    // SrvDo117 creates one ordinary missile, then count-1 charged-bolt paths.
     int count = Math.abs(SkillFormula.evaluate(skill.calc1, skill, skillLevel));
     if (count <= 0) count = Math.abs(firstParam(skill, 0, 5));
     count = Math.max(1, Math.min(16, count));
@@ -4687,6 +4685,18 @@ public class ServerSkillSystem extends PassiveSystem {
       int missileId = createMissile(missile, direction, start, event.entityId,
           sharedHitTargets, skillLevel);
       if (missileId < 0) continue;
+      Missile stream = mMissile.get(missileId);
+      stream.start.set(NativeFirestormMotion.cell(start.x),
+          NativeFirestormMotion.cell(start.y));
+      stream.chargedBoltPath = i > 0;
+      stream.chargedBoltTargetX = NativeFirestormMotion.cell(target.x);
+      stream.chargedBoltTargetY = NativeFirestormMotion.cell(target.y);
+      stream.chargedBoltMainDirection = AssassinTrapSystem.chargedBoltMainDirection(
+          NativeFirestormMotion.cell(start.x),
+          NativeFirestormMotion.cell(start.y),
+          stream.chargedBoltTargetX, stream.chargedBoltTargetY);
+      stream.chargedBoltSeedLow = stream.chargedBoltTargetX + i - 1;
+      stream.chargedBoltSeedHigh = 666;
       // Firestorm is an elemental skill-owned stream.  Its native hit
       // callback can be marked as an explosion in Missiles.txt, but the
       // Skills.txt fire packet must still be snapshotted at cast time.

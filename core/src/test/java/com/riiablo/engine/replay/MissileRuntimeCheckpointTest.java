@@ -19,11 +19,22 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 
 class MissileRuntimeCheckpointTest extends RiiabloTest {
+  @Test void versionFourWithoutPoisonPathFlagStillLoads() {
+    try (Fixture source = new Fixture(1); Fixture target = new Fixture(1)) {
+      source.get(0).poisonTrailMoved = true;
+      byte[] current = source.capture().get(0).bytes();
+      byte[] v4 = Arrays.copyOf(current, current.length - 1);
+      v4[3] = 4;
+      MissileRuntimeCheckpoint.restore(target.world, Collections.singletonMap(0,
+          MissileRuntimeCheckpoint.fromBytes(v4)));
+      assertFalse(target.get(0).poisonTrailMoved);
+    }
+  }
   @Test void versionThreeWithoutFrozenOrbSpeedStillLoads() {
     try (Fixture source = new Fixture(1); Fixture target = new Fixture(1)) {
       source.get(0).frozenOrbVelocity = 4608;
       byte[] v4 = source.capture().get(0).bytes();
-      byte[] v3 = Arrays.copyOf(v4, v4.length - 9);
+      byte[] v3 = Arrays.copyOf(v4, v4.length - 10);
       v3[3] = 3;
       MissileRuntimeCheckpoint.restore(target.world, Collections.singletonMap(0,
           MissileRuntimeCheckpoint.fromBytes(v3)));
@@ -36,7 +47,7 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       source.get(0).presentationSeed = 123;
       source.get(0).presentationSeedKnown = true;
       byte[] v3 = source.capture().get(0).bytes();
-      byte[] v2 = Arrays.copyOf(v3, v3.length - 18);
+      byte[] v2 = Arrays.copyOf(v3, v3.length - 19);
       // Header(version,row) + range,owner,baalWave,rngState = 24 bytes.
       byte[] v1 = new byte[v2.length - 5];
       System.arraycopy(v2, 0, v1, 0, 24);
@@ -58,7 +69,7 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       source.get(0).moltenBoulderCellX = 12;
       source.get(0).moltenBoulderCellY = 34;
       byte[] v3 = source.capture().get(0).bytes();
-      byte[] v2 = Arrays.copyOf(v3, v3.length - 18);
+      byte[] v2 = Arrays.copyOf(v3, v3.length - 19);
       v2[3] = 2;
       MissileRuntimeCheckpoint.restore(target.world, Collections.singletonMap(0,
           MissileRuntimeCheckpoint.fromBytes(v2)));
@@ -217,7 +228,7 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       assertThrows(IllegalArgumentException.class, () -> MissileRuntimeCheckpoint.fromBytes(invalid));
       byte[] nan = bytes.clone(); java.nio.ByteBuffer.wrap(nan).putFloat(8, Float.NaN);
       assertThrows(IllegalArgumentException.class, () -> MissileRuntimeCheckpoint.fromBytes(nan));
-      byte[] version = bytes.clone(); version[3] = 5;
+      byte[] version = bytes.clone(); version[3] = 6;
       assertThrows(IllegalArgumentException.class, () -> MissileRuntimeCheckpoint.fromBytes(version));
       assertThrows(IllegalArgumentException.class, () -> MissileRuntimeCheckpoint.fromBytes(Arrays.copyOf(bytes, bytes.length - 1)));
       assertThrows(IllegalArgumentException.class, () -> MissileRuntimeCheckpoint.fromBytes(Arrays.copyOf(bytes, bytes.length + 1)));

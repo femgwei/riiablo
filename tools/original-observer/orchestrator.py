@@ -147,10 +147,17 @@ def validate_job(job, home):
         if job not in ({"background_probe": "frozen-orb", "entry_only": True, "character": "CXSorc"},
                        {"background_probe": "blaze", "entry_only": True, "character": "CXSorc"},
                        {"background_probe": "bone-prison", "entry_only": True, "character": "CXSorc"},
-                       {"background_probe": "bone-spear", "entry_only": True, "character": "CXSorc"}):
+                       {"background_probe": "bone-spear", "entry_only": True, "character": "CXSorc"},
+                       {"background_probe": "poison-javelin", "entry_only": True, "character": "CXSorc"},
+                       {"background_probe": "plague-javelin", "entry_only": True, "character": "CXSorc"},
+                       {"background_probe": "firestorm", "entry_only": True, "character": "CXSorc"},
+                       {"background_probe": "molten-boulder", "entry_only": True, "character": "CXMolten"},
+                       {"background_probe": "molten-boulder", "entry_only": True, "character": "CXMolten", "expiry_probe": True},
+                       {"background_probe": "molten-boulder", "entry_only": True, "character": "CXMolten", "direction_batch": True},
+                       {"background_probe": "poison-javelin", "entry_only": True, "character": "CXSorc", "direction_batch": True}):
             raise ValueError("background_probe accepts only the fixed registered private-desktop experiments")
     character = job.get("character", "CXSorc")
-    if character not in ("CXSorc", "CXPortal", "CXBarb", "CXBarbWW", "aaa", "MapWalk", "Census", "CensusB", "CensusSorc"):
+    if character not in ("CXSorc", "CXMolten", "CXPortal", "CXBarb", "CXBarbWW", "aaa", "MapWalk", "Census", "CensusB", "CensusSorc"):
         raise ValueError("Only the pinned CXSorc/CXBarb/CXBarbWW/aaa/MapWalk/Census/CensusB/CensusSorc fixtures are currently supported")
     lifecycle = job.get("lifecycle")
     if lifecycle not in (None, "restart"):
@@ -252,6 +259,18 @@ def run(args):
     if job.get("background_probe") == "bone-prison":
         from bone_prison_background import run_private
         return run_private(home, args.output)
+    if job.get("background_probe") == "poison-javelin":
+        from poison_javelin_background import run_private
+        return run_private(home, args.output, job.get("direction_batch", False))
+    if job.get("background_probe") == "plague-javelin":
+        from poison_javelin_background import run_private
+        return run_private(home, args.output, plague=True)
+    if job.get("background_probe") == "firestorm":
+        from poison_javelin_background import run_private
+        return run_private(home, args.output, firestorm=True)
+    if job.get("background_probe") == "molten-boulder":
+        from molten_boulder_background import run_private
+        return run_private(home, args.output, job.get("expiry_probe", False), job.get("direction_batch", False))
     if job.get("background_probe") == "bone-spear":
         from bone_spear_background import run_private
         return run_private(home, args.output)

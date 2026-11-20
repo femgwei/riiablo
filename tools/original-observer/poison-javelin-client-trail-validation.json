@@ -1,0 +1,203 @@
+{
+  "date": "2026-11-20",
+  "status": "passed",
+  "skill": 15,
+  "original_version": "1.10f",
+  "source_run_id": "20261120-084807-09f7690b",
+  "new_original_runtime_capture": false,
+  "new_game_launch": false,
+  "source_background_verified": true,
+  "casts": [
+    {
+      "direction": 0,
+      "client_clouds": 23,
+      "matched_cloud_states": 1357
+    },
+    {
+      "direction": 4,
+      "client_clouds": 18,
+      "matched_cloud_states": 1062
+    }
+  ],
+  "matched_client_cloud_states": 2419,
+  "network_history_replay_verified": true,
+  "repeated_snapshot_dedup_verified": true,
+  "omitted_path_cache_reinitialization_verified": true,
+  "damage_cloud_smoke_suppressed": true,
+  "initial_cloud_seed_allocation_parity_verified": false,
+  "age_zero_gpu_timing_verified": false,
+  "native_damage_parity_verified": false,
+  "gpu_pixels_verified": false,
+  "limitations": [
+    "Two directions at level one; six directions still skipped",
+    "Original cloud state sampling begins at age one",
+    "Stable child seed derivation remains an adapter policy",
+    "No live network packet loss/correction validation"
+  ],
+  "suites": [
+    {
+      "name": "com.riiablo.engine.replay.MissileRuntimeCheckpointTest",
+      "timestamp": "2026-11-20T01:23:57",
+      "xml_sha256": "86c33290e06295527903ad3b3706ea961ede98c70abee1ecfe16fb33dee81d22",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.ai.TrapPoisonAiIntegrationTest",
+      "timestamp": "2026-11-20T01:24:14",
+      "xml_sha256": "e4ed9accdacd982f9cbf4ba5fb36be8d259a23385db23622432f4f3d531e2dbb",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.BoneSpearOriginalMotionTest",
+      "timestamp": "2026-11-20T01:24:00",
+      "xml_sha256": "665e6edfd41e1818bb2ac6a5bd62351b75840b977c2363e5bc5f069b02771d54",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.NativeAmazonPoisonJavelinDataTest",
+      "timestamp": "2026-11-20T01:24:02",
+      "xml_sha256": "ae17bb2c130e9373f7995bcd77985c63489a56c3abdef4ce292c5b0fa45ea364",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.PlagueJavelinGoldenDamageTest",
+      "timestamp": "2026-11-20T01:24:05",
+      "xml_sha256": "f930a5791a7b5e6964e56a1ce8e603a25c45dea2386e388b9cd248fb831b9238",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.PoisonJavelinGoldenDamageTest",
+      "timestamp": "2026-11-20T01:24:08",
+      "xml_sha256": "8d986034f7788c46feddf4534be7c0b2ed11a93fa2c5792880cddcd526634a11",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.PoisonJavelinOriginalMotionTest",
+      "timestamp": "2026-11-20T01:24:11",
+      "xml_sha256": "1ef0125958cb2152e4edf77468972548fa228d1ff9805cec68456aae643b9708",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.BoneSpearOriginalSpriteTest",
+      "timestamp": "2026-11-20T01:24:19",
+      "xml_sha256": "c52ab04da6591f9f02f91682119a75b084004d2adac9dd2ad2035bf1a21ae39c",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.BoneSpearOriginalTrailTest",
+      "timestamp": "2026-11-20T01:24:23",
+      "xml_sha256": "0eeaf02745337b4f40d7c6595af97fb882d87669b5648e4e00173590555dff94",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.PlagueJavelinPresentationLifecycleTest",
+      "timestamp": "2026-11-20T01:24:27",
+      "xml_sha256": "a3b042d14789e456c42f2d6750183fd95e31db968150641d2026143067360085",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.PoisonCloudPresentationTest",
+      "timestamp": "2026-11-20T01:24:30",
+      "xml_sha256": "ff882283cdf954467236c551627fad047b58f2dfc0fb711663d3ce29e3e0e726",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.PoisonJavelinOriginalClientTrailTest",
+      "timestamp": "2026-11-20T01:23:53",
+      "xml_sha256": "d120a2f3021dd48cc0509275c665a424a38e458ca28ec2b7d480d43ddca56c76",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.presentation.PoisonJavelinOriginalSpriteTest",
+      "timestamp": "2026-11-20T01:24:33",
+      "xml_sha256": "4d87b229ebf41662e0373640f23df6d47f0ed8faa673c2cb5cf7ef85efeef508",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.riiablo.save.OriginalPoisonJavelinFixtureTest",
+      "timestamp": "2026-11-20T01:24:38",
+      "xml_sha256": "2c730fd32fef3e56ba5c108e9946d9716eccb5f5d613b5e3257decb1d85057fe",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "evidence": [
+    {
+      "path": "core/src/test/resources/original/poison-javelin-directions-1.10f.json",
+      "sha256": "1db42d2ce9449e5cc1c44727531452268f7358f190d56e32c6032d0b28ba9dc2"
+    },
+    {
+      "path": "tools/original-observer/poison-javelin-static-client-trail.txt",
+      "sha256": "da37c1d1a040c682f09c6aa8f71b3d8e3659340800b053dbe8441600fa3b0aa8"
+    },
+    {
+      "path": "tools/original-observer/inspect_poison_javelin_animation.py",
+      "sha256": "5c21f1bdb2dfb872d8d02c81318d421e79d4aba8d36fba7d860f2b2151c52b33"
+    },
+    {
+      "path": "core/src/main/java/com/riiablo/presentation/MissileImpactPresentationSystem.java",
+      "sha256": "b3624974dd53e9a8e3cdf4729746dbc7d0e89fd1901a5c62cd73200da05d84a4"
+    },
+    {
+      "path": "core/src/main/java/com/riiablo/presentation/NativePoisonJavelinPresentation.java",
+      "sha256": "fa777d423a07b1187d893212230691875c72ba89ed1e4428c11d4079370b87ae"
+    },
+    {
+      "path": "core/src/main/java/com/riiablo/presentation/MissileLoader.java",
+      "sha256": "dac0237c0b66bf108e2a9382ee5e977039e943e6d1b70f41e804314dba059863"
+    },
+    {
+      "path": "core/src/main/java/com/riiablo/map/RenderSystem.java",
+      "sha256": "27d2193320fc1145a4dd516dd50545f4342cb02b250bdfe2b0232573b778a584"
+    },
+    {
+      "path": "core/src/test/java/com/riiablo/presentation/PoisonJavelinOriginalClientTrailTest.java",
+      "sha256": "55bd1f7b5d025944808b867aaca7116e0717c87b4dfe36b611721b1f9a22c059"
+    }
+  ],
+  "tests": 50,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0
+}

@@ -12,6 +12,9 @@ public class ReferenceElementalEffect extends Component {
   public int entityId;
   public boolean fade, orbit;
   public boolean ground;
+  /** Scoped 1.10f CltDo5 / flying-rock clocks for Molten Boulder. */
+  public boolean nativeBoulderFire, nativeBoulderRock;
+  public int nativeSeed;
   public String landing;
   public boolean landingFire;
   public int landingPhase;

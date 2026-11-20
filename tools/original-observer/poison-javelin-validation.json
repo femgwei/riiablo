@@ -1,0 +1,136 @@
+{
+  "date": "2026-11-20",
+  "status": "passed",
+  "original_version": "1.10f",
+  "skill": 15,
+  "level": 1,
+  "run_id": "20261120-071411-f9fd0d01",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "paired_draws": 1309,
+  "verified_dcc_selections": 1303,
+  "fixture_sha256": "5a34ee3dccf844d9af52ed9777c37aedf10c5ebf2fa669c44120c6ea8b7db0d4",
+  "tests": 43,
+  "failures": 0,
+  "errors": 0,
+  "suites": [
+    {
+      "name": "com.riiablo.engine.replay.MissileRuntimeCheckpointTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:35:37",
+      "xml_sha256": "e2370d5b65e08de2bda2b6b9dc9bb7803d5f963593d8122b1dc0a1283989582f"
+    },
+    {
+      "name": "com.riiablo.engine.server.ai.TrapPoisonAiIntegrationTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:35:53",
+      "xml_sha256": "517289298a04ee4b259446522295c4a438945f62b94c06936d822bfcc807d5be"
+    },
+    {
+      "name": "com.riiablo.engine.server.BoneSpearOriginalMotionTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:35:40",
+      "xml_sha256": "961758bdbef477a7589f30c7d96cef1fbf5a6dbef1cd1a3c64851e50dd424483"
+    },
+    {
+      "name": "com.riiablo.engine.server.NativeAmazonPoisonJavelinDataTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:35:43",
+      "xml_sha256": "ca1bb14d911e3316ee2bab7b802a0101939456fef95624501acbc3f032c9326d"
+    },
+    {
+      "name": "com.riiablo.engine.server.PlagueJavelinGoldenDamageTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:35:45",
+      "xml_sha256": "1821fd78dd6b74c6804557e40a4bb118d487c33e4673a105562bc0c6fb3530de"
+    },
+    {
+      "name": "com.riiablo.engine.server.PoisonJavelinGoldenDamageTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:35:48",
+      "xml_sha256": "d7ed8b2afdcab2856b3851799c6864e9ef003497bec78cbbe141b51e25606821"
+    },
+    {
+      "name": "com.riiablo.engine.server.PoisonJavelinOriginalMotionTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:35:50",
+      "xml_sha256": "f1627c97ae00bb43707aaf80bb5d318b78dc7d4089da9dad1d2ab9fdef92da9c"
+    },
+    {
+      "name": "com.riiablo.presentation.BoneSpearOriginalSpriteTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:35:58",
+      "xml_sha256": "c8dcb2ff7ca6ec361e6c33449bd1f8bc92eaed6a4d3b6e40fc5d1f807f91ac34"
+    },
+    {
+      "name": "com.riiablo.presentation.BoneSpearOriginalTrailTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:36:01",
+      "xml_sha256": "a90177de979e8fcbbc374399f6da1ec79c0afd2de57a7aac726acec5a5bb5b91"
+    },
+    {
+      "name": "com.riiablo.presentation.PlagueJavelinPresentationLifecycleTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:36:05",
+      "xml_sha256": "df44e96f064e36dd1db207564d059ff81aa61e69d263c0745eb5fdc29e4618e8"
+    },
+    {
+      "name": "com.riiablo.presentation.PoisonCloudPresentationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:36:08",
+      "xml_sha256": "5fd209ae7aadf61e0d4790c4d32cf7f5b8ed75233b195f019c2ea2a66deb91e2"
+    },
+    {
+      "name": "com.riiablo.presentation.PoisonJavelinOriginalSpriteTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:36:10",
+      "xml_sha256": "c454fae5fc74e7b35b737c2dec157d8ba647e9bc63be618919a139f3445ad0a3"
+    },
+    {
+      "name": "com.riiablo.save.OriginalPoisonJavelinFixtureTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "timestamp": "2026-11-19T23:36:13",
+      "xml_sha256": "8eb293fbb84022b7252d169dde56aad2bca2d4a38b799f24f1151ecc6e6f9d41"
+    }
+  ],
+  "scope": "One direction, level-one no-synergy cast; production server full cloud lifecycle and selected sprite frames; no GPU pixels or native damage parity claim"
+}

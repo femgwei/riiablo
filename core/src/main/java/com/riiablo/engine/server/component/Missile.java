@@ -126,6 +126,8 @@ public class Missile extends PooledComponent {
   public boolean poisonAttackerPlayer;
   /** Native poison-cloud child loop count used to extend SubLoop lifetime. */
   public int poisonCloudLoops;
+  /** SrvDo02 reads the prior path step's integer-cell movement flag (0x08). */
+  public boolean poisonTrailMoved;
   /** Expanding poison cloud; its ring offset sets direction, not a stopping point. */
   public boolean poisonCloudTraveling;
   /** Initial direction reference retained for runtime-checkpoint compatibility. */
@@ -357,6 +359,7 @@ public class Missile extends PooledComponent {
     poisonPiercePercent = 0;
     poisonAttackerPlayer = false;
     poisonCloudLoops = 0;
+    poisonTrailMoved = false;
     poisonCloudTraveling = false;
     poisonCloudTarget.setZero();
     targetId = -1;

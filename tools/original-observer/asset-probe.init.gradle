@@ -1,0 +1,73 @@
+// Offline Java source launcher using the repository's existing MPQ/DCC runtime.
+gradle.projectsEvaluated {
+  def core = rootProject.project(':core')
+  if (core.hasProperty('probeIncludes')) {
+    core.tasks.withType(Test).configureEach {
+      include core.property('probeIncludes').toString().split(',')
+    }
+  }
+  if (core.hasProperty('probeTestHeap')) {
+    core.tasks.withType(Test).configureEach {
+      maxHeapSize = core.property('probeTestHeap')
+      maxParallelForks = 1
+      forkEvery = (core.findProperty('probeForkEvery') ?: '0') as long
+      jvmArgs '-XX:TieredStopAtLevel=1'
+      testLogging.events 'failed', 'skipped', 'passed'
+    }
+    core.tasks.withType(JavaExec).configureEach {
+      maxHeapSize = core.property('probeTestHeap')
+      jvmArgs '-XX:TieredStopAtLevel=1'
+    }
+  }
+  core.tasks.register('boneSpearAssetProbe', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = rootProject.file('tools/original-observer/BoneSpearAssetProbe.java').absolutePath
+    args core.findProperty('probeHomeA'), core.findProperty('probeHomeB'), core.findProperty('probeOutput')
+  }
+  core.tasks.register('poisonJavelinAssetProbe', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = rootProject.file('tools/original-observer/PoisonJavelinAssetProbe.java').absolutePath
+    args core.findProperty('probeHomeA'), core.findProperty('probeOutput')
+  }
+  core.tasks.register('plagueJavelinOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.presentation.PlagueJavelinOriginalAnalysis'
+    args rootProject.file('core/src/test/resources/original/plague-javelin-1.10f.json').absolutePath,
+        rootProject.file(core.findProperty('probeOutput')
+            ?: 'tools/original-observer/plague-javelin-comparison-after-fix-1.10f.json').absolutePath
+  }
+  core.tasks.register('firestormAssetProbe', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = rootProject.file('tools/original-observer/PoisonJavelinAssetProbe.java').absolutePath
+    args core.findProperty('probeHomeA'), core.findProperty('probeOutput'), 'firestorm'
+  }
+  core.tasks.register('moltenBoulderAssetProbe', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = rootProject.file('tools/original-observer/PoisonJavelinAssetProbe.java').absolutePath
+    args core.findProperty('probeHomeA'), core.findProperty('probeOutput'), 'moltenboulder'
+  }
+  core.tasks.register('moltenBoulderOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.presentation.MoltenBoulderOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file('core/src/test/resources/original/molten-boulder-1.10f.json').absolutePath,
+          rootProject.file(core.findProperty('probeOutput')
+              ?: 'tools/original-observer/molten-boulder-comparison-after-fix-1.10f.json').absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('firestormOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.presentation.FirestormOriginalAnalysis'
+    args rootProject.file('core/src/test/resources/original/firestorm-1.10f.json').absolutePath,
+        rootProject.file(core.findProperty('probeOutput')
+            ?: 'tools/original-observer/firestorm-comparison-after-fix-1.10f.json').absolutePath
+  }
+}

@@ -266,76 +266,103 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
     }
   }
 
-  @Test void firestormAndBoulderMakeReferenceTrailsAndEightRadialFragments() {
-    try (Harness h = new Harness()) {
-      int root = h.root("firestormmaker", SkillId.FIRESTORM);
-      h.tick(0);
-      h.tick(.04f); h.tick(.04f); h.tick(.04f);
-      assertEquals(2, h.created.size());
-      assertEquals("firestorm", h.names.get(0));
-      ReferenceElementalEffect fire = h.effect(h.created.get(0));
-      assertEquals(1.2f, fire.duration);
-      assertTrue(fire.fade);
-      assertFalse(h.system.hideOriginal(root));
-    }
+  @Test void boulderImpactCreatesEighteenFireCellsAndVariableFlightFragments() {
     try (Harness h = new Harness()) {
       int root = h.root("moltenboulder", SkillId.MOLTEN_BOULDER);
       h.tick(0);
-      assertEquals("moltenboulderfirepath", h.names.get(0));
-      assertEquals(2f, h.effect(h.created.get(0)).duration);
+      assertTrue(h.created.isEmpty(), "standing in the birth cell emits no flame");
       assertTrue(h.system.impact(h.missile(root).missile, h.impact(root)));
-      assertEquals(11, h.created.size());
-      assertEquals("moltenboulderexplode", h.names.get(1));
-      assertEquals(16f / 25f, h.effect(h.created.get(1)).duration, .0001f);
-      for (int i = 2; i <= 9; i++) {
-        ReferenceElementalEffect fragment = h.effect(h.created.get(i));
-        assertEquals(i - 2, fragment.direction);
-        assertEquals(.5f, fragment.duration);
-        assertTrue(fragment.endOffset.len() >= 44);
+      assertEquals("moltenboulderexplode", h.names.get(0));
+      assertEquals(13f / 25f, h.effect(h.created.get(0)).duration, .0001f);
+      java.util.Set<Float> flights = new java.util.HashSet<>();
+      int fires = 0, fragments = 0;
+      for (int i = 1; i < h.created.size(); i++) {
+        ReferenceElementalEffect effect = h.effect(h.created.get(i));
+        if ("moltenboulder-flyingrocks".equals(h.names.get(i))) {
+          fragments++;
+          assertTrue(effect.nativeBoulderRock);
+          assertTrue(effect.endOffset.len() > 0);
+          flights.add(effect.duration);
+        } else {
+          assertEquals("moltenboulderfirepath", h.names.get(i));
+          int index = fires++;
+          assertEquals(new Vector2(10, 20).add(
+              com.riiablo.engine.server.missile.NativeMoltenBoulder.FIRE_X[index],
+              com.riiablo.engine.server.missile.NativeMoltenBoulder.FIRE_Y[index]), h.births.get(i));
+          assertEquals(37f / 25f, effect.duration, .0001f);
+          assertTrue(effect.nativeBoulderFire);
+          assertFalse(effect.fade);
+        }
       }
-      assertEquals("moltenboulderfirepath", h.names.get(10));
-      assertEquals(2f, h.effect(h.created.get(10)).duration);
-      assertTrue(h.effect(h.created.get(10)).fade);
-      assertTrue(h.effect(h.created.get(10)).phase >= 0
-          && h.effect(h.created.get(10)).phase < 25);
+      assertEquals(18, fires);
+      assertTrue(fragments > 0 && fragments <= 10);
+      assertTrue(flights.size() > 1);
     }
   }
 
-  @Test void boulderTrailCellsUseIndependentReferencePhases() {
+  @Test void boulderTrailUsesObservedCrossingsAndThreeNativeFireRows() {
     try (Harness h = new Harness()) {
       int root = h.root("moltenboulder", SkillId.MOLTEN_BOULDER);
       h.missile(root).presentationSeedKnown = true;
       h.missile(root).presentationSeed = 4242;
-      h.world.getMapper(Velocity.class).get(root).velocity.set(230, 0);
+      h.missile(root).authoritative = false;
       h.tick(0);
-      h.tick(.52f);
-      List<Integer> fire = new ArrayList<>();
-      for (int i = 0; i < h.names.size(); i++) {
-        if ("moltenboulderfirepath".equals(h.names.get(i))) fire.add(h.created.get(i));
+      assertTrue(h.created.isEmpty());
+      for (int cell = 11; cell <= 30; cell++) {
+        h.world.getMapper(Position.class).get(root).position.set(cell, 20);
+        h.tick(.04f);
       }
-      assertTrue(fire.size() >= 4);
-      long distinct = fire.stream().map(id -> h.effect(id).phase).distinct().count();
-      assertTrue(distinct >= 2, "boulder trail cells must not share one animation phase");
+      assertEquals(20, h.created.size());
+      assertEquals(java.util.Set.of("firewall", "firesmall", "firemedium"),
+          new java.util.HashSet<>(h.names));
+      for (int id : h.created) {
+        assertEquals(90, h.missile(id).nativeLifetimeFrames);
+        assertEquals(3.6f, h.effect(id).duration, .0001f);
+      }
+      h.tick(.52f);
+      assertEquals(20, h.created.size(), "time without a cell crossing emits no extra fire");
     }
   }
 
-  @Test void firestormTrailsFanIntoReferenceStreamsInsteadOfOverlapping() {
+  @Test void firestormUsesObservedPathMovementWithoutReferenceLaneOffsets() {
     try (Harness h = new Harness()) {
       int[] roots = new int[3];
-      int[] seeds = {101, 202, 303};
       for (int i = 0; i < roots.length; i++) {
         roots[i] = h.root("firestormmaker", SkillId.FIRESTORM);
+        h.missile(roots[i]).authoritative = false;
         h.missile(roots[i]).presentationSeedKnown = true;
-        h.missile(roots[i]).presentationSeed = seeds[i];
-        h.world.getMapper(Velocity.class).get(roots[i]).velocity.set(320, 0);
+        h.missile(roots[i]).presentationSeed = 101 * (i + 1);
+        h.world.getMapper(Position.class).get(roots[i]).initializeNativeCell(4523, 5642);
       }
-      h.tick(0);
+      h.tick(.04f);
+      assertTrue(h.created.isEmpty(), "no birth until a path cell changes");
+      for (int i = 0; i < roots.length; i++) {
+        h.world.getMapper(Position.class).get(roots[i]).setNativePrecision(
+            (4524 << 16) + 16384, (5642 << 16) + i * 8192);
+      }
+      h.tick(.04f);
       assertEquals(3, h.created.size());
+      for (int i = 0; i < roots.length; i++) {
+        int child = h.created.get(i);
+        assertNull(h.effect(child), "Firestorm no longer installs APK phase/fade effects");
+        assertEquals(15, h.missile(child).nativeLifetimeFrames);
+        assertEquals(h.world.getMapper(Position.class).get(roots[i]).position, h.births.get(i));
+      }
       h.tick(.12f);
-      assertEquals(6, h.created.size());
-      assertNotEquals(h.births.get(3), h.births.get(4));
-      assertNotEquals(h.births.get(4), h.births.get(5));
-      assertNotEquals(h.births.get(3), h.births.get(5));
+      assertEquals(3, h.created.size(), "time alone does not create more ground fire");
+    }
+  }
+
+  @Test void boulderReplicaClockRunsAtNativeRateWithSixtyHzPresentation() {
+    try (Harness h = new Harness()) {
+      int root = h.root("moltenboulder", SkillId.MOLTEN_BOULDER);
+      h.missile(root).authoritative = false;
+      for (int i = 0; i < 60; i++) h.tick(1f / 60f);
+      assertEquals(25, h.missile(root).clientFrame);
+      assertTrue(h.created.isEmpty());
+      h.missile(root).nativeFrame = 50;
+      h.tick(1f / 60f);
+      assertEquals(50, h.missile(root).clientFrame, "accept late snapshots without restarting the animation");
     }
   }
 
@@ -456,8 +483,11 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
     com.riiablo.Colors previous = Riiablo.colors;
     Riiablo.colors = new com.riiablo.Colors();
     try (Harness h = new Harness()) {
-      int maker = h.root("firestormmaker", SkillId.FIRESTORM);
+      int maker = h.root("moltenboulder", SkillId.MOLTEN_BOULDER);
+      h.missile(maker).authoritative = false;
       h.tick(0);
+      h.world.getMapper(Position.class).get(maker).position.add(1, 0);
+      h.tick(.04f);
       int fire = h.created.get(0);
       h.world.delete(maker);
       h.tick(.52f);
@@ -472,7 +502,8 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
           com.riiablo.presentation.component.AnimationWrapper.class).create(fire).animation;
       animation.edit().layer(dcc, com.riiablo.graphics.BlendMode.ID).build();
       h.system.refreshLoadedEffect(fire);
-      assertEquals(ReferenceElementalPresentationSystem.frameAt(effect, 37), animation.getFrame());
+      assertEquals(NativeFirestormPresentation.groundFrame(h.missile(fire).missile,
+          90, effect.nativeSeed, 37, 13, true), animation.getFrame());
       assertEquals(com.riiablo.graphics.BlendMode.ADDITIVE, animation.getLayer(0).getBlendMode());
       assertTrue(animation.getFrame() >= 12, "cold decoding must not restart the growth phase");
     } finally { Riiablo.colors = previous; }

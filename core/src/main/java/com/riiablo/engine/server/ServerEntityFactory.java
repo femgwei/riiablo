@@ -1,5 +1,6 @@
 package com.riiablo.engine.server;
 
+import com.riiablo.engine.server.missile.NativeFirestormMotion;
 import java.util.Arrays;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -69,6 +70,7 @@ import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.missile.NativeFrozenOrbMotion;
 import com.riiablo.engine.server.missile.NativeBoneSpearMotion;
+import com.riiablo.engine.server.missile.NativePoisonJavelinMotion;
 import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
@@ -1634,7 +1636,11 @@ public class ServerEntityFactory extends EntityFactory {
     Position missilePosition = mPosition.create(id);
     missilePosition.invalidateNativePrecision();
     missilePosition.position.set(position);
-    if (NativeFrozenOrbMotion.handles(missile) || NativeBoneSpearMotion.handles(missile)) {
+    if (NativeFrozenOrbMotion.handles(missile) || NativeBoneSpearMotion.handles(missile)
+        || NativePoisonJavelinMotion.usesCellOrigin(missile)
+        || NativeFirestormMotion.maker(missile)
+        || NativeFirestormMotion.fire(missile)
+        || com.riiablo.engine.server.missile.NativeMoltenBoulder.moves(missile)) {
       int cellX = com.badlogic.gdx.math.MathUtils.floor(position.x + .5f);
       int cellY = com.badlogic.gdx.math.MathUtils.floor(position.y + .5f);
       // MISSILES_CreateMissileFromParams allocates at the origin's integer cell centre.
@@ -1643,6 +1649,8 @@ public class ServerEntityFactory extends EntityFactory {
       } else {
         missilePosition.position.set(cellX, cellY);
       }
+      if (com.riiablo.engine.server.missile.NativeMoltenBoulder.moves(missile))
+        missileComponent.start.set(missilePosition.position);
     }
     MapWrapper ownerMap = !restoring && ownerId >= 0 && mMapWrapper.has(ownerId)
         ? mMapWrapper.get(ownerId) : null;
@@ -1663,6 +1671,14 @@ public class ServerEntityFactory extends EntityFactory {
       NativeFrozenOrbMotion.initialVelocity(angle, missileComponent.frozenOrbVelocity, missileVelocity);
     } else if (NativeBoneSpearMotion.handles(missile)) {
       NativeBoneSpearMotion.initialVelocity(missile, damageLevel, slowPercent, angle, missileVelocity);
+    } else if (NativeFirestormMotion.maker(missile)) {
+      NativeFirestormMotion.initialVelocity(
+          missile, damageLevel, angle, missileVelocity);
+    } else if (com.riiablo.engine.server.missile.NativeMoltenBoulder.moves(missile)) {
+      com.riiablo.engine.server.missile.NativeMoltenBoulder.velocity(
+          missile, damageLevel, angle, missileVelocity);
+    } else if (NativePoisonJavelinMotion.handles(missile)) {
+      NativePoisonJavelinMotion.initialVelocity(missile, damageLevel, slowPercent, angle, missileVelocity);
     } else {
       missileVelocity.set(angle).setLength(velocity);
     }
@@ -1672,7 +1688,8 @@ public class ServerEntityFactory extends EntityFactory {
       missileComponent.attachedEntityId = ownerId;
     }
     mAngle.create(id).set(angle);
-    if ((NativeFrozenOrbMotion.handles(missile) || NativeBoneSpearMotion.handles(missile))
+    if ((NativeFrozenOrbMotion.handles(missile) || NativeBoneSpearMotion.handles(missile)
+        || NativePoisonJavelinMotion.handles(missile))
         && !missileVelocity.isZero()) {
       mAngle.get(id).set(new Vector2(missileVelocity).nor());
     }

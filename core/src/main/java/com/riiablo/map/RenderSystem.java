@@ -1326,6 +1326,11 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   private void drawEntity(Array<Integer>[] cache, int entity) {
+      if (mMissile.has(entity)
+          && com.riiablo.presentation.NativePoisonJavelinPresentation.serverTrailCloud(
+              mMissile.get(entity))) return;
+      if (mMissile.has(entity)
+          && com.riiablo.presentation.NativeFirestormPresentation.serverGround(mMissile.get(entity))) return;
       if (renderEffects != null && renderEffects.hideOriginal(entity)) return;
 //      if (!entity.target().isZero() && !entity.position().epsilonEquals(entity.target())) {
 //        entity.angle(angle(entity.position(), entity.target()));

@@ -36,6 +36,21 @@ public class DirectionResolver extends IteratingSystem {
   protected void process(int entityId) {
     float radians = mAngle.get(entityId).angle.angleRad();
     Animation animation = mAnimationWrapper.get(entityId).animation;
+    if (mMissile.has(entityId) && NativeMoltenBoulderPresentation.handles(mMissile.get(entityId))) {
+      animation.setDirection(NativeMoltenBoulderPresentation.direction(
+          mAngle.get(entityId).angle, animation.getNumDirections()));
+      pendingDirection.remove(entityId, -1);
+      pendingFrames.remove(entityId, 0);
+      return;
+    }
+    int poisonDirection = mMissile.has(entityId) ? NativePoisonJavelinPresentation.direction(
+        mMissile.get(entityId), mAngle.get(entityId).angle, animation.getNumDirections()) : -1;
+    if (poisonDirection >= 0) {
+      animation.setDirection(poisonDirection);
+      pendingDirection.remove(entityId, -1);
+      pendingFrames.remove(entityId, 0);
+      return;
+    }
     int d = Direction.radiansToDirection(radians, animation.getNumDirections());
     com.riiablo.engine.server.component.SummonedPet pet = mSummonedPet.get(entityId);
     com.riiablo.engine.server.component.CofReference reference = mCofReference.get(entityId);

@@ -47,14 +47,21 @@ def atomic_json(path, value):
     # Windows.  Use a per-write temp file and retry the final replace briefly.
     tmp = path.with_name(path.name + "." + str(os.getpid()) + "." + uuid.uuid4().hex + ".tmp")
     tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf8")
-    for attempt in range(8):
+    try:
+        for attempt in range(8):
+            try:
+                os.replace(tmp, path)
+                return
+            except PermissionError:
+                if attempt == 7:
+                    raise
+                time.sleep(0.05 * (attempt + 1))
+    finally:
+        # Failed heartbeats must not leave an unbounded collection of temps.
         try:
-            os.replace(tmp, path)
-            return
-        except PermissionError:
-            if attempt == 7:
-                raise
-            time.sleep(0.05 * (attempt + 1))
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def validate(command):
@@ -99,7 +106,15 @@ class Broker:
 
     def heartbeat(self, **changes):
         self.state.update(changes, jobs=job_names(), heartbeat=time.time())
-        atomic_json(self.queue / "status.json", self.state)
+        try:
+            atomic_json(self.queue / "status.json", self.state)
+        except PermissionError as error:
+            # An open status reader / antivirus can temporarily deny replace
+            # on Windows. Status is advisory: retain the receiver and any
+            # active debugger child, then retry on the next normal poll.
+            # Queue claims and task results still fail explicitly on error.
+            self.state["status_write_failures"] = self.state.get("status_write_failures", 0) + 1
+            self.state["last_status_write_error"] = str(error)
 
     def target(self, required=True):
         from orchestrator import existing_loader_pids

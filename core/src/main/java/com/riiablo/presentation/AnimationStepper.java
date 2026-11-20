@@ -51,7 +51,19 @@ public class AnimationStepper extends IntervalIteratingSystem {
       phase = "standalone";
       if (mMissile.has(entityId)) {
         Missile missile = mMissile.get(entityId);
-        if (MissileLoader.isBoneSpearTrail(missile.missile)
+        if (NativeMoltenBoulderPresentation.handles(missile)) {
+          if (!missile.authoritative
+              && com.riiablo.engine.server.missile.NativeMoltenBoulder.isEmerge(missile.missile))
+            missile.clientFrame = Math.max(missile.nativeFrame, missile.clientFrame + 1);
+          NativeMoltenBoulderPresentation.initialize(missile, wrapper.animation);
+          return;
+        }
+        if (NativeFirestormPresentation.handles(missile)) {
+          NativeFirestormPresentation.initialize(missile, wrapper.animation);
+          return;
+        }
+        if (NativePoisonJavelinPresentation.ownsClock(missile)
+            || MissileLoader.isBoneSpearTrail(missile.missile)
             || missile.authoritative
                 && com.riiablo.engine.server.missile.NativeBoneSpearMotion.handles(missile.missile)) {
           // Movement / client lifetime already advanced this tick. Seeking

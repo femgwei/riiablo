@@ -123,7 +123,7 @@ class PlagueJavelinPresentationLifecycleTest extends RiiabloTest {
     }
   }
 
-  @Test void networkPlagueTrailBackfillsTicksAndRetainsValidatedCarrierMotion() {
+  @Test void networkPlagueTrailBackfillsTicksAsStationaryClouds() {
     try (Fixture f = new Fixture(false)) {
       int parent = f.parent(Riiablo.files.Missiles.get("plaguejavelin"), false);
       Missile root = f.missile(parent);
@@ -134,16 +134,17 @@ class PlagueJavelinPresentationLifecycleTest extends RiiabloTest {
       f.world.getMapper(Velocity.class).get(parent).velocity.set(25, 0);
       f.world.getMapper(Position.class).get(parent).position.set(14.25f, 20.75f);
       f.step();
-      assertEquals(4, f.cloudCount(), "one carrier per moving native tick, not per packet");
+      assertEquals(3, f.cloudCount(), "first path initializes; subsequent moving ticks emit clouds");
       for (int i = 0; i < f.children.size(); i++) {
         if (!"plaguejavcloud".equals(f.names.get(i))) continue;
         int id = f.children.get(i);
-        assertEquals(new Vector2(25, 0), f.world.getMapper(Velocity.class).get(id).velocity);
+        assertTrue(f.world.getMapper(Velocity.class).get(id).velocity.isZero());
+        assertTrue(f.world.getMapper(Position.class).get(id).hasNativePrecision());
         assertTrue(f.missile(id).presentationSeedKnown);
       }
       long count = f.cloudCount();
       f.step();
-      assertEquals(count, f.cloudCount());
+      assertEquals(count + 1, f.cloudCount(), "local path clock keeps moving between snapshots");
     }
   }
 
@@ -264,17 +265,22 @@ class PlagueJavelinPresentationLifecycleTest extends RiiabloTest {
     try (Fixture f = new Fixture(false)) {
       int parent = f.parent(Riiablo.files.Missiles.get("plaguejavelin"), true);
       Position at = f.world.getMapper(Position.class).get(parent);
+      f.missile(parent).nativeFrame = 1;
       f.step();
-      at.position.x = 10.9f;
+      at.position.x = 10.4f;
+      f.missile(parent).nativeFrame = 2;
       f.step();
       assertEquals(0, f.cloudCount());
       at.position.x = 11f;
+      f.missile(parent).nativeFrame = 3;
       f.step();
       assertEquals(1, f.cloudCount());
       at.position.x = 11.2f;
+      f.missile(parent).nativeFrame = 4;
       f.step();
       assertEquals(1, f.cloudCount());
-      at.position.y = 21f;
+      at.position.y = 21.6f;
+      f.missile(parent).nativeFrame = 5;
       f.step();
       assertEquals(2, f.cloudCount());
       assertEquals(5, f.missile(parent).clientFrame);
@@ -313,6 +319,77 @@ class PlagueJavelinPresentationLifecycleTest extends RiiabloTest {
 
   private static long seed(int low, int high) {
     return (Integer.toUnsignedLong(high) << 32) | Integer.toUnsignedLong(low);
+  }
+
+  @Test void originalPoisonCloudSeedsAndSpawnedSmokeVelocitiesReplayExactly() {
+    com.badlogic.gdx.utils.JsonValue batch = new com.badlogic.gdx.utils.JsonReader().parse(
+        getClass().getResourceAsStream("/original/poison-javelin-directions-1.10f.json"));
+    int transitions = 0, emissions = 0;
+    for (com.badlogic.gdx.utils.JsonValue cast : batch.get("casts")) {
+      for (com.badlogic.gdx.utils.JsonValue unit : cast.get("units")) {
+        if (!"client".equals(unit.getString("side"))
+            || !"poisonjavcloud".equals(unit.getString("missile"))) continue;
+        com.badlogic.gdx.utils.JsonValue first = unit.get("states").child;
+        com.badlogic.gdx.utils.JsonValue last = first;
+        while (last.next != null) last = last.next;
+        List<com.badlogic.gdx.utils.JsonValue> nativePuffs = new ArrayList<>();
+        for (com.badlogic.gdx.utils.JsonValue puff : cast.get("units")) {
+          if (!"client".equals(puff.getString("side"))
+              || !"poisonpuff".equals(puff.getString("missile"))) continue;
+          com.badlogic.gdx.utils.JsonValue birth = puff.get("states").child;
+          int age = birth.getInt("total_frames") - birth.getInt("current_frame");
+          long x = birth.getLong("x_fixed") - (long) age * birth.getInt("velocity_x");
+          long y = birth.getLong("y_fixed") - (long) age * birth.getInt("velocity_y");
+          // Replay only callbacks between the first and last sampled seed.
+          // A birth before the first seed or after cloud removal has no
+          // matching pair of parent states in this capture.
+          if (x == first.getLong("x_fixed") && y == first.getLong("y_fixed")
+              && birth.getInt("game_frame") > first.getInt("game_frame")
+              && birth.getInt("game_frame") <= last.getInt("game_frame")) nativePuffs.add(puff);
+        }
+        nativePuffs.sort(java.util.Comparator.comparingInt(puff -> puff.getInt("unit_id")));
+        try (Fixture f = new Fixture(false)) {
+          int id = f.parent(Riiablo.files.Missiles.get("poisonjavcloud"), false);
+          Missile cloud = f.missile(id);
+          cloud.clientSeed = new D2Seed(first.getInt("seed_low"), first.getInt("seed_high"));
+          cloud.clientSnapshotKnown = true;
+          cloud.clientFrame = first.getInt("total_frames") - first.getInt("current_frame");
+          cloud.clientSampleFrame = cloud.clientFrame;
+          Vector2 position = f.world.getMapper(Position.class).get(id).position;
+          position.set(first.getInt("x_fixed") / 65536f - .5f, first.getInt("y_fixed") / 65536f - .5f);
+          cloud.start.set(position);
+          cloud.clientSamplePosition.set(position);
+          List<Vector2> velocities = new ArrayList<>();
+          List<Integer> emissionFrames = new ArrayList<>();
+          for (com.badlogic.gdx.utils.JsonValue state = first.next; state != null; state = state.next) {
+            int previousChildren = f.children.size();
+            cloud.nativeFrame = state.getInt("total_frames") - state.getInt("current_frame");
+            assertEquals(cloud.clientFrame + 1, cloud.nativeFrame);
+            f.step();
+            assertEquals(state.getInt("seed_low"), cloud.clientSeed.getNLowSeed(), "native RNG low");
+            assertEquals(state.getInt("seed_high"), cloud.clientSeed.getNHighSeed(), "native RNG high");
+            transitions++;
+            for (int index = previousChildren; index < f.children.size(); index++) {
+              velocities.add(new Vector2(f.world.getMapper(Velocity.class).get(f.children.get(index)).velocity));
+              emissionFrames.add(state.getInt("game_frame"));
+            }
+          }
+          assertEquals(nativePuffs.size(), velocities.size(), "one-to-one native puff birth positions and clock window");
+          for (int i = 0; i < velocities.size(); i++) {
+            com.badlogic.gdx.utils.JsonValue nativeBirth = nativePuffs.get(i).get("states").child;
+            Vector2 velocity = velocities.get(i);
+            String context = "cloud " + unit.getInt("unit_id") + " puff " + nativePuffs.get(i).getInt("unit_id")
+                + " replay child " + i + " native births " + nativePuffs.size() + " replay births " + velocities.size();
+            assertEquals(nativeBirth.getInt("game_frame"), emissionFrames.get(i), "native smoke birth frame " + context);
+            assertEquals(nativeBirth.getInt("velocity_x"), Math.round(velocity.x * 65536f / 25f), "native smoke x speed " + context);
+            assertEquals(nativeBirth.getInt("velocity_y"), Math.round(velocity.y * 65536f / 25f), "native smoke y speed " + context);
+            emissions++;
+          }
+        }
+      }
+    }
+    assertEquals(2378, transitions);
+    assertEquals(93, emissions);
   }
   private static long roll(long seed) {
     return (seed & 0xffffffffL) * 0x6AC690C5L + (seed >>> 32);

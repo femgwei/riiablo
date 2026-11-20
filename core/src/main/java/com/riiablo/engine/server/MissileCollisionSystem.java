@@ -1,5 +1,6 @@
 package com.riiablo.engine.server;
 
+import com.riiablo.engine.server.missile.NativeFirestormMotion;
 import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -357,7 +358,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
     }
 
-    if (missile.chargedBoltPath && !missile.attached
+    if (missile.chargedBoltPath && !NativeFirestormMotion.maker(missile.missile)
+        && !missile.attached
         && missile.distanceTraveled >= missile.chargedBoltNextTurnDistance) {
       while (missile.distanceTraveled >= missile.chargedBoltNextTurnDistance) {
         long rolled = AssassinTrapSystem.chargedBoltRoll(
@@ -406,8 +408,16 @@ public class MissileCollisionSystem extends IteratingSystem {
 
     // Native SrvDo callbacks run before HandleMissileCollision moves the path
     // and decrements CurrentFrame. Trail children use the pre-step position.
-    if (missile.missile != null && missile.missile.pSrvDoFunc == 2) {
+    if (missile.missile != null && missile.missile.pSrvDoFunc == 2 && missile.poisonTrailMoved) {
       spawnPoisonCloud(missile, position.position);
+    }
+    if (NativeFirestormMotion.maker(missile.missile)
+        && callbackFrame > 0) {
+      NativeFirestormMotion.Sample before =
+          NativeFirestormMotion.sample(missile, callbackFrame);
+      if (before.crossedCell(NativeFirestormMotion.sample(missile, callbackFrame - 1))) {
+        spawnFirestormGround(missile, new Vector2(before.x >> 16, before.y >> 16));
+      }
     }
     if (missile.missile != null && missile.missile.pSrvDoFunc == 26) {
       processPlagueVinesMaker(missile, position.position, callbackFrame);
@@ -420,7 +430,17 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     // 更新导弹位置（VelocityAdder 系统被注释掉了，所以在这里更新）
     float moveDistance;
-    if (missile.attached) {
+    if (NativeFirestormMotion.maker(missile.missile)) {
+      NativeFirestormMotion.Sample next =
+          NativeFirestormMotion.sample(missile, missile.nativeFrame);
+      next.position(tmpVec);
+      if (checkNativeMapCollision(entityId, missile, position.position, tmpVec)) return;
+      moveDistance = position.position.dst(tmpVec);
+      if (missile.start.x >= 0 && missile.start.y >= 0) position.setNativePrecision(next.x, next.y);
+      else { position.invalidateNativePrecision(); position.position.set(tmpVec); }
+      next.velocity(velocity.velocity);
+      if (mAngle.has(entityId) && !velocity.velocity.isZero()) mAngle.get(entityId).set(new Vector2(velocity.velocity).nor());
+    } else if (missile.attached) {
       moveDistance = lastPos.dst(position.position);
     } else {
       missile.acceleration.advance(velocity.velocity);
@@ -428,7 +448,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       Vector2 next = tmpVec.set(position.position).add(
           velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
       boolean fixedPoisonPath = NativeFrozenOrbMotion.handles(missile.missile)
+          || NativeMoltenBoulder.moves(missile.missile)
           || com.riiablo.engine.server.missile.NativeBoneSpearMotion.handles(missile.missile)
+          || com.riiablo.engine.server.missile.NativePoisonJavelinMotion.usesCellOrigin(missile.missile)
           || missile.poisonCloudTraveling && missile.missile != null
           && ("plaguejavcloud".equalsIgnoreCase(missile.missile.Missile)
               || "poisonjavcloud".equalsIgnoreCase(missile.missile.Missile));
@@ -465,6 +487,10 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (missile.diabWallMaker) missile.diabWallMoved =
           MathUtils.floor(lastPos.x) != MathUtils.floor(next.x)
               || MathUtils.floor(lastPos.y) != MathUtils.floor(next.y);
+      if (missile.missile != null && missile.missile.pSrvDoFunc == 2) {
+        missile.poisonTrailMoved = MathUtils.floor(lastPos.x + .5f) != MathUtils.floor(next.x + .5f)
+            || MathUtils.floor(lastPos.y + .5f) != MathUtils.floor(next.y + .5f);
+      }
     }
 
     if (!updateNativeRoom(entityId, missile, position)) return;
@@ -2898,7 +2924,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   /** Skills.txt .blvl reads hard points and deliberately excludes +skills. */
   private int baseSkillLevel(int entityId, String skillName) {
     Skills.Entry skill = skillName != null ? files().skills.get(skillName) : null;
-    if (skill == null || !mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return 0;
+    if (entityId < 0 || skill == null || !mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return 0;
     return Math.max(0, mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id));
   }
 
@@ -3140,6 +3166,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       spawnMoltenBoulderChild(sourceId, source, origin);
       return;
     }
+    if (NativeMoltenBoulder.isRolling(source.missile)) {
+      // The shipped 1.10f SrvHit47 accepts NULL on expiry/wall hits.
+      burstMoltenBoulder(sourceId, source, origin, Engine.INVALID_ENTITY);
+      return;
+    }
     if (source.missile.pSrvHitFunc == 54) {
       source.hitFunctionTriggered = true;
       com.riiablo.engine.server.quest.Act5QuestSystem quests = world.getSystem(
@@ -3232,7 +3263,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     Vector2 direction = mVelocity.has(sourceId)
         ? new Vector2(mVelocity.get(sourceId).velocity) : new Vector2(Vector2.X);
     if (direction.isZero(0.0001f)) direction.set(Vector2.X);
-    int id = factory.createMissile(row, direction.nor(), origin, source.ownerId, level);
+    Vector2 cell = new Vector2(MathUtils.floor(origin.x + .5f), MathUtils.floor(origin.y + .5f));
+    int id = factory.createMissile(row, direction.nor(), cell, source.ownerId, level);
     if (id < 0 || !mMissile.has(id)) return;
     Missile child = mMissile.get(id);
     child.skillId = source.skillId;
@@ -3246,10 +3278,11 @@ public class MissileCollisionSystem extends IteratingSystem {
         level, n -> baseSkillLevel(source.ownerId, n), stateList(source.ownerId));
   }
 
-  /** Native SrvHit47's large-monster collision: radius packet plus fire field. */
+  /** Native SrvHit47's large-monster or NULL hit: radius packet plus fire field. */
   private void burstMoltenBoulder(int missileId, Missile source, Vector2 origin, int collisionTarget) {
     if (source.hitFunctionTriggered) return;
     source.hitFunctionTriggered = true;
+    origin = new Vector2(MathUtils.floor(origin.x + .5f), MathUtils.floor(origin.y + .5f));
     Skills.Entry skill = source.skillId >= 0 ? files().skills.get(source.skillId) : null;
     int level = Math.max(1, source.damageLevel);
     int configured = arrayValue(source.missile.sHitPar, 0);
@@ -3313,7 +3346,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     // target-class percent therefore belongs to the packet copied to ALL
     // area victims, not each secondary victim's own monster class.
     int percent = statInt(damage, Stat.damagepercent);
-    Monster collided = mMonster.has(collisionTarget) ? mMonster.get(collisionTarget) : null;
+    Monster collided = collisionTarget >= 0 && mMonster.has(collisionTarget)
+        ? mMonster.get(collisionTarget) : null;
     if (collided != null && collided.monstats != null && collided.monstats.demon) {
       percent += statInt(damage, Stat.item_demondamage_percent);
     }
@@ -3344,7 +3378,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       Vector2 origin, int lifetime) {
     if (factory == null) return;
     int level = Math.max(1, source.damageLevel);
-    int id = factory.createMissile(row, Vector2.X, origin, source.ownerId, level);
+    Vector2 cell = new Vector2(MathUtils.floor(origin.x + .5f), MathUtils.floor(origin.y + .5f));
+    int id = factory.createMissile(row, Vector2.X, cell, source.ownerId, level);
     if (id < 0 || !mMissile.has(id)) return;
     Missile child = mMissile.get(id);
     child.skillId = source.skillId;
@@ -3605,6 +3640,31 @@ public class MissileCollisionSystem extends IteratingSystem {
     return !map.castRay(wallRay, DT1.Tile.FLAG_BLOCK_JUMP, 0, wallCollision);
   }
 
+  /** SrvDo23: the pre-step integer cell owns damage, independently of CltDo6 visuals. */
+  private void spawnFirestormGround(Missile source, Vector2 origin) {
+    if (factory == null || source.missile.SubMissile == null || source.missile.SubMissile.length == 0) return;
+    Missiles.Entry row = files().Missiles.get(source.missile.SubMissile[0]);
+    if (row == null) return;
+    int id = factory.createMissile(row, Vector2.Zero, origin, source.ownerId, source.damageLevel);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile child = mMissile.get(id);
+    child.skillId = source.skillId;
+    child.damageLevel = source.damageLevel;
+    child.persistent = true;
+    child.range = 0f;
+    child.remainingFrames = child.nativeLifetimeFrames = Missile.nativeRangeFrames(row, child.damageLevel);
+    child.tickInterval = 1;
+    child.damageSnapshot = source.damageSnapshot;
+    child.fixedElementalRate = source.fixedElementalRate;
+    child.fixedElementalType = source.fixedElementalType;
+    child.elementalMinRateFixed = source.elementalMinRateFixed;
+    child.elementalMaxRateFixed = source.elementalMaxRateFixed;
+    child.elementalPiercePercent = source.elementalPiercePercent;
+    child.elementalDamageRate = row.DamageRate;
+    child.elementalAttackerPlayer = source.elementalAttackerPlayer;
+    if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
+  }
+
   /** D2MOO SrvDo02/SrvHit02 poison-javelin cloud creation. */
   private void spawnPoisonCloud(Missile source, Vector2 origin) {
     if (factory == null || source == null || source.missile == null) return;
@@ -3696,6 +3756,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     cloud.nativeLifetimeFrames = poisonCloudLifetime(row, loops);
     cloud.poisonCloudTarget.set(origin).add(offsetX, offsetY);
     cloud.poisonCloudTraveling = true;
+    // Preserve the ring's target direction before fp16 velocity truncation.
+    // The client resolves PoisonSparks cells from this path facing.
+    if (mAngle.has(id)) mAngle.get(id).set(new Vector2(offsetX, offsetY).nor());
     configurePersistentPoisonCloud(cloud, skill);
     int speedParam = arrayValue(row.Param, subRing ? 1 : 0);
     if (mVelocity.has(id)) {
@@ -3717,7 +3780,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   private void configurePersistentPoisonCloud(Missile cloud, Skills.Entry sourceSkill) {
     if (cloud == null || cloud.missile == null) return;
-    Attributes ownerAttrs = mAttributesWrapper.has(cloud.ownerId)
+    Attributes ownerAttrs = cloud.ownerId >= 0 && mAttributesWrapper.has(cloud.ownerId)
         ? mAttributesWrapper.get(cloud.ownerId).attrs : null;
     Skills.Entry damageSkill = sourceSkill;
     if ((damageSkill == null || !"pois".equalsIgnoreCase(damageSkill.EType))
@@ -3727,7 +3790,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     if (!cloud.damageSnapshot && damageSkill != null) {
       MissileDamageResolver.initializeSkillPoisonArea(files(),
-          cloud, damageSkill, ownerAttrs, mPlayer.has(cloud.ownerId),
+          cloud, damageSkill, ownerAttrs, cloud.ownerId >= 0 && mPlayer.has(cloud.ownerId),
           Math.max(1, cloud.damageLevel),
           name -> baseSkillLevel(cloud.ownerId, name));
     }

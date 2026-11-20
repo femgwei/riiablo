@@ -671,10 +671,8 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // NetworkIdManager or it will alias every local projectile.
     if (mNetworked.has(id)) mNetworked.remove(id);
     Missile missileWrapper = mMissile.get(id);
-    // Keep the authoritative Plague Javelin root DCC visible: it is the
-    // actual projectile sprite. The presentation-only plaguejavcloud layer
-    // is filtered separately in MissileLoader to remove only the duplicate
-    // trail sprite while preserving its CltDo4 smoke callback.
+    // Both the javelin and the independent stationary PoisonSparks trails
+    // have visible DCC layers; their native clocks also run while loading.
     clientContext.assets().load(missileWrapper.missileDescriptor);
     mBox2DBody.create(id);
 

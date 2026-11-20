@@ -1,0 +1,263 @@
+{
+  "schema": 1,
+  "run_id": "20261120-145902-b4b8d5b0",
+  "background_verified": true,
+  "scope": "one direction, level one, no synergies; runtime units/DCC submissions and headless production replay; no GPU/target damage parity",
+  "production_skill_fixes_applied": true,
+  "fixture_sha256": "9076853f3a958b5bbf9d15ba0fc6c26abbdeb411628f96f6c837093d0b44cc56",
+  "replay_sha256": "9da0843a5ff25539fd849955c14a4c449a19360f09385acb6d6d1aef5454b72b",
+  "original": {
+    "client_counts": {
+      "firewall": 8,
+      "firesmall": 7,
+      "firemedium": 4,
+      "moltenboulder": 1,
+      "moltenboulderemerge": 1,
+      "moltenboulderexplode": 1,
+      "moltenboulderfirepath": 18,
+      "moltenboulder-flyingrocks": 9
+    },
+    "rolling_step_fixed": 12288,
+    "rolling_speed_subtiles_per_second": 4.6875,
+    "rolling_lifetime": 100,
+    "emerge_lifetime": 5,
+    "trail_count": 19,
+    "trail_lifetimes": [
+      90
+    ],
+    "trail_variants": {
+      "firewall": 8,
+      "firesmall": 7,
+      "firemedium": 4
+    },
+    "endpoint_fire_count": 18,
+    "endpoint_fire_lifetime": 37,
+    "fragment_count_observed": 9,
+    "fragment_lifetimes": [
+      14,
+      19,
+      22,
+      24,
+      28,
+      32,
+      36,
+      38,
+      39
+    ],
+    "server_fire_lifetimes": {
+      "37": 19,
+      "7": 18
+    }
+  },
+  "production": {
+    "rolling_speed_subtiles_per_second": 4.6875,
+    "speed_shortfall_percent": 0.0,
+    "visual_trail_count": 19,
+    "visual_trail_duration": 3.6,
+    "visual_trail_type": "firemedium",
+    "visual_trail_variants": {
+      "firemedium": 4,
+      "firewall": 8,
+      "firesmall": 7
+    },
+    "server_fire_lifetimes": {
+      "37": 19,
+      "7": 18
+    },
+    "endpoint_fire_count": 18,
+    "endpoint_fire_duration": 1.48,
+    "fragment_count": 9,
+    "fragment_lifetimes": [
+      14,
+      19,
+      22,
+      24,
+      28,
+      32,
+      36,
+      38,
+      39
+    ],
+    "paired_rolling_sprite_samples": 80,
+    "rolling_frame_mismatches": 0,
+    "rolling_frame_mismatch_sample_indices": []
+  },
+  "limitations": [
+    "Single level-one, no-synergy cast in one direction; not all directions or skill levels",
+    "Original client and server updates are asynchronous; sample game_frame is the server clock",
+    "current_frame retains native field +0x10, which counts down in these observed missiles",
+    "Cache-miss draws without the selected breakpoint are retained raw, excluded from selection oracle",
+    "No controlled targets/damage/collision or pixel equivalence demonstrated"
+  ],
+  "checks": {
+    "rolling_speed": true,
+    "rolling_sprite_frames": true,
+    "trail_count": true,
+    "trail_variants": true,
+    "trail_lifetime": true,
+    "endpoint_fire_count": true,
+    "endpoint_fire_lifetime": true,
+    "server_fire_lifetimes": true,
+    "fragment_count": true,
+    "fragment_lifetimes": true
+  },
+  "findings": [
+    "rolling_speed: matched retained cast",
+    "rolling_sprite_frames: matched retained cast",
+    "trail_count: matched retained cast",
+    "trail_variants: matched retained cast",
+    "trail_lifetime: matched retained cast",
+    "endpoint_fire_count: matched retained cast",
+    "endpoint_fire_lifetime: matched retained cast",
+    "server_fire_lifetimes: matched retained cast",
+    "fragment_count: matched retained cast",
+    "fragment_lifetimes: matched retained cast"
+  ],
+  "junit": {
+    "tests": 74,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "classes": [
+      {
+        "class": "com.riiablo.engine.server.DruidFirestormIntegrationTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.engine.server.FirestormGroundDamageTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.engine.server.MoltenBoulderLifecycleTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.engine.server.NativeAmazonPoisonJavelinDataTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.engine.server.PlagueJavelinGoldenDamageTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.engine.server.PoisonJavelinGoldenDamageTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.engine.server.PoisonJavelinOriginalMotionTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.presentation.FirestormOriginalParityTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.presentation.MoltenBoulderOriginalParityTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.presentation.OriginalFirestormFixtureTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.presentation.OriginalMoltenBoulderFixtureTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.presentation.PlagueJavelinOriginalTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.presentation.PlagueJavelinPresentationLifecycleTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.presentation.PoisonJavelinOriginalClientTrailTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.presentation.PoisonJavelinOriginalSpriteTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.presentation.ReferenceElementalPresentationTest",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.riiablo.save.OriginalPoisonJavelinFixtureTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "log": "tools/original-observer/molten-fix-final-tests.log"
+  },
+  "native_callback_samples": {
+    "ground_fire_cursors": 2347,
+    "flying_rock_cursors": 242,
+    "boulder_and_rock_dcc_directions": 200
+  },
+  "rng_scope": "Rolling seed aligns trail choices and fragment targets. Fire cursor tests inject complete pre-random low/high seed; other client RNG users and global unit allocator are not replayed.",
+  "foreground_game_started_for_fix_validation": false,
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/engine/server/missile/NativeMoltenBoulder.java": "b7e3a2b9e8acc907ec45b7de33b0be4a0ad5e886a0c42cf64bf231f623241457",
+    "core/src/main/java/com/riiablo/engine/server/ServerEntityFactory.java": "20ba1fdb4f5c7beb5eeb58dafe0cd00db623a1273cb220bfd64cc58511c9fe11",
+    "core/src/main/java/com/riiablo/engine/server/MissileCollisionSystem.java": "456d310dc2eb80bde8a2314df3bcc75ca43f1a5b3dad7c778f16de79a91066de",
+    "core/src/main/java/com/riiablo/presentation/NativeMoltenBoulderPresentation.java": "155c0fd408026e767b941eef486ff6d5a0f2cb076d42f8485b77a65d8f5b000c",
+    "core/src/main/java/com/riiablo/presentation/NativeFirestormPresentation.java": "9f9819e08ac5091240624ac3667a78cbf586b8c7e4b53d5b44945e3adae247d9",
+    "core/src/main/java/com/riiablo/presentation/ReferenceElementalPresentationSystem.java": "607ab13faa2279ace5a3ddf1170e1e4f9ebf990d947a1576e2a5d41263bbaa11",
+    "core/src/main/java/com/riiablo/presentation/AnimationStepper.java": "be00fd77840092060cec5c818b06dc26c80463ffd1e86c908cb393183488be8f",
+    "core/src/main/java/com/riiablo/presentation/MissileLoader.java": "f451623990fd2a3c52018950612537aa2d709fe8fec7b18adadd7caf5424a469",
+    "core/src/main/java/com/riiablo/presentation/DirectionResolver.java": "431a0fcbd4d8ce1890ad59623b1fdc72f5300e5790997624975f2d456c2748a1",
+    "core/src/test/java/com/riiablo/presentation/MoltenBoulderOriginalParityTest.java": "240b2c7e7a0cd91ff11edb00d480c2497196050f256f78be523b1d9b8c3e0d96"
+  }
+}

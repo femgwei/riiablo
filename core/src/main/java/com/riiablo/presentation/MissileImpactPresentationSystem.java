@@ -1,5 +1,6 @@
 package com.riiablo.presentation;
 
+import com.riiablo.engine.server.missile.NativeFirestormMotion;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
@@ -77,6 +78,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         world.getSystem(ReferenceElementalPresentationSystem.class);
     if (referenceElemental != null && referenceElemental.ownsPresentation(entityId)) return;
     Missile visual = mMissile.get(entityId);
+    if (NativeFirestormPresentation.serverGround(visual)) return;
+    if (NativeFirestormMotion.maker(visual.missile)) {
+      processFirestormMaker(entityId, visual);
+      return;
+    }
     if (isFireWallMaker(visual)) {
       // Local authority has a separate presentation-only maker created by
       // SkillCastHandler. The authoritative maker remains combat-only.
@@ -99,16 +105,17 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
             || visual.missile.pCltDoFunc == 17 || visual.missile.pCltDoFunc == 18
             || visual.missile.pCltDoFunc == 15 || visual.missile.pCltDoFunc == 3
             || visual.missile.pCltDoFunc == 4 || MissileLoader.isPoisonSmokePuff(visual.missile)
-            || MissileLoader.isBoneSpearTrail(visual.missile));
+             || MissileLoader.isBoneSpearTrail(visual.missile)
+             || NativeFirestormPresentation.handles(visual));
     if (!mAnimationWrapper.has(entityId) && !callbackClock) return;
     float delta = Math.max(0f, world.delta);
     Vector2 velocity = mVelocity.get(entityId).velocity;
     float distance = velocity.len() * delta;
 
     // pCltDoFunc is a client presentation callback and must run for both
-    // network replicas and the local authoritative simulation.  The latter
-    // is the normal single-player path: the server creates the PoisonSparks
-    // cloud, while this system supplies the separate PoisonSmokePuff layer.
+    // network replicas and the local authoritative simulation. Poison Javelin
+    // creates independent visual clouds here; its damage carriers do not run
+    // a second smoke callback. Other cloud families keep their existing route.
     // The client callback owns an independent frame clock because the server
     // simulation advances nativeFrame before this presentation system runs.
     if (!visual.presentationOnly) {
@@ -215,6 +222,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       Vector2 velocity, float delta) {
     Missiles.Entry source = visual.missile;
     if (source == null) return;
+    if (NativePoisonJavelinPresentation.serverTrailCloud(visual)) return;
+    if (com.riiablo.engine.server.missile.NativePoisonJavelinMotion.handles(source)) {
+      processPoisonJavelinTrail(entityId, visual, velocity, delta);
+      return;
+    }
     int function = source.pCltDoFunc;
     if (function == 24) {
       // Sorceress Inferno's CltDo24 mutates the resident flame DCC (A/B
@@ -371,6 +383,61 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     if (maker.presentationOnly && currentFrame >= lifetime) world.delete(entityId);
   }
 
+  /** CltDo6: emit from a changed path cell, preserving the parent's precision. */
+  private void processFirestormMaker(int id, Missile maker) {
+    int elapsed = Math.max(1, Math.round(Math.max(0, world.delta) * 25f));
+    int end = maker.authoritative ? maker.nativeFrame : Math.max(maker.nativeFrame, maker.clientFrame + elapsed);
+    Vector2 current = mPosition.get(id).position;
+    if (!maker.clientFlightInitialized) {
+      maker.clientPathX = NativeFirestormMotion.cell(current.x);
+      maker.clientPathY = NativeFirestormMotion.cell(current.y);
+      maker.clientFlightInitialized = true;
+      // A late replica begins at its accepted snapshot, never at a guessed origin.
+      if (!maker.authoritative) maker.clientFrame = end;
+    }
+    if (maker.authoritative) {
+      for (int frame = maker.clientFrame; frame < end; frame++) {
+        if (frame <= 0) continue;
+        NativeFirestormMotion.Sample at =
+            NativeFirestormMotion.sample(maker, frame);
+        if (at.crossedCell(NativeFirestormMotion.sample(maker, frame - 1))) {
+          createFirestormVisual(maker, at.position(new Vector2()), at.x, at.y, true);
+        }
+      }
+    } else {
+      int x = NativeFirestormMotion.cell(current.x);
+      int y = NativeFirestormMotion.cell(current.y);
+      if (x != maker.clientPathX || y != maker.clientPathY) {
+        com.riiablo.engine.server.component.Position position = mPosition.get(id);
+        createFirestormVisual(maker, new Vector2(current),
+            position.hasNativePrecision() ? position.nativePrecisionX() : 0,
+            position.hasNativePrecision() ? position.nativePrecisionY() : 0, position.hasNativePrecision());
+      }
+      maker.clientPathX = x;
+      maker.clientPathY = y;
+    }
+    maker.clientFrame = end;
+  }
+
+  private void createFirestormVisual(Missile maker, Vector2 at, int precisionX, int precisionY,
+      boolean precisionKnown) {
+    String name = first(maker.missile.CltSubMissile, 0);
+    if (name == null || factory == null) return;
+    // CltParam1 samples light allocation; it never suppresses the sprite.
+    int lightInterval = cltParam(maker.missile, 0, 0);
+    if (lightInterval > 0) nextClientRandom(maker, lightInterval);
+    int childId = createFlightVisual(maker.missile, name, at, Vector2.X);
+    if (childId < 0 || !mMissile.has(childId)) return;
+    Missile child = mMissile.get(childId);
+    child.skillId = maker.skillId;
+    child.damageLevel = maker.damageLevel;
+    child.range = 0f;
+    child.nativeLifetimeFrames = Missile.nativeRangeFrames(child.missile, child.damageLevel);
+    if (precisionKnown && at.x >= 0 && at.y >= 0) mPosition.get(childId).setNativePrecision(precisionX, precisionY);
+    else { mPosition.get(childId).invalidateNativePrecision(); mPosition.get(childId).position.set(at); }
+    mVelocity.get(childId).velocity.setZero();
+  }
+
   private static boolean isFireWallMaker(Missile missile) {
     return missile != null && missile.missile != null
         && missile.skillId == SkillId.FIRE_WALL
@@ -518,6 +585,69 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     }
   }
 
+  /**
+   * Independent CltDo3 trail. The first observed client path initializes the
+   * movement flag; later integer-cell changes create stationary visual clouds.
+   * The authoritative clouds remain collision/damage carriers only.
+   */
+  private void processPoisonJavelinTrail(int entityId, Missile root, Vector2 velocity, float delta) {
+    if (factory == null) return;
+    int previous = root.clientFrame;
+    if (previous == 0 && root.nativeFrame == 0
+        && (root.authoritative || root.clientSnapshotKnown)) return;
+    int end = root.authoritative ? root.nativeFrame
+        : Math.max(root.nativeFrame, previous + Math.max(1, Math.round(delta * 25f)));
+    // The terminal update removes the head before another flight callback.
+    int lifetime = root.nativeLifetimeFrames > 0 ? root.nativeLifetimeFrames : root.missile.Range;
+    end = Math.min(end, Math.max(0, lifetime - 1));
+    if (end <= previous) return;
+    Position position = mPosition.get(entityId);
+    String childName = first(root.missile.CltSubMissile, 0);
+    if (childName == null || childName.isEmpty()) return;
+    int stepX = NativePoisonMissileMotion.frameStep(velocity.x);
+    int stepY = NativePoisonMissileMotion.frameStep(velocity.y);
+    int sampleFrame = root.authoritative || root.clientSnapshotKnown ? root.nativeFrame : end;
+    // Server checkpoints preserve the callback clock, but intentionally omit
+    // the last observed client path cell. Rebuild it without emitting a cloud.
+    int begin = previous > 0 && root.clientSampleFrame < 0 ? previous : previous + 1;
+    if (begin == previous) root.clientFlightInitialized = false;
+    for (int frame = begin; frame <= end; frame++) {
+      int x, y;
+      if (position.hasNativePrecision()) {
+        x = (position.nativePrecisionX() + stepX * (frame - sampleFrame)) >>> 16;
+        y = (position.nativePrecisionY() + stepY * (frame - sampleFrame)) >>> 16;
+      } else {
+        x = MathUtils.floor(position.position.x + .5f + stepX * (frame - sampleFrame) / 65536f);
+        y = MathUtils.floor(position.position.y + .5f + stepY * (frame - sampleFrame) / 65536f);
+      }
+      boolean moved = root.clientFlightInitialized && (x != root.clientPathX || y != root.clientPathY);
+      root.clientFlightInitialized = true;
+      root.clientPathX = x;
+      root.clientPathY = y;
+      root.clientFrame = frame;
+      if (!moved) continue;
+      int id = createFlightVisual(root.missile, childName, new Vector2(x, y), Vector2.Zero);
+      if (id < 0 || !mMissile.has(id)) continue;
+      Missile cloud = mMissile.get(id);
+      cloud.skillId = root.skillId;
+      cloud.damageLevel = root.damageLevel;
+      // Poison Javelin uses zero; Plague's client helper adds two loops per
+      // additional skill level. Keep this independent of the hit ring's loops.
+      cloud.poisonCloudLoops = "plaguejavelin".equalsIgnoreCase(root.missile.Missile)
+          && cloud.missile.SubLoop > 0 ? 2 * Math.max(0, root.damageLevel - 1) : 0;
+      cloud.range = 0;
+      cloud.nativeLifetimeFrames = Math.max(1, cloud.missile.Range
+          + cloud.poisonCloudLoops * Math.max(0, cloud.missile.SubStop - cloud.missile.SubStart));
+      mVelocity.get(id).velocity.setZero();
+      if (x >= 0 && x <= 0xFFFF && y >= 0 && y <= 0xFFFF)
+        mPosition.get(id).initializeNativeCell(x, y);
+      seedFlightChild(root, cloud, frame);
+      agePoisonVisual(id, end - frame);
+    }
+    root.clientSampleFrame = end;
+    root.clientSamplePosition.set(position.position);
+  }
+
   private void processPoisonFlight(int entityId, Missile visual, Missiles.Entry source,
       Vector2 velocity, float delta) {
     processPoisonFlight(entityId, visual, source, velocity, delta, 0);
@@ -525,7 +655,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   private void processPoisonFlight(int entityId, Missile visual, Missiles.Entry source,
       Vector2 velocity, float delta, int historyAge) {
-    // SrvDo2 already supplies Poison Javelin's trail; Plague's SrvDo3 does not.
+    // Amazon poison javelins have their own precise trail path above.
+    // Preserve the legacy server-cloud policy for the other CltDo3 families.
     if (source.pCltDoFunc == 3 && source.pSrvDoFunc != 3) return;
     if (factory == null) return;
     String child = first(source.CltSubMissile, 0);
@@ -582,10 +713,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
             ? 2 * Math.max(0, visual.damageLevel - 1) : 0;
         cloud.nativeLifetimeFrames = Math.max(1, cloud.missile.Range
             + cloud.poisonCloudLoops * Math.max(0, cloud.missile.SubStop - cloud.missile.SubStart));
-        // Restore the previously validated moving presentation carrier.
-        // This is an ECS visual compatibility policy, NOT a claim that the
-        // native 0x8005 creation flag means velocity inheritance. Its base
-        // DCC remains hidden; only its smoke emitter follows this motion.
+        // Legacy non-Amazon CltDo3 carrier motion. Poison/Plague Javelin
+        // bypass this branch and create stationary trails above.
         mVelocity.get(id).velocity.set(velocity);
         seedFlightChild(visual, cloud, frame);
         agePoisonVisual(id, age);

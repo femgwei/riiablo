@@ -174,6 +174,41 @@ class MoltenBoulderLifecycleTest extends RiiabloTest {
     return id;
   }
 
+  @Test void naturalExpiryWithoutCollisionStillResolvesAreaDamageAndEighteenShortFires() {
+    EntityFactory factory = mock(EntityFactory.class);
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem(), factory).build()
+        .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      world.setDelta(1f / 25f);
+      int owner = world.create();
+      world.getMapper(Player.class).create(owner);
+      world.getMapper(Position.class).create(owner).position.set(1, 1);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(1000);
+      ArrayList<Integer> children = new ArrayList<>();
+      when(factory.createMissile(any(Missiles.Entry.class), any(Vector2.class),
+          any(Vector2.class), eq(owner), anyInt())).thenAnswer(call -> {
+            int id = create(world, call.getArgument(0), call.getArgument(2), call.getArgument(1), owner);
+            children.add(id); return id;
+          });
+      int victim = monster(world, 15, 10, false);
+      int id = create(world, Riiablo.files.Missiles.get("moltenboulder"), new Vector2(10, 10), Vector2.X, owner);
+      Missile rolling = world.getMapper(Missile.class).get(id);
+      rolling.nativeLifetimeFrames = 1;
+      world.getMapper(Velocity.class).get(id).velocity.setZero();
+      MissileDamageResolver.initializeSkill(Riiablo.files, rolling,
+          Riiablo.files.skills.get(SkillId.MOLTEN_BOULDER),
+          world.getMapper(AttributesWrapper.class).get(owner).attrs, 1, n -> 0);
+      world.process();
+      assertEquals(18, children.size());
+      float life = world.getMapper(AttributesWrapper.class).get(victim).attrs.get(Stat.hitpoints).asFixed();
+      assertTrue(life >= 976 && life <= 988, "NULL expiry applies one physical+fire area packet: " + life);
+      for (int child : children) assertEquals(7, world.getMapper(Missile.class).get(child).remainingFrames);
+      for (int tick = 0; tick < 8; tick++) world.process();
+      assertEquals(18, children.size(), "expiry cannot recursively fan out from its fire children");
+    } finally { world.dispose(); }
+  }
+
   private static Attributes attributes(float life) {
     Attributes attrs = Attributes.obtainStandard();
     attrs.base().clear();

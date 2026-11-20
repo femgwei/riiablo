@@ -1,0 +1,76 @@
+D2Client.dll sha256=94466b84c0593ab682f1d3d8dc65ef4f8170f33e430865d802bc752458b2b282
+0009d90e push esi
+0009d90f call 0x6fb6b550
+0009d914 mov ebx, eax
+0009d916 push esi
+0009d917 call 0x6fb6b4c6
+0009d91c xor edx, edx
+0009d91e cmp eax, ebx
+0009d920 setle dl
+0009d923 mov ebp, edx
+0009d925 test ebp, ebp
+0009d927 je 0x6fb3d945
+0009d929 push esi
+0009d92a call 0x6fb6b4d8
+0009d92f xor ecx, ecx
+0009d931 mov cl, byte ptr [edi + 0x135]
+0009d937 cmp eax, ecx
+0009d939 jle 0x6fb3d945
+0009d93b and dword ptr [esi + 0xc8], 0xfffbffff
+0009d945 push esi
+0009d946 call 0x6fb60150
+0009d94b test eax, eax
+0009d94d je 0x6fb3db74
+0009d953 test ebp, ebp
+0009d955 je 0x6fb3d975
+0009d957 mov al, byte ptr [edi + 0x137]
+0009d95d test al, al
+0009d95f jne 0x6fb3db1e
+0009d965 push esi
+0009d966 call 0x6fb6b400
+0009d96b test eax, eax
+0009d96d jne 0x6fb3d975
+0009d96f push esi
+0009d970 call 0x6fb6b3fa
+0009db1e mov al, byte ptr [edi + 0x180]
+0009db24 test al, al
+0009db26 je 0x6fb3d96f
+0009db2c xor ebx, ebx
+0009db2e push esi
+0009db2f mov bl, byte ptr [edi + 0x182]
+0009db35 call 0x6fb6b4c6
+0009db3a xor edx, edx
+0009db3c mov dl, byte ptr [edi + 0x178]
+0009db42 sub edx, ebx
+0009db44 inc edx
+0009db45 cmp eax, edx
+0009db47 jle 0x6fb3d96f
+0009db4d xor eax, eax
+0009db4f push ebx
+0009db50 mov al, byte ptr [edi + 0x181]
+0009db56 push eax
+0009db57 push esi
+0009db58 call 0x6fb6b538
+0009db5d jmp 0x6fb3d975
+000cb4c6 jmp dword ptr [0x6fb6d2ac] D2Common.dll#11124
+000cb538 jmp dword ptr [0x6fb6d260] D2Common.dll#10375
+D2Common.dll sha256=b9d1a27c6a35992932c7c47438d02e5269f878e899f6e614d507902cecd1beab
+Export #10375: advance 8.8 cursor, wrap at exclusive SubStop
+0007f020 mov eax, dword ptr [esp + 4]
+0007f024 mov ecx, dword ptr [esp + 0xc]
+0007f028 push esi
+0007f029 movsx edx, word ptr [eax + 0x4c]
+0007f02d mov esi, dword ptr [eax + 0x44]
+0007f030 add esi, edx
+0007f032 shl ecx, 8
+0007f035 mov edx, esi
+0007f037 mov dword ptr [eax + 0x44], esi
+0007f03a cmp edx, ecx
+0007f03c jl 0x6fdbf04c
+0007f03e mov esi, dword ptr [esp + 0xc]
+0007f042 shl esi, 8
+0007f045 sub esi, ecx
+0007f047 add esi, edx
+0007f049 mov dword ptr [eax + 0x44], esi
+0007f04c pop esi
+0007f04d ret 0xc

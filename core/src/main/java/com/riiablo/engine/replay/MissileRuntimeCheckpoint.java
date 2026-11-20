@@ -21,7 +21,7 @@ import java.util.*;
  * shared cast hit sets are rebound only after every entity has been assembled.
  */
 public final class MissileRuntimeCheckpoint {
-  private static final int VERSION = 4;
+  private static final int VERSION = 5;
   public static final int MAX_BYTES = 1024 * 1024;
   private static final int MAX_TARGETS = 65536;
   private final byte[] bytes;
@@ -53,7 +53,7 @@ public final class MissileRuntimeCheckpoint {
       "elementalMaxRateFixed", "elementalPiercePercent", "elementalDamageRate", "elementalAttackerPlayer", "fireWallMaker",
       "fireWallSegmentsCreated", "diabWallMaker", "diabWallMoved", "diabWallFire", "diabWallParentId",
       "diabWallCastId", "fixedPoisonRate", "poisonMinRateFixed", "poisonMaxRateFixed", "poisonDurationFrames",
-      "poisonPiercePercent", "poisonAttackerPlayer", "poisonCloudLoops", "poisonCloudTraveling", "targetId",
+      "poisonPiercePercent", "poisonAttackerPlayer", "poisonCloudLoops", "poisonCloudTraveling", "poisonTrailMoved", "targetId",
       "homing", "homingNextTurnFrame", "attachedEntityId", "attached", "nativeFrame",
       "clientFrame", "clientFlightInitialized", "clientSeed", "clientPathX", "clientPathY",
       "clientRecyclerVineSpawned", "clientRecyclerExplosionSpawned", "nativeLifetimeFrames",
@@ -108,6 +108,7 @@ public final class MissileRuntimeCheckpoint {
         out.writeInt(missile.frozenOrbVelocity);
         out.writeInt(missile.fireWallNextFrame);
         out.writeBoolean(missile.recyclerRecovered);
+        out.writeBoolean(missile.poisonTrailMoved);
         out.flush();
         result.put(id, fromBytes(bytes.toByteArray()));
       } catch (IOException impossible) { throw new IllegalStateException(impossible); }
@@ -519,6 +520,7 @@ public final class MissileRuntimeCheckpoint {
       m.frozenOrbVelocity = version >= 4 ? in.readInt() : 0;
       m.fireWallNextFrame = version >= 4 ? in.readInt() : 0;
       m.recyclerRecovered = version >= 4 && presence(in);
+      m.poisonTrailMoved = version >= 5 && presence(in);
       if (d.ownerLifetime > 2 || (d.ownerLifetime != 0 && m.ownerId < 0)
           || m.ownerId < -1 || m.nativeFrame < 0 || m.nativeLifetimeFrames < 0) {
         throw new IllegalArgumentException("missile runtime identity/clock");

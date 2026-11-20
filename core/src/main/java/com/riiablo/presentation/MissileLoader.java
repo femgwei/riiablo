@@ -1,5 +1,6 @@
 package com.riiablo.presentation;
 
+import com.riiablo.engine.server.missile.NativeFirestormMotion;
 import com.badlogic.gdx.Gdx;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -32,6 +33,8 @@ public class MissileLoader extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Missile missile = mMissile.get(entityId);
+    if (NativePoisonJavelinPresentation.serverTrailCloud(missile)) return;
+    if (NativeFirestormPresentation.serverGround(missile)) return;
     // Original Bone Spear trails first draw at age 1, after the head has
     // advanced away. Publishing age 0 here (including loadNow's warm-cache
     // path) draws a fresh trail over the head at the same position.
@@ -74,12 +77,6 @@ public class MissileLoader extends IteratingSystem {
     DCC celFile = clientContext.assets().get(missile.missileDescriptor);
 
     Missiles.Entry entry = visualRow;
-    // CltDo3's presentation-only plaguejavcloud is a callback carrier: its
-    // PoisonSparks base layer is the extra spear-like sprite seen travelling
-    // with the javelin. Keep the entity alive so MissileImpactPresentationSystem
-    // can run CltDo4 and emit PoisonSmokePuff, but do not attach this base DCC.
-    if (missile.presentationOnly && entry != null
-        && "plaguejavcloud".equalsIgnoreCase(entry.Missile)) return;
     // One-shot impact DCCs are created and rendered in the same simulation
     // tick.  Preload their sole direction here instead of relying on the
     // lazy Layer.draw path, which can otherwise submit a region before the
@@ -156,7 +153,17 @@ public class MissileLoader extends IteratingSystem {
     initializePlayback(missile, entry, animation, initialFrame);
     
     // Set direction based on Angle component if available
-    if (mAngle.has(entityId)) {
+    int poisonDirection = NativePoisonJavelinPresentation.direction(missile,
+        mAngle.has(entityId) ? mAngle.get(entityId).angle : com.badlogic.gdx.math.Vector2.Zero,
+        animation.getNumDirections());
+    if (NativeMoltenBoulderPresentation.handles(missile) && mAngle.has(entityId)) {
+      animation.setDirection(NativeMoltenBoulderPresentation.direction(
+          mAngle.get(entityId).angle, animation.getNumDirections()));
+    } else if (poisonDirection >= 0) {
+      // Native stationary poison clouds retain path direction zero, which
+      // selects direction four in the eight-direction PoisonSparks DCC.
+      animation.setDirection(poisonDirection);
+    } else if (mAngle.has(entityId)) {
       float radians = mAngle.get(entityId).angle.angleRad();
       int direction = Direction.radiansToDirection(radians, animation.getNumDirections());
       animation.setDirection(direction);
@@ -176,6 +183,7 @@ public class MissileLoader extends IteratingSystem {
 
   static int nativeFrameDelta(ClientGameplayContext context, Missile missile,
       Missiles.Entry visualRow) {
+    if (NativeFirestormMotion.maker(missile.missile)) return 512;
     if (missile.skillId == 308 && missile.missile.Id == 502) {
       if (context == null || context.files() == null || context.files().skills == null) return 256;
       int speed = com.riiablo.engine.server.skill.SkillFormula.evaluate(
@@ -266,6 +274,19 @@ public class MissileLoader extends IteratingSystem {
       Animation animation, int initialFrame) {
     int frames = animation.getNumFramesPerDir();
     if (frames <= 0) return;
+    if (NativeFirestormPresentation.handles(missile)) {
+      NativeFirestormPresentation.initialize(missile, animation);
+      return;
+    }
+    if (NativeMoltenBoulderPresentation.handles(missile)) {
+      NativeMoltenBoulderPresentation.initialize(missile, animation);
+      return;
+    }
+    if (entry != null && ("poisonjavcloud".equalsIgnoreCase(entry.Missile)
+        || "plaguejavcloud".equalsIgnoreCase(entry.Missile))) {
+      NativePoisonJavelinPresentation.initializeCloud(missile, animation);
+      return;
+    }
     if (NativeGroundFirePresentation.handles(missile)) {
       NativeGroundFirePresentation.initialize(missile, animation);
       return;

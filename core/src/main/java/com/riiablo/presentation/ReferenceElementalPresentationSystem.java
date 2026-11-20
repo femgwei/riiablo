@@ -1,5 +1,11 @@
 package com.riiablo.presentation;
 
+import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.seed.Seed;
+import com.riiablo.engine.Direction;
+import com.riiablo.engine.server.missile.NativeMoltenBoulder;
+import com.riiablo.engine.server.missile.NativePoisonMissileMotion;
+import com.riiablo.util.EngineUtils;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
@@ -23,8 +29,8 @@ import com.riiablo.presentation.component.ReferenceElementalEffect;
 import com.riiablo.presentation.component.ReferenceElementalEmitter;
 
 /**
- * Sprite composition recovered from the reference APK's w/xne, Sne, Y4, Tbe,
- * Ebe and Abe helpers. Authoritative missiles still own all combat/lifetimes.
+ * Elemental sprites: audited 1.10f Boulder behavior alongside the reference
+ * APK's w/xne, Sne, Y4, Tbe, Ebe and Abe fallbacks. Combat stays authoritative.
  * Pixel offsets use the APK's downward screen Y, converted once at the boundary.
  */
 @All(Position.class)
@@ -105,6 +111,10 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
     if (mUnitStates.has(id)) updateHurricane(id);
     if (!mMissile.has(id)) return;
     Missile missile = mMissile.get(id);
+    if (NativeMoltenBoulder.isRolling(missile.missile)) {
+      updateBoulderTrail(id, missile);
+      return;
+    }
     if (isBlazeTrail(missile)) {
       updateBlazeTrail(id, missile);
       return;
@@ -168,7 +178,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
       falling("meteortail", at, .6f, -140, -356, 0, 44, age, null);
       falling("meteor", at, .6f, -140, -356, 0, 44, age, null);
       clock.next = Float.POSITIVE_INFINITY;
-    } else if ("firestormmaker".equals(name) || "moltenboulder".equals(name)) {
+    } else if ("firestormmaker".equals(name)) {
       boolean firestorm = "firestormmaker".equals(name);
       while (clock.next <= end + .00001f) {
         Vector2 trailAt = new Vector2(at);
@@ -236,6 +246,65 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
     clock.age = end;
   }
 
+  /** CltDo47 -> CltDo6 emits on path-cell crossings, with independent visual RNG. */
+  private void updateBoulderTrail(int id, Missile missile) {
+    ReferenceElementalEmitter clock = mEmitter.get(id);
+    Vector2 at = mPosition.get(id).position;
+    if (clock == null) {
+      clock = mEmitter.create(id);
+      clock.boulderSeed = new D2Seed(
+          missile.presentationSeedKnown ? missile.presentationSeed : missile.rngState, 666);
+      clock.boulderCellX = MathUtils.floor(at.x + .5f);
+      clock.boulderCellY = MathUtils.floor(at.y + .5f);
+      clock.boulderTime = Math.max(missile.nativeFrame, missile.clientFrame) / 25.0;
+      if (!missile.authoritative) clock.boulderFrame = Math.max(missile.nativeFrame, missile.clientFrame);
+    }
+    clock.boulderTime = Math.max(missile.nativeFrame / 25.0,
+        clock.boulderTime + Math.max(0, world.delta));
+    int end = missile.authoritative ? missile.nativeFrame
+        : Math.max(missile.nativeFrame, (int) (clock.boulderTime * 25 + .0001));
+    if (missile.authoritative) {
+      Vector2 velocity = mVelocity.has(id) ? mVelocity.get(id).velocity : Vector2.Zero;
+      int vx = NativePoisonMissileMotion.frameStep(velocity.x);
+      int vy = NativePoisonMissileMotion.frameStep(velocity.y);
+      int ox = NativePoisonMissileMotion.precision(missile.start.x);
+      int oy = NativePoisonMissileMotion.precision(missile.start.y);
+      for (int frame = clock.boulderFrame; frame < end; frame++) {
+        if (frame <= 0) continue;
+        int x = ox + vx * frame, y = oy + vy * frame;
+        if ((x >> 16) != ((x - vx) >> 16) || (y >> 16) != ((y - vy) >> 16))
+          boulderTrailFire(missile, clock, new Vector2(x / 65536f - .5f, y / 65536f - .5f));
+      }
+    } else {
+      int x = MathUtils.floor(at.x + .5f), y = MathUtils.floor(at.y + .5f);
+      if (x != clock.boulderCellX || y != clock.boulderCellY) boulderTrailFire(missile, clock, at);
+      clock.boulderCellX = x;
+      clock.boulderCellY = y;
+    }
+    clock.boulderFrame = end;
+    missile.clientFrame = end;
+  }
+
+  private void boulderTrailFire(Missile parent, ReferenceElementalEmitter clock, Vector2 at) {
+    // Native remainder 0 selects slot 1, 1 selects slot 2, 2 retains slot 0.
+    int choice = Seed.rollLimitedRandomNumber(clock.boulderSeed, 3);
+    int slot = (choice + 1) % 3;
+    String name = parent.missile.CltSubMissile[slot];
+    Missiles.Entry row = clientContext.files().Missiles.get(name);
+    if (row != null) boulderFire(name, at, row.Range,
+        (int) Seed.rollRandomNumber(clock.boulderSeed));
+  }
+
+  private ReferenceElementalEffect boulderFire(String name, Vector2 at, int frames, int seed) {
+    ReferenceElementalEffect effect = sprite(name, at, frames / 25f);
+    if (effect != null) {
+      effect.nativeBoulderFire = true;
+      effect.nativeSeed = seed;
+      applyAnimation(effect.entityId, effect);
+    }
+    return effect;
+  }
+
   private void updateHurricane(int id) {
     UnitStates states = mUnitStates.get(id);
     boolean active = states.stateList != null && states.stateList.hasState(StateId.HURRICANE);
@@ -287,7 +356,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
     switch (m.missile.Missile.toLowerCase(java.util.Locale.ROOT)) {
       case "meteorcenter": case "blizzardcenter":
       case "blizzard1": case "blizzard2": case "blizzard3": case "blizzard4":
-      case "firestormmaker": case "firestorm": case "moltenboulder": case "moltenboulderfirepath":
+      case "moltenboulder": case "moltenboulderfirepath":
       case "moltenboulderexplode":
       case "erruption center": case "erruption crack 1": case "erruption smoke 1":
       case "volcano": case "volcano debris 2": return true;
@@ -318,21 +387,21 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
     if (age >= duration) return; // A late baseline must not reignite expired visuals.
     double birth = presentationTime - age;
     Vector2 at = mPosition.get(id).position;
-    Vector2 screen = com.riiablo.util.EngineUtils.worldToScreenCoords(at, new Vector2());
+    Vector2 screen = EngineUtils.worldToScreenCoords(at, new Vector2());
     BlazeTrail trail = blazeTrails.get(missile.ownerId);
     // APK blaze.cast samples every .1s, requiring 14 pixels from the last cell.
     // Quantize that policy to the incoming 25Hz authoritative observations.
     if (trail != null && (birth - trail.birthTime < .1 - .00001
         || screen.dst2(trail.screen) < 14f * 14f)) return;
     int seed = missile.presentationSeedKnown ? missile.presentationSeed : missile.rngState;
-    com.d2moo.common.drlg.D2Seed visualSeed =
-        new com.d2moo.common.drlg.D2Seed(seed, 666);
-    int variant = com.d2moo.common.seed.Seed.rollLimitedRandomNumber(visualSeed, 3);
+    D2Seed visualSeed =
+        new D2Seed(seed, 666);
+    int variant = Seed.rollLimitedRandomNumber(visualSeed, 3);
     ReferenceElementalEffect effect = sprite(BLAZE_SPRITES[variant], at, duration);
     if (effect == null) return;
     effect.age = age;
     effect.fade = true;
-    effect.phase = com.d2moo.common.seed.Seed.rollLimitedRandomNumber(visualSeed, 25);
+    effect.phase = Seed.rollLimitedRandomNumber(visualSeed, 25);
     applyAnimation(effect.entityId, effect);
     if (trail == null) {
       trail = new BlazeTrail();
@@ -384,29 +453,54 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
     }
     if (name.matches("blizzard[1-4]") || "volcano debris 2".equals(name)) return true;
     if ("moltenboulder".equals(name)) {
-      // CltHit52 draws the rolling boulder's explicit explosion before the
-      // eight fragments.  The server event is presentation-only; damage and
-      // collision remain owned by the authoritative missile.
-      sprite("moltenboulderexplode", at, 16f / 25f);
-      for (int i = 0; i < 8; i++) {
-        ReferenceElementalEffect fragment = sprite("moltenboulder-flyingrocks", at, .5f);
-        if (fragment == null) continue;
-        float angle = i * MathUtils.PI2 / 8;
-        fragment.direction = i;
-        fragment.endOffset.set(MathUtils.cos(angle) * 70, -MathUtils.sin(angle) * 45);
-      }
-      // The reference client's final Ws(moltenboulderfirepath) cell remains
-      // on the ground after the boulder expires.  The native server may have
-      // already removed its damage child by the time this event is rendered,
-      // so retain the visual cell independently for the authored two seconds.
-      ReferenceElementalEffect fire = sprite("moltenboulderfirepath", at, 2f);
-      if (fire != null) {
-        fire.fade = true;
-        fire.phase = impactFirePhase(event.missileEntityId, at);
-      }
+      boulderImpact(source, event, at);
       return true;
     }
     return false;
+  }
+
+  private void boulderImpact(Missiles.Entry source, MissileImpactEvent event, Vector2 impact) {
+    // Expiry is dispatched before the normal presentation pass. Consume the
+    // final pre-movement callback too, including a crossing on native age 99.
+    Missile parent = event.missileEntityId >= 0 ? mMissile.get(event.missileEntityId) : null;
+    if (parent != null && parent.missile == source && mPosition.has(event.missileEntityId))
+      updateBoulderTrail(event.missileEntityId, parent);
+    Vector2 at = new Vector2(MathUtils.floor(impact.x + .5f), MathUtils.floor(impact.y + .5f));
+    ReferenceElementalEmitter clock = event.missileEntityId >= 0
+        ? mEmitter.get(event.missileEntityId) : null;
+    D2Seed seed = clock != null && clock.boulderSeed != null
+        ? clock.boulderSeed : new D2Seed(impactFirePhase(event.missileEntityId, at), 666);
+    // The null-CelFile explosion row is an invisible 13-tick carrier.
+    Missiles.Entry explode = clientContext.files().Missiles.get("moltenboulderexplode");
+    sprite("moltenboulderexplode", at, explode.Range / 25f);
+    int attempts = Math.max(0, source.cHitPar[0]);
+    int radius = attempts * 2;
+    int speed = (Math.max(1, source.cHitPar[1]) << 8) * 75 / 100;
+    for (int i = 0; i < attempts; i++) {
+      int dx = Seed.rollLimitedRandomNumber(seed, radius * 2 + 1) - radius;
+      int dy = Seed.rollLimitedRandomNumber(seed, radius * 2 + 1) - radius;
+      int distance = NativeMoltenBoulder.distance(dx, dy);
+      if (distance <= 3) continue;
+      int frames = Math.max(1, (distance << 16) / (16 * speed));
+      Vector2 v = NativePoisonMissileMotion.velocity(
+          Vector2.Zero, new Vector2(dx, dy), speed, new Vector2());
+      ReferenceElementalEffect fragment = sprite("moltenboulder-flyingrocks", at, frames / 25f);
+      if (fragment == null) continue;
+      fragment.nativeBoulderRock = true;
+      // Creation flag 0x100 overrides visual facing with (targetX+targetY)&63;
+      // it deliberately leaves the physical direction vector unchanged.
+      fragment.direction = NativeMoltenBoulderPresentation.pathDirection(
+          Math.round(at.x) + dx + Math.round(at.y) + dy, 8);
+      EngineUtils.worldToScreenCoords(new Vector2(v).scl(frames / 25f), fragment.endOffset);
+    }
+    for (int i = 0; i < NativeMoltenBoulder.FIRE_X.length; i++) {
+      Vector2 cell = new Vector2(at).add(
+          NativeMoltenBoulder.FIRE_X[i],
+          NativeMoltenBoulder.FIRE_Y[i]);
+      boulderFire("moltenboulderfirepath", cell,
+          clientContext.files().Missiles.get("moltenboulderfirepath").Range,
+          (int) Seed.rollRandomNumber(seed));
+    }
   }
 
   private void groundFire(String name, Vector2 at, float duration, ReferenceElementalEmitter clock) {
@@ -419,13 +513,6 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
 
   private static int groundFirePhase(String name, ReferenceElementalEmitter clock) {
     int phase = (int) (random(clock) * 25);
-    if ("moltenboulderfirepath".equals(name)) {
-      // Ws samples a fresh phase for every cell.  Keep the deterministic
-      // visual RNG, while preventing adjacent boulder cells from repeatedly
-      // landing on the same loop frame in a sparse network snapshot.
-      if (phase == clock.lastBoulderFirePhase) phase = (phase + 7) % 25;
-      clock.lastBoulderFirePhase = phase;
-    }
     return phase;
   }
 
@@ -496,7 +583,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
 
   private void updateEffect(int id, ReferenceElementalEffect e, float delta) {
     e.age += delta;
-    if (e.age >= e.duration) {
+    if (e.age + .00001f >= e.duration) {
       if (e.landing != null) {
         sprite(e.landing, e.origin, "volcano explosion".equals(e.landing) ? .72f : .64f);
         if ("volcano explosion".equals(e.landing)) sprite("volcano small fire", e.origin, .72f);
@@ -512,7 +599,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
       return;
     }
     sample(e, e.age);
-    if (mMissile.has(id)) mMissile.get(id).nativeFrame = (int) (e.age * 25);
+    if (mMissile.has(id)) mMissile.get(id).nativeFrame = (int) (e.age * 25 + .0001f);
     applyAnimation(id, e);
   }
 
@@ -524,14 +611,20 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
       // Convert screen tangent into the host world axes before DCC selection.
       Vector2 tangent = pixelOffset(Vector2.Zero, -MathUtils.sin(angle) * e.spin,
           MathUtils.cos(angle) * .5f * e.spin, new Vector2());
-      e.direction = com.riiablo.engine.Direction.radiansToDirection(tangent.angleRad(), 8);
+      e.direction = Direction.radiansToDirection(tangent.angleRad(), 8);
     } else {
       e.offset.set(e.startOffset).lerp(e.endOffset, MathUtils.clamp(age / e.duration, 0, 1));
     }
   }
 
   private void applyAnimation(int id, ReferenceElementalEffect e) {
-    if (e.orbit) {
+    if (e.nativeBoulderRock) {
+      float fraction = MathUtils.clamp(e.age / e.duration, 0, 1);
+      mPosition.get(id).invalidateNativePrecision();
+      pixelOffset(e.origin, e.endOffset.x * fraction, -e.endOffset.y * fraction,
+          mPosition.get(id).position);
+      e.offset.setZero();
+    } else if (e.orbit) {
       float angle = e.angle + e.spin * e.age;
       mPosition.get(id).invalidateNativePrecision();
       pixelOffset(e.origin, MathUtils.cos(angle) * e.radius,
@@ -544,7 +637,11 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
     int frames = animation.getNumFramesPerDir();
     if (frames <= 0) return;
     animation.setMode(Animation.Mode.CLAMP);
-    animation.setFrame(frameAt(e, frames));
+    int age = Math.max(0, (int) (e.age * 25 + .0001f));
+    animation.setFrame(e.nativeBoulderFire ? NativeFirestormPresentation.groundFrame(
+        mMissile.get(id).missile, Math.round(e.duration * 25), e.nativeSeed, frames, age, true)
+        : e.nativeBoulderRock ? NativeMoltenBoulderPresentation.rockFrame(
+            frames, Math.round(e.duration * 25), age) : frameAt(e, frames));
     animation.setDirection(Math.floorMod(e.direction, Math.max(1, animation.getNumDirections())));
     if (animation.getLayer(0) != null) {
       String name = mMissile.get(id).missile.Missile;

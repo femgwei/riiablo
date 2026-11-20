@@ -11,6 +11,7 @@ public class ReferenceElementalEmitter extends Component {
   public boolean initialized, hurricane;
   /** Reference Firestorm's three slightly diverging flame streams. */
   public float firestormLaneAngle;
-  /** Last boulder ground-fire phase, used to avoid visually locked cells. */
-  public int lastBoulderFirePhase = -1;
+  public com.d2moo.common.drlg.D2Seed boulderSeed;
+  public int boulderFrame, boulderCellX, boulderCellY;
+  public double boulderTime;
 }
