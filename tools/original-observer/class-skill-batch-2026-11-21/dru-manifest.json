@@ -962,11 +962,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "wolf_keyframe_rollback_and_combo_exit_headless_validated",
       "batch_evidence": null,
       "comparison_evidence": null,
       "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "execution_readiness": "needs_private_desktop_fury_rollback_runtime_capture",
       "resource_paths": [],
       "required_observations": [
         "caster_mode_sequence",
@@ -975,7 +975,15 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "intermediate_strikes_rewind_at_keyframe_instead_of_endanim",
+        "analysis": "docs/druid-fury-presentation-analysis-2026-11-24.md",
+        "validation": "tools/original-observer/fury-presentation-validation-2026-11-24.json",
+        "validated": "32 JDK 17 tests passed. Real wolf A1 stepping: 2/5 attempts, immediate intermediate rollback, final tail/NU, retarget after death, no phantom strikes after all targets die, incrementing same-mode CofReferenceP restart IDs.",
+        "remaining": "Exact original event/GPU birth/rollback phase and CltSt53/CltDo21 presentation; Full weapons/IAS/werewolf state modifier matrix; Real network playback and cross-entity lifetime/path edge cases; Non-retail partial rollback uses local fixed cursor approximation; only retail 100 percent verified",
+        "evidence_scope": "Effective local MPQ tables, real AnimData-driven wolf A1 keyframes, public reconstructed D2MOO source and production headless action/sequence/combat plus CofReference packet tests. No original runtime, GPU drawing or live socket session."
+      }
     },
     {
       "skill_id": 249,

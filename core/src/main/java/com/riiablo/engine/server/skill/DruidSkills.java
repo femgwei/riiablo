@@ -826,10 +826,16 @@ public final class DruidSkills {
         skill.calc2, skill, Math.max(1, skillLevel)) : 0;
   }
 
-  /** Temporary attack-rate stat installed between native Fury strikes. */
-  public static int getFuryRepeatAttackRate(Skills.Entry skill) {
+  /** SrvDo013 passes Param2 to SUNIT_RewindAnimationByPercentage, not to attack rate. */
+  public static int getFuryRollbackPercent(Skills.Entry skill) {
     return isFury(skill) && skill.Param != null && skill.Param.length > 1
-        ? skill.Param[1] : 0;
+        ? Math.max(0, Math.min(100, skill.Param[1])) : 0;
+  }
+
+  /** @deprecated Param2 describes frame rollback, not increased attack speed. */
+  @Deprecated
+  public static int getFuryRepeatAttackRate(Skills.Entry skill) {
+    return getFuryRollbackPercent(skill);
   }
 
   /**

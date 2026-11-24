@@ -1800,10 +1800,10 @@ public class Actioneer extends PassiveSystem {
             casting.targetVec.set(mPosition.get(resolvedTarget).position);
           }
           log.info("[DRUID_FURY] phase=start source={} skill={} level={} target={} "
-                  + "strikes={} damagePercent={} attackRate={}",
+                  + "strikes={} damagePercent={} rollbackPercent={}",
               entityId, casting.skillId, level, resolvedTarget, strikes,
               DruidSkills.getFuryDamagePercent(skill, level),
-              DruidSkills.getFuryRepeatAttackRate(skill));
+              DruidSkills.getFuryRollbackPercent(skill));
           break;
         }
         if (skill == null || skill.srvdofunc != 109) break;
@@ -3994,14 +3994,18 @@ public class Actioneer extends PassiveSystem {
       casting.targetId = next;
       if (mPosition.has(next)) casting.targetVec.set(mPosition.get(next).position);
     }
+    if (next != Engine.INVALID_ENTITY) {
+      SequenceHandler sequences = world.getSystem(SequenceHandler.class);
+      if (sequences != null) sequences.rewindFuryAnimation(entityId);
+    }
     log.info("[DRUID_FURY] phase=strike source={} index={} target={} result={} "
             + "damage={} hp={} -> {} damageRange={}..{} attackRating={} chance={} "
-            + "remaining={} nextTarget={} attackRate={}",
+            + "remaining={} nextTarget={} rollbackPercent={}",
         entityId, strike, current,
         combat.blocked ? "blocked" : combat.hit ? "hit" : "miss",
         applied, before, hp != null ? hp.asFixed() : before,
         damage[0], damage[1], attackRating, combat.hitChance,
-        casting.furyRemainingStrikes, next, DruidSkills.getFuryRepeatAttackRate(skill));
+        casting.furyRemainingStrikes, next, DruidSkills.getFuryRollbackPercent(skill));
   }
 
   /** Native SrvDo122: wolf/bear melee hit with post-hit life/mana steal. */

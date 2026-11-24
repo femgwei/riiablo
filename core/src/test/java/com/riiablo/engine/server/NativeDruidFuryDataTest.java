@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 /** Locks Fury's SrvSt37/SrvDo013 formulas to the native Skills.txt row. */
 class NativeDruidFuryDataTest extends RiiabloTest {
   @Test
-  void furyUsesNativeShapeCountDamageAndAttackRateColumns() {
+  void furyUsesNativeShapeCountDamageAndRollbackColumns() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.FURY);
     assertNotNull(skill);
     assertEquals("Fury", skill.skill);
@@ -34,6 +34,6 @@ class NativeDruidFuryDataTest extends RiiabloTest {
     assertEquals(5, DruidSkills.getFuryHitCount(skill, 20));
     assertEquals(100, DruidSkills.getFuryDamagePercent(skill, 1));
     assertEquals(117, DruidSkills.getFuryDamagePercent(skill, 2));
-    assertEquals(100, DruidSkills.getFuryRepeatAttackRate(skill));
+    assertEquals(100, DruidSkills.getFuryRollbackPercent(skill));
   }
 }

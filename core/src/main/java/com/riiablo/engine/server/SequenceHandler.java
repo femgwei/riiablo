@@ -354,6 +354,31 @@ public class SequenceHandler extends IteratingSystem {
     return -1;
   }
 
+  /** Native SrvDo013 rewinds at the action event, before playing the final tail. */
+  void rewindFuryAnimation(int entityId) {
+    Sequence sequence = mSequence.get(entityId);
+    Casting casting = mCasting.get(entityId);
+    AnimData anim = mAnimData.get(entityId);
+    if (sequence == null || casting == null || anim == null
+        || casting.furyRemainingStrikes <= 0) return;
+    com.riiablo.codec.excel.Skills.Entry skill = files().skills.get(casting.skillId);
+    int percent = com.riiablo.engine.server.skill.DruidSkills.getFuryRollbackPercent(skill);
+    // Retail Fury uses 100%, so both native elapsed-time rollback and the
+    // local fixed-frame cursor restart at zero. Partial modded rollback
+    // retains the current cursor's fraction rather than treating it as IAS.
+    int frame = (int) ((long) Math.max(0, anim.frame) * (100 - percent) / 100);
+    int override = anim.override;
+    cofs.setMode(entityId, sequence.mode1, true);
+    anim = mAnimData.get(entityId);
+    anim.frame = frame;
+    anim.lastKeyframeIndex = Math.max(-1, (frame >>> 8) - 1);
+    anim.override = override;
+    sequence.started = true;
+    casting.furyStrikeProcessed = false;
+    log.info("[DRUID_FURY] phase=keyframe_rollback source={} remaining={} percent={} frame={}",
+        entityId, casting.furyRemainingStrikes, percent, frame);
+  }
+
   /** Restart Jab/Fend at the next attack window instead of replaying a full COF. */
   private void restartAmazonStrikeAnimation(int entityId, Casting casting,
       byte mode, String skillName) {

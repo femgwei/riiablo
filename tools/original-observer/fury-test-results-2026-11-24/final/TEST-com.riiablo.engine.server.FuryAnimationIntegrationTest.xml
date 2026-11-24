@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.FuryAnimationIntegrationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T03:31:04" hostname="DESKTOP-7GGAVHU" time="2.446">
+  <properties/>
+  <testcase name="[1] 1, false, false" classname="com.riiablo.engine.server.FuryAnimationIntegrationTest" time="2.208"/>
+  <testcase name="[2] 4, false, false" classname="com.riiablo.engine.server.FuryAnimationIntegrationTest" time="0.1"/>
+  <testcase name="[3] 4, true, false" classname="com.riiablo.engine.server.FuryAnimationIntegrationTest" time="0.055"/>
+  <testcase name="[4] 4, true, true" classname="com.riiablo.engine.server.FuryAnimationIntegrationTest" time="0.059"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3072 frames=3328 lastKeyframe=12
+FURY_ANIMATION level=1 killFirst=false removeAll=false frames=13 hit_ticks=[7, 14] finish_tick=20 targets=[1, 2]
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=1 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=1 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=1 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3072 frames=3328 lastKeyframe=12
+FURY_ANIMATION level=4 killFirst=false removeAll=false frames=13 hit_ticks=[7, 14, 21, 28, 35] finish_tick=41 targets=[1, 2, 1, 2, 1]
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3072 frames=3328 lastKeyframe=12
+FURY_ANIMATION level=4 killFirst=true removeAll=false frames=13 hit_ticks=[7, 14, 21, 28, 35] finish_tick=41 targets=[1, 2, 2, 2, 2]
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=keyframe entity=0 frame=7 keyframe=ATK
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=248 target=2 keyframe=ATK srvDoFunc=13 cltDoFunc=21
+[AnimStepper] [ATTACK_ANIM] phase=finished entity=0 frame=3072 frames=3328 lastKeyframe=12
+FURY_ANIMATION level=4 killFirst=true removeAll=true frames=13 hit_ticks=[7] finish_tick=20 targets=[1]
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>
