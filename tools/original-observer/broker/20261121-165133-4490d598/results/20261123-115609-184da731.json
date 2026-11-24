@@ -1,0 +1,15 @@
+{
+  "id": "20261123-115609-184da731",
+  "status": "completed",
+  "started": 1795406169.4243066,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "druid-wolf-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-115609-184da731\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795406209.07659
+}

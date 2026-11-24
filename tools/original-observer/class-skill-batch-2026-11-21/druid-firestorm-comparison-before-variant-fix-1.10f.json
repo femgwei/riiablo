@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "source_run_id": "20261121-090722-a91508f2",
+  "skill_id": 225,
+  "comparison_status": "compared_with_differences",
+  "fixture": {
+    "name": "CXDruBatch",
+    "path": "G:\\BaiduNetdiskDownload\\Diablo II\\Save\\CXDruBatch.d2s",
+    "sha256": "db8690a9559099cf755b2270616b4b671b21f1c3e24fa756e38fd20c5943b4f1",
+    "source_sha256": "21349fff66d97e0d8270ed15c2d1148e5c4c38e46e28621757987f18f5415374",
+    "class_id": 5,
+    "hard_points": {
+      "225": 1,
+      "229": 1
+    },
+    "other_hard_points": 0,
+    "equipment": "empty",
+    "map_seed": 127897359,
+    "hotkeys": {
+      "F1": 225,
+      "F2": 229
+    },
+    "limitations": [
+      "Both skills learned together: native synergy bonuses are active",
+      "Batch proves capture isolation, not parity with isolated zero-synergy fixtures"
+    ]
+  },
+  "checks": {
+    "maker_count": true,
+    "maker_lifetimes": true,
+    "initial_velocity": true,
+    "damage_fire_count": true,
+    "damage_fire_lifetimes": true,
+    "visual_fire_lifetimes": true,
+    "maker_frames": true,
+    "ground_fire_frames": true,
+    "observed_visual_count": false
+  },
+  "details": {
+    "original_visual_count": 17,
+    "production_visual_count": 34,
+    "maker_samples": 92,
+    "ground_fire_samples": 189,
+    "count_difference_attribution": "Unresolved: snapshot observations versus actual CltDo6/create-return trace; production has no map collision"
+  },
+  "original_sha256": "2073f0b75bc739b55e2db48dba65ad7f4dde6b2268d7a7e72ab05884b4dc01cf",
+  "replay_sha256": "061cf0638a1486234e8eb8b91457572770d91227e1b3a9979689ca67ec8aeba1",
+  "limitations": [
+    "Scoped single-cast comparison; not all required cases or all directions",
+    "Production replay starts at SkillDo; no caster input/sequence, map geometry, damage or GPU comparison",
+    "Observed count differences require attribution before changing production emission rules",
+    "No full RNG alignment claim; recorded seed is supplied for the Molten Boulder presentation diagnostic"
+  ]
+}

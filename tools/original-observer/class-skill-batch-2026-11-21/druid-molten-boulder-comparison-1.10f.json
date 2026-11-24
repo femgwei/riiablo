@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "source_run_id": "20261121-090722-a91508f2",
+  "skill_id": 229,
+  "comparison_status": "compared_scoped_match",
+  "fixture": {
+    "name": "CXDruBatch",
+    "path": "G:\\BaiduNetdiskDownload\\Diablo II\\Save\\CXDruBatch.d2s",
+    "sha256": "db8690a9559099cf755b2270616b4b671b21f1c3e24fa756e38fd20c5943b4f1",
+    "source_sha256": "21349fff66d97e0d8270ed15c2d1148e5c4c38e46e28621757987f18f5415374",
+    "class_id": 5,
+    "hard_points": {
+      "225": 1,
+      "229": 1
+    },
+    "other_hard_points": 0,
+    "equipment": "empty",
+    "map_seed": 127897359,
+    "hotkeys": {
+      "F1": 225,
+      "F2": 229
+    },
+    "limitations": [
+      "Both skills learned together: native synergy bonuses are active",
+      "Batch proves capture isolation, not parity with isolated zero-synergy fixtures"
+    ]
+  },
+  "checks": {
+    "rolling_motion": true,
+    "rolling_velocity": true,
+    "rolling_lifetime": true,
+    "emerge_lifetime": true,
+    "rolling_frames": true,
+    "visual_child_counts": true,
+    "server_fire_lifetimes_and_count": true,
+    "lifetime_firewall": true,
+    "lifetime_firesmall": true,
+    "lifetime_firemedium": true,
+    "lifetime_moltenboulderexplode": true,
+    "lifetime_moltenboulderfirepath": true,
+    "lifetime_moltenboulder-flyingrocks": true,
+    "fragment_displacements": true
+  },
+  "details": {
+    "rolling_samples": 88,
+    "frame_mismatch_indices": [],
+    "motion_mismatches": 0,
+    "native_visual_counts": {
+      "firewall": 8,
+      "firesmall": 7,
+      "firemedium": 4,
+      "moltenboulderexplode": 1,
+      "moltenboulderfirepath": 18,
+      "moltenboulder-flyingrocks": 8
+    },
+    "production_visual_counts": {
+      "firesmall": 7,
+      "firemedium": 4,
+      "firewall": 8,
+      "moltenboulderexplode": 1,
+      "moltenboulder-flyingrocks": 8,
+      "moltenboulderfirepath": 18
+    },
+    "conditioned_on": "Recorded rolling client pre-crossing seed; does not establish allocator RNG or all flame phases"
+  },
+  "original_sha256": "e9eaf238ce54f83dd8b241e9aad4a8f1b50515824bbd0ab35eedb4c4ce8c55d1",
+  "replay_sha256": "481986bf390c5e4706946195d9261e60af40fea18fa1dc73a2566b02db0595a0",
+  "limitations": [
+    "Scoped single-cast comparison; not all required cases or all directions",
+    "Production replay starts at SkillDo; no caster input/sequence, map geometry, damage or GPU comparison",
+    "Observed count differences require attribution before changing production emission rules",
+    "First Firestorm batch omitted small/medium client rows; whole-stream count is not an acceptance check",
+    "No full RNG alignment claim; recorded seed is supplied for the Molten Boulder presentation diagnostic"
+  ]
+}

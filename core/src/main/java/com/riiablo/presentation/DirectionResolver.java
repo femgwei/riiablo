@@ -26,6 +26,7 @@ public class DirectionResolver extends IteratingSystem {
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<com.riiablo.presentation.component.DruidWindFlight> mDruidWindFlight;
   protected ComponentMapper<com.riiablo.engine.server.component.SummonedPet> mSummonedPet;
   protected ComponentMapper<com.riiablo.engine.server.component.CofReference> mCofReference;
 
@@ -36,6 +37,12 @@ public class DirectionResolver extends IteratingSystem {
   protected void process(int entityId) {
     float radians = mAngle.get(entityId).angle.angleRad();
     Animation animation = mAnimationWrapper.get(entityId).animation;
+    if (mDruidWindFlight.has(entityId)) {
+      animation.setDirection(NativeDruidWindPresentation.direction(
+          mDruidWindFlight.get(entityId).pathDirection, animation.getNumDirections()));
+      pendingDirection.remove(entityId,-1); pendingFrames.remove(entityId,0);
+      return;
+    }
     if (mMissile.has(entityId) && NativeMoltenBoulderPresentation.handles(mMissile.get(entityId))) {
       animation.setDirection(NativeMoltenBoulderPresentation.direction(
           mAngle.get(entityId).angle, animation.getNumDirections()));

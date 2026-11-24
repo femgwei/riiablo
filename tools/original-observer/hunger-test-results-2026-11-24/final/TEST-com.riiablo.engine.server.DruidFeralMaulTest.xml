@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.DruidFeralMaulTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-24T01:45:15" hostname="DESKTOP-7GGAVHU" time="0.509">
+  <properties/>
+  <testcase name="wrongShapeAndOutOfRangeNeverPrepareCombatRecord()" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.17"/>
+  <testcase name="maulRebuildsDamageAndStunFromStackCountWithoutCompounding()" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.008"/>
+  <testcase name="fireClawsConsumesSrvSt58RecordWithoutGenericSecondHit()" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.031"/>
+  <testcase name="multiplayerSnapshotCarriesFeralStateDurationLevelStacksAndVelocity()" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.004"/>
+  <testcase name="rabiesConsumesPreparedHitAndMarksTargetInfected()" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.024"/>
+  <testcase name="[1] wolf, true, false, true, normal" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.054"/>
+  <testcase name="[2] bear, true, false, true, normal" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.005"/>
+  <testcase name="[3] wolf, false, false, false, normal" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.005"/>
+  <testcase name="[4] bear, true, true, false, normal" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.006"/>
+  <testcase name="[5] wolf, true, false, true, zero" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.004"/>
+  <testcase name="[6] bear, true, false, true, lethal" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.012"/>
+  <testcase name="[7] wolf, true, false, false, dead" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.004"/>
+  <testcase name="losingShapeRemovesOnlyItsDependentChargeState()" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.0"/>
+  <testcase name="shapeRestrictionsFollowRestrictAndStateColumns()" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.0"/>
+  <testcase name="srvSt56ResultIsConsumedOnceAndMissDoesNotBuildAStack()" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.062"/>
+  <testcase name="successfulHitsBuildRefreshAndCapNativeFeralStacks()" classname="com.riiablo.engine.server.DruidFeralMaulTest" time="0.002"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=238 target=1 keyframe=ATK srvDoFunc=121 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=239 target=1 keyframe=ATK srvDoFunc=2 cltDoFunc=0
+WARN  [Attributes] #reset() called on attributes with an empty base
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=232 target=1 keyframe=ATK srvDoFunc=120 cltDoFunc=0
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=232 target=1 keyframe=ATK srvDoFunc=120 cltDoFunc=0
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

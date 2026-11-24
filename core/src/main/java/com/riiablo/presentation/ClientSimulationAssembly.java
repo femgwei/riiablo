@@ -162,6 +162,8 @@ public final class ClientSimulationAssembly {
         .with(new OverlayManager()) // TODO: move to more appropriate spot in list
         .with(new HurricaneAudioSystem())
         .with(new InfernoAudioSystem())
+        .with(new InfernoPresentationSystem())
+        .with(new DruidWindPresentationSystem())
         .with(new ReferenceElementalPresentationSystem())
         .with(new com.riiablo.presentation.MissileImpactPresentationSystem())
         .with(new ElementalHitPresentationSystem())

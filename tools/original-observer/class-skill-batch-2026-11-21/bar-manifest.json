@@ -1,0 +1,831 @@
+{
+  "schema": 1,
+  "class_code": "bar",
+  "priority": 3,
+  "deferred": false,
+  "source_inventory_sha256": "11b24a3fc8d01529146304b770a44fbf3c2b38f016a39fe0163bf4573bef7b2f",
+  "fixture_policy": "Record learned skills/equipment/synergies; separate loadouts or sessions when prerequisites conflict",
+  "family_classification": "Table-based scheduling hint, requires per-skill review",
+  "skills": [
+    {
+      "skill_id": 126,
+      "skill": "Bash",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 127,
+      "skill": "Sword Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment",
+        "aura_enter_leave_radius",
+        "aura_refresh"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 128,
+      "skill": "Axe Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment",
+        "aura_enter_leave_radius",
+        "aura_refresh"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 129,
+      "skill": "Mace Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment",
+        "aura_enter_leave_radius",
+        "aura_refresh"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 130,
+      "skill": "Howl",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BAYellShockWave01.dcc",
+        "data/global/overlays/CurseHit.dcc",
+        "data/global/overlays/CurseTerrorEffect.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 131,
+      "skill": "Find Potion",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 132,
+      "skill": "Leap",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 133,
+      "skill": "Double Swing",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 134,
+      "skill": "Pole Arm Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 135,
+      "skill": "Throwing Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 136,
+      "skill": "Spear Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 137,
+      "skill": "Taunt",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/CurseConfuseEffect.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 138,
+      "skill": "Shout",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BAYellShockWave01.dcc",
+        "data/global/overlays/Shout.dcc",
+        "data/global/overlays/ShoutStart.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 139,
+      "skill": "Stun",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 140,
+      "skill": "Double Throw",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 141,
+      "skill": "Increased Stamina",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 142,
+      "skill": "Find Item",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 143,
+      "skill": "Leap Attack",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/BABash.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 144,
+      "skill": "Concentrate",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/impacting01.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 145,
+      "skill": "Iron Skin",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 146,
+      "skill": "Battle Cry",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BAYellShockWave01.dcc",
+        "data/global/overlays/BattleCry.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 147,
+      "skill": "Frenzy",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/Frenzy.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 148,
+      "skill": "Increased Speed",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 149,
+      "skill": "Battle Orders",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BAYellShockWave01.dcc",
+        "data/global/overlays/BattleOrders.dcc",
+        "data/global/overlays/BattleOrdersStart.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 150,
+      "skill": "Grim Ward",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/GrimWardLarge.dcc",
+        "data/global/missiles/GrimWardLargeStart.dcc",
+        "data/global/missiles/GrimWardLargeStop.dcc",
+        "data/global/missiles/GrimWardMedium.dcc",
+        "data/global/missiles/GrimWardMediumStart.dcc",
+        "data/global/missiles/GrimWardMediumStop.dcc",
+        "data/global/missiles/GrimWardSmall.dcc",
+        "data/global/missiles/GrimWardSmallStart.dcc",
+        "data/global/missiles/GrimWardSmallStop.dcc",
+        "data/global/overlays/CurseHit.dcc",
+        "data/global/overlays/CurseTerrorEffect.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 151,
+      "skill": "Whirlwind",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/BAWhirlwind01.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 152,
+      "skill": "Berserk",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/BerserkOverlay.dcc",
+        "data/global/overlays/null.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 153,
+      "skill": "Natural Resistance",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 154,
+      "skill": "War Cry",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/WarcryShockwave.dcc",
+        "data/global/overlays/WarcryHit.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 155,
+      "skill": "Battle Command",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BAYellShockWave01.dcc",
+        "data/global/overlays/BattleCommand.dcc",
+        "data/global/overlays/BattleCommandStart.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    }
+  ]
+}

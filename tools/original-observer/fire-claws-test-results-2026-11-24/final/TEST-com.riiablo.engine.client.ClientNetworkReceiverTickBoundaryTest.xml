@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.client.ClientNetworkReceiverTickBoundaryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T01:29:03" hostname="DESKTOP-7GGAVHU" time="3.167">
+  <properties/>
+  <testcase name="networkDeletionWaitsForStructuralCommitPhase()" classname="com.riiablo.engine.client.ClientNetworkReceiverTickBoundaryTest" time="0.262"/>
+  <testcase name="networkEventWaitsForEventsPhase()" classname="com.riiablo.engine.client.ClientNetworkReceiverTickBoundaryTest" time="2.882"/>
+  <testcase name="labelRemovalEventWaitsForEventsPhase()" classname="com.riiablo.engine.client.ClientNetworkReceiverTickBoundaryTest" time="0.01"/>
+  <testcase name="replicaPresentationEventWaitsForEventsPhase()" classname="com.riiablo.engine.client.ClientNetworkReceiverTickBoundaryTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

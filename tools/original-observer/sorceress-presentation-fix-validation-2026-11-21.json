@@ -1,0 +1,54 @@
+{
+  "date": "2026-11-21",
+  "tests": {
+    "tests": 63,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "test_record": "sorceress-fix-test-results-2026-11-21.json",
+  "inferno": {
+    "paired_dcc_samples": 116,
+    "frame_mismatches_before": 54,
+    "frame_mismatches_after": 0,
+    "speed": 14.0625,
+    "independent_creation_tested": true,
+    "cold_loading_tested": true,
+    "full_channel_cadence_verified": false
+  },
+  "enchant": {
+    "checks": {
+      "level_one_state_stats": true,
+      "state_duration": true,
+      "refresh_activation_count": true,
+      "overlay_rate": true,
+      "uses_existing_native_overlay_blend_policy": true,
+      "restores_synthetic_hand_base": true
+    },
+    "repeated_activation_tokens_replicated": true,
+    "original_weapon_pixels_verified": false,
+    "full_natural_expiry_verified": false
+  },
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/engine/server/NativeMonInferno.java": "946de604b401ee75bf1bc8655b1b67f7b7f5ed51b3be16016ab5010aaa017bc7",
+    "core/src/main/java/com/riiablo/engine/server/missile/NativeInfernoMotion.java": "60eb705d91a9ae7118829f3335904f03304472ab52daef62368f4d351436ab66",
+    "core/src/main/java/com/riiablo/presentation/InfernoAudioSystem.java": "9acba02be29b8f0209c99b11452362db0fbe80cbb0ba0b5f660bf130fbfe9b32",
+    "core/src/main/java/com/riiablo/presentation/InfernoPresentationSystem.java": "d61492a68ae00c3018b37b62db6a4ecc5af04cb7ca63e9a4af9c391e0e942c8b",
+    "core/src/main/java/com/riiablo/presentation/NativeInfernoPresentation.java": "09581e3ed14d4510ee677ada81abc33b59b05da065dd72cdcd5464e689276bdd",
+    "core/src/main/java/com/riiablo/presentation/OverlayStepper.java": "d929c7c037c3ade2b8db9925d732be5606c53ab690e1de2411d1f9a0227c11c8",
+    "core/src/main/java/com/riiablo/presentation/StateOverlaySystem.java": "d6a326227a43930d4960a16bf5f267ee1a550ceaa6d5ef6becdf22fee200502b",
+    "core/src/main/java/com/riiablo/engine/server/skill/SorceressSkills.java": "5b2496e3bd75e596c557206bfc625803312ac223554e974682a9688a7f742c8e",
+    "core/src/main/java/com/riiablo/engine/server/component/serializer/StateSerializer.java": "f44718fe851cd001ca525e1178908f67f6bb0576be06c3e3a41c4969ae5f4859",
+    "core/src/main/java/com/riiablo/engine/replay/UnitStateRuntimeCheckpoint.java": "0cc2599f37e5faf9ef512f5d7d17dbe936b9bc1fb0efe204a538da1b4c7dfa85",
+    "core/src/main/java/com/riiablo/engine/replay/MissileRuntimeCheckpoint.java": "95a77df2ea26d7d6835b007433ddbb78d3799dca763f53fac2bcf17dfdd14139",
+    "core/src/main/flatbuffers/com/riiablo/net/d2gs/Sync.fbs": "3b87fbc63eaa50e44e3a7e100e34e57437decfceb7e1785dd16ebdcc758336d9"
+  },
+  "limits": [
+    "Focused tests, not the full repository suite",
+    "Original observations frozen from offline 1.10F private-desktop runs; no new original Sorceress run needed",
+    "Inferno full SQ/input/release timing and A/B RNG alignment remain pending",
+    "New Druid class batch has two learned skills and synergies; no matched production comparison yet",
+    "Earlier pre-fix checkpoint reflection failure retained in sorceress-fix-tests.log",
+    "Earlier unrelated Blaze duration assertion discrepancy retained in original research records"
+  ]
+}

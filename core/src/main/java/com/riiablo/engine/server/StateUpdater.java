@@ -10,6 +10,8 @@ import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.IntSet;
 import com.badlogic.gdx.utils.ObjectSet;
+import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.seed.Seed;
 
 import com.riiablo.Riiablo;
 import com.riiablo.CharacterClass;
@@ -64,6 +66,7 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.map.Map;
+import com.riiablo.map.DT1.Tile;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -934,7 +937,11 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       Skills.Entry skill = files().skills.get(pet.skillId);
       int stateId = DruidSkills.getSummonAuraState(skill);
       if (!isDruidSpiritAura(stateId)) continue;
-      UnitState sourceAura = sourceStates.stateList.getState(stateId);
+      int controllerState = DruidSkills.getSummonAuraControllerState(files(), skill);
+      UnitState sourceAura = sourceStates.stateList.getState(controllerState);
+      // Legacy checkpoints stored the target state on the source spirit.
+      if (sourceAura == null && controllerState != stateId)
+        sourceAura = sourceStates.stateList.getState(stateId);
       if (sourceAura == null || !isAlive(sourceId)) continue;
       activeSources.add(sourceId);
       int level = Math.max(1, pet.skillLevel > 0 ? pet.skillLevel : sourceAura.level);
@@ -954,6 +961,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
             || !sameDruidAuraZone(sourceId, targetId)
             || !druidAuraAlly(pet.ownerId, targetId)
             || origin.dst2(mPosition.get(targetId).position) > range * (float) range) continue;
+        // BasicAura calls IterateAuraTargets with bCheckMonAuraFlag=1.
+        if (mMonster.has(targetId) && mMonster.get(targetId).monstats != null
+            && mMonster.get(targetId).monstats.noAura) continue;
         UnitStates targetStates = mUnitStates.get(targetId);
         if (targetStates.snapshotOnly || targetStates.stateList == null) continue;
         UnitState targetAura = targetStates.stateList.addStateLayer(
@@ -1224,9 +1234,46 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       return;
     }
     int range = Math.max(1, SkillFormula.evaluate(skill.aurarangecalc, skill, aura.level));
-    int targetId = findStormTarget(entityId, range);
+    if (skill.Id == SkillId.HURRICANE) {
+      // SrvActive145 applies one area packet to every eligible unit. Keep the
+      // old carrier only when the headless world has no targets at all; this
+      // preserves a network-visible pulse for empty fixture rooms.
+      if (processHurricaneAreaDamage(entityId, aura, skill, range, states, row)) return;
+    }
     Vector2 origin = mPosition.get(entityId).position;
-    if (targetId >= 0 && mPosition.has(targetId)) origin = mPosition.get(targetId).position;
+    int targetId = -1;
+    if (skill.Id == SkillId.ARMAGEDDON) {
+      // Native SrvActive146 does not select the nearest hostile. It makes up
+      // to five random cells around the caster and accepts the first cell
+      // passing the radial missile-barrier check. The control missile then
+      // owns the area damage at that cell.
+      Vector2 random = randomArmageddonCell(entityId, aura, range);
+      if (random == null) {
+        log.debug("[DRUID_STORM] phase=skip source={} skill={} reason=no_valid_random_cell",
+            entityId, skill.Id);
+        return;
+      }
+      origin = random;
+    } else {
+      if (skill.Id == SkillId.HURRICANE) {
+        IntBag targets = findStormTargets(entityId, range);
+        if (targets.size() > 0) {
+          for (int i = 0; i < targets.size(); i++) {
+            int target = targets.get(i);
+            emitDruidStormStrike(entityId, aura, skill, range,
+                mPosition.get(target).position, target, states, row);
+          }
+          return;
+        }
+      }
+      targetId = findStormTarget(entityId, range);
+      if (targetId >= 0 && mPosition.has(targetId)) origin = mPosition.get(targetId).position;
+    }
+    emitDruidStormStrike(entityId, aura, skill, range, origin, targetId, states, row);
+  }
+
+  private void emitDruidStormStrike(int entityId, UnitState aura, Skills.Entry skill,
+      int range, Vector2 origin, int targetId, StateList states, Missiles.Entry row) {
     int id = factory.createMissile(row, Vector2.X, origin, entityId);
     if (id < 0 || !mMissile.has(id)) {
       log.info("[DRUID_STORM] phase=skip source={} skill={} reason=create_missile_failed "
@@ -1254,6 +1301,61 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         range, aura.periodicDelayFrames, strike.damageSnapshot);
   }
 
+  private boolean processHurricaneAreaDamage(int sourceId, UnitState aura,
+      Skills.Entry skill, int range, StateList ownerStates, Missiles.Entry row) {
+    IntBag targets = findStormTargets(sourceId, range);
+    if (targets.size() == 0 || !mAttributesWrapper.has(sourceId)) return false;
+    Attributes owner = mAttributesWrapper.get(sourceId).attrs;
+    Missile template = new Missile();
+    template.missile = row;
+    template.skillId = skill.Id;
+    template.damageLevel = Math.max(1, aura.level);
+    if (!MissileDamageResolver.initializeSkill(files(), template, skill, owner,
+        template.damageLevel, name -> baseSkillLevel(sourceId, name), ownerStates)) {
+      return false;
+    }
+    int minCold = template.damage.get(Stat.coldmindam) == null
+        ? 0 : template.damage.get(Stat.coldmindam).asInt();
+    int maxCold = template.damage.get(Stat.coldmaxdam) == null
+        ? minCold : template.damage.get(Stat.coldmaxdam).asInt();
+    int minPhysical = template.damage.get(Stat.mindamage) == null
+        ? 0 : template.damage.get(Stat.mindamage).asInt();
+    int maxPhysical = template.damage.get(Stat.maxdamage) == null
+        ? minPhysical : template.damage.get(Stat.maxdamage).asInt();
+    if (maxCold <= 0 && maxPhysical <= 0) return true;
+    int pierce = statInt(owner, Stat.item_pierce_cold)
+        + statInt(owner, Stat.passive_cold_pierce);
+    NativeUnitRandom rng = NativeUnitRandom.unit(world, gameSeed(), sourceId);
+    for (int i = 0; i < targets.size(); i++) {
+      int targetId = targets.get(i);
+      Attributes target = mAttributesWrapper.get(targetId).attrs;
+      StateList targetStates = mUnitStates.has(targetId)
+          ? mUnitStates.get(targetId).stateList : null;
+      int rawCold = minCold + (maxCold > minCold
+          ? rng.nextInt(maxCold - minCold + 1) : 0);
+      int rawPhysical = minPhysical + (maxPhysical > minPhysical
+          ? rng.nextInt(maxPhysical - minPhysical + 1) : 0);
+      CombatSystem.CombatResult cold = combatSystemResolver.calculateFixedElementalDamage(
+          target, isPlayerAligned(targetId), isPlayerAligned(sourceId),
+          CombatSystem.DAMAGE_COLD, rawCold, pierce, targetStates,
+          nativeDifficultyContext());
+      CombatSystem.CombatResult physical = combatSystemResolver.calculateFixedPhysicalDamage(
+          target, isPlayerAligned(targetId), isPlayerAligned(sourceId), rawPhysical, targetStates);
+      float total = Math.max(0f, cold.totalDamage) + Math.max(0f, physical.totalDamage);
+      if (total <= 0f && cold.absorbedLife <= 0f) continue;
+      DamageEvent event = DamageEvent.obtainMissile(sourceId, targetId, total,
+          Math.max(0f, physical.physicalDamage), "");
+      event.withElementalDamage(cold, 1f);
+      DamageSettlement.commit(world, event);
+      if (event.lethal) DamageSettlement.finishDeath(world, event);
+    }
+    aura.needsSync = true;
+    log.info("[DRUID_STORM] phase=area_pulse source={} skill={} targets={} range={} "
+            + "cold={}..{} physical={}..{}", sourceId, skill.Id, targets.size(), range,
+        minCold, maxCold, minPhysical, maxPhysical);
+    return true;
+  }
+
   private static String firstStormMissile(Skills.Entry skill) {
     if (skill == null) return null;
     if (skill.srvmissilea != null && !skill.srvmissilea.isEmpty()) return skill.srvmissilea;
@@ -1267,6 +1369,22 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       if (candidate != null && candidate.Id == id) return candidate;
     }
     return null;
+  }
+
+  private IntBag findStormTargets(int sourceId, int range) {
+    IntBag result = new IntBag();
+    if (!mPosition.has(sourceId)) return result;
+    float range2 = range * (float) range;
+    Vector2 source = mPosition.get(sourceId).position;
+    IntBag candidates = world.getAspectSubscriptionManager()
+        .get(Aspect.all(AttributesWrapper.class, Position.class)).getEntities();
+    for (int i = 0; i < candidates.size(); i++) {
+      int id = candidates.get(i);
+      if (id == sourceId || !isAlive(id) || !isHostile(sourceId, id)
+          || source.dst2(mPosition.get(id).position) > range2) continue;
+      result.add(id);
+    }
+    return result;
   }
 
   private int findStormTarget(int sourceId, int range) {
@@ -1285,6 +1403,29 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       bestDistance = distance;
     }
     return best;
+  }
+
+  private Vector2 randomArmageddonCell(int sourceId, UnitState aura, int range) {
+    if (!mPosition.has(sourceId)) return null;
+    int radius = Math.max(1, range);
+    // SrvActive146 resets the low seed from Skills.Param1, advances once to
+    // publish the next Param1, then consumes bounded draws for each x/y pair.
+    // UnitState.runtimeValue is serialized with the aura and is the closest
+    // server-side equivalent until the live D2 skill object is replicated.
+    D2Seed seed = new D2Seed(aura.runtimeValue & 0xFFFF, 666);
+    aura.runtimeValue = (int) ((Seed.rollRandomNumber(seed) & 0xFFFFFFFFL) % 1000000L);
+    Vector2 source = mPosition.get(sourceId).position;
+    for (int attempt = 0; attempt < 5; attempt++) {
+      int x = Math.round(source.x) + Seed.rollLimitedRandomNumber(seed, radius * 2 + 1) - radius;
+      int y = Math.round(source.y) + Seed.rollLimitedRandomNumber(seed, radius * 2 + 1) - radius;
+      if (map == null || map.getZones() == null || map.getZones().size == 0) {
+        return new Vector2(x, y);
+      }
+      if (map.getZone(x, y) == null) continue;
+      if ((map.playerFlyingFlags(x, y) & Tile.FLAG_BLOCK_JUMP) != 0) continue;
+      return new Vector2(x, y);
+    }
+    return null;
   }
 
   private void expireOrphanedConversion(int entityId, StateList states) {

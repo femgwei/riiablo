@@ -1,0 +1,3090 @@
+{
+  "schema": 1,
+  "evidence_type": "offline local PE/Capstone, NOT live REA evidence",
+  "binary": "G:\\BaiduNetdiskDownload\\Diablo II 1.10F\\D2Client.dll",
+  "sha256": "94466b84c0593ab682f1d3d8dc65ef4f8170f33e430865d802bc752458b2b282",
+  "image_base": "0x6faa0000",
+  "target_executed": false,
+  "foreground_used": false,
+  "set_dispatch": {
+    "table": "0x6fb93ee0",
+    "index": 8,
+    "target": "0x6fb4c560"
+  },
+  "remove_dispatch": {
+    "table": "0x6fb93f60",
+    "index": 5,
+    "target": "0x6fb4c3d0"
+  },
+  "set_function": [
+    {
+      "va": "0x6fb4c560",
+      "rva": "0xac560",
+      "bytes": "83ec18",
+      "mnemonic": "sub",
+      "operands": "esp, 0x18"
+    },
+    {
+      "va": "0x6fb4c563",
+      "rva": "0xac563",
+      "bytes": "53",
+      "mnemonic": "push",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c564",
+      "rva": "0xac564",
+      "bytes": "55",
+      "mnemonic": "push",
+      "operands": "ebp"
+    },
+    {
+      "va": "0x6fb4c565",
+      "rva": "0xac565",
+      "bytes": "56",
+      "mnemonic": "push",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c566",
+      "rva": "0xac566",
+      "bytes": "57",
+      "mnemonic": "push",
+      "operands": "edi"
+    },
+    {
+      "va": "0x6fb4c567",
+      "rva": "0xac567",
+      "bytes": "85d2",
+      "mnemonic": "test",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c569",
+      "rva": "0xac569",
+      "bytes": "89542424",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x24], edx"
+    },
+    {
+      "va": "0x6fb4c56d",
+      "rva": "0xac56d",
+      "bytes": "8bf9",
+      "mnemonic": "mov",
+      "operands": "edi, ecx"
+    },
+    {
+      "va": "0x6fb4c56f",
+      "rva": "0xac56f",
+      "bytes": "0f8cd8020000",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c84d"
+    },
+    {
+      "va": "0x6fb4c575",
+      "rva": "0xac575",
+      "bytes": "a1acd4b66f",
+      "mnemonic": "mov",
+      "operands": "eax, dword ptr [0x6fb6d4ac]"
+    },
+    {
+      "va": "0x6fb4c57a",
+      "rva": "0xac57a",
+      "bytes": "8b08",
+      "mnemonic": "mov",
+      "operands": "ecx, dword ptr [eax]"
+    },
+    {
+      "va": "0x6fb4c57c",
+      "rva": "0xac57c",
+      "bytes": "3b91c4000000",
+      "mnemonic": "cmp",
+      "operands": "edx, dword ptr [ecx + 0xc4]"
+    },
+    {
+      "va": "0x6fb4c582",
+      "rva": "0xac582",
+      "bytes": "0f8dc5020000",
+      "mnemonic": "jge",
+      "operands": "0x6fb4c84d"
+    },
+    {
+      "va": "0x6fb4c588",
+      "rva": "0xac588",
+      "bytes": "8b89bc000000",
+      "mnemonic": "mov",
+      "operands": "ecx, dword ptr [ecx + 0xbc]"
+    },
+    {
+      "va": "0x6fb4c58e",
+      "rva": "0xac58e",
+      "bytes": "8d0452",
+      "mnemonic": "lea",
+      "operands": "eax, [edx + edx*2]"
+    },
+    {
+      "va": "0x6fb4c591",
+      "rva": "0xac591",
+      "bytes": "8d0480",
+      "mnemonic": "lea",
+      "operands": "eax, [eax + eax*4]"
+    },
+    {
+      "va": "0x6fb4c594",
+      "rva": "0xac594",
+      "bytes": "8d1c81",
+      "mnemonic": "lea",
+      "operands": "ebx, [ecx + eax*4]"
+    },
+    {
+      "va": "0x6fb4c597",
+      "rva": "0xac597",
+      "bytes": "85db",
+      "mnemonic": "test",
+      "operands": "ebx, ebx"
+    },
+    {
+      "va": "0x6fb4c599",
+      "rva": "0xac599",
+      "bytes": "0f84ae020000",
+      "mnemonic": "je",
+      "operands": "0x6fb4c84d"
+    },
+    {
+      "va": "0x6fb4c59f",
+      "rva": "0xac59f",
+      "bytes": "52",
+      "mnemonic": "push",
+      "operands": "edx"
+    },
+    {
+      "va": "0x6fb4c5a0",
+      "rva": "0xac5a0",
+      "bytes": "57",
+      "mnemonic": "push",
+      "operands": "edi"
+    },
+    {
+      "va": "0x6fb4c5a1",
+      "rva": "0xac5a1",
+      "bytes": "e8dae60100",
+      "mnemonic": "call",
+      "operands": "0x6fb6ac80",
+      "import": "D2Common.dll#10480"
+    },
+    {
+      "va": "0x6fb4c5a6",
+      "rva": "0xac5a6",
+      "bytes": "8bf0",
+      "mnemonic": "mov",
+      "operands": "esi, eax"
+    },
+    {
+      "va": "0x6fb4c5a8",
+      "rva": "0xac5a8",
+      "bytes": "85f6",
+      "mnemonic": "test",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c5aa",
+      "rva": "0xac5aa",
+      "bytes": "0f849d020000",
+      "mnemonic": "je",
+      "operands": "0x6fb4c84d"
+    },
+    {
+      "va": "0x6fb4c5b0",
+      "rva": "0xac5b0",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c5b2",
+      "rva": "0xac5b2",
+      "bytes": "6884000000",
+      "mnemonic": "push",
+      "operands": "0x84"
+    },
+    {
+      "va": "0x6fb4c5b7",
+      "rva": "0xac5b7",
+      "bytes": "56",
+      "mnemonic": "push",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c5b8",
+      "rva": "0xac5b8",
+      "bytes": "e8f9e60100",
+      "mnemonic": "call",
+      "operands": "0x6fb6acb6",
+      "import": "D2Common.dll#10466"
+    },
+    {
+      "va": "0x6fb4c5bd",
+      "rva": "0xac5bd",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c5bf",
+      "rva": "0xac5bf",
+      "bytes": "6885000000",
+      "mnemonic": "push",
+      "operands": "0x85"
+    },
+    {
+      "va": "0x6fb4c5c4",
+      "rva": "0xac5c4",
+      "bytes": "56",
+      "mnemonic": "push",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c5c5",
+      "rva": "0xac5c5",
+      "bytes": "89442428",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x28], eax"
+    },
+    {
+      "va": "0x6fb4c5c9",
+      "rva": "0xac5c9",
+      "bytes": "e8e8e60100",
+      "mnemonic": "call",
+      "operands": "0x6fb6acb6",
+      "import": "D2Common.dll#10466"
+    },
+    {
+      "va": "0x6fb4c5ce",
+      "rva": "0xac5ce",
+      "bytes": "8be8",
+      "mnemonic": "mov",
+      "operands": "ebp, eax"
+    },
+    {
+      "va": "0x6fb4c5d0",
+      "rva": "0xac5d0",
+      "bytes": "668b4302",
+      "mnemonic": "mov",
+      "operands": "ax, word ptr [ebx + 2]"
+    },
+    {
+      "va": "0x6fb4c5d4",
+      "rva": "0xac5d4",
+      "bytes": "6685c0",
+      "mnemonic": "test",
+      "operands": "ax, ax"
+    },
+    {
+      "va": "0x6fb4c5d7",
+      "rva": "0xac5d7",
+      "bytes": "7c09",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c5e2"
+    },
+    {
+      "va": "0x6fb4c5d9",
+      "rva": "0xac5d9",
+      "bytes": "0fbfd0",
+      "mnemonic": "movsx",
+      "operands": "edx, ax"
+    },
+    {
+      "va": "0x6fb4c5dc",
+      "rva": "0xac5dc",
+      "bytes": "89542418",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x18], edx"
+    },
+    {
+      "va": "0x6fb4c5e0",
+      "rva": "0xac5e0",
+      "bytes": "eb08",
+      "mnemonic": "jmp",
+      "operands": "0x6fb4c5ea"
+    },
+    {
+      "va": "0x6fb4c5e2",
+      "rva": "0xac5e2",
+      "bytes": "c7442418ffffffff",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x18], 0xffffffff"
+    },
+    {
+      "va": "0x6fb4c5ea",
+      "rva": "0xac5ea",
+      "bytes": "668b4304",
+      "mnemonic": "mov",
+      "operands": "ax, word ptr [ebx + 4]"
+    },
+    {
+      "va": "0x6fb4c5ee",
+      "rva": "0xac5ee",
+      "bytes": "6685c0",
+      "mnemonic": "test",
+      "operands": "ax, ax"
+    },
+    {
+      "va": "0x6fb4c5f1",
+      "rva": "0xac5f1",
+      "bytes": "7c09",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c5fc"
+    },
+    {
+      "va": "0x6fb4c5f3",
+      "rva": "0xac5f3",
+      "bytes": "0fbfc0",
+      "mnemonic": "movsx",
+      "operands": "eax, ax"
+    },
+    {
+      "va": "0x6fb4c5f6",
+      "rva": "0xac5f6",
+      "bytes": "89442414",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x14], eax"
+    },
+    {
+      "va": "0x6fb4c5fa",
+      "rva": "0xac5fa",
+      "bytes": "eb08",
+      "mnemonic": "jmp",
+      "operands": "0x6fb4c604"
+    },
+    {
+      "va": "0x6fb4c5fc",
+      "rva": "0xac5fc",
+      "bytes": "c7442414ffffffff",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x14], 0xffffffff"
+    },
+    {
+      "va": "0x6fb4c604",
+      "rva": "0xac604",
+      "bytes": "668b5b06",
+      "mnemonic": "mov",
+      "operands": "bx, word ptr [ebx + 6]"
+    },
+    {
+      "va": "0x6fb4c608",
+      "rva": "0xac608",
+      "bytes": "6685db",
+      "mnemonic": "test",
+      "operands": "bx, bx"
+    },
+    {
+      "va": "0x6fb4c60b",
+      "rva": "0xac60b",
+      "bytes": "7c05",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c612"
+    },
+    {
+      "va": "0x6fb4c60d",
+      "rva": "0xac60d",
+      "bytes": "0fbfdb",
+      "mnemonic": "movsx",
+      "operands": "ebx, bx"
+    },
+    {
+      "va": "0x6fb4c610",
+      "rva": "0xac610",
+      "bytes": "eb03",
+      "mnemonic": "jmp",
+      "operands": "0x6fb4c615"
+    },
+    {
+      "va": "0x6fb4c612",
+      "rva": "0xac612",
+      "bytes": "83cbff",
+      "mnemonic": "or",
+      "operands": "ebx, 0xffffffff"
+    },
+    {
+      "va": "0x6fb4c615",
+      "rva": "0xac615",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c617",
+      "rva": "0xac617",
+      "bytes": "6863010000",
+      "mnemonic": "push",
+      "operands": "0x163"
+    },
+    {
+      "va": "0x6fb4c61c",
+      "rva": "0xac61c",
+      "bytes": "56",
+      "mnemonic": "push",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c61d",
+      "rva": "0xac61d",
+      "bytes": "e894e60100",
+      "mnemonic": "call",
+      "operands": "0x6fb6acb6",
+      "import": "D2Common.dll#10466"
+    },
+    {
+      "va": "0x6fb4c622",
+      "rva": "0xac622",
+      "bytes": "89442420",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x20], eax"
+    },
+    {
+      "va": "0x6fb4c626",
+      "rva": "0xac626",
+      "bytes": "b856555555",
+      "mnemonic": "mov",
+      "operands": "eax, 0x55555556"
+    },
+    {
+      "va": "0x6fb4c62b",
+      "rva": "0xac62b",
+      "bytes": "f7ed",
+      "mnemonic": "imul",
+      "operands": "ebp"
+    },
+    {
+      "va": "0x6fb4c62d",
+      "rva": "0xac62d",
+      "bytes": "8bca",
+      "mnemonic": "mov",
+      "operands": "ecx, edx"
+    },
+    {
+      "va": "0x6fb4c62f",
+      "rva": "0xac62f",
+      "bytes": "bd03000000",
+      "mnemonic": "mov",
+      "operands": "ebp, 3"
+    },
+    {
+      "va": "0x6fb4c634",
+      "rva": "0xac634",
+      "bytes": "c1e91f",
+      "mnemonic": "shr",
+      "operands": "ecx, 0x1f"
+    },
+    {
+      "va": "0x6fb4c637",
+      "rva": "0xac637",
+      "bytes": "03d1",
+      "mnemonic": "add",
+      "operands": "edx, ecx"
+    },
+    {
+      "va": "0x6fb4c639",
+      "rva": "0xac639",
+      "bytes": "8b4c241c",
+      "mnemonic": "mov",
+      "operands": "ecx, dword ptr [esp + 0x1c]"
+    },
+    {
+      "va": "0x6fb4c63d",
+      "rva": "0xac63d",
+      "bytes": "3bca",
+      "mnemonic": "cmp",
+      "operands": "ecx, edx"
+    },
+    {
+      "va": "0x6fb4c63f",
+      "rva": "0xac63f",
+      "bytes": "896c2410",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x10], ebp"
+    },
+    {
+      "va": "0x6fb4c643",
+      "rva": "0xac643",
+      "bytes": "8d0412",
+      "mnemonic": "lea",
+      "operands": "eax, [edx + edx]"
+    },
+    {
+      "va": "0x6fb4c646",
+      "rva": "0xac646",
+      "bytes": "7d0c",
+      "mnemonic": "jge",
+      "operands": "0x6fb4c654"
+    },
+    {
+      "va": "0x6fb4c648",
+      "rva": "0xac648",
+      "bytes": "c744241002000000",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x10], 2"
+    },
+    {
+      "va": "0x6fb4c650",
+      "rva": "0xac650",
+      "bytes": "8b6c2410",
+      "mnemonic": "mov",
+      "operands": "ebp, dword ptr [esp + 0x10]"
+    },
+    {
+      "va": "0x6fb4c654",
+      "rva": "0xac654",
+      "bytes": "3bc8",
+      "mnemonic": "cmp",
+      "operands": "ecx, eax"
+    },
+    {
+      "va": "0x6fb4c656",
+      "rva": "0xac656",
+      "bytes": "7d05",
+      "mnemonic": "jge",
+      "operands": "0x6fb4c65d"
+    },
+    {
+      "va": "0x6fb4c658",
+      "rva": "0xac658",
+      "bytes": "4d",
+      "mnemonic": "dec",
+      "operands": "ebp"
+    },
+    {
+      "va": "0x6fb4c659",
+      "rva": "0xac659",
+      "bytes": "896c2410",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x10], ebp"
+    },
+    {
+      "va": "0x6fb4c65d",
+      "rva": "0xac65d",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c65f",
+      "rva": "0xac65f",
+      "bytes": "55",
+      "mnemonic": "push",
+      "operands": "ebp"
+    },
+    {
+      "va": "0x6fb4c660",
+      "rva": "0xac660",
+      "bytes": "6863010000",
+      "mnemonic": "push",
+      "operands": "0x163"
+    },
+    {
+      "va": "0x6fb4c665",
+      "rva": "0xac665",
+      "bytes": "56",
+      "mnemonic": "push",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c666",
+      "rva": "0xac666",
+      "bytes": "e847e40100",
+      "mnemonic": "call",
+      "operands": "0x6fb6aab2",
+      "import": "D2Common.dll#10465"
+    },
+    {
+      "va": "0x6fb4c66b",
+      "rva": "0xac66b",
+      "bytes": "3b6c2420",
+      "mnemonic": "cmp",
+      "operands": "ebp, dword ptr [esp + 0x20]"
+    },
+    {
+      "va": "0x6fb4c66f",
+      "rva": "0xac66f",
+      "bytes": "0f8ec2000000",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c737"
+    },
+    {
+      "va": "0x6fb4c675",
+      "rva": "0xac675",
+      "bytes": "8b542424",
+      "mnemonic": "mov",
+      "operands": "edx, dword ptr [esp + 0x24]"
+    },
+    {
+      "va": "0x6fb4c679",
+      "rva": "0xac679",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c67b",
+      "rva": "0xac67b",
+      "bytes": "e850fdffff",
+      "mnemonic": "call",
+      "operands": "0x6fb4c3d0"
+    },
+    {
+      "va": "0x6fb4c680",
+      "rva": "0xac680",
+      "bytes": "83fbff",
+      "mnemonic": "cmp",
+      "operands": "ebx, -1"
+    },
+    {
+      "va": "0x6fb4c683",
+      "rva": "0xac683",
+      "bytes": "7430",
+      "mnemonic": "je",
+      "operands": "0x6fb4c6b5"
+    },
+    {
+      "va": "0x6fb4c685",
+      "rva": "0xac685",
+      "bytes": "83fd03",
+      "mnemonic": "cmp",
+      "operands": "ebp, 3"
+    },
+    {
+      "va": "0x6fb4c688",
+      "rva": "0xac688",
+      "bytes": "7c2b",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c6b5"
+    },
+    {
+      "va": "0x6fb4c68a",
+      "rva": "0xac68a",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c68c",
+      "rva": "0xac68c",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c68e",
+      "rva": "0xac68e",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c690",
+      "rva": "0xac690",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c692",
+      "rva": "0xac692",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c694",
+      "rva": "0xac694",
+      "bytes": "6a03",
+      "mnemonic": "push",
+      "operands": "3"
+    },
+    {
+      "va": "0x6fb4c696",
+      "rva": "0xac696",
+      "bytes": "8bd3",
+      "mnemonic": "mov",
+      "operands": "edx, ebx"
+    },
+    {
+      "va": "0x6fb4c698",
+      "rva": "0xac698",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c69a",
+      "rva": "0xac69a",
+      "bytes": "e8d1f30000",
+      "mnemonic": "call",
+      "operands": "0x6fb5ba70"
+    },
+    {
+      "va": "0x6fb4c69f",
+      "rva": "0xac69f",
+      "bytes": "8d5301",
+      "mnemonic": "lea",
+      "operands": "edx, [ebx + 1]"
+    },
+    {
+      "va": "0x6fb4c6a2",
+      "rva": "0xac6a2",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c6a4",
+      "rva": "0xac6a4",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6a6",
+      "rva": "0xac6a6",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6a8",
+      "rva": "0xac6a8",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6aa",
+      "rva": "0xac6aa",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6ac",
+      "rva": "0xac6ac",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6ae",
+      "rva": "0xac6ae",
+      "bytes": "6a03",
+      "mnemonic": "push",
+      "operands": "3"
+    },
+    {
+      "va": "0x6fb4c6b0",
+      "rva": "0xac6b0",
+      "bytes": "e8bbf30000",
+      "mnemonic": "call",
+      "operands": "0x6fb5ba70"
+    },
+    {
+      "va": "0x6fb4c6b5",
+      "rva": "0xac6b5",
+      "bytes": "8b742414",
+      "mnemonic": "mov",
+      "operands": "esi, dword ptr [esp + 0x14]"
+    },
+    {
+      "va": "0x6fb4c6b9",
+      "rva": "0xac6b9",
+      "bytes": "83feff",
+      "mnemonic": "cmp",
+      "operands": "esi, -1"
+    },
+    {
+      "va": "0x6fb4c6bc",
+      "rva": "0xac6bc",
+      "bytes": "7430",
+      "mnemonic": "je",
+      "operands": "0x6fb4c6ee"
+    },
+    {
+      "va": "0x6fb4c6be",
+      "rva": "0xac6be",
+      "bytes": "83fd02",
+      "mnemonic": "cmp",
+      "operands": "ebp, 2"
+    },
+    {
+      "va": "0x6fb4c6c1",
+      "rva": "0xac6c1",
+      "bytes": "7c2b",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c6ee"
+    },
+    {
+      "va": "0x6fb4c6c3",
+      "rva": "0xac6c3",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6c5",
+      "rva": "0xac6c5",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6c7",
+      "rva": "0xac6c7",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6c9",
+      "rva": "0xac6c9",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6cb",
+      "rva": "0xac6cb",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6cd",
+      "rva": "0xac6cd",
+      "bytes": "6a03",
+      "mnemonic": "push",
+      "operands": "3"
+    },
+    {
+      "va": "0x6fb4c6cf",
+      "rva": "0xac6cf",
+      "bytes": "8bd6",
+      "mnemonic": "mov",
+      "operands": "edx, esi"
+    },
+    {
+      "va": "0x6fb4c6d1",
+      "rva": "0xac6d1",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c6d3",
+      "rva": "0xac6d3",
+      "bytes": "e898f30000",
+      "mnemonic": "call",
+      "operands": "0x6fb5ba70"
+    },
+    {
+      "va": "0x6fb4c6d8",
+      "rva": "0xac6d8",
+      "bytes": "8d5601",
+      "mnemonic": "lea",
+      "operands": "edx, [esi + 1]"
+    },
+    {
+      "va": "0x6fb4c6db",
+      "rva": "0xac6db",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c6dd",
+      "rva": "0xac6dd",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6df",
+      "rva": "0xac6df",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6e1",
+      "rva": "0xac6e1",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6e3",
+      "rva": "0xac6e3",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6e5",
+      "rva": "0xac6e5",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c6e7",
+      "rva": "0xac6e7",
+      "bytes": "6a03",
+      "mnemonic": "push",
+      "operands": "3"
+    },
+    {
+      "va": "0x6fb4c6e9",
+      "rva": "0xac6e9",
+      "bytes": "e882f30000",
+      "mnemonic": "call",
+      "operands": "0x6fb5ba70"
+    },
+    {
+      "va": "0x6fb4c6ee",
+      "rva": "0xac6ee",
+      "bytes": "8b742418",
+      "mnemonic": "mov",
+      "operands": "esi, dword ptr [esp + 0x18]"
+    },
+    {
+      "va": "0x6fb4c6f2",
+      "rva": "0xac6f2",
+      "bytes": "83feff",
+      "mnemonic": "cmp",
+      "operands": "esi, -1"
+    },
+    {
+      "va": "0x6fb4c6f5",
+      "rva": "0xac6f5",
+      "bytes": "0f8452010000",
+      "mnemonic": "je",
+      "operands": "0x6fb4c84d"
+    },
+    {
+      "va": "0x6fb4c6fb",
+      "rva": "0xac6fb",
+      "bytes": "83fd01",
+      "mnemonic": "cmp",
+      "operands": "ebp, 1"
+    },
+    {
+      "va": "0x6fb4c6fe",
+      "rva": "0xac6fe",
+      "bytes": "0f8c49010000",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c84d"
+    },
+    {
+      "va": "0x6fb4c704",
+      "rva": "0xac704",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c706",
+      "rva": "0xac706",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c708",
+      "rva": "0xac708",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c70a",
+      "rva": "0xac70a",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c70c",
+      "rva": "0xac70c",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c70e",
+      "rva": "0xac70e",
+      "bytes": "6a03",
+      "mnemonic": "push",
+      "operands": "3"
+    },
+    {
+      "va": "0x6fb4c710",
+      "rva": "0xac710",
+      "bytes": "8bd6",
+      "mnemonic": "mov",
+      "operands": "edx, esi"
+    },
+    {
+      "va": "0x6fb4c712",
+      "rva": "0xac712",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c714",
+      "rva": "0xac714",
+      "bytes": "e857f30000",
+      "mnemonic": "call",
+      "operands": "0x6fb5ba70"
+    },
+    {
+      "va": "0x6fb4c719",
+      "rva": "0xac719",
+      "bytes": "8d5601",
+      "mnemonic": "lea",
+      "operands": "edx, [esi + 1]"
+    },
+    {
+      "va": "0x6fb4c71c",
+      "rva": "0xac71c",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c71e",
+      "rva": "0xac71e",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c720",
+      "rva": "0xac720",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c722",
+      "rva": "0xac722",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c724",
+      "rva": "0xac724",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c726",
+      "rva": "0xac726",
+      "bytes": "6a00",
+      "mnemonic": "push",
+      "operands": "0"
+    },
+    {
+      "va": "0x6fb4c728",
+      "rva": "0xac728",
+      "bytes": "6a03",
+      "mnemonic": "push",
+      "operands": "3"
+    },
+    {
+      "va": "0x6fb4c72a",
+      "rva": "0xac72a",
+      "bytes": "e841f30000",
+      "mnemonic": "call",
+      "operands": "0x6fb5ba70"
+    },
+    {
+      "va": "0x6fb4c72f",
+      "rva": "0xac72f",
+      "bytes": "5f",
+      "mnemonic": "pop",
+      "operands": "edi"
+    },
+    {
+      "va": "0x6fb4c730",
+      "rva": "0xac730",
+      "bytes": "5e",
+      "mnemonic": "pop",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c731",
+      "rva": "0xac731",
+      "bytes": "5d",
+      "mnemonic": "pop",
+      "operands": "ebp"
+    },
+    {
+      "va": "0x6fb4c732",
+      "rva": "0xac732",
+      "bytes": "5b",
+      "mnemonic": "pop",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c733",
+      "rva": "0xac733",
+      "bytes": "83c418",
+      "mnemonic": "add",
+      "operands": "esp, 0x18"
+    },
+    {
+      "va": "0x6fb4c736",
+      "rva": "0xac736",
+      "bytes": "c3",
+      "mnemonic": "ret",
+      "operands": ""
+    },
+    {
+      "va": "0x6fb4c737",
+      "rva": "0xac737",
+      "bytes": "85db",
+      "mnemonic": "test",
+      "operands": "ebx, ebx"
+    },
+    {
+      "va": "0x6fb4c739",
+      "rva": "0xac739",
+      "bytes": "7458",
+      "mnemonic": "je",
+      "operands": "0x6fb4c793"
+    },
+    {
+      "va": "0x6fb4c73b",
+      "rva": "0xac73b",
+      "bytes": "83fd02",
+      "mnemonic": "cmp",
+      "operands": "ebp, 2"
+    },
+    {
+      "va": "0x6fb4c73e",
+      "rva": "0xac73e",
+      "bytes": "7f53",
+      "mnemonic": "jg",
+      "operands": "0x6fb4c793"
+    },
+    {
+      "va": "0x6fb4c740",
+      "rva": "0xac740",
+      "bytes": "83fbff",
+      "mnemonic": "cmp",
+      "operands": "ebx, -1"
+    },
+    {
+      "va": "0x6fb4c743",
+      "rva": "0xac743",
+      "bytes": "7424",
+      "mnemonic": "je",
+      "operands": "0x6fb4c769"
+    },
+    {
+      "va": "0x6fb4c745",
+      "rva": "0xac745",
+      "bytes": "53",
+      "mnemonic": "push",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c746",
+      "rva": "0xac746",
+      "bytes": "e897ef0100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c74b",
+      "rva": "0xac74b",
+      "bytes": "8be8",
+      "mnemonic": "mov",
+      "operands": "ebp, eax"
+    },
+    {
+      "va": "0x6fb4c74d",
+      "rva": "0xac74d",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c74f",
+      "rva": "0xac74f",
+      "bytes": "85ed",
+      "mnemonic": "test",
+      "operands": "ebp, ebp"
+    },
+    {
+      "va": "0x6fb4c751",
+      "rva": "0xac751",
+      "bytes": "7e12",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c765"
+    },
+    {
+      "va": "0x6fb4c753",
+      "rva": "0xac753",
+      "bytes": "8d141e",
+      "mnemonic": "lea",
+      "operands": "edx, [esi + ebx]"
+    },
+    {
+      "va": "0x6fb4c756",
+      "rva": "0xac756",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c758",
+      "rva": "0xac758",
+      "bytes": "52",
+      "mnemonic": "push",
+      "operands": "edx"
+    },
+    {
+      "va": "0x6fb4c759",
+      "rva": "0xac759",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c75b",
+      "rva": "0xac75b",
+      "bytes": "e860f70000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c760",
+      "rva": "0xac760",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c761",
+      "rva": "0xac761",
+      "bytes": "3bf5",
+      "mnemonic": "cmp",
+      "operands": "esi, ebp"
+    },
+    {
+      "va": "0x6fb4c763",
+      "rva": "0xac763",
+      "bytes": "7cee",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c753"
+    },
+    {
+      "va": "0x6fb4c765",
+      "rva": "0xac765",
+      "bytes": "8b6c2410",
+      "mnemonic": "mov",
+      "operands": "ebp, dword ptr [esp + 0x10]"
+    },
+    {
+      "va": "0x6fb4c769",
+      "rva": "0xac769",
+      "bytes": "43",
+      "mnemonic": "inc",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c76a",
+      "rva": "0xac76a",
+      "bytes": "83fbff",
+      "mnemonic": "cmp",
+      "operands": "ebx, -1"
+    },
+    {
+      "va": "0x6fb4c76d",
+      "rva": "0xac76d",
+      "bytes": "7424",
+      "mnemonic": "je",
+      "operands": "0x6fb4c793"
+    },
+    {
+      "va": "0x6fb4c76f",
+      "rva": "0xac76f",
+      "bytes": "53",
+      "mnemonic": "push",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c770",
+      "rva": "0xac770",
+      "bytes": "e86def0100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c775",
+      "rva": "0xac775",
+      "bytes": "8be8",
+      "mnemonic": "mov",
+      "operands": "ebp, eax"
+    },
+    {
+      "va": "0x6fb4c777",
+      "rva": "0xac777",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c779",
+      "rva": "0xac779",
+      "bytes": "85ed",
+      "mnemonic": "test",
+      "operands": "ebp, ebp"
+    },
+    {
+      "va": "0x6fb4c77b",
+      "rva": "0xac77b",
+      "bytes": "7e12",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c78f"
+    },
+    {
+      "va": "0x6fb4c77d",
+      "rva": "0xac77d",
+      "bytes": "8d041e",
+      "mnemonic": "lea",
+      "operands": "eax, [esi + ebx]"
+    },
+    {
+      "va": "0x6fb4c780",
+      "rva": "0xac780",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c782",
+      "rva": "0xac782",
+      "bytes": "50",
+      "mnemonic": "push",
+      "operands": "eax"
+    },
+    {
+      "va": "0x6fb4c783",
+      "rva": "0xac783",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c785",
+      "rva": "0xac785",
+      "bytes": "e836f70000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c78a",
+      "rva": "0xac78a",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c78b",
+      "rva": "0xac78b",
+      "bytes": "3bf5",
+      "mnemonic": "cmp",
+      "operands": "esi, ebp"
+    },
+    {
+      "va": "0x6fb4c78d",
+      "rva": "0xac78d",
+      "bytes": "7cee",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c77d"
+    },
+    {
+      "va": "0x6fb4c78f",
+      "rva": "0xac78f",
+      "bytes": "8b6c2410",
+      "mnemonic": "mov",
+      "operands": "ebp, dword ptr [esp + 0x10]"
+    },
+    {
+      "va": "0x6fb4c793",
+      "rva": "0xac793",
+      "bytes": "8b5c2414",
+      "mnemonic": "mov",
+      "operands": "ebx, dword ptr [esp + 0x14]"
+    },
+    {
+      "va": "0x6fb4c797",
+      "rva": "0xac797",
+      "bytes": "85db",
+      "mnemonic": "test",
+      "operands": "ebx, ebx"
+    },
+    {
+      "va": "0x6fb4c799",
+      "rva": "0xac799",
+      "bytes": "7458",
+      "mnemonic": "je",
+      "operands": "0x6fb4c7f3"
+    },
+    {
+      "va": "0x6fb4c79b",
+      "rva": "0xac79b",
+      "bytes": "83fd01",
+      "mnemonic": "cmp",
+      "operands": "ebp, 1"
+    },
+    {
+      "va": "0x6fb4c79e",
+      "rva": "0xac79e",
+      "bytes": "7f53",
+      "mnemonic": "jg",
+      "operands": "0x6fb4c7f3"
+    },
+    {
+      "va": "0x6fb4c7a0",
+      "rva": "0xac7a0",
+      "bytes": "83fbff",
+      "mnemonic": "cmp",
+      "operands": "ebx, -1"
+    },
+    {
+      "va": "0x6fb4c7a3",
+      "rva": "0xac7a3",
+      "bytes": "7428",
+      "mnemonic": "je",
+      "operands": "0x6fb4c7cd"
+    },
+    {
+      "va": "0x6fb4c7a5",
+      "rva": "0xac7a5",
+      "bytes": "53",
+      "mnemonic": "push",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c7a6",
+      "rva": "0xac7a6",
+      "bytes": "e837ef0100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c7ab",
+      "rva": "0xac7ab",
+      "bytes": "8bd8",
+      "mnemonic": "mov",
+      "operands": "ebx, eax"
+    },
+    {
+      "va": "0x6fb4c7ad",
+      "rva": "0xac7ad",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c7af",
+      "rva": "0xac7af",
+      "bytes": "85db",
+      "mnemonic": "test",
+      "operands": "ebx, ebx"
+    },
+    {
+      "va": "0x6fb4c7b1",
+      "rva": "0xac7b1",
+      "bytes": "7e16",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c7c9"
+    },
+    {
+      "va": "0x6fb4c7b3",
+      "rva": "0xac7b3",
+      "bytes": "8b4c2414",
+      "mnemonic": "mov",
+      "operands": "ecx, dword ptr [esp + 0x14]"
+    },
+    {
+      "va": "0x6fb4c7b7",
+      "rva": "0xac7b7",
+      "bytes": "8d140e",
+      "mnemonic": "lea",
+      "operands": "edx, [esi + ecx]"
+    },
+    {
+      "va": "0x6fb4c7ba",
+      "rva": "0xac7ba",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c7bc",
+      "rva": "0xac7bc",
+      "bytes": "52",
+      "mnemonic": "push",
+      "operands": "edx"
+    },
+    {
+      "va": "0x6fb4c7bd",
+      "rva": "0xac7bd",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c7bf",
+      "rva": "0xac7bf",
+      "bytes": "e8fcf60000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c7c4",
+      "rva": "0xac7c4",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c7c5",
+      "rva": "0xac7c5",
+      "bytes": "3bf3",
+      "mnemonic": "cmp",
+      "operands": "esi, ebx"
+    },
+    {
+      "va": "0x6fb4c7c7",
+      "rva": "0xac7c7",
+      "bytes": "7cea",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c7b3"
+    },
+    {
+      "va": "0x6fb4c7c9",
+      "rva": "0xac7c9",
+      "bytes": "8b5c2414",
+      "mnemonic": "mov",
+      "operands": "ebx, dword ptr [esp + 0x14]"
+    },
+    {
+      "va": "0x6fb4c7cd",
+      "rva": "0xac7cd",
+      "bytes": "43",
+      "mnemonic": "inc",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c7ce",
+      "rva": "0xac7ce",
+      "bytes": "83fbff",
+      "mnemonic": "cmp",
+      "operands": "ebx, -1"
+    },
+    {
+      "va": "0x6fb4c7d1",
+      "rva": "0xac7d1",
+      "bytes": "7420",
+      "mnemonic": "je",
+      "operands": "0x6fb4c7f3"
+    },
+    {
+      "va": "0x6fb4c7d3",
+      "rva": "0xac7d3",
+      "bytes": "53",
+      "mnemonic": "push",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c7d4",
+      "rva": "0xac7d4",
+      "bytes": "e809ef0100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c7d9",
+      "rva": "0xac7d9",
+      "bytes": "8be8",
+      "mnemonic": "mov",
+      "operands": "ebp, eax"
+    },
+    {
+      "va": "0x6fb4c7db",
+      "rva": "0xac7db",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c7dd",
+      "rva": "0xac7dd",
+      "bytes": "85ed",
+      "mnemonic": "test",
+      "operands": "ebp, ebp"
+    },
+    {
+      "va": "0x6fb4c7df",
+      "rva": "0xac7df",
+      "bytes": "7e12",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c7f3"
+    },
+    {
+      "va": "0x6fb4c7e1",
+      "rva": "0xac7e1",
+      "bytes": "8d041e",
+      "mnemonic": "lea",
+      "operands": "eax, [esi + ebx]"
+    },
+    {
+      "va": "0x6fb4c7e4",
+      "rva": "0xac7e4",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c7e6",
+      "rva": "0xac7e6",
+      "bytes": "50",
+      "mnemonic": "push",
+      "operands": "eax"
+    },
+    {
+      "va": "0x6fb4c7e7",
+      "rva": "0xac7e7",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c7e9",
+      "rva": "0xac7e9",
+      "bytes": "e8d2f60000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c7ee",
+      "rva": "0xac7ee",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c7ef",
+      "rva": "0xac7ef",
+      "bytes": "3bf5",
+      "mnemonic": "cmp",
+      "operands": "esi, ebp"
+    },
+    {
+      "va": "0x6fb4c7f1",
+      "rva": "0xac7f1",
+      "bytes": "7cee",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c7e1"
+    },
+    {
+      "va": "0x6fb4c7f3",
+      "rva": "0xac7f3",
+      "bytes": "8b6c2418",
+      "mnemonic": "mov",
+      "operands": "ebp, dword ptr [esp + 0x18]"
+    },
+    {
+      "va": "0x6fb4c7f7",
+      "rva": "0xac7f7",
+      "bytes": "85ed",
+      "mnemonic": "test",
+      "operands": "ebp, ebp"
+    },
+    {
+      "va": "0x6fb4c7f9",
+      "rva": "0xac7f9",
+      "bytes": "7452",
+      "mnemonic": "je",
+      "operands": "0x6fb4c84d"
+    },
+    {
+      "va": "0x6fb4c7fb",
+      "rva": "0xac7fb",
+      "bytes": "83fd01",
+      "mnemonic": "cmp",
+      "operands": "ebp, 1"
+    },
+    {
+      "va": "0x6fb4c7fe",
+      "rva": "0xac7fe",
+      "bytes": "7f4d",
+      "mnemonic": "jg",
+      "operands": "0x6fb4c84d"
+    },
+    {
+      "va": "0x6fb4c800",
+      "rva": "0xac800",
+      "bytes": "83fdff",
+      "mnemonic": "cmp",
+      "operands": "ebp, -1"
+    },
+    {
+      "va": "0x6fb4c803",
+      "rva": "0xac803",
+      "bytes": "7420",
+      "mnemonic": "je",
+      "operands": "0x6fb4c825"
+    },
+    {
+      "va": "0x6fb4c805",
+      "rva": "0xac805",
+      "bytes": "55",
+      "mnemonic": "push",
+      "operands": "ebp"
+    },
+    {
+      "va": "0x6fb4c806",
+      "rva": "0xac806",
+      "bytes": "e8d7ee0100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c80b",
+      "rva": "0xac80b",
+      "bytes": "8bd8",
+      "mnemonic": "mov",
+      "operands": "ebx, eax"
+    },
+    {
+      "va": "0x6fb4c80d",
+      "rva": "0xac80d",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c80f",
+      "rva": "0xac80f",
+      "bytes": "85db",
+      "mnemonic": "test",
+      "operands": "ebx, ebx"
+    },
+    {
+      "va": "0x6fb4c811",
+      "rva": "0xac811",
+      "bytes": "7e12",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c825"
+    },
+    {
+      "va": "0x6fb4c813",
+      "rva": "0xac813",
+      "bytes": "8d0c2e",
+      "mnemonic": "lea",
+      "operands": "ecx, [esi + ebp]"
+    },
+    {
+      "va": "0x6fb4c816",
+      "rva": "0xac816",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c818",
+      "rva": "0xac818",
+      "bytes": "51",
+      "mnemonic": "push",
+      "operands": "ecx"
+    },
+    {
+      "va": "0x6fb4c819",
+      "rva": "0xac819",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c81b",
+      "rva": "0xac81b",
+      "bytes": "e8a0f60000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c820",
+      "rva": "0xac820",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c821",
+      "rva": "0xac821",
+      "bytes": "3bf3",
+      "mnemonic": "cmp",
+      "operands": "esi, ebx"
+    },
+    {
+      "va": "0x6fb4c823",
+      "rva": "0xac823",
+      "bytes": "7cee",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c813"
+    },
+    {
+      "va": "0x6fb4c825",
+      "rva": "0xac825",
+      "bytes": "8d5d01",
+      "mnemonic": "lea",
+      "operands": "ebx, [ebp + 1]"
+    },
+    {
+      "va": "0x6fb4c828",
+      "rva": "0xac828",
+      "bytes": "83fbff",
+      "mnemonic": "cmp",
+      "operands": "ebx, -1"
+    },
+    {
+      "va": "0x6fb4c82b",
+      "rva": "0xac82b",
+      "bytes": "7420",
+      "mnemonic": "je",
+      "operands": "0x6fb4c84d"
+    },
+    {
+      "va": "0x6fb4c82d",
+      "rva": "0xac82d",
+      "bytes": "53",
+      "mnemonic": "push",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c82e",
+      "rva": "0xac82e",
+      "bytes": "e8afee0100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c833",
+      "rva": "0xac833",
+      "bytes": "8be8",
+      "mnemonic": "mov",
+      "operands": "ebp, eax"
+    },
+    {
+      "va": "0x6fb4c835",
+      "rva": "0xac835",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c837",
+      "rva": "0xac837",
+      "bytes": "85ed",
+      "mnemonic": "test",
+      "operands": "ebp, ebp"
+    },
+    {
+      "va": "0x6fb4c839",
+      "rva": "0xac839",
+      "bytes": "7e12",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c84d"
+    },
+    {
+      "va": "0x6fb4c83b",
+      "rva": "0xac83b",
+      "bytes": "8d141e",
+      "mnemonic": "lea",
+      "operands": "edx, [esi + ebx]"
+    },
+    {
+      "va": "0x6fb4c83e",
+      "rva": "0xac83e",
+      "bytes": "8bcf",
+      "mnemonic": "mov",
+      "operands": "ecx, edi"
+    },
+    {
+      "va": "0x6fb4c840",
+      "rva": "0xac840",
+      "bytes": "52",
+      "mnemonic": "push",
+      "operands": "edx"
+    },
+    {
+      "va": "0x6fb4c841",
+      "rva": "0xac841",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c843",
+      "rva": "0xac843",
+      "bytes": "e878f60000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c848",
+      "rva": "0xac848",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c849",
+      "rva": "0xac849",
+      "bytes": "3bf5",
+      "mnemonic": "cmp",
+      "operands": "esi, ebp"
+    },
+    {
+      "va": "0x6fb4c84b",
+      "rva": "0xac84b",
+      "bytes": "7cee",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c83b"
+    },
+    {
+      "va": "0x6fb4c84d",
+      "rva": "0xac84d",
+      "bytes": "5f",
+      "mnemonic": "pop",
+      "operands": "edi"
+    },
+    {
+      "va": "0x6fb4c84e",
+      "rva": "0xac84e",
+      "bytes": "5e",
+      "mnemonic": "pop",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c84f",
+      "rva": "0xac84f",
+      "bytes": "5d",
+      "mnemonic": "pop",
+      "operands": "ebp"
+    },
+    {
+      "va": "0x6fb4c850",
+      "rva": "0xac850",
+      "bytes": "5b",
+      "mnemonic": "pop",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c851",
+      "rva": "0xac851",
+      "bytes": "83c418",
+      "mnemonic": "add",
+      "operands": "esp, 0x18"
+    },
+    {
+      "va": "0x6fb4c854",
+      "rva": "0xac854",
+      "bytes": "c3",
+      "mnemonic": "ret",
+      "operands": ""
+    }
+  ],
+  "remove_function": [
+    {
+      "va": "0x6fb4c3d0",
+      "rva": "0xac3d0",
+      "bytes": "83ec08",
+      "mnemonic": "sub",
+      "operands": "esp, 8"
+    },
+    {
+      "va": "0x6fb4c3d3",
+      "rva": "0xac3d3",
+      "bytes": "85d2",
+      "mnemonic": "test",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c3d5",
+      "rva": "0xac3d5",
+      "bytes": "53",
+      "mnemonic": "push",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c3d6",
+      "rva": "0xac3d6",
+      "bytes": "55",
+      "mnemonic": "push",
+      "operands": "ebp"
+    },
+    {
+      "va": "0x6fb4c3d7",
+      "rva": "0xac3d7",
+      "bytes": "56",
+      "mnemonic": "push",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c3d8",
+      "rva": "0xac3d8",
+      "bytes": "57",
+      "mnemonic": "push",
+      "operands": "edi"
+    },
+    {
+      "va": "0x6fb4c3d9",
+      "rva": "0xac3d9",
+      "bytes": "8bd9",
+      "mnemonic": "mov",
+      "operands": "ebx, ecx"
+    },
+    {
+      "va": "0x6fb4c3db",
+      "rva": "0xac3db",
+      "bytes": "0f8c6e010000",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c54f"
+    },
+    {
+      "va": "0x6fb4c3e1",
+      "rva": "0xac3e1",
+      "bytes": "a1acd4b66f",
+      "mnemonic": "mov",
+      "operands": "eax, dword ptr [0x6fb6d4ac]"
+    },
+    {
+      "va": "0x6fb4c3e6",
+      "rva": "0xac3e6",
+      "bytes": "8b00",
+      "mnemonic": "mov",
+      "operands": "eax, dword ptr [eax]"
+    },
+    {
+      "va": "0x6fb4c3e8",
+      "rva": "0xac3e8",
+      "bytes": "3b90c4000000",
+      "mnemonic": "cmp",
+      "operands": "edx, dword ptr [eax + 0xc4]"
+    },
+    {
+      "va": "0x6fb4c3ee",
+      "rva": "0xac3ee",
+      "bytes": "0f8d5b010000",
+      "mnemonic": "jge",
+      "operands": "0x6fb4c54f"
+    },
+    {
+      "va": "0x6fb4c3f4",
+      "rva": "0xac3f4",
+      "bytes": "8d1452",
+      "mnemonic": "lea",
+      "operands": "edx, [edx + edx*2]"
+    },
+    {
+      "va": "0x6fb4c3f7",
+      "rva": "0xac3f7",
+      "bytes": "8d0c92",
+      "mnemonic": "lea",
+      "operands": "ecx, [edx + edx*4]"
+    },
+    {
+      "va": "0x6fb4c3fa",
+      "rva": "0xac3fa",
+      "bytes": "8b90bc000000",
+      "mnemonic": "mov",
+      "operands": "edx, dword ptr [eax + 0xbc]"
+    },
+    {
+      "va": "0x6fb4c400",
+      "rva": "0xac400",
+      "bytes": "8d048a",
+      "mnemonic": "lea",
+      "operands": "eax, [edx + ecx*4]"
+    },
+    {
+      "va": "0x6fb4c403",
+      "rva": "0xac403",
+      "bytes": "85c0",
+      "mnemonic": "test",
+      "operands": "eax, eax"
+    },
+    {
+      "va": "0x6fb4c405",
+      "rva": "0xac405",
+      "bytes": "0f8444010000",
+      "mnemonic": "je",
+      "operands": "0x6fb4c54f"
+    },
+    {
+      "va": "0x6fb4c40b",
+      "rva": "0xac40b",
+      "bytes": "668b4802",
+      "mnemonic": "mov",
+      "operands": "cx, word ptr [eax + 2]"
+    },
+    {
+      "va": "0x6fb4c40f",
+      "rva": "0xac40f",
+      "bytes": "6685c9",
+      "mnemonic": "test",
+      "operands": "cx, cx"
+    },
+    {
+      "va": "0x6fb4c412",
+      "rva": "0xac412",
+      "bytes": "7c05",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c419"
+    },
+    {
+      "va": "0x6fb4c414",
+      "rva": "0xac414",
+      "bytes": "0fbfe9",
+      "mnemonic": "movsx",
+      "operands": "ebp, cx"
+    },
+    {
+      "va": "0x6fb4c417",
+      "rva": "0xac417",
+      "bytes": "eb03",
+      "mnemonic": "jmp",
+      "operands": "0x6fb4c41c"
+    },
+    {
+      "va": "0x6fb4c419",
+      "rva": "0xac419",
+      "bytes": "83cdff",
+      "mnemonic": "or",
+      "operands": "ebp, 0xffffffff"
+    },
+    {
+      "va": "0x6fb4c41c",
+      "rva": "0xac41c",
+      "bytes": "668b4804",
+      "mnemonic": "mov",
+      "operands": "cx, word ptr [eax + 4]"
+    },
+    {
+      "va": "0x6fb4c420",
+      "rva": "0xac420",
+      "bytes": "6685c9",
+      "mnemonic": "test",
+      "operands": "cx, cx"
+    },
+    {
+      "va": "0x6fb4c423",
+      "rva": "0xac423",
+      "bytes": "7c09",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c42e"
+    },
+    {
+      "va": "0x6fb4c425",
+      "rva": "0xac425",
+      "bytes": "0fbfc9",
+      "mnemonic": "movsx",
+      "operands": "ecx, cx"
+    },
+    {
+      "va": "0x6fb4c428",
+      "rva": "0xac428",
+      "bytes": "894c2410",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x10], ecx"
+    },
+    {
+      "va": "0x6fb4c42c",
+      "rva": "0xac42c",
+      "bytes": "eb08",
+      "mnemonic": "jmp",
+      "operands": "0x6fb4c436"
+    },
+    {
+      "va": "0x6fb4c42e",
+      "rva": "0xac42e",
+      "bytes": "c7442410ffffffff",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x10], 0xffffffff"
+    },
+    {
+      "va": "0x6fb4c436",
+      "rva": "0xac436",
+      "bytes": "668b4006",
+      "mnemonic": "mov",
+      "operands": "ax, word ptr [eax + 6]"
+    },
+    {
+      "va": "0x6fb4c43a",
+      "rva": "0xac43a",
+      "bytes": "6685c0",
+      "mnemonic": "test",
+      "operands": "ax, ax"
+    },
+    {
+      "va": "0x6fb4c43d",
+      "rva": "0xac43d",
+      "bytes": "7c09",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c448"
+    },
+    {
+      "va": "0x6fb4c43f",
+      "rva": "0xac43f",
+      "bytes": "0fbfd0",
+      "mnemonic": "movsx",
+      "operands": "edx, ax"
+    },
+    {
+      "va": "0x6fb4c442",
+      "rva": "0xac442",
+      "bytes": "89542414",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x14], edx"
+    },
+    {
+      "va": "0x6fb4c446",
+      "rva": "0xac446",
+      "bytes": "eb08",
+      "mnemonic": "jmp",
+      "operands": "0x6fb4c450"
+    },
+    {
+      "va": "0x6fb4c448",
+      "rva": "0xac448",
+      "bytes": "c7442414ffffffff",
+      "mnemonic": "mov",
+      "operands": "dword ptr [esp + 0x14], 0xffffffff"
+    },
+    {
+      "va": "0x6fb4c450",
+      "rva": "0xac450",
+      "bytes": "83fdff",
+      "mnemonic": "cmp",
+      "operands": "ebp, -1"
+    },
+    {
+      "va": "0x6fb4c453",
+      "rva": "0xac453",
+      "bytes": "7448",
+      "mnemonic": "je",
+      "operands": "0x6fb4c49d"
+    },
+    {
+      "va": "0x6fb4c455",
+      "rva": "0xac455",
+      "bytes": "55",
+      "mnemonic": "push",
+      "operands": "ebp"
+    },
+    {
+      "va": "0x6fb4c456",
+      "rva": "0xac456",
+      "bytes": "e887f20100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c45b",
+      "rva": "0xac45b",
+      "bytes": "8bf8",
+      "mnemonic": "mov",
+      "operands": "edi, eax"
+    },
+    {
+      "va": "0x6fb4c45d",
+      "rva": "0xac45d",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c45f",
+      "rva": "0xac45f",
+      "bytes": "85ff",
+      "mnemonic": "test",
+      "operands": "edi, edi"
+    },
+    {
+      "va": "0x6fb4c461",
+      "rva": "0xac461",
+      "bytes": "7e12",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c475"
+    },
+    {
+      "va": "0x6fb4c463",
+      "rva": "0xac463",
+      "bytes": "8d042e",
+      "mnemonic": "lea",
+      "operands": "eax, [esi + ebp]"
+    },
+    {
+      "va": "0x6fb4c466",
+      "rva": "0xac466",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c468",
+      "rva": "0xac468",
+      "bytes": "50",
+      "mnemonic": "push",
+      "operands": "eax"
+    },
+    {
+      "va": "0x6fb4c469",
+      "rva": "0xac469",
+      "bytes": "8bcb",
+      "mnemonic": "mov",
+      "operands": "ecx, ebx"
+    },
+    {
+      "va": "0x6fb4c46b",
+      "rva": "0xac46b",
+      "bytes": "e850fa0000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c470",
+      "rva": "0xac470",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c471",
+      "rva": "0xac471",
+      "bytes": "3bf7",
+      "mnemonic": "cmp",
+      "operands": "esi, edi"
+    },
+    {
+      "va": "0x6fb4c473",
+      "rva": "0xac473",
+      "bytes": "7cee",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c463"
+    },
+    {
+      "va": "0x6fb4c475",
+      "rva": "0xac475",
+      "bytes": "8d7d01",
+      "mnemonic": "lea",
+      "operands": "edi, [ebp + 1]"
+    },
+    {
+      "va": "0x6fb4c478",
+      "rva": "0xac478",
+      "bytes": "83ffff",
+      "mnemonic": "cmp",
+      "operands": "edi, -1"
+    },
+    {
+      "va": "0x6fb4c47b",
+      "rva": "0xac47b",
+      "bytes": "7420",
+      "mnemonic": "je",
+      "operands": "0x6fb4c49d"
+    },
+    {
+      "va": "0x6fb4c47d",
+      "rva": "0xac47d",
+      "bytes": "57",
+      "mnemonic": "push",
+      "operands": "edi"
+    },
+    {
+      "va": "0x6fb4c47e",
+      "rva": "0xac47e",
+      "bytes": "e85ff20100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c483",
+      "rva": "0xac483",
+      "bytes": "8be8",
+      "mnemonic": "mov",
+      "operands": "ebp, eax"
+    },
+    {
+      "va": "0x6fb4c485",
+      "rva": "0xac485",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c487",
+      "rva": "0xac487",
+      "bytes": "85ed",
+      "mnemonic": "test",
+      "operands": "ebp, ebp"
+    },
+    {
+      "va": "0x6fb4c489",
+      "rva": "0xac489",
+      "bytes": "7e12",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c49d"
+    },
+    {
+      "va": "0x6fb4c48b",
+      "rva": "0xac48b",
+      "bytes": "8d0c3e",
+      "mnemonic": "lea",
+      "operands": "ecx, [esi + edi]"
+    },
+    {
+      "va": "0x6fb4c48e",
+      "rva": "0xac48e",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c490",
+      "rva": "0xac490",
+      "bytes": "51",
+      "mnemonic": "push",
+      "operands": "ecx"
+    },
+    {
+      "va": "0x6fb4c491",
+      "rva": "0xac491",
+      "bytes": "8bcb",
+      "mnemonic": "mov",
+      "operands": "ecx, ebx"
+    },
+    {
+      "va": "0x6fb4c493",
+      "rva": "0xac493",
+      "bytes": "e828fa0000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c498",
+      "rva": "0xac498",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c499",
+      "rva": "0xac499",
+      "bytes": "3bf5",
+      "mnemonic": "cmp",
+      "operands": "esi, ebp"
+    },
+    {
+      "va": "0x6fb4c49b",
+      "rva": "0xac49b",
+      "bytes": "7cee",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c48b"
+    },
+    {
+      "va": "0x6fb4c49d",
+      "rva": "0xac49d",
+      "bytes": "8b442410",
+      "mnemonic": "mov",
+      "operands": "eax, dword ptr [esp + 0x10]"
+    },
+    {
+      "va": "0x6fb4c4a1",
+      "rva": "0xac4a1",
+      "bytes": "83f8ff",
+      "mnemonic": "cmp",
+      "operands": "eax, -1"
+    },
+    {
+      "va": "0x6fb4c4a4",
+      "rva": "0xac4a4",
+      "bytes": "7450",
+      "mnemonic": "je",
+      "operands": "0x6fb4c4f6"
+    },
+    {
+      "va": "0x6fb4c4a6",
+      "rva": "0xac4a6",
+      "bytes": "50",
+      "mnemonic": "push",
+      "operands": "eax"
+    },
+    {
+      "va": "0x6fb4c4a7",
+      "rva": "0xac4a7",
+      "bytes": "e836f20100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c4ac",
+      "rva": "0xac4ac",
+      "bytes": "8bf8",
+      "mnemonic": "mov",
+      "operands": "edi, eax"
+    },
+    {
+      "va": "0x6fb4c4ae",
+      "rva": "0xac4ae",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c4b0",
+      "rva": "0xac4b0",
+      "bytes": "85ff",
+      "mnemonic": "test",
+      "operands": "edi, edi"
+    },
+    {
+      "va": "0x6fb4c4b2",
+      "rva": "0xac4b2",
+      "bytes": "7e16",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c4ca"
+    },
+    {
+      "va": "0x6fb4c4b4",
+      "rva": "0xac4b4",
+      "bytes": "8b542410",
+      "mnemonic": "mov",
+      "operands": "edx, dword ptr [esp + 0x10]"
+    },
+    {
+      "va": "0x6fb4c4b8",
+      "rva": "0xac4b8",
+      "bytes": "8bcb",
+      "mnemonic": "mov",
+      "operands": "ecx, ebx"
+    },
+    {
+      "va": "0x6fb4c4ba",
+      "rva": "0xac4ba",
+      "bytes": "8d0416",
+      "mnemonic": "lea",
+      "operands": "eax, [esi + edx]"
+    },
+    {
+      "va": "0x6fb4c4bd",
+      "rva": "0xac4bd",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c4bf",
+      "rva": "0xac4bf",
+      "bytes": "50",
+      "mnemonic": "push",
+      "operands": "eax"
+    },
+    {
+      "va": "0x6fb4c4c0",
+      "rva": "0xac4c0",
+      "bytes": "e8fbf90000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c4c5",
+      "rva": "0xac4c5",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c4c6",
+      "rva": "0xac4c6",
+      "bytes": "3bf7",
+      "mnemonic": "cmp",
+      "operands": "esi, edi"
+    },
+    {
+      "va": "0x6fb4c4c8",
+      "rva": "0xac4c8",
+      "bytes": "7cea",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c4b4"
+    },
+    {
+      "va": "0x6fb4c4ca",
+      "rva": "0xac4ca",
+      "bytes": "8b4c2410",
+      "mnemonic": "mov",
+      "operands": "ecx, dword ptr [esp + 0x10]"
+    },
+    {
+      "va": "0x6fb4c4ce",
+      "rva": "0xac4ce",
+      "bytes": "8d7901",
+      "mnemonic": "lea",
+      "operands": "edi, [ecx + 1]"
+    },
+    {
+      "va": "0x6fb4c4d1",
+      "rva": "0xac4d1",
+      "bytes": "83ffff",
+      "mnemonic": "cmp",
+      "operands": "edi, -1"
+    },
+    {
+      "va": "0x6fb4c4d4",
+      "rva": "0xac4d4",
+      "bytes": "7420",
+      "mnemonic": "je",
+      "operands": "0x6fb4c4f6"
+    },
+    {
+      "va": "0x6fb4c4d6",
+      "rva": "0xac4d6",
+      "bytes": "57",
+      "mnemonic": "push",
+      "operands": "edi"
+    },
+    {
+      "va": "0x6fb4c4d7",
+      "rva": "0xac4d7",
+      "bytes": "e806f20100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c4dc",
+      "rva": "0xac4dc",
+      "bytes": "8be8",
+      "mnemonic": "mov",
+      "operands": "ebp, eax"
+    },
+    {
+      "va": "0x6fb4c4de",
+      "rva": "0xac4de",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c4e0",
+      "rva": "0xac4e0",
+      "bytes": "85ed",
+      "mnemonic": "test",
+      "operands": "ebp, ebp"
+    },
+    {
+      "va": "0x6fb4c4e2",
+      "rva": "0xac4e2",
+      "bytes": "7e12",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c4f6"
+    },
+    {
+      "va": "0x6fb4c4e4",
+      "rva": "0xac4e4",
+      "bytes": "8d143e",
+      "mnemonic": "lea",
+      "operands": "edx, [esi + edi]"
+    },
+    {
+      "va": "0x6fb4c4e7",
+      "rva": "0xac4e7",
+      "bytes": "8bcb",
+      "mnemonic": "mov",
+      "operands": "ecx, ebx"
+    },
+    {
+      "va": "0x6fb4c4e9",
+      "rva": "0xac4e9",
+      "bytes": "52",
+      "mnemonic": "push",
+      "operands": "edx"
+    },
+    {
+      "va": "0x6fb4c4ea",
+      "rva": "0xac4ea",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c4ec",
+      "rva": "0xac4ec",
+      "bytes": "e8cff90000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c4f1",
+      "rva": "0xac4f1",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c4f2",
+      "rva": "0xac4f2",
+      "bytes": "3bf5",
+      "mnemonic": "cmp",
+      "operands": "esi, ebp"
+    },
+    {
+      "va": "0x6fb4c4f4",
+      "rva": "0xac4f4",
+      "bytes": "7cee",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c4e4"
+    },
+    {
+      "va": "0x6fb4c4f6",
+      "rva": "0xac4f6",
+      "bytes": "8b442414",
+      "mnemonic": "mov",
+      "operands": "eax, dword ptr [esp + 0x14]"
+    },
+    {
+      "va": "0x6fb4c4fa",
+      "rva": "0xac4fa",
+      "bytes": "83f8ff",
+      "mnemonic": "cmp",
+      "operands": "eax, -1"
+    },
+    {
+      "va": "0x6fb4c4fd",
+      "rva": "0xac4fd",
+      "bytes": "7450",
+      "mnemonic": "je",
+      "operands": "0x6fb4c54f"
+    },
+    {
+      "va": "0x6fb4c4ff",
+      "rva": "0xac4ff",
+      "bytes": "50",
+      "mnemonic": "push",
+      "operands": "eax"
+    },
+    {
+      "va": "0x6fb4c500",
+      "rva": "0xac500",
+      "bytes": "e8ddf10100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c505",
+      "rva": "0xac505",
+      "bytes": "8bf8",
+      "mnemonic": "mov",
+      "operands": "edi, eax"
+    },
+    {
+      "va": "0x6fb4c507",
+      "rva": "0xac507",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c509",
+      "rva": "0xac509",
+      "bytes": "85ff",
+      "mnemonic": "test",
+      "operands": "edi, edi"
+    },
+    {
+      "va": "0x6fb4c50b",
+      "rva": "0xac50b",
+      "bytes": "7e16",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c523"
+    },
+    {
+      "va": "0x6fb4c50d",
+      "rva": "0xac50d",
+      "bytes": "8b442414",
+      "mnemonic": "mov",
+      "operands": "eax, dword ptr [esp + 0x14]"
+    },
+    {
+      "va": "0x6fb4c511",
+      "rva": "0xac511",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c513",
+      "rva": "0xac513",
+      "bytes": "8d0c06",
+      "mnemonic": "lea",
+      "operands": "ecx, [esi + eax]"
+    },
+    {
+      "va": "0x6fb4c516",
+      "rva": "0xac516",
+      "bytes": "51",
+      "mnemonic": "push",
+      "operands": "ecx"
+    },
+    {
+      "va": "0x6fb4c517",
+      "rva": "0xac517",
+      "bytes": "8bcb",
+      "mnemonic": "mov",
+      "operands": "ecx, ebx"
+    },
+    {
+      "va": "0x6fb4c519",
+      "rva": "0xac519",
+      "bytes": "e8a2f90000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c51e",
+      "rva": "0xac51e",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c51f",
+      "rva": "0xac51f",
+      "bytes": "3bf7",
+      "mnemonic": "cmp",
+      "operands": "esi, edi"
+    },
+    {
+      "va": "0x6fb4c521",
+      "rva": "0xac521",
+      "bytes": "7cea",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c50d"
+    },
+    {
+      "va": "0x6fb4c523",
+      "rva": "0xac523",
+      "bytes": "8b542414",
+      "mnemonic": "mov",
+      "operands": "edx, dword ptr [esp + 0x14]"
+    },
+    {
+      "va": "0x6fb4c527",
+      "rva": "0xac527",
+      "bytes": "8d7a01",
+      "mnemonic": "lea",
+      "operands": "edi, [edx + 1]"
+    },
+    {
+      "va": "0x6fb4c52a",
+      "rva": "0xac52a",
+      "bytes": "83ffff",
+      "mnemonic": "cmp",
+      "operands": "edi, -1"
+    },
+    {
+      "va": "0x6fb4c52d",
+      "rva": "0xac52d",
+      "bytes": "7420",
+      "mnemonic": "je",
+      "operands": "0x6fb4c54f"
+    },
+    {
+      "va": "0x6fb4c52f",
+      "rva": "0xac52f",
+      "bytes": "57",
+      "mnemonic": "push",
+      "operands": "edi"
+    },
+    {
+      "va": "0x6fb4c530",
+      "rva": "0xac530",
+      "bytes": "e8adf10100",
+      "mnemonic": "call",
+      "operands": "0x6fb6b6e2",
+      "import": "D2Common.dll#10680"
+    },
+    {
+      "va": "0x6fb4c535",
+      "rva": "0xac535",
+      "bytes": "8be8",
+      "mnemonic": "mov",
+      "operands": "ebp, eax"
+    },
+    {
+      "va": "0x6fb4c537",
+      "rva": "0xac537",
+      "bytes": "33f6",
+      "mnemonic": "xor",
+      "operands": "esi, esi"
+    },
+    {
+      "va": "0x6fb4c539",
+      "rva": "0xac539",
+      "bytes": "85ed",
+      "mnemonic": "test",
+      "operands": "ebp, ebp"
+    },
+    {
+      "va": "0x6fb4c53b",
+      "rva": "0xac53b",
+      "bytes": "7e12",
+      "mnemonic": "jle",
+      "operands": "0x6fb4c54f"
+    },
+    {
+      "va": "0x6fb4c53d",
+      "rva": "0xac53d",
+      "bytes": "8d043e",
+      "mnemonic": "lea",
+      "operands": "eax, [esi + edi]"
+    },
+    {
+      "va": "0x6fb4c540",
+      "rva": "0xac540",
+      "bytes": "33d2",
+      "mnemonic": "xor",
+      "operands": "edx, edx"
+    },
+    {
+      "va": "0x6fb4c542",
+      "rva": "0xac542",
+      "bytes": "50",
+      "mnemonic": "push",
+      "operands": "eax"
+    },
+    {
+      "va": "0x6fb4c543",
+      "rva": "0xac543",
+      "bytes": "8bcb",
+      "mnemonic": "mov",
+      "operands": "ecx, ebx"
+    },
+    {
+      "va": "0x6fb4c545",
+      "rva": "0xac545",
+      "bytes": "e876f90000",
+      "mnemonic": "call",
+      "operands": "0x6fb5bec0"
+    },
+    {
+      "va": "0x6fb4c54a",
+      "rva": "0xac54a",
+      "bytes": "46",
+      "mnemonic": "inc",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c54b",
+      "rva": "0xac54b",
+      "bytes": "3bf5",
+      "mnemonic": "cmp",
+      "operands": "esi, ebp"
+    },
+    {
+      "va": "0x6fb4c54d",
+      "rva": "0xac54d",
+      "bytes": "7cee",
+      "mnemonic": "jl",
+      "operands": "0x6fb4c53d"
+    },
+    {
+      "va": "0x6fb4c54f",
+      "rva": "0xac54f",
+      "bytes": "5f",
+      "mnemonic": "pop",
+      "operands": "edi"
+    },
+    {
+      "va": "0x6fb4c550",
+      "rva": "0xac550",
+      "bytes": "5e",
+      "mnemonic": "pop",
+      "operands": "esi"
+    },
+    {
+      "va": "0x6fb4c551",
+      "rva": "0xac551",
+      "bytes": "5d",
+      "mnemonic": "pop",
+      "operands": "ebp"
+    },
+    {
+      "va": "0x6fb4c552",
+      "rva": "0xac552",
+      "bytes": "5b",
+      "mnemonic": "pop",
+      "operands": "ebx"
+    },
+    {
+      "va": "0x6fb4c553",
+      "rva": "0xac553",
+      "bytes": "83c408",
+      "mnemonic": "add",
+      "operands": "esp, 8"
+    },
+    {
+      "va": "0x6fb4c556",
+      "rva": "0xac556",
+      "bytes": "c3",
+      "mnemonic": "ret",
+      "operands": ""
+    }
+  ],
+  "interpretation": {
+    "stats": {
+      "132": "bonearmor",
+      "133": "bonearmormax",
+      "355": "shortparam1 (previous visual count)"
+    },
+    "third": "signed integer maximum / 3 (truncation toward zero)",
+    "count": "3; if current < third then 2; if current < 2*third then decrement once",
+    "creation": "For each enabled overlay1..3, create its numeric ID and ID+1, mode 3",
+    "increase": "When count > previous, remfunc5 clears all pairs, then recreate enabled pairs",
+    "decrease": "Remove higher disabled pairs, preserve surviving lower animation objects",
+    "retail_lowest_group_quirk": "At 0x6fb4c7fb compares first overlay numeric ID, not count, against 1; positive pool always retains at least group one",
+    "remove": "For all three configured IDs and ID+1, remove the 1ofN range returned by D2Common#10680"
+  },
+  "limits": [
+    "Static behavior only, no original gameplay or GPU frames captured",
+    "Retail 1ofN=1 overlays are the supported reconstruction scope",
+    "Riiablo treats zero/missing pool as no visual; exhausted authoritative armor removes the state"
+  ]
+}

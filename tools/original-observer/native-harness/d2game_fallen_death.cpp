@@ -86,13 +86,14 @@ static std::pair<U,U> distancePoint(CastController& d,U room,U ox,U oy,int reque
   throw std::runtime_error("No exact-distance clear footprint in native room");
 }
 
+#ifndef D2_FALLEN_HELPERS_ONLY
 int wmain(int argc, wchar_t** argv) {
   SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
   if (argc != 4 && argc != 5) return 2;
   std::wstring profile=argc==5?argv[4]:L"same-room-native-death";
   if(profile!=L"same-room-native-death"&&profile!=L"distance-14"&&profile!=L"distance-15"
-      &&profile!=L"ring-4"&&profile!=L"ring-5"&&profile!=L"adjacent-room"&&profile!=L"recovery"&&profile!=L"recovery-reengage"&&profile!=L"attack-direct"&&profile!=L"attack-repeat"&&profile!=L"attack-natural")return 2;
-  U observationFrames=(profile==L"attack-repeat"||profile==L"attack-natural")?1040:(profile==L"recovery"||profile==L"recovery-reengage")?600:120;
+      &&profile!=L"ring-4"&&profile!=L"ring-5"&&profile!=L"adjacent-room"&&profile!=L"recovery"&&profile!=L"recovery-reengage"&&profile!=L"attack-direct"&&profile!=L"attack-repeat"&&profile!=L"attack-natural"&&profile!=L"attack-natural-long")return 2;
+  U observationFrames=profile==L"attack-natural-long"?1600:(profile==L"attack-repeat"||profile==L"attack-natural")?1040:(profile==L"recovery"||profile==L"recovery-reengage")?600:120;
   int requestedDistance=profile==L"distance-14"?14:profile==L"distance-15"?15:0;
   U deathCount=profile==L"ring-4"?4:profile==L"ring-5"?5:1;
   CastController d; bool success=false, created=false, removed=false, death=false, ring=false;
@@ -157,7 +158,9 @@ int wmain(int argc, wchar_t** argv) {
     U game=original.Ecx, returnTo=d.get(original.Esp),player=0;
     U act=d.get(game+0xBC),seed=d.get(act+0xC); validateGame(d,game,seed,player);
     char name[16]{};d.read(d.get(player+0x14),name,16);
-    require(std::memcmp(name,"CXSorc",7)==0 && d.get(player+4)==1,"Require CXSorc fixture");
+    bool sorcFixture=std::memcmp(name,"CXSorc",7)==0 && d.get(player+4)==1;
+    bool ravenFixture=std::memcmp(name,"CXDruRaven",10)==0 && d.get(player+4)==5;
+    require(sorcFixture || ravenFixture,"Require CXSorc or CXDruRaven fixture");
     require(d.get(player+0x10)!=0 && d.get(player+0x10)!=17,"Require living player");
     require(returnTo>=gm.base && returnTo<gm.base+gm.size,"Update caller outside D2Game");
     U room=d.get(d.get(player+0x2C)+0x1C);
@@ -203,7 +206,7 @@ int wmain(int argc, wchar_t** argv) {
     }
     combatStats<<"}}";combatStats.close();
     std::ofstream identity(output / "identity.json");
-    identity<<"{\"natural_ai\":"<<(profile==L"attack-natural"?"true":"false")<<",\"map_seed\":"<<seed<<",\"observer_id\":"<<oid<<",\"corpse_id\":"<<cid
+    identity<<"{\"natural_ai\":"<<((profile==L"attack-natural"||profile==L"attack-natural-long")?"true":"false")<<",\"map_seed\":"<<seed<<",\"observer_id\":"<<oid<<",\"corpse_id\":"<<cid
       <<",\"reengage_step\":"<<(profile==L"recovery-reengage"?100:0)<<",\"observation_frames\":"<<observationFrames<<",\"death_count\":"<<deathCount<<",\"requested_distance\":"<<requestedDistance<<",\"observer_class\":19,\"corpse_class\":0,\"room\":"<<room<<",\"death_room\":"<<deathRoom<<",\"adjacent_room_fixture\":"<<(deathRoom!=room?"true":"false")<<",\"player_id\":"<<d.get(player+0xC)
       <<",\"player_x\":"<<pp.first<<",\"player_y\":"<<pp.second<<",\"observer_x\":"<<op.first
       <<",\"observer_y\":"<<op.second<<",\"corpse_x\":"<<cp.first<<",\"corpse_y\":"<<cp.second<<",\"adjacent_rooms\":[";
@@ -514,3 +517,4 @@ int wmain(int argc, wchar_t** argv) {
   save();while(d.attached&&!cleaned){Sleep(1000);cleaned=d.cleanup();}save();
   return success&&cleaned?0:1;
 }
+#endif

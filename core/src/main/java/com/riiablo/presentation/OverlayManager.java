@@ -73,6 +73,11 @@ public class OverlayManager extends IteratingSystem {
     for (int i = effects.size - 1; i >= 0; i--) {
       OwnedOverlay effect = effects.get(i);
       com.riiablo.presentation.component.Overlay overlay = effect.component;
+      boolean arctic = NativeArcticCastOverlay.handles(overlay);
+      if (arctic && !NativeArcticCastOverlay.advance(overlay, world.delta)) {
+        retire(entity, effect);
+        continue;
+      }
       if (!assets.isLoaded(effect.descriptor)) continue;
       Animation animation = overlay.animation;
       boolean loadedBefore = overlay.isLoaded;
@@ -89,6 +94,10 @@ public class OverlayManager extends IteratingSystem {
         }
         animation.setMode(overlay.persistent ? Animation.Mode.LOOP : Animation.Mode.CLAMP);
         overlay.isLoaded = true;
+      }
+      if (arctic) {
+        NativeArcticCastOverlay.apply(overlay);
+        continue; // No asset-dependent minimum-display extension of the native ONCE lifetime.
       }
       if (!overlay.persistent && loadedBefore && overlay.minimumDisplayFrames > 0)
         overlay.minimumDisplayFrames--;
@@ -108,6 +117,13 @@ public class OverlayManager extends IteratingSystem {
     install(entity, entry, false, -1);
   }
 
+  @net.mostlyoriginal.api.event.common.Subscribe
+  public void onUnitOverlay(com.riiablo.engine.server.event.UnitOverlayEvent event) {
+    if (event == null || event.entityId < 0 || event.overlay == null
+        || event.overlay.isEmpty() || !world.getEntityManager().isActive(event.entityId)) return;
+    set(event.entityId, event.overlay);
+  }
+
   public void setPersistent(int entity, int stateId, String overlayId) {
     ensureOpen();
     if (overlayId == null || overlayId.isEmpty()) return;
@@ -121,6 +137,36 @@ public class OverlayManager extends IteratingSystem {
     }
     Overlay.Entry entry = resolveEntry(overlayId);
     if (entry != null) install(entity, entry, true, stateId);
+  }
+
+  /** Replaces a state's selected layers while retaining matching animation clocks. */
+  public void reconcilePersistent(int entity, int stateId, String... overlayIds) {
+    ensureOpen();
+    Array<OwnedOverlay> effects = owned.get(entity);
+    if (effects != null) for (int i = effects.size - 1; i >= 0; i--) {
+      OwnedOverlay effect = effects.get(i);
+      com.riiablo.presentation.component.Overlay current = effect.component;
+      if (!current.persistent || current.stateId != stateId) continue;
+      boolean retain = false;
+      if (overlayIds != null && current.entry != null) for (String name : overlayIds) {
+        if (same(current.entry.overlay, name)) { retain = true; break; }
+      }
+      if (!retain) retire(entity, effect);
+    }
+    if (overlayIds != null) for (String name : overlayIds) setPersistent(entity, stateId, name);
+    removeEmptyComponent(entity);
+  }
+
+  /** Includes pending asset loads: a chained state overlay waits for retirement. */
+  public boolean isOneShotActive(int entity, String overlayId) {
+    Array<OwnedOverlay> effects = owned.get(entity);
+    if (effects == null || overlayId == null || overlayId.isEmpty()) return false;
+    for (OwnedOverlay effect : effects) {
+      com.riiablo.presentation.component.Overlay overlay = effect.component;
+      if (!overlay.persistent && overlay.entry != null
+          && same(overlayId, overlay.entry.overlay) && isCurrent(entity, effect)) return true;
+    }
+    return false;
   }
 
   /** Clears only this state's layers; unrelated buffs and impact flashes survive. */

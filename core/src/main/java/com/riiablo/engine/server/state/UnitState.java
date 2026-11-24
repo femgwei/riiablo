@@ -42,6 +42,9 @@ public class UnitState {
   
   /** 初始持续时间（用于计算百分比） */
   public int initialDuration;
+
+  /** Presentation refresh token; persisted by the owning runtime checkpoint codec. */
+  public int presentationRevision;
   
   /** 施法者实体ID（-1 表示无来源） */
   public int sourceEntityId = -1;
@@ -266,6 +269,7 @@ public class UnitState {
     level = 1;
     duration = 0;
     initialDuration = 0;
+    presentationRevision = 0;
     sourceEntityId = -1;
     skillId = -1;
     curseGroup = 0;
@@ -768,6 +772,7 @@ public class UnitState {
     this.level = other.level;
     this.duration = other.duration;
     this.initialDuration = other.initialDuration;
+    this.presentationRevision = other.presentationRevision;
     this.sourceEntityId = other.sourceEntityId;
     this.skillId = other.skillId;
     this.curseGroup = other.curseGroup;

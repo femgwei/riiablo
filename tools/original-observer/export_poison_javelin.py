@@ -6,7 +6,11 @@ import json
 from pathlib import Path
 
 NAMES = {38: "poisonjav", 39: "poisonjavcloud", 43: "plaguejavelin",
-         221: "plaguejavcloud", 141: "poisonpuff", 457: "firestorm", 458: "firestormmaker"}
+         221: "plaguejavcloud", 141: "poisonpuff", 104: "firesmall", 105: "firemedium", 457: "firestorm", 458: "firestormmaker",
+         461: "erruption center", 462: "erruption crack 1", 463: "erruption crack 2",
+         464: "erruption smoke 1", 465: "erruption smoke 2", 479: "volcano",
+         480: "volcano overlay fire", 481: "volcano debris 2", 482: "volcano explosion", 483: "volcano small fire",
+         477: "twister", 478: "tornado"}
 
 
 def export(run, capture_name="capture"):

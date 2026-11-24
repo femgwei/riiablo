@@ -222,12 +222,12 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
       h.root("erruption center", SkillId.FISSURE);
       h.tick(0);
       for (int i = 0; i < 10; i++) h.tick(.04f);
-      assertEquals(10, h.created.size());
+      assertEquals(4, h.created.size());
       for (int i = 0; i < h.created.size(); i += 2) {
         assertEquals("erruption crack 1", h.names.get(i));
         assertEquals("erruption smoke 1", h.names.get(i + 1));
         assertEquals(h.births.get(i), h.births.get(i + 1));
-        assertEquals(.9f, h.effect(h.created.get(i)).duration);
+        assertEquals(84f / 25f, h.effect(h.created.get(i)).duration);
         assertTrue(h.effect(h.created.get(i)).direction < 4);
         assertTrue(h.effect(h.created.get(i)).ground);
       }
@@ -237,22 +237,22 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
   @Test void volcanoHasTwoResidentLayersAndRocksLandWithExplosionAndLava() {
     try (Harness h = new Harness()) {
       int root = h.root("volcano", SkillId.VOLCANO);
-      // The controller can arrive with only one authoritative frame left;
-      // the reference client still keeps the authored 5.5s volcano layers.
-      h.missile(root).nativeLifetimeFrames = 1;
+      h.missile(root).nativeLifetimeFrames = 150;
+      h.missile(root).ownerId = h.world.create();
       h.tick(0);
       assertEquals(2, h.created.size());
       assertEquals("volcano", h.names.get(0));
       assertEquals("volcano overlay fire", h.names.get(1));
-      assertEquals(5.5f, h.effect(h.created.get(0)).duration, .0001f);
-      assertEquals(5.5f, h.effect(h.created.get(1)).duration, .0001f);
+      assertEquals(6f, h.effect(h.created.get(0)).duration, .0001f);
+      assertEquals(6f, h.effect(h.created.get(1)).duration, .0001f);
       assertTrue(h.effect(h.created.get(0)).ground);
       for (int i = 0; i < 8; i++) h.tick(.04f);
       assertEquals("volcano debris 2", h.names.get(2));
       ReferenceElementalEffect rock = h.effect(h.created.get(2));
-      assertEquals(.45f, rock.duration);
-      assertEquals("volcano explosion", rock.landing);
-      for (int i = 0; i < 12; i++) h.tick(.04f);
+      assertTrue(rock.nativeVolcanoRock);
+      assertTrue(rock.duration >= 1f / 25 && rock.duration <= 27f / 25);
+      assertNull(rock.landing);
+      for (int i = 0; i < 30; i++) h.tick(.04f);
       assertTrue(h.names.contains("volcano explosion"));
       assertTrue(h.names.contains("volcano small fire"));
       assertTrue(h.system.hideOriginal(root));
@@ -263,6 +263,53 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
       h.root("volcano debris 2", SkillId.VOLCANO);
       h.tick(0);
       assertEquals(0, h.created.size());
+    }
+  }
+
+  @Test void lateVolcanoSnapshotResumesItsOutroAndCannotRestartTheEffect() {
+    try (Harness h = new Harness()) {
+      int root = h.root("volcano", SkillId.VOLCANO);
+      h.missile(root).nativeLifetimeFrames = 150;
+      h.missile(root).nativeFrame = 149;
+      h.tick(0);
+      assertEquals(2, h.created.size());
+      for (int id : h.created) assertEquals(149f / 25f, h.effect(id).age, .0001f);
+      h.tick(1f / 25f);
+      for (int id : h.created) assertFalse(h.world.getEntityManager().isActive(id));
+      h.tick(.5f);
+      assertEquals(2, h.created.size(), "expired snapshots cannot create new rocks or restart resident layers");
+    }
+  }
+
+  @Test void volcanoOwnerRemovalSkipsLandingChildren() {
+    try (Harness h = new Harness()) {
+      int root = h.root("volcano", SkillId.VOLCANO), owner = h.world.create();
+      h.missile(root).ownerId = owner;
+      h.missile(root).nativeLifetimeFrames = 150;
+      for (int i = 0; i < 6; i++) h.tick(.04f);
+      assertTrue(h.names.contains("volcano debris 2"));
+      h.world.delete(root); h.world.delete(owner);
+      for (int i = 0; i < 35; i++) h.tick(.04f);
+      assertFalse(h.names.contains("volcano explosion"));
+      assertFalse(h.names.contains("volcano small fire"));
+    }
+  }
+
+  @Test void volcanoLeavingTheHostSceneOnItsFinalStepDoesNotLand() {
+    com.riiablo.map.Map map = mock(com.riiablo.map.Map.class);
+    com.riiablo.map.Map.Zone zone = mock(com.riiablo.map.Map.Zone.class);
+    when(map.getZone(any(Vector2.class))).thenAnswer(call -> ((Vector2) call.getArgument(0)).x < 10.5f ? zone : null);
+    try (Harness h = new Harness(map)) {
+      int root = h.root("volcano", SkillId.VOLCANO);
+      h.missile(root).ownerId = h.world.create(); h.missile(root).nativeLifetimeFrames = 150;
+      for (int i = 0; i < 6; i++) h.tick(.04f);
+      int id = h.created.get(h.names.indexOf("volcano debris 2"));
+      ReferenceElementalEffect rock = h.effect(id);
+      rock.age = 0; rock.duration = .04f; rock.nativeVelocityX = 65536; rock.nativeVelocityY = 0;
+      h.world.getMapper(Position.class).get(id).position.set(rock.origin);
+      h.world.delete(root); h.tick(.04f);
+      assertFalse(h.world.getEntityManager().isActive(id));
+      assertFalse(h.names.contains("volcano explosion")); assertFalse(h.names.contains("volcano small fire"));
     }
   }
 
@@ -366,7 +413,7 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
     }
   }
 
-  @Test void armageddonLayersScatterAroundTheCastCenterAndExplodeAfterTheFall() {
+  @Test void armageddonLayersUseTheReceivedLandingPointAndCompleteTheNativeFall() {
     try (Harness h = new Harness()) {
       int caster = h.world.create();
       h.world.getMapper(Position.class).create(caster).position.set(10, 20);
@@ -374,28 +421,23 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
           .addState(StateId.ARMAGEDDON, 250, 1, caster);
       int first = h.root("armageddoncontrol", SkillId.ARMAGEDDON);
       h.missile(first).ownerId = caster;
+      h.missile(first).nativeLifetimeFrames = 2;
       h.missile(first).presentationSeedKnown = true;
       h.missile(first).presentationSeed = 101;
       int second = h.root("armageddoncontrol", SkillId.ARMAGEDDON);
       h.missile(second).ownerId = caster;
       h.missile(second).presentationSeedKnown = true;
       h.missile(second).presentationSeed = 202;
+      h.world.getMapper(Position.class).get(second).position.set(15, 23);
       h.tick(0);
       assertEquals(4, h.created.size());
       assertEquals(h.effect(h.created.get(0)).offset, h.effect(h.created.get(1)).offset);
-      assertEquals(330, h.effect(h.created.get(0)).offset.y);
+      assertEquals(new Vector2(375, 625), h.effect(h.created.get(0)).offset);
+      assertEquals(1f, h.effect(h.created.get(0)).duration);
       assertEquals(h.births.get(0), h.births.get(1));
       assertEquals(h.births.get(2), h.births.get(3));
-      assertNotEquals(h.births.get(0), h.births.get(2),
-          "each strike must land at a different point in the cast area");
-      Vector2 center = h.world.getMapper(Position.class).get(caster).position;
-      Vector2 screenCenter = EngineUtils.worldToScreenCoords(center, new Vector2());
-      for (int i : new int[] {0, 2}) {
-        Vector2 delta = EngineUtils.worldToScreenCoords(h.births.get(i), new Vector2())
-            .sub(screenCenter);
-        assertTrue(delta.x * delta.x / (220 * 220)
-            + delta.y * delta.y / (149.6f * 149.6f) <= 1.001f);
-      }
+      assertEquals(new Vector2(10, 20), h.births.get(0));
+      assertEquals(new Vector2(15, 23), h.births.get(2));
       h.world.getMapper(Position.class).get(caster).position.set(100, 80);
       int third = h.root("armageddoncontrol", SkillId.ARMAGEDDON);
       h.missile(third).ownerId = caster;
@@ -403,17 +445,42 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
       h.missile(third).presentationSeed = 303;
       h.tick(0);
       assertEquals(6, h.created.size());
-      Vector2 movedCenter = EngineUtils.worldToScreenCoords(
-          h.world.getMapper(Position.class).get(caster).position, new Vector2());
-      Vector2 movedDelta = EngineUtils.worldToScreenCoords(h.births.get(4), new Vector2())
-          .sub(movedCenter);
-      assertTrue(movedDelta.x * movedDelta.x / (220 * 220)
-          + movedDelta.y * movedDelta.y / (149.6f * 149.6f) <= 1.001f);
-      assertNotEquals(h.births.get(0), h.births.get(4),
-          "later strikes must follow the caster's moved center");
+      assertEquals(new Vector2(10, 20), h.births.get(4),
+          "caster movement cannot displace a received strike");
       for (int i = 0; i < 12; i++) h.tick(.04f);
+      assertFalse(h.names.contains("armageddonexplosion"), "no impact after the old .45s approximation");
+      assertEquals(new Vector2(195, 325), h.effect(h.created.get(0)).offset);
+      for (int i = 0; i < 13; i++) h.tick(.04f);
       assertTrue(h.names.contains("armageddonexplosion"));
       assertEquals(3, h.names.stream().filter("armageddonexplosion"::equals).count());
+      assertEquals(3, h.names.stream().filter("armageddonfire"::equals).count());
+      for (int i = 0; i < h.created.size(); i++) if ("armageddonfire".equals(h.names.get(i))) {
+        int id = h.created.get(i);
+        assertEquals(37f / 25, h.effect(id).duration);
+        assertFalse(h.effect(id).fade); assertEquals(0, h.effect(id).phase);
+      }
+      assertEquals(101, h.missile(first).presentationSeed);
+      assertEquals(2, h.missile(first).nativeLifetimeFrames, "do not change the server carrier clock");
+    }
+  }
+
+  @Test void armageddonDamageChildrenCannotCreateAnotherFallingPair() {
+    try (Harness h = new Harness()) {
+      h.root("armageddonfire", SkillId.ARMAGEDDON);
+      h.root("armageddonexplosion", SkillId.ARMAGEDDON);
+      h.tick(0);
+      assertTrue(h.created.isEmpty());
+    }
+  }
+
+  @Test void armageddonCannotCreateImpactChildrenAfterItsOwnerIsRemoved() {
+    try (Harness h = new Harness()) {
+      int owner=h.world.create(), root=h.root("armageddoncontrol", SkillId.ARMAGEDDON);
+      h.missile(root).ownerId=owner; h.tick(0);
+      assertEquals(2,h.created.size());
+      h.world.delete(owner); h.tick(1f);
+      assertEquals(2,h.created.size());
+      assertFalse(h.names.contains("armageddonfire"));
     }
   }
 
@@ -428,7 +495,8 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
       for (int id : h.created) {
         ReferenceElementalEffect effect = h.effect(id);
         assertTrue(effect.orbit);
-        assertTrue(effect.spin < 0);
+        assertNotNull(effect.hurricaneFlight);
+        assertEquals(0, effect.hurricaneFlight.age, "all nine particles share their birth frame");
         assertTrue(effect.lift >= 0 && effect.lift < 75);
         assertEquals(new Vector2(10, 20), effect.origin);
       }
@@ -530,7 +598,7 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
         if (effect.direction != com.riiablo.engine.Direction.EAST) nonDefaultDirections++;
         assertEquals(effect.direction, animation.getDirection(),
             "tick " + i + ": the factory Angle must not overwrite the orbital tangent");
-        assertEquals(ReferenceElementalPresentationSystem.frameAt(effect, 11), animation.getFrame(),
+        assertEquals(effect.hurricaneFlight.age / 2, animation.getFrame(),
             "the 12.5 FPS wind clock must also survive the generic animation pass");
       }
       assertTrue(nonDefaultDirections > 8, "exercise directions that disagree with the birth Angle");
@@ -552,7 +620,7 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
     } finally { Riiablo.colors = previous; }
   }
 
-  private static final class Harness implements AutoCloseable {
+  static final class Harness implements AutoCloseable {
     final ReferenceElementalPresentationSystem system = new ReferenceElementalPresentationSystem();
     final World world;
     final List<Integer> created = new ArrayList<>();
@@ -560,12 +628,15 @@ class ReferenceElementalPresentationTest extends RiiabloTest {
     final List<Vector2> births = new ArrayList<>();
 
     Harness() {
+      this(new com.riiablo.map.Map(0, 0));
+    }
+    Harness(com.riiablo.map.Map map) {
       EntityFactory factory = mock(EntityFactory.class, CALLS_REAL_METHODS);
       world = new World(new WorldConfigurationBuilder().with(
           new net.mostlyoriginal.api.event.common.EventSystem(), system,
           new MissileImpactPresentationSystem(), new OverlayManager(), factory,
           new AnimationStepper(), new DirectionResolver()).build()
-          .register("factory", factory).register("map", new com.riiablo.map.Map(0, 0))
+          .register("factory", factory).register("map", map)
           .register("clientContext", ClientGameplayContext.fromGlobals()));
       doAnswer(call -> {
         Missiles.Entry row = Riiablo.files.Missiles.get((Integer) call.getArgument(0));

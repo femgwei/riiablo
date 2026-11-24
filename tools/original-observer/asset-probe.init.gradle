@@ -1,6 +1,41 @@
 // Offline Java source launcher using the repository's existing MPQ/DCC runtime.
 gradle.projectsEvaluated {
   def core = rootProject.project(':core')
+  core.tasks.register('druidWindOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.presentation.DruidWindOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file(core.findProperty('probeOutput')).absolutePath
+    if (core.hasProperty('probeWindStaticBaseline')) args '--static-baseline'
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('druidSurfaceOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.presentation.DruidSurfaceOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file(core.findProperty('probeOutput')).absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('druidBatchOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.presentation.DruidBatchOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file(core.findProperty('probeOutput')).absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('classSkillAssetProbe', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = rootProject.file('tools/original-observer/ClassSkillAssetProbe.java').absolutePath
+    workingDir rootProject.projectDir
+    args core.findProperty('probeHomeA'), rootProject.file(core.findProperty('probeOutput')).absolutePath
+  }
   if (core.hasProperty('probeIncludes')) {
     core.tasks.withType(Test).configureEach {
       include core.property('probeIncludes').toString().split(',')
@@ -50,6 +85,98 @@ gradle.projectsEvaluated {
     classpath = core.sourceSets.test.runtimeClasspath
     mainClass = rootProject.file('tools/original-observer/PoisonJavelinAssetProbe.java').absolutePath
     args core.findProperty('probeHomeA'), core.findProperty('probeOutput'), 'moltenboulder'
+  }
+  core.tasks.register('infernoAssetProbe', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = rootProject.file('tools/original-observer/PoisonJavelinAssetProbe.java').absolutePath
+    args core.findProperty('probeHomeA'), core.findProperty('probeOutput'), 'inferno'
+  }
+  core.tasks.register('enchantAssetProbe', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = rootProject.file('tools/original-observer/EnchantAssetProbe.java').absolutePath
+    args core.findProperty('probeHomeA'), core.findProperty('probeOutput')
+  }
+  core.tasks.register('enchantOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.presentation.EnchantOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file(core.findProperty('probeOutput')
+            ?: 'tools/original-observer/enchant-comparison-1.10f.json').absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('arcticBlastTurnOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.engine.server.ArcticBlastTurnOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file(core.findProperty('probeOutput')).absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('arcticBlastPublicationOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.engine.server.ArcticBlastPublicationOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file(core.findProperty('probeOutput')).absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('arcticBlastBirthBoundaryOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.engine.server.ArcticBlastBirthBoundaryOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file('core/src/test/resources/original/arctic-blast-birth-boundary-1.10f.json').absolutePath,
+        rootProject.file(core.findProperty('probeOutput')).absolutePath,
+        rootProject.file('core/src/test/resources/original/arctic-blast-sequence-1.10f.json').absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('arcticBlastOverlayOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.engine.server.ArcticBlastOverlayOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file('core/src/test/resources/original/arctic-blast-overlay-1.10f.json').absolutePath,
+        rootProject.file(core.findProperty('probeOutput')).absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('arcticBlastSequenceOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.engine.server.ArcticBlastSequenceOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file('core/src/test/resources/original/arctic-blast-sequence-1.10f.json').absolutePath,
+        rootProject.file(core.findProperty('probeOutput')).absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('arcticBlastOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.presentation.ArcticBlastOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file('core/src/test/resources/original/arctic-blast-1.10f.json').absolutePath,
+        rootProject.file(core.findProperty('probeOutput')).absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
+  }
+  core.tasks.register('infernoOriginalAnalysis', JavaExec) {
+    dependsOn core.tasks.named('testClasses')
+    classpath = core.sourceSets.test.runtimeClasspath
+    mainClass = 'com.riiablo.presentation.InfernoOriginalAnalysis'
+    workingDir rootProject.projectDir
+    args rootProject.file('core/src/test/resources/original/inferno-1.10f.json').absolutePath,
+        rootProject.file(core.findProperty('probeOutput')
+            ?: 'tools/original-observer/inferno-comparison-1.10f.json').absolutePath
+    environment 'D2_HOME', core.findProperty('probeHomeA')
+    environment 'D2_TEST', core.findProperty('probeHomeA')
   }
   core.tasks.register('moltenBoulderOriginalAnalysis', JavaExec) {
     dependsOn core.tasks.named('testClasses')

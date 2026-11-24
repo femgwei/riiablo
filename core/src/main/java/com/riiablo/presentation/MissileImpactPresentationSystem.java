@@ -43,6 +43,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<com.riiablo.presentation.component.DruidWindAnimationClock> mDruidWindClock;
+  protected ComponentMapper<com.riiablo.presentation.component.DruidWindFlight> mDruidWindFlight;
   @com.artemis.annotations.Wire(name = "factory")
   protected EntityFactory factory;
   @com.artemis.annotations.Wire(failOnNull = false)
@@ -78,6 +80,36 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         world.getSystem(ReferenceElementalPresentationSystem.class);
     if (referenceElemental != null && referenceElemental.ownsPresentation(entityId)) return;
     Missile visual = mMissile.get(entityId);
+    if (mDruidWindFlight.has(entityId)) return; // Native client wind system owns motion and TTL, including cold assets.
+    if (NativeDruidWindPresentation.handles(visual) && !visual.authoritative && !visual.presentationOnly) {
+      com.riiablo.presentation.component.DruidWindAnimationClock clock = mDruidWindClock.create(entityId);
+      clock.time = Math.max(clock.time, visual.nativeFrame / 25.0) + Math.max(0, world.delta);
+      visual.clientFrame = Math.max(visual.nativeFrame, (int) Math.floor(clock.time * 25 + .00001));
+      return; // Only the local animation clock; snapshot authority owns movement and removal.
+    }
+    if (visual.presentationOnly && NativeInfernoPresentation.handles(visual)) {
+      InfernoPresentationSystem inferno = world.getSystem(InfernoPresentationSystem.class);
+      if (visual.skillId == 230 && inferno != null && inferno.arcticBornThisPass(entityId)) return;
+      visual.infernoPresentationTime = Math.max(visual.nativeFrame / 25.0,
+          visual.infernoPresentationTime) + Math.max(0, world.delta);
+      int age = (int) Math.floor(visual.infernoPresentationTime * 25 + .00001);
+      // D2Client+9DAE4..9DB19 repeats CltDo1 once when a local player's
+      // newly active missile has just reached elapsed frame 1. Advance both
+      // position and animation age, rather than skipping a DCC frame alone.
+      if (visual.skillId == 230 && visual.nativeFrame == 0 && age > 0
+          && visual.ownerId == clientContext.playerId() && visual.ownerId >= 0
+          && !mVelocity.get(entityId).velocity.isZero()) {
+        age++;
+        visual.infernoPresentationTime += 1.0 / 25.0;
+      }
+      int steps = Math.min(age, visual.nativeLifetimeFrames) - visual.nativeFrame;
+      if (steps > 0) {
+        NativePoisonMissileMotion.advance(mPosition.get(entityId), mVelocity.get(entityId).velocity, steps);
+        visual.nativeFrame += steps;
+      }
+      if (visual.nativeFrame >= visual.nativeLifetimeFrames) world.delete(entityId);
+      return;
+    }
     if (NativeFirestormPresentation.serverGround(visual)) return;
     if (NativeFirestormMotion.maker(visual.missile)) {
       processFirestormMaker(entityId, visual);
@@ -107,6 +139,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
             || visual.missile.pCltDoFunc == 4 || MissileLoader.isPoisonSmokePuff(visual.missile)
              || MissileLoader.isBoneSpearTrail(visual.missile)
              || NativeFirestormPresentation.handles(visual));
+    callbackClock |= NativeInfernoPresentation.handles(visual);
     if (!mAnimationWrapper.has(entityId) && !callbackClock) return;
     float delta = Math.max(0f, world.delta);
     Vector2 velocity = mVelocity.get(entityId).velocity;
@@ -131,7 +164,8 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       processClientFlightFunction(entityId, visual, velocity, delta);
     }
     if (distance > 0f) {
-      if (MissileLoader.isPoisonSmokePuff(visual.missile)) {
+      if (MissileLoader.isPoisonSmokePuff(visual.missile)
+          || NativeInfernoPresentation.handles(visual)) {
         NativePoisonMissileMotion.advance(mPosition.get(entityId), velocity,
             Math.max(1, Math.round(delta * 25f)));
       } else {
@@ -421,7 +455,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
 
   private void createFirestormVisual(Missile maker, Vector2 at, int precisionX, int precisionY,
       boolean precisionKnown) {
-    String name = first(maker.missile.CltSubMissile, 0);
+    String name = fireWallChild(maker, maker.missile);
     if (name == null || factory == null) return;
     // CltParam1 samples light allocation; it never suppresses the sprite.
     int lightInterval = cltParam(maker.missile, 0, 0);
@@ -432,7 +466,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
     child.skillId = maker.skillId;
     child.damageLevel = maker.damageLevel;
     child.range = 0f;
-    child.nativeLifetimeFrames = Missile.nativeRangeFrames(child.missile, child.damageLevel);
+    // CltDo6's Firestorm alternatives all retain the primary flame's
+    // 15-tick clock, even though standalone small/medium rows have Range=90.
+    Missiles.Entry primary = clientContext.files().Missiles.get(first(maker.missile.CltSubMissile, 0));
+    child.nativeLifetimeFrames = Missile.nativeRangeFrames(primary != null ? primary : child.missile, child.damageLevel);
     if (precisionKnown && at.x >= 0 && at.y >= 0) mPosition.get(childId).setNativePrecision(precisionX, precisionY);
     else { mPosition.get(childId).invalidateNativePrecision(); mPosition.get(childId).position.set(at); }
     mVelocity.get(childId).velocity.setZero();
@@ -444,7 +481,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         && "firewallmaker".equalsIgnoreCase(missile.missile.Missile);
   }
 
-  private static String fireWallChild(Missile maker, Missiles.Entry source) {
+  static String fireWallChild(Missile maker, Missiles.Entry source) {
     if (maker == null || source == null || source.CltSubMissile == null) return null;
     String first = first(source.CltSubMissile, 0);
     String second = first(source.CltSubMissile, 1);
@@ -1014,7 +1051,10 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
       // impact sound: that changes the observable Missiles.txt behavior.
       playImpactSound(event, hitSound);
     }
-    String hitClassSound = hitClassSound(source.HitClass, event.targetEntityId);
+    // SrvDmg07 replaces the table's hit class with 0x60 for unit hits
+    // (War Cry/Shock Wave). Shock Wave's raw row still says lightning (64).
+    int hitClass = source.pSrvDmgFunc == 7 && event.targetEntityId >= 0 ? 96 : source.HitClass;
+    String hitClassSound = hitClassSound(hitClass, event.targetEntityId);
     if (hitClassSound != null && clientContext.audio() != null) {
       playImpactSound(event, hitClassSound);
     }

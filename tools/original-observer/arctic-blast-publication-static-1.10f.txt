@@ -1,0 +1,309 @@
+Local static Capstone disassembly; not runtime or REA Evidence.
+D2Client.dll sha256=94466b84c0593ab682f1d3d8dc65ef4f8170f33e430865d802bc752458b2b282
+CltSt15 has its own state-dependent point8 / remaining5 rewind. A rewind alone cannot identify CltDo24.
+Allocator increments global counter RVA F08FC and synchronously links the unit by type/id.
+This does not prove when any call ran in the collected process.
+CltSt15, including existing-state rewind RVA=0x2a050
+0002A050 push esi
+0002A051 push edi
+0002A052 test edx, edx
+0002A054 mov edi, ecx
+0002A056 jl 0x6faca07c
+0002A058 mov eax, dword ptr [0x6fb6d4ac]
+0002A05D mov eax, dword ptr [eax]
+0002A05F cmp edx, dword ptr [eax + 0xba0]
+0002A065 jge 0x6faca07c
+0002A067 lea ecx, [edx + edx*8]
+0002A06A shl ecx, 4
+0002A06D sub ecx, edx
+0002A06F mov edx, dword ptr [eax + 0xb98]
+0002A075 lea esi, [edx + ecx*4]
+0002A078 test esi, esi
+0002A07A jne 0x6faca083
+0002A07C pop edi
+0002A07D xor eax, eax
+0002A07F pop esi
+0002A080 ret 4
+0002A083 push 0xc
+0002A085 push edi
+0002A086 call 0x6fb6ab12
+0002A08B test eax, eax
+0002A08D jne 0x6faca0dc
+0002A08F mov ax, word ptr [esi + 0x10c]
+0002A096 test ax, ax
+0002A099 jle 0x6faca0c0
+0002A09B movsx edx, ax
+0002A09E mov eax, dword ptr [0x6fb6d4ac]
+0002A0A3 mov ecx, dword ptr [eax]
+0002A0A5 cmp edx, dword ptr [ecx + 0xbc0]
+0002A0AB jge 0x6faca0c0
+0002A0AD push 0
+0002A0AF push 0
+0002A0B1 push 0
+0002A0B3 push 0
+0002A0B5 push 0
+0002A0B7 push 2
+0002A0B9 mov ecx, edi
+0002A0BB call 0x6fb5ba70
+0002A0C0 mov si, word ptr [esi + 0x10e]
+0002A0C7 test si, si
+0002A0CA jle 0x6faca0dc
+0002A0CC push 0
+0002A0CE push 0
+0002A0D0 movsx ecx, si
+0002A0D3 push 0
+0002A0D5 xor edx, edx
+0002A0D7 call 0x6fb55820
+0002A0DC push 0xc
+0002A0DE push edi
+0002A0DF call 0x6fb6ac80
+0002A0E4 mov esi, eax
+0002A0E6 test esi, esi
+0002A0E8 jne 0x6faca145
+0002A0EA test edi, edi
+0002A0EC jne 0x6faca0f8
+0002A0EE or ecx, 0xffffffff
+0002A0F1 mov eax, 6
+0002A0F6 jmp 0x6faca0fd
+0002A0F8 mov ecx, dword ptr [edi + 0xc]
+0002A0FB mov eax, dword ptr [edi]
+0002A0FD push ecx
+0002A0FE push eax
+0002A0FF push 0x15
+0002A101 push 2
+0002A103 push 0
+0002A105 call 0x6fb6aac4
+0002A10A mov esi, eax
+0002A10C test esi, esi
+0002A10E jne 0x6faca115
+0002A110 pop edi
+0002A111 pop esi
+0002A112 ret 4
+0002A115 push 1
+0002A117 push esi
+0002A118 push edi
+0002A119 call 0x6fb6aab8
+0002A11E push 0x6fb2fb80
+0002A123 push esi
+0002A124 call 0x6fb6acce
+0002A129 push 0xc
+0002A12B push esi
+0002A12C call 0x6fb6aabe
+0002A131 push 1
+0002A133 push 0xc
+0002A135 push edi
+0002A136 call 0x6fb6aa7c
+0002A13B mov eax, 1
+0002A140 pop edi
+0002A141 pop esi
+0002A142 ret 4
+0002A145 push 8
+0002A147 push edi
+0002A148 call 0x6fb6ad4c
+0002A14D mov dword ptr [edi + 0x48], 0x500
+0002A154 push 7
+0002A156 push esi
+0002A157 call 0x6fb6ad46
+0002A15C mov eax, 1
+0002A161 pop edi
+0002A162 pop esi
+CltDo24 create, then state-dependent rewind RVA=0x2a2fe
+0002A2FE call 0x6fb3e070
+0002A303 mov edi, eax
+0002A305 test edi, edi
+0002A307 je 0x6faca358
+0002A309 cmp dword ptr [edi], 3
+0002A30C jne 0x6faca358
+0002A30E test ebp, ebp
+0002A310 je 0x6faca358
+0002A312 mov ecx, dword ptr [edi + 4]
+0002A315 test ecx, ecx
+0002A317 jl 0x6faca358
+0002A319 mov eax, dword ptr [0x6fb6d4ac]
+0002A31E mov edx, dword ptr [eax]
+0002A320 cmp ecx, dword ptr [edx + 0xb6c]
+0002A326 jge 0x6faca358
+0002A328 lea eax, [ecx*8]
+0002A32F mov edx, dword ptr [edx + 0xb64]
+0002A335 sub eax, ecx
+0002A337 lea eax, [eax + eax*2]
+0002A33A lea ecx, [eax + eax*4]
+0002A33D lea eax, [edx + ecx*4]
+0002A340 test eax, eax
+0002A342 je 0x6faca358
+0002A344 xor ecx, ecx
+0002A346 mov ch, byte ptr [eax + 0x178]
+0002A34C mov eax, ecx
+0002A34E cdq 
+0002A34F idiv ebp
+0002A351 push eax
+0002A352 push edi
+0002A353 call 0x6fb6abf0
+0002A358 push 0xc
+0002A35A push esi
+0002A35B call 0x6fb6ab12
+0002A360 test eax, eax
+0002A362 je 0x6faca394
+0002A364 mov eax, dword ptr [esi + 0x30]
+0002A367 test eax, eax
+0002A369 je 0x6faca386
+0002A36B push 8
+0002A36D push esi
+0002A36E call 0x6fb6ad4c
+0002A373 mov eax, edi
+0002A375 mov dword ptr [esi + 0x48], 0x500
+0002A37C pop edi
+0002A37D pop esi
+0002A37E pop ebp
+0002A37F pop ebx
+0002A380 add esp, 0x70
+0002A383 ret 4
+0002A386 mov edx, dword ptr [esi + 0x44]
+0002A389 xor dl, dl
+0002A38B sub edx, 0x200
+0002A391 mov dword ptr [esi + 0x44], edx
+0002A394 mov eax, edi
+0002A396 pop edi
+0002A397 pop esi
+0002A398 pop ebp
+0002A399 pop ebx
+0002A39A add esp, 0x70
+Client allocator counter and unit initialization call RVA=0x87d50
+00087D50 sub esp, 0x1c
+00087D53 push ebx
+00087D54 push esi
+00087D55 mov esi, edx
+00087D57 mov edx, dword ptr [0x6fb908fc]
+00087D5D inc edx
+00087D5E push edi
+00087D5F cmp edx, -1
+00087D62 mov ebx, ecx
+00087D64 mov dword ptr [0x6fb908fc], edx
+00087D6A jne 0x6fb27d74
+00087D6C xor edx, edx
+00087D6E mov dword ptr [0x6fb908fc], edx
+00087D74 mov edi, dword ptr [esp + 0x30]
+00087D78 cmp edi, 1
+00087D7B jne 0x6fb27dc2
+00087D7D mov ecx, 7
+00087D82 xor eax, eax
+00087D84 lea edi, [esp + 0xc]
+00087D88 push 1
+00087D8A rep stosd dword ptr es:[edi], eax
+00087D8C mov eax, dword ptr [esp + 0x30]
+00087D90 push 0
+00087D92 mov dword ptr [esp + 0x14], edx
+00087D96 push 0
+00087D98 push 0
+00087D9A xor edx, edx
+00087D9C lea ecx, [esp + 0x1c]
+00087DA0 mov dword ptr [esp + 0x20], ebx
+00087DA4 mov dword ptr [esp + 0x24], esi
+00087DA8 mov dword ptr [esp + 0x28], eax
+00087DAC mov dword ptr [esp + 0x34], 1
+00087DB4 call 0x6fb27630
+00087DB9 pop edi
+00087DBA pop esi
+00087DBB pop ebx
+00087DBC add esp, 0x1c
+00087DBF ret 0xc
+00087DC2 push edi
+00087DC3 push 0
+00087DC5 call 0x6fb6b340
+00087DCA test eax, eax
+00087DCC jne 0x6fb27dd7
+00087DCE pop edi
+00087DCF pop esi
+00087DD0 pop ebx
+00087DD1 add esp, 0x1c
+00087DD4 ret 0xc
+00087DD7 mov edx, dword ptr [eax + 0xc4]
+00087DDD mov ecx, dword ptr [esp + 0x34]
+00087DE1 or edx, 0x600000
+00087DE7 push 0
+00087DE9 mov dword ptr [eax + 0xc4], edx
+00087DEF mov edx, dword ptr [esp + 0x30]
+00087DF3 push ecx
+00087DF4 push edi
+00087DF5 push edx
+00087DF6 mov edx, dword ptr [0x6fb908fc]
+00087DFC push esi
+00087DFD push ebx
+00087DFE mov ecx, eax
+00087E00 call 0x6fb27080
+00087E05 pop edi
+00087E06 pop esi
+00087E07 pop ebx
+00087E08 add esp, 0x1c
+Allocation initializer invokes hash insertion RVA=0x87219
+00087219 mov ecx, esi
+0008721B call 0x6fb4dac0
+00087220 mov eax, dword ptr [esp + 0x28]
+00087224 test eax, eax
+00087226 je 0x6fb2722d
+00087228 cmp eax, 1
+0008722B jne 0x6fb2723d
+0008722D push 0x21b
+00087232 push 0x6fb90938
+00087237 push esi
+00087238 call 0x6fb6ad10
+0008723D mov ecx, esi
+0008723F call 0x6fb27280
+00087244 mov esi, eax
+00087246 test esi, esi
+00087248 je 0x6fb27258
+0008724A cmp dword ptr [esp + 0x28], 2
+0008724F jne 0x6fb27258
+00087251 mov ecx, esi
+00087253 call 0x6fb46ba0
+00087258 mov eax, esi
+0008725A pop edi
+0008725B pop esi
+0008725C pop ebp
+0008725D pop ebx
+0008725E add esp, 8
+Hash insertion selects secondary table for local units RVA=0x874f2
+000874F2 mov edx, 1
+000874F7 mov ecx, esi
+000874F9 call 0x6fb51f00
+000874FE mov eax, dword ptr [esi + 0xc4]
+00087504 mov edi, dword ptr [esi + 0xc]
+00087507 shr eax, 0x15
+0008750A mov edx, edi
+0008750C and eax, 1
+0008750F and edx, 0x7f
+00087512 cmp eax, 1
+00087515 mov eax, dword ptr [esi]
+00087517 jne 0x6fb27523
+00087519 shl eax, 9
+0008751C add eax, 0x6fbbb600
+00087521 jmp 0x6fb2752b
+00087523 shl eax, 9
+00087526 add eax, 0x6fbbaa00
+0008752B mov ecx, dword ptr [eax + edx*4]
+0008752E xor ebx, ebx
+00087530 test ecx, ecx
+00087532 je 0x6fb27545
+00087534 cmp dword ptr [ecx + 0xc], edi
+00087537 jbe 0x6fb27545
+00087539 mov ebx, ecx
+0008753B mov ecx, dword ptr [ecx + 0xe4]
+00087541 test ecx, ecx
+00087543 jne 0x6fb27534
+00087545 test ebx, ebx
+00087547 mov dword ptr [esi + 0xe4], ecx
+0008754D je 0x6fb2755f
+0008754F mov dword ptr [ebx + 0xe4], esi
+00087555 pop edi
+00087556 pop esi
+00087557 pop ebp
+00087558 mov eax, 1
+0008755D pop ebx
+0008755E ret 
+0008755F mov dword ptr [eax + edx*4], esi
+00087562 pop edi
+00087563 pop esi
+00087564 pop ebp
+00087565 mov eax, 1
+0008756A pop ebx
+0008756B ret 

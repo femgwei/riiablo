@@ -2,7 +2,6 @@ package com.riiablo.presentation;
 
 import com.d2moo.common.drlg.D2Seed;
 import com.d2moo.common.seed.Seed;
-import com.riiablo.engine.Direction;
 import com.riiablo.engine.server.missile.NativeMoltenBoulder;
 import com.riiablo.engine.server.missile.NativePoisonMissileMotion;
 import com.riiablo.util.EngineUtils;
@@ -29,17 +28,12 @@ import com.riiablo.presentation.component.ReferenceElementalEffect;
 import com.riiablo.presentation.component.ReferenceElementalEmitter;
 
 /**
- * Elemental sprites: audited 1.10f Boulder behavior alongside the reference
- * APK's w/xne, Sne, Y4, Tbe, Ebe and Abe fallbacks. Combat stays authoritative.
+ * Elemental sprites: audited 1.10f Druid paths/clocks alongside the remaining
+ * reference APK fallbacks. Combat stays authoritative.
  * Pixel offsets use the APK's downward screen Y, converted once at the boundary.
  */
 @All(Position.class)
 public class ReferenceElementalPresentationSystem extends IteratingSystem implements com.riiablo.map.RenderEffectProvider {
-  private static final float VOLCANO_DURATION_SECONDS = 5.5f;
-  private static final float VOLCANO_FIRST_ROCK_DELAY = .3f;
-  private static final float VOLCANO_ROCK_INTERVAL = .2f;
-  private static final int[] HURRICANE_X = {7, 5, 0, -5, -7, -5, 0, 5};
-  private static final int[] HURRICANE_Y = {0, 5, 7, 5, 0, -5, -7, -5};
   private static final String[] BLAZE_SPRITES = {"blaze", "firemedium", "firesmall"};
   private final java.util.Map<Integer, BlazeTrail> blazeTrails = new java.util.HashMap<>();
   private double presentationTime;
@@ -59,6 +53,7 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
   protected ComponentMapper<ReferenceElementalEmitter> mEmitter;
   @Wire(name = "factory") protected EntityFactory factory;
   @Wire(name = "clientContext") protected ClientGameplayContext clientContext;
+  @Wire(name = "map", failOnNull = false) protected com.riiablo.map.Map map;
 
   @Override protected void initialize() {
     // Queue short effects before the first cast; their visual clocks must not
@@ -139,28 +134,32 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
         // fall in its final segment instead of stretching the descent to 2.4s.
         clock.next = Math.max(0, duration - .6f);
       } else if (volcano) {
-        // Tbe creates both resident layers for the authored S0=5.5 seconds.
-        // Do not shorten the volcano to the remaining network carrier life:
-        // a late controller snapshot would otherwise show no volcano at all.
-        float duration = VOLCANO_DURATION_SECONDS;
+        float duration = Math.max(1, missile.nativeLifetimeFrames > 0
+            ? missile.nativeLifetimeFrames : missile.missile.Range) / 25f;
         ReferenceElementalEffect base = sprite("volcano", at, duration);
-        if (base != null) base.ground = true;
-        sprite("volcano overlay fire", at, duration);
-        clock.next = clock.age + VOLCANO_FIRST_ROCK_DELAY;
-      } else if (missile.skillId == SkillId.ARMAGEDDON) {
-        // Ebe: both layers share one landing point and a 0.45s diagonal fall.
-        // The native state is attached to the caster and the server emits a
-        // fresh strike from the caster's current position every period. Keep
-        // that moving center for the visual area; the authoritative missile
-        // remains at its server-selected target for combat.
-        Vector2 center = armageddonCenter(missile.ownerId, at);
-        Vector2 landing = scatter(center, 220f, .68f, clock);
-        falling("armageddontail", landing, .45f, 17160f / 127f, -330, 0, 0, 0, null);
-        ReferenceElementalEffect rock = falling("armageddonrock", landing, .45f,
-            17160f / 127f, -330, 0, 0, 0, "armageddonexplosion");
-        if (rock != null) {
-          rock.landingFire = random(clock) < .3f;
-          rock.landingPhase = (int) (random(clock) * 25);
+        if (base != null) {base.ground = true; nativeSurface(base, missile.nativeFrame / 25f);}
+        ReferenceElementalEffect fire = sprite("volcano overlay fire", at, duration);
+        if (fire != null) nativeSurface(fire, missile.nativeFrame / 25f);
+        clock.volcanoSeed = new D2Seed(missile.presentationSeedKnown ? missile.presentationSeed : missile.rngState, 666);
+        clock.volcanoFrame = Math.max(0, missile.nativeFrame - 1);
+      } else if ("erruption center".equals(name)) {
+        int interval = fissureInterval(missile);
+        int age = Math.max(0, missile.nativeFrame - 1);
+        clock.next = ((age + interval - 1) / interval * interval) / 25f;
+      } else if (missile.skillId == SkillId.ARMAGEDDON && "armageddoncontrol".equals(name)) {
+        // CltPrg92 uses the received landing cell. Re-scattering in the
+        // client displaced the effect from the authoritative strike.
+        for (String layer : new String[] {"armageddontail", "armageddonrock"}) {
+          ReferenceElementalEffect effect = falling(layer, at, NativeArmageddonPresentation.FRAMES / 25f,
+              NativeArmageddonPresentation.FRAMES * NativeArmageddonPresentation.SLIDE,
+              -NativeArmageddonPresentation.FRAMES * NativeArmageddonPresentation.FALL,
+              0, 0, Math.max(0, missile.nativeFrame - 1) / 25f, null);
+          if (effect != null) {
+            effect.nativeArmageddon = true;
+            mMissile.get(effect.entityId).ownerId = missile.ownerId;
+            sample(effect, effect.age);
+            applyAnimation(effect.entityId, effect);
+          }
         }
       }
       if ("firestormmaker".equals(name)) {
@@ -219,28 +218,38 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
         clock.next += .1f;
       }
     } else if ("erruption center".equals(name)) {
-      while (clock.next <= end + .00001f) {
+      // Native CltDo48 tests its emission clock before the movement update.
+      int life = missile.nativeLifetimeFrames > 0 ? missile.nativeLifetimeFrames : missile.missile.Range;
+      while (clock.next <= clock.age + .00001f && clock.next * 25 < life) {
         Vector2 vent = scatter(at, 80 + 6 * Math.max(0, missile.damageLevel - 1), .7f, clock);
-        ReferenceElementalEffect crack = sprite("erruption crack 1", vent, .9f);
-        if (crack != null) crack.direction = Math.min(3, (int) (random(clock) * 4));
-        sprite("erruption smoke 1", vent, .9f);
-        clock.next += .09f;
+        vent.set(MathUtils.floor(vent.x + .5f), MathUtils.floor(vent.y + .5f));
+        Missiles.Entry crackRow = clientContext.files().Missiles.get("erruption crack 1");
+        Missiles.Entry smokeRow = clientContext.files().Missiles.get("erruption smoke 1");
+        ReferenceElementalEffect crack = sprite("erruption crack 1", vent, crackRow.Range / 25f);
+        if (crack != null) {crack.direction = Math.min(3, (int) (random(clock) * 4)); nativeSurface(crack, 0);}
+        ReferenceElementalEffect smoke = sprite("erruption smoke 1", vent, smokeRow.Range / 25f);
+        if (smoke != null) nativeSurface(smoke, 0);
+        clock.next += fissureInterval(missile) / 25f;
       }
     } else if (volcano) {
-      while (clock.next <= end + .00001f) {
-        float angle = random(clock) * MathUtils.PI2;
-        float radius = 20 + random(clock) * 110;
-        Vector2 landing = pixelOffset(at, MathUtils.cos(angle) * radius,
-            -MathUtils.sin(angle) * radius * .7f, new Vector2());
-        // Start at the mouth, 50px above the base; land after 0.45s (wbe).
-        ReferenceElementalEffect rock = sprite("volcano debris 2", landing, .45f);
-        if (rock != null) {
-          rock.startOffset.set(-MathUtils.cos(angle) * radius,
-              -50 - MathUtils.sin(angle) * radius * .7f);
-          rock.landing = "volcano explosion";
-          sample(rock, 0);
-        }
-        clock.next += VOLCANO_ROCK_INTERVAL;
+      int life = missile.nativeLifetimeFrames > 0 ? missile.nativeLifetimeFrames : missile.missile.Range;
+      com.riiablo.codec.excel.Skills.Entry skill = clientContext.files().skills.get(SkillId.VOLCANO);
+      int radius = volcanoParameter(missile, 1, skill, skill == null ? null : skill.aurarangecalc);
+      int period = volcanoParameter(missile, 0, skill, skill == null ? null : skill.calc4);
+      int last = Math.min(life, (int) (end * 25 + .0001f));
+      while (clock.volcanoFrame < last) {
+        int frame = clock.volcanoFrame++;
+        if (!NativeVolcanoPresentation.emits(frame, period, missile.missile.CltParam[2], missile.missile.CltParam[3])) continue;
+        String nameRock = missile.missile.CltSubMissile[0];
+        Missiles.Entry row = clientContext.files().Missiles.get(nameRock);
+        NativeVolcanoPresentation.Flight flight = NativeVolcanoPresentation.flight(row, missile.damageLevel,
+            MathUtils.floor(at.x + .5f), MathUtils.floor(at.y + .5f), radius, clock.volcanoSeed);
+        ReferenceElementalEffect rock = sprite(nameRock, at, flight.lifetime / 25f);
+        if (rock == null) continue;
+        rock.nativeVolcanoRock = true; rock.nativeVolcanoOwnerId = missile.ownerId;
+        rock.nativeVelocityX = flight.velocityX; rock.nativeVelocityY = flight.velocityY;
+        rock.nativeVolcanoHeight = missile.missile.CltParam[4];
+        applyAnimation(rock.entityId, rock);
       }
     }
     clock.age = end;
@@ -316,31 +325,47 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
     if (clock == null) clock = mEmitter.create(id);
     if (!clock.hurricane) {
       clock.hurricane = true;
-      clock.age = clock.next = 0;
-      clock.seed = id * 1103515245 + 250;
+      clock.hurricaneTime = 0;
+      clock.hurricaneFrame = 0;
+      if (clock.hurricaneSeed == null) clock.hurricaneSeed = new D2Seed(id * 1103515245 + 250, 666);
     }
-    float end = clock.age + Math.max(0f, world.delta);
-    while (clock.next < end) {
-      int lane = Math.min(7, (int) (random(clock) * 8));
-      int type = Math.min(2, (int) (random(clock) * 3));
-      float x = (HURRICANE_X[lane] - HURRICANE_Y[lane]) * 16f;
-      float y = (HURRICANE_X[lane] + HURRICANE_Y[lane]) * 8f;
-      ReferenceElementalEffect effect = sprite(type == 0 ? "hurricaneswoosh"
-          : type == 1 ? "hurricanerock" : "hurricanetree",
-          mPosition.get(id).position, (type == 0 ? 22 : 20) / 25f);
-      if (effect != null) {
-        effect.orbit = true;
-        effect.radius = (float) Math.hypot(x, y / .5f);
-        effect.angle = MathUtils.atan2(y / .5f, x);
-        effect.spin = -(type == 0 ? 20 : 18) * 21 / effect.radius;
-        effect.lift = random(clock) * 75;
-        effect.age = Math.max(0, end - clock.next);
-        sample(effect, effect.age);
-        applyAnimation(effect.entityId, effect);
+    double end = clock.hurricaneTime + Math.max(0f, world.delta);
+    int frame = (int) Math.floor(end * 25 + .000001);
+    Position center = mPosition.get(id);
+    int centerX = center.hasNativePrecision() ? center.nativePrecisionX() >>> 16 : MathUtils.floor(center.position.x + .5f);
+    int centerY = center.hasNativePrecision() ? center.nativePrecisionY() >>> 16 : MathUtils.floor(center.position.y + .5f);
+    while (clock.hurricaneFrame < frame) {
+      int born = ++clock.hurricaneFrame;
+      // CltActive90 calls its constructor three times for each cltcalc1=3.
+      // All nine births share a native frame; never spread them over 1/225s.
+      for (int child = 0; child < 9; child++) {
+        int lane = (int) Seed.rollRandomNumber(clock.hurricaneSeed) & 7;
+        int type = Seed.rollLimitedRandomNumber(clock.hurricaneSeed, 3);
+        ReferenceElementalEffect effect = hurricaneDebris(centerX, centerY, lane,
+            type == 0 ? "hurricanerock" : type == 1 ? "hurricanetree" : "hurricaneswoosh", 0);
+        if (effect != null) {
+          // Native rolls height after successful allocation only.
+          effect.lift = Seed.rollLimitedRandomNumber(clock.hurricaneSeed, 75);
+          effect.age = (float) Math.max(0, end - born / 25.0);
+          applyAnimation(effect.entityId, effect);
+        }
       }
-      clock.next += 1f / 225f;
     }
-    clock.age = end;
+    clock.hurricaneTime = end;
+  }
+
+  /** Shared constructor for runtime state emission and observation-driven diagnostic replay. */
+  ReferenceElementalEffect hurricaneDebris(int centerX, int centerY, int lane, String name, int height) {
+    Missiles.Entry row = clientContext.files().Missiles.get(name);
+    if (row == null) return null;
+    ReferenceElementalEffect effect = sprite(name, new Vector2(centerX, centerY), row.Range / 25f);
+    if (effect != null) {
+      effect.orbit = true;
+      effect.hurricaneFlight = NativeHurricanePresentation.flight(centerX, centerY, lane, row.Vel);
+      effect.lift = height;
+      applyAnimation(effect.entityId, effect);
+    }
+    return effect;
   }
 
   /** Suppress native duplicate children while the replacement system is installed. */
@@ -561,6 +586,46 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
     return effect;
   }
 
+  private int fissureInterval(Missile controller) {
+    com.riiablo.codec.excel.Skills.Entry skill = clientContext.files().skills.get(SkillId.FISSURE);
+    return skill == null ? 6 : Math.max(1, com.riiablo.engine.server.skill.SkillFormula.evaluate(
+        skill.calc2, skill, Math.max(1, controller.damageLevel)));
+  }
+
+  private int volcanoParameter(Missile missile, int index, com.riiablo.codec.excel.Skills.Entry skill, String formula) {
+    int value = missile.missile.CltParam[index];
+    return value > 0 ? value : skill == null ? 1 : Math.max(1,
+        com.riiablo.engine.server.skill.SkillFormula.evaluate(formula, skill, Math.max(1, missile.damageLevel)));
+  }
+
+  private void volcanoLanding(int id, ReferenceElementalEffect effect) {
+    clientHit55Landing(id, effect.nativeVolcanoOwnerId);
+  }
+
+  private void clientHit55Landing(int id, int ownerId) {
+    if (ownerId < 0 || !world.getAspectSubscriptionManager().get(com.artemis.Aspect.all())
+        .getActiveEntityIds().get(ownerId)) return;
+    Missiles.Entry source = mMissile.get(id).missile;
+    Vector2 at = mPosition.get(id).position;
+    Vector2 cell = new Vector2(MathUtils.floor(at.x + .5f), MathUtils.floor(at.y + .5f));
+    // CltHit55 attempts each configured child separately; creation failure
+    // or subsequent removal must not be replaced with a random probability.
+    for (String name : source.CltHitSubMissile) {
+      if (name == null || name.isEmpty()) continue;
+      Missiles.Entry row = clientContext.files().Missiles.get(name);
+      if (row == null) continue;
+      ReferenceElementalEffect child = sprite(name, cell, row.Range / 25f);
+      if (child != null) nativeSurface(child, 0);
+    }
+  }
+
+  private void nativeSurface(ReferenceElementalEffect effect, float age) {
+    effect.nativeDruidSurface = true;
+    effect.age = Math.max(0, age);
+    mMissile.get(effect.entityId).nativeFrame = (int) (effect.age * 25 + .0001f);
+    applyAnimation(effect.entityId, effect);
+  }
+
   static void configure(String name, ReferenceElementalEffect e) {
     e.ground = "volcano".equals(name) || "erruption crack 1".equals(name)
         || "volcano small fire".equals(name);
@@ -584,6 +649,12 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
   private void updateEffect(int id, ReferenceElementalEffect e, float delta) {
     e.age += delta;
     if (e.age + .00001f >= e.duration) {
+      if (e.nativeVolcanoRock) {
+        if (volcanoPoseInScene(id, e, Math.round(e.duration * 25))) volcanoLanding(id, e);
+      }
+      if (e.nativeArmageddon && "armageddonrock".equalsIgnoreCase(mMissile.get(id).missile.Missile)) {
+        clientHit55Landing(id, mMissile.get(id).ownerId);
+      }
       if (e.landing != null) {
         sprite(e.landing, e.origin, "volcano explosion".equals(e.landing) ? .72f : .64f);
         if ("volcano explosion".equals(e.landing)) sprite("volcano small fire", e.origin, .72f);
@@ -604,33 +675,41 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
   }
 
   static void sample(ReferenceElementalEffect e, float age) {
-    if (e.orbit) {
-      float angle = e.angle + e.spin * age;
-      e.offset.set(MathUtils.cos(angle) * e.radius,
-          -MathUtils.sin(angle) * e.radius * .5f + e.lift);
-      // Convert screen tangent into the host world axes before DCC selection.
-      Vector2 tangent = pixelOffset(Vector2.Zero, -MathUtils.sin(angle) * e.spin,
-          MathUtils.cos(angle) * .5f * e.spin, new Vector2());
-      e.direction = Direction.radiansToDirection(tangent.angleRad(), 8);
+    if (e.hurricaneFlight != null) {
+      e.offset.set(0, e.lift);
+    } else if (e.nativeArmageddon) {
+      NativeArmageddonPresentation.offset(Math.max(0, (int) (age * 25 + .0001f)), e.offset);
     } else {
       e.offset.set(e.startOffset).lerp(e.endOffset, MathUtils.clamp(age / e.duration, 0, 1));
     }
   }
 
   private void applyAnimation(int id, ReferenceElementalEffect e) {
-    if (e.nativeBoulderRock) {
+    if (e.hurricaneFlight != null) {
+      e.hurricaneFlight.advanceTo(Math.max(0, (int) (e.age * 25 + .0001f)));
+      mPosition.get(id).setNativePrecision(e.hurricaneFlight.x, e.hurricaneFlight.y);
+      if (map != null && map.getZones() != null && map.getZones().size > 0
+          && map.getZone(mPosition.get(id).position) == null) {
+        // Native PATH_RecacheRoomIfNeeded clears a missile path when the
+        // stepped cell has no room. Do not leave a render-only particle
+        // alive after it crosses a known loaded-scene boundary.
+        world.delete(id);
+        return;
+      }
+      e.direction = NativeHurricanePresentation.direction(e.hurricaneFlight.direction,
+          "hurricaneswoosh".equalsIgnoreCase(mMissile.get(id).missile.Missile) ? 8 : 1);
+      e.offset.set(0, e.lift);
+    } else if (e.nativeVolcanoRock) {
+      int age = Math.max(0, (int) (e.age * 25 + .0001f));
+      if (!volcanoPoseInScene(id, e, age)) {
+        world.delete(id); return; // Leaving a known scene is removal, not CltHit55.
+      }
+    } else if (e.nativeBoulderRock) {
       float fraction = MathUtils.clamp(e.age / e.duration, 0, 1);
       mPosition.get(id).invalidateNativePrecision();
       pixelOffset(e.origin, e.endOffset.x * fraction, -e.endOffset.y * fraction,
           mPosition.get(id).position);
       e.offset.setZero();
-    } else if (e.orbit) {
-      float angle = e.angle + e.spin * e.age;
-      mPosition.get(id).invalidateNativePrecision();
-      pixelOffset(e.origin, MathUtils.cos(angle) * e.radius,
-          MathUtils.sin(angle) * e.radius * .5f, mPosition.get(id).position);
-      // Sorting/culling follows the ground orbit, while lift affects only drawing.
-      e.offset.set(0, e.lift);
     }
     if (!mAnimationWrapper.has(id)) return;
     Animation animation = mAnimationWrapper.get(id).animation;
@@ -638,8 +717,14 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
     if (frames <= 0) return;
     animation.setMode(Animation.Mode.CLAMP);
     int age = Math.max(0, (int) (e.age * 25 + .0001f));
-    animation.setFrame(e.nativeBoulderFire ? NativeFirestormPresentation.groundFrame(
+    animation.setFrame(e.hurricaneFlight != null ? Math.min(frames - 1,
+        age * Math.max(0, mMissile.get(id).missile.AnimSpeed) / 16)
+        : e.nativeDruidSurface ? NativeDruidSurfacePresentation.frame(
+        mMissile.get(id).missile, frames, Math.round(e.duration * 25), age)
+        : e.nativeBoulderFire ? NativeFirestormPresentation.groundFrame(
         mMissile.get(id).missile, Math.round(e.duration * 25), e.nativeSeed, frames, age, true)
+        : e.nativeVolcanoRock ? NativeVolcanoPresentation.rockFrame(frames,
+            mMissile.get(id).missile.AnimLen, Math.round(e.duration * 25), age)
         : e.nativeBoulderRock ? NativeMoltenBoulderPresentation.rockFrame(
             frames, Math.round(e.duration * 25), age) : frameAt(e, frames));
     animation.setDirection(Math.floorMod(e.direction, Math.max(1, animation.getNumDirections())));
@@ -652,6 +737,20 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
       animation.getLayer(0).setBlendMode(opaque ? BlendMode.ID : BlendMode.ADDITIVE);
       animation.getLayer(0).setAlpha(e.fade ? MathUtils.clamp((e.duration - e.age) / .4f, 0, 1) : 1);
     }
+  }
+
+  private void volcanoPose(int id, ReferenceElementalEffect effect, int age) {
+    int x = (MathUtils.floor(effect.origin.x + .5f) << 16) + 32768;
+    int y = (MathUtils.floor(effect.origin.y + .5f) << 16) + 32768;
+    mPosition.get(id).setNativePrecision(x + age * effect.nativeVelocityX, y + age * effect.nativeVelocityY);
+    effect.offset.set(0, NativeVolcanoPresentation.heightFixed(Math.round(effect.duration * 25),
+        effect.nativeVolcanoHeight, age + 1) >> 11);
+  }
+
+  private boolean volcanoPoseInScene(int id, ReferenceElementalEffect effect, int age) {
+    Vector2 before = new Vector2(mPosition.get(id).position);
+    volcanoPose(id, effect, age);
+    return map == null || map.getZone(before) == null || map.getZone(mPosition.get(id).position) != null;
   }
 
   /** Publish the proper pose/blend on the same frame an asynchronous DCC arrives. */
@@ -678,11 +777,6 @@ public class ReferenceElementalPresentationSystem extends IteratingSystem implem
     float r = (float) Math.sqrt(random(clock)) * radius;
     float angle = random(clock) * MathUtils.PI2;
     return pixelOffset(at, MathUtils.cos(angle) * r, MathUtils.sin(angle) * r * flatten, new Vector2());
-  }
-
-  private Vector2 armageddonCenter(int ownerId, Vector2 fallback) {
-    return ownerId >= 0 && mPosition.has(ownerId)
-        ? mPosition.get(ownerId).position : fallback;
   }
 
   private static boolean isVolcanoController(Missile missile, String name) {

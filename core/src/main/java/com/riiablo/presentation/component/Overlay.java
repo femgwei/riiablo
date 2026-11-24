@@ -25,12 +25,26 @@ public class Overlay extends PooledComponent {
   public boolean persistent;
   /** Native aura-specific drawing; other overlay consumers retain their existing policy. */
   public boolean nativeAura;
+  /** Enchant's native 25 Hz activation clock, including asset-load delays. */
+  public int nativeFrame;
+  /** Client birth clock for the Arctic Blast ONCE layer, including cold assets. */
+  public double nativeClockTime;
+  public boolean nativeClockStarted;
   /** State id that owns a persistent overlay, or -1 for cast visuals. */
   public int stateId = -1;
 
   public boolean usesNativeRendering() {
     return nativeAura || entry != null
-        && (com.riiablo.presentation.AuraRenderPolicy.isBarbarianOverlay(entry.overlay)
+        && (persistent && com.riiablo.presentation.NativeFeralMaulPresentation.handles(stateId)
+            || persistent && stateId == com.riiablo.engine.server.state.StateId.CYCLONEARMOR
+            || persistent && stateId == com.riiablo.engine.server.state.StateId.FENRIS_RAGE
+            || persistent && stateId == com.riiablo.engine.server.state.StateId.RABIES
+            || com.riiablo.presentation.AuraRenderPolicy.isBarbarianOverlay(entry.overlay)
+            || "enchant".equalsIgnoreCase(entry.overlay)
+            || "fire_hit".equalsIgnoreCase(entry.overlay)
+            || "steallife".equalsIgnoreCase(entry.overlay)
+            || "stealmana".equalsIgnoreCase(entry.overlay)
+            || "arctic_blast_cast".equalsIgnoreCase(entry.overlay)
             || com.riiablo.presentation.AuraRenderPolicy.isPaladinTargetOverlay(entry.overlay));
   }
 
@@ -41,6 +55,8 @@ public class Overlay extends PooledComponent {
     this.minimumDisplayFrames = 3;
     this.persistent = false;
     this.nativeAura = false;
+    this.nativeFrame = 0;
+    this.nativeClockTime = 0; this.nativeClockStarted = false;
     this.stateId = -1;
     return this;
   }
@@ -61,6 +77,8 @@ public class Overlay extends PooledComponent {
     minimumDisplayFrames = 0;
     persistent = false;
     nativeAura = false;
+    nativeFrame = 0;
+    nativeClockTime = 0; nativeClockStarted = false;
     stateId = -1;
   }
 }

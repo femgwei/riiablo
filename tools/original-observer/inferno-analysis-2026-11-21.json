@@ -1,0 +1,543 @@
+{
+  "schema": 1,
+  "run_id": "20261121-073752-f6bf3010",
+  "background_verified": true,
+  "scope": "One level-one positive-X held original cast and one headless production stream; no production fixes applied",
+  "fixture_sha256": "041c58f70198e11e7813c199133c10bd130ebb99243e26cff9744911ae8f3cb6",
+  "replay_sha256": "aad48f2b1b4fc5969120bd56cf4c7b43b015625546bc0cfe5f91f3738116648a",
+  "original": {
+    "server_counts": {
+      "infernoflame1": 14
+    },
+    "client_counts": {
+      "infernoflame1": 6,
+      "infernoflame2": 12
+    },
+    "lifetime_frames": 10,
+    "velocity_subtiles_per_second": [
+      14.0625,
+      0.0
+    ],
+    "client_frame_delta": 384,
+    "server_birth_frames": [
+      466,
+      468,
+      470,
+      472,
+      474,
+      476,
+      478,
+      480,
+      482,
+      484,
+      486,
+      488,
+      490,
+      494
+    ],
+    "client_birth_frames": [
+      467,
+      469,
+      471,
+      473,
+      475,
+      477,
+      479,
+      481,
+      483,
+      485,
+      487,
+      489,
+      491,
+      493,
+      495,
+      497,
+      499,
+      501
+    ],
+    "release_game_frame": 495,
+    "last_client_birth_after_release": 6,
+    "last_client_observed_frame": 509
+  },
+  "production": {
+    "lifetime_frames": 10,
+    "velocity_subtiles_per_second": [
+      12,
+      0
+    ],
+    "speed_shortfall_percent": 14.66666666666666,
+    "frame_delta": 384,
+    "native_precision": false,
+    "paired_dcc_samples": 116,
+    "frame_mismatches": 54,
+    "mismatch_details": [
+      {
+        "index": 2,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 5,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 6,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 10,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 11,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 12,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 17,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 18,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 19,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 24,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 25,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 26,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 31,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 32,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 33,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 38,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 39,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 40,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 45,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 46,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 47,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 52,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 53,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 54,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 59,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 60,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 61,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 66,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 67,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 68,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 69,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 70,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 71,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 76,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 77,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 78,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 79,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 80,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 81,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 86,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 87,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 88,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 93,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 94,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 95,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 100,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 101,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 102,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 107,
+        "age": 4,
+        "original": 6,
+        "production": 5
+      },
+      {
+        "index": 108,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 109,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 113,
+        "age": 6,
+        "original": 9,
+        "production": 8
+      },
+      {
+        "index": 114,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      },
+      {
+        "index": 117,
+        "age": 8,
+        "original": 12,
+        "production": 11
+      }
+    ],
+    "positions_and_frames": [
+      {
+        "age": 0,
+        "native_normalized_position": [
+          4523.0,
+          5642.0
+        ],
+        "production_position": [
+          4523,
+          5642
+        ],
+        "native_frame": 0,
+        "production_frame": 0
+      },
+      {
+        "age": 1,
+        "native_normalized_position": [
+          4523.5625,
+          5642.0
+        ],
+        "production_position": [
+          4523.48,
+          5642
+        ],
+        "native_frame": 1,
+        "production_frame": 1
+      },
+      {
+        "age": 2,
+        "native_normalized_position": [
+          4524.125,
+          5642.0
+        ],
+        "production_position": [
+          4523.96,
+          5642
+        ],
+        "native_frame": 3,
+        "production_frame": 2
+      },
+      {
+        "age": 3,
+        "native_normalized_position": [
+          4524.6875,
+          5642.0
+        ],
+        "production_position": [
+          4524.44,
+          5642
+        ],
+        "native_frame": 4,
+        "production_frame": 4
+      },
+      {
+        "age": 4,
+        "native_normalized_position": [
+          4525.25,
+          5642.0
+        ],
+        "production_position": [
+          4524.92,
+          5642
+        ],
+        "native_frame": 6,
+        "production_frame": 5
+      },
+      {
+        "age": 5,
+        "native_normalized_position": [
+          4525.8125,
+          5642.0
+        ],
+        "production_position": [
+          4525.4,
+          5642
+        ],
+        "native_frame": 7,
+        "production_frame": 7
+      },
+      {
+        "age": 6,
+        "native_normalized_position": [
+          4526.375,
+          5642.0
+        ],
+        "production_position": [
+          4525.88,
+          5642
+        ],
+        "native_frame": 9,
+        "production_frame": 8
+      },
+      {
+        "age": 7,
+        "native_normalized_position": [
+          4526.9375,
+          5642.0
+        ],
+        "production_position": [
+          4526.36,
+          5642
+        ],
+        "native_frame": 10,
+        "production_frame": 10
+      },
+      {
+        "age": 8,
+        "native_normalized_position": [
+          4527.5,
+          5642.0
+        ],
+        "production_position": [
+          4526.84,
+          5642
+        ],
+        "native_frame": 12,
+        "production_frame": 11
+      },
+      {
+        "age": 9,
+        "native_normalized_position": [
+          4528.0625,
+          5642.0
+        ],
+        "production_position": [
+          4527.32,
+          5642
+        ],
+        "native_frame": 13,
+        "production_frame": 13
+      }
+    ]
+  },
+  "findings": [
+    "Current factory uses Vel as world units/second; native velocity is 14.0625 instead of 12",
+    "Animation-rate formula matches (384), but float animation update selects late frames at even ages",
+    "Original client skill callback owns an independent A/B stream; missile pCltDo is 1, not 24",
+    "Observed original client/server birth counts differ; production held-cast cadence still needs separate replay"
+  ],
+  "limitations": [
+    "One stream; no original client cadence replay or caster sequence/GPU comparison",
+    "No map collision, targets, damage values or held-input mana comparison",
+    "Riiablo cell coordinates correspond to native fixed-point cell centres minus 0.5"
+  ]
+}

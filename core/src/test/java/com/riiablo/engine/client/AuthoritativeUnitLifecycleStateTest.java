@@ -16,6 +16,51 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class AuthoritativeUnitLifecycleStateTest {
+  @Test void cyclonePoolsSurviveDetachedSnapshotBufferReuseAndReplicaReplacement() {
+    com.riiablo.engine.server.component.UnitStates source = new com.riiablo.engine.server.component.UnitStates().init(77);
+    com.riiablo.engine.server.state.UnitState armor = source.stateList.addStateLayer(StateId.CYCLONEARMOR, 0, 20, 77, 235);
+    armor.setStatContribution(com.riiablo.attributes.Stat.bonearmor, 0,
+        com.riiablo.attributes.NativeStatResolver.Operation.ADD, 123456);
+    armor.setStatContribution(com.riiablo.attributes.Stat.bonearmormax, 0,
+        com.riiablo.attributes.NativeStatResolver.Operation.ADD, 400001);
+    armor.runtimeValue = 123456;
+    FlatBufferBuilder b = new FlatBufferBuilder(512);
+    int data = new com.riiablo.engine.server.component.serializer.StateSerializer().putData(b, source);
+    int types = EntitySync.createComponentTypeVector(b, new byte[] {ComponentP.StateP});
+    int components = EntitySync.createComponentVector(b, new int[] {data});
+    b.finish(EntitySync.createEntitySync(b, 77, Class.Type.PLR.ordinal(), 0, types, components, 10, 400, 0, 0, 0, -1));
+    AuthoritativeUnitLifecycleState store = new AuthoritativeUnitLifecycleState();
+    assertTrue(store.commit(77, EntitySync.getRootAsEntitySync(b.dataBuffer())));
+    java.nio.ByteBuffer buffer = b.dataBuffer();
+    for (int i = buffer.position(); i < buffer.limit(); i++) buffer.put(i, (byte) 0);
+    com.riiablo.engine.server.component.UnitStates replica = new com.riiablo.engine.server.component.UnitStates();
+    ClientUnitSnapshotWriter.states(77, replica, store.get(77));
+    com.riiablo.engine.server.state.UnitState restored = replica.stateList.getState(StateId.CYCLONEARMOR);
+    assertEquals(123456, restored.runtimeValue);
+    assertEquals(123456, restored.getStatContributionValue(com.riiablo.attributes.Stat.bonearmor));
+    assertEquals(400001, restored.getStatContributionValue(com.riiablo.attributes.Stat.bonearmormax));
+    restored.runtimeValue = 1;
+    ClientUnitSnapshotWriter.states(77, replica, store.get(77));
+    assertEquals(123456, replica.stateList.getState(StateId.CYCLONEARMOR).runtimeValue);
+  }
+  @Test void snapshotWriterPreservesEnchantActivationRevision() {
+    FlatBufferBuilder b = new FlatBufferBuilder(256);
+    int ids = StateP.createStateIdVector(b, new short[] {(short) StateId.ENCHANT});
+    int durations = StateP.createDurationVector(b, new int[] {3600});
+    int revision = StateP.createPresentationRevisionVector(b, new int[] {7});
+    int state = StateP.createStateP(b, ids, durations, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, revision, 0, 0);
+    int types = EntitySync.createComponentTypeVector(b, new byte[] {ComponentP.StateP});
+    int components = EntitySync.createComponentVector(b, new int[] {state});
+    b.finish(EntitySync.createEntitySync(b, 100, Class.Type.PLR.ordinal(), 0, types, components,
+        10, 400, 0, 0, 0, -1));
+    AuthoritativeUnitLifecycleState store = new AuthoritativeUnitLifecycleState();
+    store.commit(4, EntitySync.getRootAsEntitySync(b.dataBuffer()));
+    com.riiablo.engine.server.component.UnitStates replica = new com.riiablo.engine.server.component.UnitStates();
+    ClientUnitSnapshotWriter.states(4, replica, store.get(4));
+    assertEquals(7, replica.stateList.getState(StateId.ENCHANT).presentationRevision);
+    ClientUnitSnapshotWriter.states(4, replica, store.get(4));
+    assertEquals(7, replica.stateList.getState(StateId.ENCHANT).presentationRevision);
+  }
   @Test void valuesAndStateListSurviveBufferReuseAndReplicaMutation() {
     AuthoritativeUnitLifecycleState store = new AuthoritativeUnitLifecycleState();
     EntitySync wire = packet(10, (int) Engine.Player.MODE_DD, true, true);
@@ -94,7 +139,7 @@ class AuthoritativeUnitLifecycleStateTest {
     int sources = StateP.createSourceEntityIdVector(b, new int[] {7, 8});
     int skills = StateP.createSkillIdVector(b, new int[] {4, 5});
     int values = StateP.createRuntimeValueVector(b, new short[] {11, 22});
-    int states = StateP.createStateP(b, ids, durations, 0, 0, values, 0, 0, 0, 0, 0, sources, skills, 0, 0);
+    int states = StateP.createStateP(b, ids, durations, 0, 0, values, 0, 0, 0, 0, 0, sources, skills, 0, 0, 0, 0, 0);
     int types = EntitySync.createComponentTypeVector(b, new byte[] {ComponentP.StateP});
     int components = EntitySync.createComponentVector(b, new int[] {states});
     b.finish(EntitySync.createEntitySync(b, 100, Class.Type.PLR.ordinal(), 0, types, components,
@@ -130,7 +175,7 @@ class AuthoritativeUnitLifecycleStateTest {
       int sources = StateP.createSourceEntityIdVector(builder, new int[] {7});
       int countdown = StateP.createPeriodicCountdownFramesVector(builder, new int[] {6});
       values.add(StateP.createStateP(builder, ids, durations, levels, 0, 0, 0, 0,
-          0, 0, 0, sources, 0, 0, countdown));
+          0, 0, 0, sources, 0, 0, countdown, 0, 0, 0));
       types.add(ComponentP.StateP);
     }
     int[] offsets = new int[values.size()];

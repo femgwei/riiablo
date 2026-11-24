@@ -11,7 +11,9 @@ public final class NativeFirestormPresentation {
   private NativeFirestormPresentation() {}
 
   static boolean handles(Missile m) {
-    return m != null && (NativeFirestormMotion.maker(m.missile) || NativeFirestormMotion.fire(m.missile));
+    return m != null && (NativeFirestormMotion.maker(m.missile) || NativeFirestormMotion.fire(m.missile)
+        || m.presentationOnly && m.skillId == 225 && m.missile != null
+            && ("firesmall".equalsIgnoreCase(m.missile.Missile) || "firemedium".equalsIgnoreCase(m.missile.Missile)));
   }
 
   public static boolean serverGround(Missile m) {
@@ -29,7 +31,7 @@ public final class NativeFirestormPresentation {
     if (NativeFirestormMotion.maker(m.missile)) return Math.floorMod(Math.max(0, age) * 2, frames);
     int lifetime = m.nativeLifetimeFrames > 0 ? m.nativeLifetimeFrames : Math.max(1, m.missile.Range);
     return groundFrame(m.missile, lifetime,
-        m.presentationSeedKnown ? m.presentationSeed : m.rngState, frames, age);
+        m.presentationSeedKnown ? m.presentationSeed : m.rngState, frames, age, m.missile.SubLoop > 0);
   }
 
   static int groundFrame(com.riiablo.codec.excel.Missiles.Entry row, int lifetime,

@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "F:\3rd_src\riiablo\tools\original-observer\resident_broker.py", line 363, in main
+    while broker.serve_once():
+  File "F:\3rd_src\riiablo\tools\original-observer\resident_broker.py", line 341, in serve_once
+    self.heartbeat()
+  File "F:\3rd_src\riiablo\tools\original-observer\resident_broker.py", line 102, in heartbeat
+    atomic_json(self.queue / "status.json", self.state)
+  File "F:\3rd_src\riiablo\tools\original-observer\resident_broker.py", line 52, in atomic_json
+    os.replace(tmp, path)
+PermissionError: [WinError 5] 拒绝访问。: 'F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\status.json.24896.ed821f71183049d5890afff5181c9c85.tmp' -> 'F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\status.json'

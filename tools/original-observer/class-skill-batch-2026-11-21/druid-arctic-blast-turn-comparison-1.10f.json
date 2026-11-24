@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "source_run_id": "20261121-233623-a5ced4c9",
+  "comparison_status": "matched_current_target_turn_and_release_directions",
+  "production_presentation_changed": true,
+  "server_gameplay_changed": false,
+  "compared_births": 18,
+  "initial_direction_births": 4,
+  "turned_direction_births": 14,
+  "post_release_births": 3,
+  "overlay_instances": 1,
+  "original_posted_turn_ms": 609,
+  "note": "Local target change is aligned to the native observed path-target boundary; PostMessage/input transport delays are not compared.",
+  "limitations": [
+    "Posted WM_MOUSEMOVE time is not the path-target-change or native skill consumption time.",
+    "Snapshots are non-atomic; equal endpoint markers exclude detected transitions only.",
+    "Free-flight point aiming in this sample; target-monster disappearance, all angles, DCC/GPU orientation remain unverified."
+  ]
+}

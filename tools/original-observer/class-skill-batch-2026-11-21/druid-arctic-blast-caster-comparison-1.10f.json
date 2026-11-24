@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "skill_id": 230,
+  "source_run_id": "20261121-185938-70b0693c",
+  "comparison_status": "compared_caster_source_frame_stages_with_remaining_phase_differences",
+  "comparisons": [
+    {
+      "hold_ticks": 16,
+      "native_source_frame_stages": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "local_source_frame_stages": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "source_frame_stage_order_matches": true,
+      "native_observed_streams": 7,
+      "local_callback_count": 6,
+      "stream_count_matches_callback_count": false,
+      "local_callback_intervals_ticks": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "native_release_tail_ms": 359,
+      "local_release_tail_ticks": 8,
+      "local_final_streams": 0
+    },
+    {
+      "hold_ticks": 40,
+      "native_source_frame_stages": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "local_source_frame_stages": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "source_frame_stage_order_matches": true,
+      "native_observed_streams": 19,
+      "local_callback_count": 18,
+      "stream_count_matches_callback_count": false,
+      "local_callback_intervals_ticks": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "native_release_tail_ms": 312,
+      "local_release_tail_ticks": 8,
+      "local_final_streams": 0
+    }
+  ],
+  "evidence_sha256": {
+    "core\\src\\test\\resources\\original\\arctic-blast-sequence-1.10f.json": "cc2602049abb3ddf80835d0435b721e7bf55950229bd5caa7b6a20ac063b6619",
+    "tools\\original-observer\\arctic-blast-sequence-production-1.10f.json": "5a653728c2f3e160a49e32ab3b5b77baeeeef760d51b4503b44e839c947ce113"
+  },
+  "limitations": [
+    "Source-frame stage order and two-tick callback intervals are compared; logical cursor/packet/absolute tick parity is not established",
+    "Original release snapshots can alternate logical points9/10 while the local adapter retains its8/9 loop until state expiry; both display source frame9",
+    "Native input clock is not aligned to local requests; count differences remain explicit and are not treated as passes",
+    "No original server damage/mana, FCR variants, progress-overlay submissions, actual body/missile DCC directions or GPU pixels"
+  ]
+}

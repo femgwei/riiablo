@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "run_id": "20261122-230514-9ca03d85",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "native_target": {
+    "status": "passed",
+    "detached": true,
+    "cleanup_confirmed": true,
+    "fixtures_removed": true,
+    "native_death_observed": true,
+    "room_ring_verified": true,
+    "samples": 1041,
+    "first_frame": 448,
+    "ai_parity": "untested",
+    "restart_required": false
+  },
+  "native_target_identity": {
+    "natural_ai": true,
+    "map_seed": 127897359,
+    "observer_id": 20,
+    "corpse_id": 23,
+    "reengage_step": 0,
+    "observation_frames": 1040,
+    "death_count": 1,
+    "requested_distance": 0,
+    "observer_class": 19,
+    "corpse_class": 0,
+    "room": 167596416,
+    "death_room": 167596416,
+    "adjacent_room_fixture": false,
+    "player_id": 1,
+    "player_x": 4521,
+    "player_y": 5642,
+    "observer_x": 4523,
+    "observer_y": 5644,
+    "corpse_x": 4521,
+    "corpse_y": 5646,
+    "adjacent_rooms": [
+      136680960,
+      167596032,
+      136681088,
+      167598720,
+      167602432,
+      167596416,
+      167596672,
+      167598848,
+      167598976
+    ]
+  },
+  "fixture": {
+    "name": "CXDruRaven",
+    "path": "G:\\BaiduNetdiskDownload\\Diablo II\\Save\\CXDruRaven.d2s",
+    "sha256": "2b05407dc64a58adee412c12fb84f1469fadde45aa0a6ac28936200e7a5c1e8d",
+    "source_sha256": "21349fff66d97e0d8270ed15c2d1148e5c4c38e46e28621757987f18f5415374",
+    "class_id": 5,
+    "hard_points": {
+      "221": 1
+    },
+    "other_hard_points": 0,
+    "equipment": "empty",
+    "map_seed": 127897359,
+    "hotkeys": {
+      "F1": 221,
+      "F2": 221
+    },
+    "limitations": [
+      "Only Raven learned; summon activity/AI requires runtime observation"
+    ]
+  },
+  "capture": {
+    "status": "passed",
+    "skill": 221,
+    "baseline_units": 11,
+    "new_units_count": 1,
+    "new_class_ids": [
+      419
+    ],
+    "new_units": [
+      {
+        "pointer": 90273024,
+        "type": 1,
+        "class_id": 419,
+        "unit_id": 24,
+        "mode": 2,
+        "animation_raw": 780,
+        "animation_frame": 3072,
+        "animation_rate": 156,
+        "x_fixed": 296767809,
+        "y_fixed": 370211534,
+        "table_rva": 1157888,
+        "owner_type": 0,
+        "owner_id": 0,
+        "direction": 62,
+        "new_direction": 62,
+        "elapsed_ms": 15971,
+        "local_new": true
+      }
+    ],
+    "raven_sample_count": 507,
+    "raven_mode_values": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "raven_attack_mode": 4,
+    "raven_attack_entries": {
+      "24": 4
+    },
+    "final_units": 12,
+    "cleanup_confirmed": true,
+    "scope": "Private HWND cast and read-only unit snapshots; no runtime stacks or pixels"
+  },
+  "limitations": [
+    "Skill level 1, one controlled Fallen target and one 16-second read-only Raven window.",
+    "A1 entry count is an animation-mode observation, not a damage or peck-settlement count.",
+    "The target harness uses debugger/remote calls to create the target; it is separate from the read-only Raven collector."
+  ]
+}

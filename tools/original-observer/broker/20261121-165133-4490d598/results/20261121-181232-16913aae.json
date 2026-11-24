@@ -1,0 +1,13 @@
+{
+  "id": "20261121-181232-16913aae",
+  "status": "failed",
+  "started": 1795255952.4812453,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "arctic-blast-private-desktop"
+  },
+  "error": "Only the pinned CXSorc/CXBarb/CXBarbWW/aaa/MapWalk/Census/CensusB/CensusSorc fixtures are currently supported",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 376, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 328, in execute\n    validate_job(read_json(job), HOME)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\orchestrator.py\", line 170, in validate_job\n    raise ValueError(\"Only the pinned CXSorc/CXBarb/CXBarbWW/aaa/MapWalk/Census/CensusB/CensusSorc fixtures are currently supported\")\nValueError: Only the pinned CXSorc/CXBarb/CXBarbWW/aaa/MapWalk/Census/CensusB/CensusSorc fixtures are currently supported\n",
+  "finished": 1795255952.5152411
+}

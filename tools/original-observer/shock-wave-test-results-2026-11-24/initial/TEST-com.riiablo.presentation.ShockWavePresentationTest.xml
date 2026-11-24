@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.presentation.ShockWavePresentationTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T02:23:24" hostname="DESKTOP-7GGAVHU" time="0.424">
+  <properties/>
+  <testcase name="remoteStunSnapshotOwnsOneLoopAndOnlyAuthoritativeRemovalClearsIt()" classname="com.riiablo.presentation.ShockWavePresentationTest" time="0.322"/>
+  <testcase name="[1] 8, 0" classname="com.riiablo.presentation.ShockWavePresentationTest" time="0.029"/>
+  <testcase name="[2] 0, 8" classname="com.riiablo.presentation.ShockWavePresentationTest" time="0.015"/>
+  <testcase name="[3] -8, 0" classname="com.riiablo.presentation.ShockWavePresentationTest" time="0.018"/>
+  <testcase name="[4] 0, -8" classname="com.riiablo.presentation.ShockWavePresentationTest" time="0.013"/>
+  <testcase name="[5] 8, 8" classname="com.riiablo.presentation.ShockWavePresentationTest" time="0.014"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+SHOCK_WAVE_RESOURCE frames=7 directions=8 stun_frames=12
+SHOCK_WAVE_RESOURCE frames=7 directions=8 stun_frames=12
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=243 target=-1 srvDoFunc=8 cltDoFunc=17
+SHOCK_WAVE_FAN target_delta=8.0,0.0 count=5 directions=8 dcc_frames=7 table_frames=7
+SHOCK_WAVE_RESOURCE frames=7 directions=8 stun_frames=12
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=243 target=-1 srvDoFunc=8 cltDoFunc=17
+SHOCK_WAVE_FAN target_delta=0.0,8.0 count=5 directions=8 dcc_frames=7 table_frames=7
+SHOCK_WAVE_RESOURCE frames=7 directions=8 stun_frames=12
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=243 target=-1 srvDoFunc=8 cltDoFunc=17
+SHOCK_WAVE_FAN target_delta=-8.0,0.0 count=5 directions=8 dcc_frames=7 table_frames=7
+SHOCK_WAVE_RESOURCE frames=7 directions=8 stun_frames=12
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=243 target=-1 srvDoFunc=8 cltDoFunc=17
+SHOCK_WAVE_FAN target_delta=0.0,-8.0 count=5 directions=8 dcc_frames=7 table_frames=7
+SHOCK_WAVE_RESOURCE frames=7 directions=8 stun_frames=12
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=243 target=-1 srvDoFunc=8 cltDoFunc=17
+SHOCK_WAVE_FAN target_delta=8.0,8.0 count=5 directions=8 dcc_frames=7 table_frames=7
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

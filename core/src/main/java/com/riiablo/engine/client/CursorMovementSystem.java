@@ -125,6 +125,24 @@ public class CursorMovementSystem extends BaseSystem {
       return;
     }
 
+    // A channel is already casting, so the ordinary canStartCast gate below
+    // must not discard its held pointer or release. Queue this with other
+    // fixed-step input; never read Gdx input from authoritative animation code.
+    if (socket == null && actioneer.hasArcticBlastSequence(playerId)) {
+      boolean right = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
+      boolean left = Gdx.input.isButtonPressed(Input.Buttons.LEFT)
+          && pointerUi != null && pointerUi.shiftDown();
+      int selected = actionInput == null ? Engine.INVALID_ENTITY
+          : actionInput.action(right ? Input.Buttons.RIGHT : Input.Buttons.LEFT);
+      boolean held = (right || left) && selected == SkillId.ARCTIC_BLAST
+          && uiHitSource(Gdx.input.getX(), Gdx.input.getY()) == null;
+      int target = held ? getSkillTargetAt(playerId, Gdx.input.getX(), Gdx.input.getY(), selected)
+          : Engine.INVALID_ENTITY;
+      iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
+      Vector2 aim = new Vector2(tmpVec2);
+      enqueueMovement(() -> actioneer.updateArcticBlastInput(playerId, held, target, aim), "skill.arctic-input");
+    }
+
     // A short click can begin and end between two 25 Hz simulation ticks. The
     // render frame captures its coordinates; consume it once here so a ground
     // move is never lost just because the button was released before the next
@@ -335,13 +353,17 @@ public class CursorMovementSystem extends BaseSystem {
     }
     if (uiHitSource(click.screenX, click.screenY) != null) return true;
 
+    int skillId = actionInput == null ? Engine.INVALID_ENTITY
+        : actionInput.action(Input.Buttons.RIGHT);
+    // A second press during the same channel is input for that live action.
+    // Retrying it as a new queued cast would restart spraying after release.
+    if (skillId == SkillId.ARCTIC_BLAST && actioneer.hasArcticBlastSequence(src)) return true;
+
     if (!canStartCast(src)) {
       pendingRightClicks.restore(click);
       return false;
     }
 
-    int skillId = actionInput == null ? Engine.INVALID_ENTITY
-        : actionInput.action(Input.Buttons.RIGHT);
     int targetId = getSkillTargetAt(src, click.screenX, click.screenY, skillId);
     if (targetId != Engine.INVALID_ENTITY
         && !allowsNonLivingSkillTarget(skillId, targetId)

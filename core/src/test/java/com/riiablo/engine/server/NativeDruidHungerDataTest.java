@@ -30,4 +30,21 @@ class NativeDruidHungerDataTest extends RiiabloTest {
     assertTrue(DruidSkills.getHungerLifeLeech(skill, 1, name -> 0) > 0);
     assertTrue(DruidSkills.getHungerManaLeech(skill, 1, name -> 0) > 0);
   }
+
+  @org.junit.jupiter.api.Test
+  void damagePenaltyMultipliesTheCompletedPhysicalDamageRatherThanCancellingStrength() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.HUNGER);
+    com.riiablo.attributes.Attributes attrs = com.riiablo.attributes.Attributes.obtainStandard();
+    attrs.base().put(com.riiablo.attributes.Stat.mindamage, 40);
+    attrs.base().put(com.riiablo.attributes.Stat.maxdamage, 40);
+    attrs.base().put(com.riiablo.attributes.Stat.strength, 100);
+    attrs.reset();
+    org.junit.jupiter.api.Assertions.assertArrayEquals(new int[] {20,20},
+        DruidSkills.calculateShapeWeaponDamage(skill, 1, attrs, null, null),
+        "40 * (1 + 100% strength) * 25% = 20, rather than 50 from additive -75% ED");
+    com.riiablo.engine.server.state.StateList states = new com.riiablo.engine.server.state.StateList(1);
+    states.addState(com.riiablo.engine.server.state.StateId.BEAR, 2000, 1, 1).damageModifier = 100;
+    org.junit.jupiter.api.Assertions.assertArrayEquals(new int[] {30,30},
+        DruidSkills.calculateShapeWeaponDamage(skill, 1, attrs, null, states));
+  }
 }

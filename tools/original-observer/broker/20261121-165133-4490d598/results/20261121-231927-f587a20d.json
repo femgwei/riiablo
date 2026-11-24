@@ -1,0 +1,15 @@
+{
+  "id": "20261121-231927-f587a20d",
+  "status": "completed",
+  "started": 1795274367.3021345,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "arctic-blast-birth-release-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795274413.4735782
+}

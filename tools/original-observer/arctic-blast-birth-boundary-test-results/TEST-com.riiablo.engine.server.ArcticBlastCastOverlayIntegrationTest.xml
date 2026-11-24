@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.ArcticBlastCastOverlayIntegrationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-21T14:13:01" hostname="DESKTOP-7GGAVHU" time="2.608">
+  <properties/>
+  <testcase name="realStartPlaysOneNativeOverlayAndOneStartSoundForTheWholeHeldAction()" classname="com.riiablo.engine.server.ArcticBlastCastOverlayIntegrationTest" time="1.828"/>
+  <testcase name="renderUpdatesAtSixtyHzKeepTheTwentyFiveHzOnceClock()" classname="com.riiablo.engine.server.ArcticBlastCastOverlayIntegrationTest" time="0.121"/>
+  <testcase name="repeatedStartsAreDeduplicatedButANewCastGetsANewBirthClock()" classname="com.riiablo.engine.server.ArcticBlastCastOverlayIntegrationTest" time="0.134"/>
+  <testcase name="everyObservedActiveCursorMatchesTheProductionResourceClock()" classname="com.riiablo.engine.server.ArcticBlastCastOverlayIntegrationTest" time="0.143"/>
+  <testcase name="missingAssetsExpireOnTimeAndCannotFlashWhenTheyBecomeAvailable()" classname="com.riiablo.engine.server.ArcticBlastCastOverlayIntegrationTest" time="0.124"/>
+  <testcase name="completingTheCastLayerPreservesAnUnrelatedPersistentLayer()" classname="com.riiablo.engine.server.ArcticBlastCastOverlayIntegrationTest" time="0.124"/>
+  <testcase name="lateAssetsSeekToAgeWithoutRestartingTheOnceLayer()" classname="com.riiablo.engine.server.ArcticBlastCastOverlayIntegrationTest" time="0.129"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[Actioneer] [SKILL_DO] phase=dispatch entity=0 skill=230 target=-1 keyframe=ATK srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

@@ -16,7 +16,8 @@ static BOOL CALLBACK poisonWindow(HWND hwnd, LPARAM arg) {
 struct PoisonController : Controller {};
 
 static U headClass = 38, cloudClass = 39;
-static bool poisonClass(U id) { return id == headClass || id == cloudClass || id == 141; }
+static std::set<U> additionalClasses;
+static bool poisonClass(U id) { return id == headClass || id == cloudClass || id == 141 || additionalClasses.count(id); }
 
 // These offsets are recorded with the raw bytes, not presumed to be the GPU's
 // final draw argument. Common path direction is checked against getter code.
@@ -42,6 +43,16 @@ static void sample(PoisonController& d, std::ofstream& out, const char* side,
       out << ",\"gfx_words\":[";
       for (size_t i=0;i<g.size();i++) { if(i) out << ','; out << g[i]; }
       out << ']';
+      // Hash-pinned D2Client BBA40 returns unit.gfx(+54)->aux(+30).
+      if (raw[1] == 481 && g[0x30/4]) {
+        std::array<U,0x50/4> aux{}; SIZE_T count = 0;
+        if (ReadProcessMemory(d.process, reinterpret_cast<void*>(g[0x30/4]), aux.data(), sizeof aux, &count)
+            && count == sizeof aux) {
+          out << ",\"gfx_aux_words\":[";
+          for (size_t i=0;i<aux.size();i++) out << (i?",":"") << aux[i];
+          out << ']';
+        }
+      }
       if (g[0x44/4]) {
         char name[128]{};
         if (ReadProcessMemory(d.process, reinterpret_cast<void*>(g[0x44/4]), name, sizeof(name)-1, &got)) {
@@ -68,13 +79,30 @@ static void sample(PoisonController& d, std::ofstream& out, const char* side,
 
 int wmain(int argc, wchar_t** argv) {
   SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
-  if (argc < 4 || argc > 6 || (argc == 6 && std::wstring(argv[5]) != L"plague" && std::wstring(argv[5]) != L"firestorm")) return 2;
+  if (argc < 4 || argc > 6) return 2;
+  std::wstring mode = argc == 6 ? argv[5] : L"poison";
+#ifdef D2_DRUID_WIND_FIXTURE
+  if (mode != L"twister" && mode != L"tornado") return 2;
+  bool twister = mode == L"twister", tornado = mode == L"tornado";
+  bool fissure = false, volcano = false;
+#elif defined(D2_DRUID_SURFACE_FIXTURE)
+  if (mode != L"fissure" && mode != L"volcano") return 2;
+  bool fissure = mode == L"fissure", volcano = mode == L"volcano";
+  bool twister = false, tornado = false;
+#else
+  if (mode != L"poison" && mode != L"plague" && mode != L"firestorm") return 2;
+  bool fissure = false, volcano = false;
+  bool twister = false, tornado = false;
+#endif
   bool plague = argc == 6 && std::wstring(argv[5]) == L"plague";
   bool firestorm = argc == 6 && std::wstring(argv[5]) == L"firestorm";
-  U skillId = firestorm ? 225 : plague ? 25 : 15;
-  U playerClass = firestorm ? 5 : 0;
+  U skillId = twister ? 240 : tornado ? 245 : fissure ? 234 : volcano ? 244 : firestorm ? 225 : plague ? 25 : 15;
+  U playerClass = firestorm || fissure || volcano || twister || tornado ? 5 : 0;
   if (plague) { headClass = 43; cloudClass = 221; }
-  if (firestorm) { headClass = 458; cloudClass = 457; }
+  if (firestorm) { headClass = 458; cloudClass = 457; additionalClasses = {104, 105}; }
+  if (fissure) { headClass = 461; cloudClass = 462; additionalClasses = {463, 464, 465}; }
+  if (volcano) { headClass = 479; cloudClass = 480; additionalClasses = {481, 482, 483}; }
+  if (twister || tornado) { headClass = twister ? 477 : 478; cloudClass = headClass; }
   PoisonController d; bool success = false, created = false, castStarted = false;
   U firstFrame=0,lastFrame=0,serverSamples=0,clientSamples=0;
   U renderProbeEvents=0,renderPrepared=0,poisonDraws=0,poisonDrawReturns=0,poisonDrawSelections=0;
@@ -105,7 +133,28 @@ int wmain(int argc, wchar_t** argv) {
     for(U i=0;i<4;i++) hashGetter.push_back(static_cast<BYTE>(missileHash>>(8*i)));
     signature(d,client.base+0x86B1B,hashGetter);
     signature(d,common.base+0x69BF0,{0x8B,0x44,0x24,0x04,0x85,0xC0,0x75,0x05,0x32,0xC0,0xC2,0x04,0x00,0x8A,0x40,0x64,0xC2,0x04,0x00});
-    enableDebugPrivilege(); require(DebugActiveProcess(d.pid), "Attach"); d.attached=true;
+    enableDebugPrivilege();
+#ifdef D2_DRUID_WIND_FIXTURE
+    {
+      BOOL occupied=FALSE, elevated=FALSE; DWORD occupiedError=ERROR_SUCCESS;
+      SetLastError(ERROR_SUCCESS);
+      bool checked=CheckRemoteDebuggerPresent(d.process,&occupied)!=FALSE;
+      if(!checked) occupiedError=GetLastError();
+      HANDLE token=nullptr; TOKEN_ELEVATION elevation{}; DWORD size=0;
+      if(OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&token)) {
+        if(GetTokenInformation(token,TokenElevation,&elevation,sizeof elevation,&size)) elevated=elevation.TokenIsElevated;
+        CloseHandle(token);
+      }
+      std::ofstream diagnostic(output/"attach-preflight.json");
+      diagnostic << "{\"helper_pid\":" << GetCurrentProcessId() << ",\"target_pid\":" << d.pid
+          << ",\"helper_elevated\":" << (elevated?"true":"false")
+          << ",\"debugger_query_ok\":" << (checked?"true":"false")
+          << ",\"debugger_query_error\":" << occupiedError
+          << ",\"target_already_debugged\":" << (occupied?"true":"false") << '}';
+      require(checked && !occupied,"Target already has a debugger or query failed");
+    }
+#endif
+    require(DebugActiveProcess(d.pid), "Attach"); d.attached=true;
     require(DebugSetProcessKillOnExit(FALSE), "Disable kill-on-exit");
     d.waitBreakpoint(0,3000,true); d.arm(entry); d.resume();
     CONTEXT original=d.waitBreakpoint(entry,5000); d.gameThread=d.event.dwThreadId;
@@ -114,7 +163,15 @@ int wmain(int argc, wchar_t** argv) {
     require(d.get<BYTE>(returnTo-5)==0xE8 && returnTo+d.get(returnTo-4)==entry, "Update caller mismatch");
     validateGame(d,game,127897359,player);
     char name[16]{}; d.read(d.get(player+0x14),name,16);
+#ifdef D2_DRUID_BATCH_FIXTURE
+    require(firestorm && std::strcmp(name,"CXDruBatch")==0 && d.get(player+4)==5, "Require fixed Druid batch fixture");
+#elif defined(D2_DRUID_SURFACE_FIXTURE)
+    require(std::strcmp(name,"CXDruSurface")==0 && d.get(player+4)==5, "Require fixed Druid surface fixture");
+#elif defined(D2_DRUID_WIND_FIXTURE)
+    require(std::strcmp(name,"CXDruWind")==0 && d.get(player+4)==5, "Require fixed Druid wind fixture");
+#else
     require(std::strcmp(name,firestorm ? "CXFirestorm" : plague ? "CXPlague" : "CXPoison")==0 && d.get(player+4)==playerClass, "Require separate fixed skill fixture");
+#endif
     U skills=d.get(player+0xA8), skill=d.get(skills+0xC);
     require(skill && d.get<std::uint16_t>(d.get(skill))==skillId && d.get(skill+0x28)==1, "Require selected fixed javelin level one");
     U path=d.get(player+0x2C), room=d.get(path+0x1C);
@@ -162,6 +219,92 @@ int wmain(int argc, wchar_t** argv) {
     U selectedDir=0,selectedDirs=0,selectedFrames=0,selectedOffset=0;
     bool hasSelection=false;
     d.observeOtherThreads=true;
+#ifdef D2_FIRESTORM_CALLBACK_TRACE
+    const U callbackFlags = client.base + 0x9083B, callbackCreated = client.base + 0x90A9A,
+            callbackDone = client.base + 0x90AC1;
+    signature(d, callbackFlags, {0x85,0xC0,0x0F,0x84,0x7E,2,0,0});
+    signature(d, callbackCreated, {0x8B,0xF8,0x85,0xFF,0x74,0x21});
+    signature(d, callbackDone, {0x8B,0xCE,0xE8});
+    std::ofstream callbacks(output / "client-callbacks.jsonl");
+    require(callbacks.is_open(), "Open callback trace");
+    U callbackThread = 0, pendingParent = 0;
+    d.observeOnce=[&](CONTEXT c) {
+      if (!callbackThread) callbackThread = d.event.dwThreadId;
+      require(callbackThread == d.event.dwThreadId, "Callback changed thread");
+      U at = c.Eip, parent = c.Esi, path = d.get(parent + 0x2C);
+      require(d.get(parent) == 3 && d.get(parent + 4) == 458, "Unexpected CltDo6 parent");
+      require(path && d.get(path + 0x30) == parent, "Callback path identity");
+      if (at == callbackFlags) {
+        require(!pendingParent, "Overlapping client creation");
+        callbacks << "{\"kind\":\"path_flag\",\"unit_id\":" << d.get(parent + 0xC)
+                  << ",\"game_frame\":" << d.get(game + 0xA8) << ",\"result\":" << c.Eax
+                  << ",\"path_flags\":" << d.get(path + 0x34)
+                  << ",\"seed_low\":" << d.get(parent + 0x20) << ",\"seed_high\":" << d.get(parent + 0x24)
+                  << ",\"x_fixed\":" << d.get(path) << ",\"y_fixed\":" << d.get(path + 4) << "}\n";
+        if (c.Eax) pendingParent = parent;
+        d.observedEntry = c.Eax ? callbackCreated : callbackDone;
+      } else if (at == callbackCreated) {
+        require(at == callbackCreated && pendingParent == parent, "Unpaired client creation return");
+        U child = c.Eax;
+        std::array<U,4> childWords{}; SIZE_T childRead = 0;
+        bool readable = child && ReadProcessMemory(d.process, reinterpret_cast<void*>(child),
+                            childWords.data(), sizeof childWords, &childRead) && childRead == sizeof childWords;
+        callbacks << "{\"kind\":\"create_return\",\"parent_unit_id\":" << d.get(parent + 0xC)
+                  << ",\"game_frame\":" << d.get(game + 0xA8) << ",\"child\":" << child
+                  << ",\"readable\":" << (readable ? "true" : "false")
+                  << ",\"child_type\":" << childWords[0] << ",\"child_class\":" << childWords[1]
+                  << ",\"child_unit_id\":" << childWords[3] << "}\n";
+        pendingParent = 0; d.observedEntry = callbackDone;
+      } else {
+        require(at == callbackDone && !pendingParent, "Callback exit without paired creation");
+        // Arm the next entry only after executing the current flag test.
+        // Re-arming callbackFlags at its own EIP would trap forever.
+        d.observedEntry = callbackFlags;
+      }
+      callbacks.flush(); d.arm(d.observedEntry);
+    };
+    d.observedEntry=callbackFlags; d.arm(callbackFlags);
+#elif defined(D2_VOLCANO_HIT_TRACE)
+    const U ownerReturned = client.base + 0x991A4, firstCreated = client.base + 0x991EE,
+            secondCreated = client.base + 0x99207, hitDone = client.base + 0x99220;
+    signature(d, ownerReturned, {0x8B,0xD0,0x85,0xD2});
+    signature(d, firstCreated, {0x66,0x8B,0x43,0x2E});
+    signature(d, secondCreated, {0x66,0x8B,0x5B,0x30});
+    signature(d, hitDone, {0x5E,0xB8,1,0,0,0});
+    std::ofstream hits(output / "client-hit55.jsonl");
+    require(hits.is_open(), "Open CltHit55 log");
+    DWORD hitThread=0; U hitParent=0;
+    d.observeOnce=[&](CONTEXT c) {
+      if(!hitThread) hitThread=d.event.dwThreadId;
+      require(hitThread==d.event.dwThreadId,"CltHit55 changed thread");
+      U at=c.Eip, parent=c.Esi;
+      require(d.get(parent)==3 && d.get(parent+4)==481,"CltHit55 parent identity");
+      if(at==ownerReturned) {
+        require(!hitParent,"Overlapping CltHit55");hitParent=parent;
+        U path=d.get(parent+0x2C), data=d.get(parent+0x14);
+        hits << "{\"kind\":\"owner_return\",\"unit_id\":" << d.get(parent+0xC)
+             << ",\"game_frame\":" << d.get(game+0xA8) << ",\"owner\":" << c.Eax
+             << ",\"current_frame\":" << d.get<std::int16_t>(data+0x10)
+             << ",\"x_fixed\":" << d.get(path) << ",\"y_fixed\":" << d.get(path+4) << "}\n";
+        d.observedEntry=c.Eax ? firstCreated : hitDone;
+      } else if(at==firstCreated || at==secondCreated) {
+        require(hitParent==parent,"CltHit55 creation parent mismatch");
+        std::array<U,4> words{};SIZE_T count=0;
+        bool readable=c.Eax && ReadProcessMemory(d.process,reinterpret_cast<void*>(c.Eax),words.data(),sizeof words,&count) && count==sizeof words;
+        hits << "{\"kind\":\"create_return\",\"unit_id\":" << d.get(parent+0xC)
+             << ",\"game_frame\":" << d.get(game+0xA8) << ",\"slot\":" << (at==firstCreated?0:1)
+             << ",\"result\":" << c.Eax << ",\"readable\":" << (readable?"true":"false")
+             << ",\"child_type\":" << words[0] << ",\"child_class\":" << words[1]
+             << ",\"child_unit_id\":" << words[3] << "}\n";
+        d.observedEntry=at==firstCreated?secondCreated:hitDone;
+      } else {
+        require(at==hitDone && hitParent==parent,"Unpaired CltHit55 exit");
+        hitParent=0;d.observedEntry=ownerReturned;
+      }
+      hits.flush();d.arm(d.observedEntry);
+    };
+    d.observedEntry=ownerReturned;d.arm(ownerReturned);
+#else
     d.observeOnce=[&](CONTEXT c) {
       renderProbeEvents++;
       if(!renderThread) renderThread=d.event.dwThreadId;
@@ -259,6 +402,7 @@ int wmain(int argc, wchar_t** argv) {
       else {if(d.observedAlternative)d.disarm(d.observedAlternative);d.observedAlternative=0;d.observedEntry=0;}
     };
     d.observedEntry=preparing; d.arm(preparing);
+#endif
     // Start through the original client input handler. A server-only mode
     // call can produce valid server missiles without executing CltDo on the
     // local client, which is precisely the evidence needed for this probe.
@@ -277,7 +421,7 @@ int wmain(int argc, wchar_t** argv) {
     frames << "step,game_frame,server_player_mode,client_player_mode,client_hash_missiles\n";
     for(U step=0;step<=240;step++) {
       U frame=d.get(game+0xA8); lastFrame=frame;
-      castStarted=castStarted || d.get(player+0x10)==(firestorm ? 10u : 11u);
+      castStarted=castStarted || d.get(player+0x10)==(playerClass == 5 ? 10u : 11u);
       if(step==4) require(PostMessageW(window.hwnd,WM_RBUTTONUP,0,point),"Post private cast up");
       require(frame==firstFrame+step,"Non-contiguous server frames");
       std::set<U> seen;
@@ -325,9 +469,9 @@ int wmain(int argc, wchar_t** argv) {
       d.arm(entry); d.set(returned); d.resume(); original=d.waitBreakpoint(entry,3000);
       require(original.Ecx==game && d.get(original.Esp)==returnTo,"Update context changed");
     }
-    require(castStarted && serverIds[headClass].size()==(firestorm ? 3u : 1u),"Unexpected server head count");
-    require(clientIds[headClass].size()==(firestorm ? 3u : 1u) && clientIds[cloudClass].size()>0
-        && (firestorm || clientIds[141].size()>0),"Missing client skill or trail observations");
+    require(castStarted && serverIds[headClass].size()==(firestorm || twister ? 3u : 1u),"Unexpected server head count");
+    require(clientIds[headClass].size()==(firestorm || twister ? 3u : 1u) && clientIds[cloudClass].size()>0
+        && (firestorm || fissure || volcano || twister || tornado || clientIds[141].size()>0),"Missing client skill or trail observations");
     success=true;
   } catch(const std::exception& e) {error=e.what();std::cerr << error << '\n';}
   bool cleaned=d.cleanup();

@@ -164,6 +164,7 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       source.get(0).clientSnapshotKnown = true;
       source.get(0).clientSampleFrame = 81;
       source.get(0).clientSamplePosition.set(7, 9);
+      source.get(0).infernoPresentationTime = .12345;
       Map<Integer, MissileRuntimeCheckpoint> snapshots = source.capture();
       assertArrayEquals(before, snapshots.get(0).bytes(), "local caches cannot affect server replay hashes");
       target.get(0).clientSeed = new D2Seed(789, 10);
@@ -172,6 +173,7 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       target.get(0).clientSnapshotKnown = true;
       target.get(0).clientSampleFrame = 55;
       target.get(0).clientSamplePosition.set(8, 10);
+      target.get(0).infernoPresentationTime = .34567;
       MissileRuntimeCheckpoint.restore(target.world, snapshots);
       assertNull(target.get(0).clientSeed);
       assertEquals(0, target.get(0).clientPathX);
@@ -179,6 +181,7 @@ class MissileRuntimeCheckpointTest extends RiiabloTest {
       assertFalse(target.get(0).clientSnapshotKnown);
       assertEquals(-1, target.get(0).clientSampleFrame);
       assertTrue(target.get(0).clientSamplePosition.isZero());
+      assertEquals(0, target.get(0).infernoPresentationTime);
       assertArrayEquals(before, target.capture().get(0).bytes());
     }
   }

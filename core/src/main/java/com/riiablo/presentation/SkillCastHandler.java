@@ -211,7 +211,7 @@ public class SkillCastHandler extends PassiveSystem {
         break;
       case 11: // Arrow/Bolt client start; cltdofunc owns the presentation.
         break;
-      case 15: // Arctic Blast channel start; server missile owns the stream.
+      case 15: // InfernoPresentationSystem owns Arctic Blast's CltSt15 overlay/audio and CltDo24 stream.
         break;
       case 2: // Channeled skills (inferno, arctic blast)
         // Start channeling effect
@@ -268,6 +268,10 @@ public class SkillCastHandler extends PassiveSystem {
     // ServerSkillSystem (Blessed Hammer is now one such authoritative path).
     boolean networkClient = world.getSystem(ClientNetworkReceiver.class) != null;
     boolean localServer = world.getSystem(ServerSkillSystem.class) != null;
+    if ((skill.Id == SkillId.INFERNO || skill.Id == SkillId.ARCTIC_BLAST)
+        && world.getSystem(InfernoPresentationSystem.class) != null) return;
+    if ((skill.Id == SkillId.TWISTER || skill.Id == SkillId.TORNADO)
+        && world.getSystem(DruidWindPresentationSystem.class) != null) return;
     // SrvDo022/068 already emit the complete authoritative 64-way warcry
     // ring in local games. NumDirections is the DCC layout, not ring size.
     if (localServer && isWarCryWave(skill)) return;
@@ -321,10 +325,8 @@ public class SkillCastHandler extends PassiveSystem {
           event.entityId, networkClient, localServer);
       return;
     }
-    // Inferno and Arctic Blast stream missiles are created by SrvDo019 and
-    // replicated with their native CltDo24 animation clock. CltDo19 is only
-    // the retail packet hook; creating its legacy client stream as well makes
-    // a held cast show a second fire/animation action.
+    // CltDo24 is owned by InfernoPresentationSystem for both fire and ice;
+    // their server carriers remain combat-only.
     if ((skill.Id == SkillId.INFERNO || skill.Id == SkillId.ARCTIC_BLAST)
         && (localServer || networkClient)) {
       log.info("[SORCERESS_STREAM] phase=reuse_server_missile entity={} skill={} "

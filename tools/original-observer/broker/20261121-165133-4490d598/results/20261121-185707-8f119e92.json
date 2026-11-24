@@ -1,0 +1,15 @@
+{
+  "id": "20261121-185707-8f119e92",
+  "status": "completed",
+  "started": 1795258627.6195087,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "arctic-blast-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-185707-8f119e92\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795258671.4687467
+}

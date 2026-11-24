@@ -1,0 +1,135 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. See https://docs.gradle.org/7.3/userguide/gradle_daemon.html#sec:disabling_the_daemon.
+Daemon will be stopped at the end of the build 
+
+> Configure project :android
+Unable to initialize metrics, ensure C:\.android is writable, details: C:\.android\analytics.settings (ϵͳ�Ҳ���ָ����·����)
+
+> Task :verifyModuleBoundaries
+Module boundaries verified: strict project DAG and zero host/presentation/global RNG access in extracted modules.
+
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :shared:compileJava UP-TO-DATE
+> Task :game-data:compileJava UP-TO-DATE
+> Task :server-domain:compileJava UP-TO-DATE
+> Task :quests:compileJava UP-TO-DATE
+> Task :server-systems:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+> Task :core:compileJava
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+
+> Task :core:compileTestJava
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processTestResources UP-TO-DATE
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :game-data:processResources NO-SOURCE
+> Task :game-data:classes UP-TO-DATE
+> Task :game-data:jar UP-TO-DATE
+> Task :quests:processResources NO-SOURCE
+> Task :quests:classes UP-TO-DATE
+> Task :quests:jar UP-TO-DATE
+> Task :server-domain:processResources NO-SOURCE
+> Task :server-domain:classes UP-TO-DATE
+> Task :server-domain:jar UP-TO-DATE
+> Task :server-systems:processResources NO-SOURCE
+> Task :server-systems:classes UP-TO-DATE
+> Task :server-systems:jar UP-TO-DATE
+> Task :shared:processResources NO-SOURCE
+> Task :shared:classes UP-TO-DATE
+> Task :shared:jar UP-TO-DATE
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :core:test
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+ReferenceElementalPresentationTest > coldDccPublishesAtItsCurrentAgeAndSurvivesItsParent() PASSED
+
+ReferenceElementalPresentationTest > growthAndLoopsRespectTheReferenceMetadataAndExcludedSkillsStayUntouched() PASSED
+
+ReferenceElementalPresentationTest > hurricaneUsesStateNotTargetMissileAndHasBoundedOrbitingDebris() PASSED
+
+ReferenceElementalPresentationTest > meteorRockAndTailShareOneFixedFallAndKeepServerImpactTiming() PASSED
+
+ReferenceElementalPresentationTest > volcanoHasTwoResidentLayersAndRocksLandWithExplosionAndLava() PASSED
+
+ReferenceElementalPresentationTest > ordinarySpritesStillResolveTheirAngleAfterTwoStableTicks() PASSED
+
+ReferenceElementalPresentationTest > boulderImpactCreatesEighteenFireCellsAndVariableFlightFragments() PASSED
+
+ReferenceElementalPresentationTest > blazeDistanceGateOwnersAndLateSnapshotsDoNotDuplicateCells() PASSED
+
+ReferenceElementalPresentationTest > volcanoOwnerRemovalSkipsLandingChildren() PASSED
+
+ReferenceElementalPresentationTest > blazeUsesRealSizeVariantsWithTheSameGroundAnchorAndLoop() PASSED
+
+ReferenceElementalPresentationTest > boulderReplicaClockRunsAtNativeRateWithSixtyHzPresentation() PASSED
+
+ReferenceElementalPresentationTest > blazeDownsamplesOneTrailWithoutMovingOrRetimingAuthority() PASSED
+
+ReferenceElementalPresentationTest > armageddonDamageChildrenCannotCreateAnotherFallingPair() PASSED
+
+ReferenceElementalPresentationTest > volcanoLeavingTheHostSceneOnItsFinalStepDoesNotLand() PASSED
+
+ReferenceElementalPresentationTest > armageddonLayersUseTheReceivedLandingPointAndCompleteTheNativeFall() PASSED
+
+ReferenceElementalPresentationTest > referenceSpritesExistInTheReal110fMpqs() PASSED
+
+ReferenceElementalPresentationTest > boulderTrailUsesObservedCrossingsAndThreeNativeFireRows() PASSED
+
+ReferenceElementalPresentationTest > replacementAndLegacySystemsDoNotAdvanceTheSameEffectTwice() PASSED
+
+ReferenceElementalPresentationTest > armageddonCannotCreateImpactChildrenAfterItsOwnerIsRemoved() PASSED
+
+ReferenceElementalPresentationTest > lateVolcanoSnapshotResumesItsOutroAndCannotRestartTheEffect() PASSED
+
+ReferenceElementalPresentationTest > firestormUsesObservedPathMovementWithoutReferenceLaneOffsets() PASSED
+
+ReferenceElementalPresentationTest > fissureCreatesCrackAndSmokeAtTheSamePointWithRandomCrackDirections() PASSED
+
+ReferenceElementalPresentationTest > pixelOffsetsRoundTripWithoutReversingTheFall() PASSED
+
+ReferenceElementalPresentationTest > blizzardAlternatesFallingDccsAcrossAnEllipseWithoutDuplicateHits() PASSED
+
+ReferenceElementalPresentationTest > hurricaneTangentDirectionSurvivesTheLateGenericDirectionPassOnEveryTick() PASSED
+
+ReferenceElementalPresentationTest > secondBlizzardVariantFallsFromNativeHeightAndLoopsUntilLanding() PASSED
+
+DruidStormOriginalParityTest > everyAcceptedNativeFrameMatchesRockTailExplosionAndGroundFireProfiles() PASSED
+
+DruidStormOriginalParityTest > everyAcceptedNativeRockAndTailGraphicsOffsetMatchesTheProductionSampler() PASSED
+
+DruidStormOriginalParityTest > bothBackgroundStatesRefreshBeyondTenSecondsAndLeaveNoResidualEffects() PASSED
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+DruidSurfaceOriginalParityTest > coldResourcesCannotExtendTheSurfaceEffects() PASSED
+
+DruidSurfaceOriginalParityTest > everyCapturedSurfaceDccFrameMatchesTheProductionClockIncludingOutro() PASSED
+
+DruidSurfaceOriginalParityTest > actualVolcanoRetainsBothResidentLayersThroughTheNativeOutro() PASSED
+
+DruidSurfaceOriginalParityTest > actualFissureHasFourteenPairedLongLivedVents() PASSED
+
+VolcanoOriginalParityTest > hitTraceProvesTwoIndependentSuccessfulCreationsEvenWhenSnapshotsMissAChild() PASSED
+
+VolcanoOriginalParityTest > allCapturedGraphicsArcStatesIncludeTheImmediateCreationUpdate() PASSED
+
+VolcanoOriginalParityTest > bothNativeCastsReplayAllObservedFlightLifetimesVelocitiesAndPositions() PASSED
+
+VolcanoOriginalParityTest > everyObservedRockAndLandingDccSelectionMatchesRealAssetFrameCounts() PASSED
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+VolcanoOriginalParityTest > realProductionEmitsAllSixtyTwoFlightsAndMovesEvenWithColdResources() PASSED
+
+BUILD SUCCESSFUL in 1m 29s
+22 actionable tasks: 4 executed, 18 up-to-date

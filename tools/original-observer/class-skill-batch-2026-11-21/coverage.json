@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "class_order": [
+    "dru",
+    "nec",
+    "bar",
+    "pal",
+    "ass",
+    "ama",
+    "sor"
+  ],
+  "classes": [
+    {
+      "class_code": "dru",
+      "priority": 1,
+      "deferred": false,
+      "total": 30,
+      "captured_in_class_batch": 4,
+      "captured_client_polling": 5,
+      "compared_in_class_batch": 9,
+      "prior_individual_fixtures": 2,
+      "family_counts": {
+        "action_or_target": 3,
+        "channel": 1,
+        "missile": 7,
+        "passive": 1,
+        "state": 8,
+        "summon": 10
+      }
+    },
+    {
+      "class_code": "nec",
+      "priority": 2,
+      "deferred": false,
+      "total": 30,
+      "captured_in_class_batch": 0,
+      "captured_client_polling": 0,
+      "compared_in_class_batch": 0,
+      "prior_individual_fixtures": 2,
+      "family_counts": {
+        "action_or_target": 1,
+        "missile": 7,
+        "passive": 3,
+        "state": 11,
+        "summon": 8
+      }
+    },
+    {
+      "class_code": "bar",
+      "priority": 3,
+      "deferred": false,
+      "total": 30,
+      "captured_in_class_batch": 0,
+      "captured_client_polling": 0,
+      "compared_in_class_batch": 0,
+      "prior_individual_fixtures": 0,
+      "family_counts": {
+        "action_or_target": 7,
+        "missile": 2,
+        "passive": 10,
+        "state": 11
+      }
+    },
+    {
+      "class_code": "pal",
+      "priority": 4,
+      "deferred": false,
+      "total": 30,
+      "captured_in_class_batch": 0,
+      "captured_client_polling": 0,
+      "compared_in_class_batch": 0,
+      "prior_individual_fixtures": 0,
+      "family_counts": {
+        "action_or_target": 4,
+        "missile": 4,
+        "state": 22
+      }
+    },
+    {
+      "class_code": "ass",
+      "priority": 5,
+      "deferred": false,
+      "total": 30,
+      "captured_in_class_batch": 0,
+      "captured_client_polling": 0,
+      "compared_in_class_batch": 0,
+      "prior_individual_fixtures": 0,
+      "family_counts": {
+        "action_or_target": 4,
+        "missile": 5,
+        "passive": 2,
+        "state": 11,
+        "summon": 8
+      }
+    },
+    {
+      "class_code": "ama",
+      "priority": 6,
+      "deferred": true,
+      "total": 30,
+      "captured_in_class_batch": 0,
+      "captured_client_polling": 0,
+      "compared_in_class_batch": 0,
+      "prior_individual_fixtures": 2,
+      "family_counts": {
+        "action_or_target": 4,
+        "missile": 16,
+        "passive": 6,
+        "state": 2,
+        "summon": 2
+      }
+    },
+    {
+      "class_code": "sor",
+      "priority": 7,
+      "deferred": true,
+      "total": 30,
+      "captured_in_class_batch": 0,
+      "captured_client_polling": 0,
+      "compared_in_class_batch": 0,
+      "prior_individual_fixtures": 4,
+      "family_counts": {
+        "action_or_target": 3,
+        "channel": 1,
+        "missile": 14,
+        "passive": 4,
+        "state": 7,
+        "summon": 1
+      }
+    }
+  ],
+  "total_skills": 210,
+  "priority_skills": 150,
+  "deferred_skills": 60,
+  "static_resource_headers": 224,
+  "resource_status_counts": {
+    "header_collected": 224
+  },
+  "scope": "Static inventory complete; runtime and scoped comparison coverage counted separately; no all-case or pixel parity claim"
+}

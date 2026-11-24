@@ -1,0 +1,138 @@
+{
+  "schema": 1,
+  "scope": "Raven level-one successful hit creates Dim Vision and client overlays",
+  "run": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-085128-369b3f76\\orchestrator",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "native_cleanup": {
+    "status": "passed",
+    "detached": true,
+    "cleanup_confirmed": true,
+    "fixtures_removed": true,
+    "memory_writes": true,
+    "remote_execution": true,
+    "debugger_attached": true,
+    "samples": 425,
+    "first_frame": 477
+  },
+  "target_intervention": {
+    "target_id": 20,
+    "target_class": 0,
+    "target_hp_fixed": 2560000,
+    "target_ai_think_deleted": true,
+    "target_pointer": 90072832,
+    "target_hp_regen_before": 1250,
+    "target_hp_regen_after": 0,
+    "room": 163861120,
+    "player_id": 1,
+    "first_frame": 477,
+    "max_frames": 2600,
+    "combat_entry_trace": true
+  },
+  "raven_stats": {
+    "frame": 500,
+    "unit_id": 21,
+    "level": 98,
+    "tohit": 1057,
+    "mindamage": 0,
+    "maxdamage": 0,
+    "item_stupidity": -1
+  },
+  "first_server_application": {
+    "frame": 724,
+    "unit_id": 20,
+    "target_mode": 1,
+    "dimvision": true,
+    "dimvision_list": true,
+    "dimvision_expiry": 1249,
+    "dimvision_skill": 71,
+    "dimvision_level": 8,
+    "dimvision_owner_type": 1,
+    "dimvision_owner_id": 21
+  },
+  "applied_duration": 525,
+  "pecks": [
+    {
+      "frame": 724,
+      "hit": true,
+      "hp_loss_fixed": 781,
+      "dimvision_before": false,
+      "dimvision_after": true,
+      "target_mode_after": 1,
+      "level_after": 8,
+      "expiry_after": 1249
+    },
+    {
+      "frame": 794,
+      "hit": false,
+      "hp_loss_fixed": 0,
+      "dimvision_before": true,
+      "dimvision_after": true,
+      "target_mode_after": 1,
+      "level_after": 8,
+      "expiry_after": 1249
+    },
+    {
+      "frame": 864,
+      "hit": true,
+      "hp_loss_fixed": 695,
+      "dimvision_before": true,
+      "dimvision_after": true,
+      "target_mode_after": 1,
+      "level_after": 8,
+      "expiry_after": 1249
+    }
+  ],
+  "client": {
+    "samples": 503,
+    "first_blind_elapsed_ms": 9040,
+    "overlay_transitions": [
+      {
+        "elapsed_ms": 17,
+        "dimvision": false,
+        "overlay_ids": []
+      },
+      {
+        "elapsed_ms": 9040,
+        "dimvision": true,
+        "overlay_ids": [
+          69
+        ]
+      },
+      {
+        "elapsed_ms": 9388,
+        "dimvision": true,
+        "overlay_ids": [
+          129
+        ]
+      }
+    ],
+    "target_modes": [
+      1
+    ],
+    "state_bit_received": true,
+    "full_stat_list_received": false
+  },
+  "sha256": {
+    "orchestrator.json": "82864b13ffd01ee2a0a7cef296f95793d91c7f381c4986f98352189ab1f65492",
+    "worker/summary.json": "b4255b0996dcdb7e74fe5a16cce8a164c191962aef4c37f2446753e79eedc82c",
+    "worker/capture/summary.json": "aefd9c6ea86a513b4aa54c8a41c6f91c7c4f88a77ce5a2cd7202d85432ab6444",
+    "worker/capture/target-samples.json": "f080a55d1ec16d1d15a2bf76d5afcae663aa0089a163bea9df2ddeea188b5597",
+    "worker/native-target/summary.json": "6db1a169691ed4060314602b6dbbe421e0103db669c72819e8d8cbef4606339f",
+    "worker/native-target/identity.json": "2fa703a52543f9d7ede0283e25baf11bc99c9603f10437950b4a76eca52f04a3",
+    "worker/native-target/target-feedback.jsonl": "0f4bf9b3a4599124cf71ed4db6329dfa6abf1900577cb071fa6cd69ac88f2ede",
+    "worker/native-target/combat.jsonl": "1db90788a0456b52fa66b62d22cd57474b9a9e268c9ac3032d6f5c3c2a86a093",
+    "worker/native-target/raven-stats.jsonl": "9c0202ad98009ddba145017d4b59bc458709b6975d37edccfca98b60c925c2d5",
+    "worker/provenance/d2game_raven_target.exe": "fc0722ef32e0735a19d66bc92411fd75a6b7bdbd2b25ba36286ab3e100b610aa",
+    "worker/provenance/d2game_raven_target.cpp": "2f40dbd2de8a8cbac4822b6c0fae081a1c3759ea1a960392471eb4aa32fd4388",
+    "worker/provenance/druid_raven_passive.py": "758522c47d3db30ea3fb504fc46d4461948526ab5d11c58c3c58b7503c27170a"
+  },
+  "limitations": [
+    "Selected function entry/return probes and stopped-thread server snapshots, not a complete stack.",
+    "Client read-only polling is non-atomic; elapsed milliseconds are not aligned with server ticks.",
+    "The client counter at +0x107794 was zero and is not used as a clock.",
+    "The 10000-HP fixed target has regeneration/AI suppressed; it never entered GH in this sample.",
+    "Expiry is scheduled in the server stat list but not reached by this short capture.",
+    "Overlay identity and state reception do not establish GPU drawing or pixel parity."
+  ]
+}

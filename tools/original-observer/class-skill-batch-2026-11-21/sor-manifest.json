@@ -1,0 +1,887 @@
+{
+  "schema": 1,
+  "class_code": "sor",
+  "priority": 7,
+  "deferred": true,
+  "source_inventory_sha256": "11b24a3fc8d01529146304b770a44fbf3c2b38f016a39fe0163bf4573bef7b2f",
+  "fixture_policy": "Record learned skills/equipment/synergies; separate loadouts or sessions when prerequisites conflict",
+  "family_classification": "Table-based scheduling hint, requires per-skill review",
+  "skills": [
+    {
+      "skill_id": 36,
+      "skill": "Fire Bolt",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/Firebolt.dcc",
+        "data/global/overlays/FireCast_for_Sorceress.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 37,
+      "skill": "Warmth",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/Warmth.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 38,
+      "skill": "Charged Bolt",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/ChargedBolt.dcc",
+        "data/global/overlays/LightningCast.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 39,
+      "skill": "Ice Bolt",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/Icebolt.dcc",
+        "data/global/overlays/IceCastNew01.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 40,
+      "skill": "Frozen Armor",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/AuraResistColdCast.dcc",
+        "data/global/overlays/FrozenArmor.dcc",
+        "data/global/overlays/IceCastNew01.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 41,
+      "skill": "Inferno",
+      "proposed_family": "channel",
+      "required_cases": [
+        "start_hold_release",
+        "direction",
+        "interrupt"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": "core/src/test/resources/original/inferno-1.10f.json",
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/Flamethrower.dcc",
+        "data/global/missiles/Flamethrower2.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 42,
+      "skill": "Static Field",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/LightningCast.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 43,
+      "skill": "Telekinesis",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/LightningCastRunesFront.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 44,
+      "skill": "Frost Nova",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/FrostNova.dcc",
+        "data/global/overlays/IceCastNew02.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 45,
+      "skill": "Ice Blast",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/IceBlast.dcc",
+        "data/global/overlays/IceCastNew01.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 46,
+      "skill": "Blaze",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": "core/src/test/resources/original/blaze-client-animation-1.10f.json",
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/groundFireBig.dcc",
+        "data/global/missiles/groundFireMedium.dcc",
+        "data/global/missiles/groundFireSmall.dcc",
+        "data/global/overlays/FireCast2.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 47,
+      "skill": "Fire Ball",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/FireArrowExplode2.dcc",
+        "data/global/missiles/Fireball.dcc",
+        "data/global/overlays/FireCast2.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 48,
+      "skill": "Nova",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/ElectricNova.dcc",
+        "data/global/overlays/LightningCast.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 49,
+      "skill": "Lightning",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/LightningStrike.dcc",
+        "data/global/overlays/LightningCast.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 50,
+      "skill": "Shiver Armor",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/Gleam.dcc",
+        "data/global/overlays/AuraResistColdCast.dcc",
+        "data/global/overlays/FrozenArmor.dcc",
+        "data/global/overlays/IceCastNew02.dcc",
+        "data/global/overlays/IceCastNew03.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 51,
+      "skill": "Fire Wall",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/groundFireBig.dcc",
+        "data/global/missiles/groundFireMedium.dcc",
+        "data/global/missiles/groundFireSmall.dcc",
+        "data/global/overlays/FireCast2.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 52,
+      "skill": "Enchant",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": "core/src/test/resources/original/enchant-1.10f.json",
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/FireEnchant.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 53,
+      "skill": "Chain Lightning",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/LightningStrike.dcc",
+        "data/global/overlays/LightningCast.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 54,
+      "skill": "Teleport",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/Teleport.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 55,
+      "skill": "Glacial Spike",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/FreezeExplodeCenter.dcc",
+        "data/global/missiles/FreezeExplodeEjecta.dcc",
+        "data/global/missiles/GlacialSpike.dcc",
+        "data/global/overlays/IceCastNew02.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 56,
+      "skill": "Meteor",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/ExpArrowExplode.dcc",
+        "data/global/missiles/Meteor.dcc",
+        "data/global/missiles/MeteorTail.dcc",
+        "data/global/missiles/MeteorTargetIndicator.dcc",
+        "data/global/missiles/groundFireMedium.dcc",
+        "data/global/missiles/groundFireSmall.dcc",
+        "data/global/overlays/FireCast2.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 57,
+      "skill": "Thunder Storm",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/LightningboltBig.dcc",
+        "data/global/overlays/LightningCastRunesFront.dcc",
+        "data/global/overlays/ShockHitSm.dcc",
+        "data/global/overlays/ThunderstormCast.dcc",
+        "data/global/overlays/ThunderstormCast_operate.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 58,
+      "skill": "Energy Shield",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/LightningCastRunesFront.dcc",
+        "data/global/overlays/ManaShieldBall.dcc",
+        "data/global/overlays/ManaShieldDir00.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 59,
+      "skill": "Blizzard",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/Blizzard.dcc",
+        "data/global/missiles/icestormfallvar01.dcc",
+        "data/global/missiles/icestormimpactvar01.dcc",
+        "data/global/missiles/icestormimpactvar02.dcc",
+        "data/global/overlays/IceCastNew03.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 60,
+      "skill": "Chilling Armor",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/IceBolt.dcc",
+        "data/global/overlays/AuraResistColdCast.dcc",
+        "data/global/overlays/FrozenArmor.dcc",
+        "data/global/overlays/IceCastNew03.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 61,
+      "skill": "Fire Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 62,
+      "skill": "Hydra",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/FireCast2.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 63,
+      "skill": "Lightning Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 64,
+      "skill": "Frozen Orb",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": "core/src/test/resources/original/frozen-orb-sprites-1.10f.json",
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/IceBolt.dcc",
+        "data/global/missiles/IceOrb.dcc",
+        "data/global/overlays/IceCastNew03.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 65,
+      "skill": "Cold Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    }
+  ]
+}

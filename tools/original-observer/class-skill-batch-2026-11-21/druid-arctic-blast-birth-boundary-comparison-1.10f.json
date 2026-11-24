@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "skill_id": 230,
+  "source_run_id": "20261121-220407-c5eb938e",
+  "comparison_status": "matched_release_boundary_counts_without_production_count_compensation",
+  "boundary_comparisons": [
+    {
+      "release_after_births": 3,
+      "total_native": 6,
+      "total_local": 6,
+      "native_tail_births": 3,
+      "local_tail_births": 3,
+      "local_tail_ticks": [
+        2,
+        4,
+        6
+      ],
+      "native_tail_observed_ms": [
+        93,
+        171,
+        250
+      ],
+      "max_observed_time_difference_ms": 13,
+      "native_logical_point_at_release": 9,
+      "local_logical_point_at_release": 8,
+      "source_frame_at_release": 9,
+      "local_final_streams": 0
+    },
+    {
+      "release_after_births": 15,
+      "total_native": 18,
+      "total_local": 18,
+      "native_tail_births": 3,
+      "local_tail_births": 3,
+      "local_tail_ticks": [
+        2,
+        4,
+        6
+      ],
+      "native_tail_observed_ms": [
+        79,
+        157,
+        235
+      ],
+      "max_observed_time_difference_ms": 5,
+      "native_logical_point_at_release": 9,
+      "local_logical_point_at_release": 8,
+      "source_frame_at_release": 9,
+      "local_final_streams": 0
+    }
+  ],
+  "calibrated_elapsed_comparisons": [
+    {
+      "hold_elapsed_intervals": 16,
+      "native_count": 7,
+      "local_count": 7,
+      "reference": "initialized S1 source frame0; the zero pose is not counted as an elapsed interval",
+      "local_time_zero_tick": 1,
+      "local_release_tick": 17
+    },
+    {
+      "hold_elapsed_intervals": 40,
+      "native_count": 19,
+      "local_count": 19,
+      "reference": "initialized S1 source frame0; the zero pose is not counted as an elapsed interval",
+      "local_time_zero_tick": 1,
+      "local_release_tick": 41
+    }
+  ],
+  "production_gameplay_changed": false,
+  "evidence_sha256": {
+    "core\\src\\test\\resources\\original\\arctic-blast-birth-boundary-1.10f.json": "4dcdb60e153593816d1ca38154b0553a787c49236393973291c2b68990d6f09e",
+    "tools\\original-observer\\arctic-blast-birth-boundary-production-1.10f.json": "8d3f682cc466aeb00864edd07cddc9e1289aae835b68357537374e75ce4069b1",
+    "core\\src\\test\\resources\\original\\arctic-blast-sequence-1.10f.json": "cc2602049abb3ddf80835d0435b721e7bf55950229bd5caa7b6a20ac063b6619"
+  },
+  "limitations": [
+    "Native births are hash-list observations; local births are actual Artemis component insertions, not a runtime CltDo24 stack trace",
+    "The native release logical point is9 versus local8, although both source frames are9; absolute frame/packet/update-phase parity is not claimed",
+    "Elapsed-time calibration removes the initialization-sample offset but does not establish native message processing timestamps",
+    "No claim about native server damage/mana, all input phases/FCR/levels, GPU or actual audio playback"
+  ]
+}

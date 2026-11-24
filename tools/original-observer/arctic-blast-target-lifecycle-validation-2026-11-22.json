@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-11-22T00:05:32.572250+08:00",
+  "original_execution_this_stage": false,
+  "foreground_interaction": false,
+  "original_loader_pids": [],
+  "native_evidence": "hash-pinned offline target-reference validation only; no new death runtime or GPU capture",
+  "broker_snapshot": {
+    "pid": 25512,
+    "status": "ready",
+    "responsive": true,
+    "active": null,
+    "cleanup_blocked": false
+  },
+  "production_presentation_changed": true,
+  "server_gameplay_changed": false,
+  "previous_server_and_missile_update_hashes_unchanged": [
+    "core/src/main/java/com/riiablo/presentation/MissileImpactPresentationSystem.java",
+    "core/src/main/java/com/riiablo/engine/server/Actioneer.java",
+    "core/src/main/java/com/riiablo/engine/server/AnimStepper.java",
+    "core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java"
+  ],
+  "test_total": 40,
+  "new_target_lifecycle_tests": 5,
+  "suites": [
+    {
+      "name": "com.riiablo.engine.server.ArcticBlastBirthBoundaryParityTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T16:02:12",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.279"
+    },
+    {
+      "name": "com.riiablo.engine.server.ArcticBlastCastOverlayIntegrationTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T16:02:27",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.644"
+    },
+    {
+      "name": "com.riiablo.engine.server.ArcticBlastClientPhaseParityTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T16:02:42",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.6"
+    },
+    {
+      "name": "com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T16:02:56",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.496"
+    },
+    {
+      "name": "com.riiablo.engine.server.ArcticBlastTargetLifecycleTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T16:01:57",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.233"
+    },
+    {
+      "name": "com.riiablo.presentation.ArcticBlastOriginalParityTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T16:03:11",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.093"
+    },
+    {
+      "name": "com.riiablo.presentation.InfernoAudioSystemTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T16:03:25",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.267"
+    },
+    {
+      "name": "com.riiablo.presentation.SorceressPresentationParityTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T16:03:39",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.672"
+    }
+  ],
+  "attempts": [
+    {
+      "log": "arctic-blast-target-lifecycle-validation.log",
+      "tests": 13,
+      "failures": 1
+    },
+    {
+      "log": "arctic-blast-target-lifecycle-diagnostic.log",
+      "tests": 5,
+      "failures": 1
+    },
+    {
+      "log": "arctic-blast-target-lifecycle-active-guard-validation.log",
+      "tests": 5,
+      "failures": 1
+    }
+  ],
+  "checks": {
+    "python_py_compile": "passed",
+    "scoped_git_diff_check": "passed",
+    "new_source_whitespace": "passed",
+    "native_static_assertions": "passed"
+  },
+  "limitations": [
+    "No original runtime target death/removal sample this stage.",
+    "Numeric ID reuse and network rebinding are not established.",
+    "Caster DeathEvent regression covers pending action cancellation, not a complete DT/DD/corpse/equipment/GPU sequence."
+  ],
+  "hashes": {
+    "core/src/main/java/com/riiablo/engine/server/Actioneer.java": "9271cf9d98bd8f5b9761b056340b08120e9c33c4c667db4d92a63e1a278900dd",
+    "core/src/main/java/com/riiablo/engine/server/AnimStepper.java": "41fd2d8a43c3ec4131a678254b66940e996a3d04c55b65472f22da4612745266",
+    "core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java": "0fe7c30d3127d71b606208f512a3eb30762721c2456596c314cc28735fe8f389",
+    "core/src/main/java/com/riiablo/presentation/InfernoPresentationSystem.java": "5bab0468d9f8e63d7f0a7ac25713a3247a49aa9da82f75bc9de7a49d1a25c93f",
+    "core/src/main/java/com/riiablo/presentation/MissileImpactPresentationSystem.java": "06322adbbe12d721ba5c0dfda73d9f9c25434e308e2955df96e88235eec86b3b",
+    "core/src/test/java/com/riiablo/engine/server/ArcticBlastTargetLifecycleTest.java": "5d049abe7705bfee772cb78b9c97f7fc536f8d8025d9032f8643854305014149",
+    "docs/arctic-blast-retarget-release-analysis-2026-11-21.md": "bfd09de969688a642edda9b0b47cbc102339ce8cbbc0bc2bc621149cb65b8c43",
+    "docs/arctic-blast-target-lifecycle-analysis-2026-11-22.md": "81b373e37423530541bd0383850ec42ecae74bf6895585266bfe3239e9f37153",
+    "docs/class-skill-batch-workflow-2026-11-21.md": "aa88c544777e34c2e5625e518634fec74278bf23078081569e2a55750da7f669",
+    "tools/original-observer/arctic-blast-target-lifecycle-active-guard-validation.log": "a12b52d000fc88b48861ccdc07a40f5829c94a65784a886c149130729a2c07e8",
+    "tools/original-observer/arctic-blast-target-lifecycle-artemis-static-2.3.0-2026-11-22.txt": "0ce5645168acc1430bf6c565f38ab2a7f752cd1832433288b5fe968d018a8c2c",
+    "tools/original-observer/arctic-blast-target-lifecycle-diagnostic.log": "17712be74aa742d31a3117b06a058009e07c39b7ee749f85df19979ca300aff7",
+    "tools/original-observer/arctic-blast-target-lifecycle-final-validation-2026-11-22.log": "498ee27daf5e005bdd2c3b1f2dda0cf96c02b0c568a314a94e6e555862bd1a33",
+    "tools/original-observer/arctic-blast-target-lifecycle-test-results-2026-11-22/TEST-com.riiablo.engine.server.ArcticBlastBirthBoundaryParityTest.xml": "d68dcd939cc2668630659f83f998f34f465842144d9cd1610ee9a2a009a2e850",
+    "tools/original-observer/arctic-blast-target-lifecycle-test-results-2026-11-22/TEST-com.riiablo.engine.server.ArcticBlastCastOverlayIntegrationTest.xml": "9904c473bf70850dd69770137bb670d38726129ce0d0ea262a185bc291d35d41",
+    "tools/original-observer/arctic-blast-target-lifecycle-test-results-2026-11-22/TEST-com.riiablo.engine.server.ArcticBlastClientPhaseParityTest.xml": "5a6742aa18e32be8fe7fa20dcc214db1c833d869cdde0b2305fa61c0931f5461",
+    "tools/original-observer/arctic-blast-target-lifecycle-test-results-2026-11-22/TEST-com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest.xml": "1b9578ce28f7560faed3eb6861ef8488c93a35d8fae115e62807e216e26cf4f6",
+    "tools/original-observer/arctic-blast-target-lifecycle-test-results-2026-11-22/TEST-com.riiablo.engine.server.ArcticBlastTargetLifecycleTest.xml": "26720abc8c106a4f85f7274c1b5a4a2e2decac0029bc8827f4240c7baf028182",
+    "tools/original-observer/arctic-blast-target-lifecycle-test-results-2026-11-22/TEST-com.riiablo.presentation.ArcticBlastOriginalParityTest.xml": "339ec1fc5f3a2b1d868cf00641c249c15675255fe715b46b71bddfa7c8b0a9e0",
+    "tools/original-observer/arctic-blast-target-lifecycle-test-results-2026-11-22/TEST-com.riiablo.presentation.InfernoAudioSystemTest.xml": "17d6f9c97ea14b00b9be7b4c89034a419141d409114a87bbee17a6d45745fbeb",
+    "tools/original-observer/arctic-blast-target-lifecycle-test-results-2026-11-22/TEST-com.riiablo.presentation.SorceressPresentationParityTest.xml": "6479c8f46ccb8fe5161680bb4990a38bd19f236b238f16720e76572d78433a04",
+    "tools/original-observer/arctic-blast-target-lifecycle-validation.log": "04a5e6ef3d0a5c4acb37576542beeef68d9c348fe2822cf0cf59680f4e69003d",
+    "tools/original-observer/arctic-blast-target-lifetime-static-1.10f-2026-11-22.txt": "6c294528cb0ab747eaa8fe023903e585ec2e2f94cd0f36962fc1e656ff82a076",
+    "tools/original-observer/inspect_arctic_target_lifetime.py": "c7e846537c6027c42b7daa6aeeb4565fa6f1fe654b6c4bd99dc975f42a577cb6"
+  }
+}

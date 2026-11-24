@@ -1,0 +1,13 @@
+{
+  "id": "20261122-221822-40fe4481",
+  "status": "failed",
+  "started": 1795357102.7497356,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "druid-raven-target-harness-private-desktop"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261122-221822-40fe4481\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 376, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 343, in execute\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261122-221822-40fe4481\\orchestrator\n",
+  "finished": 1795357168.4620643
+}

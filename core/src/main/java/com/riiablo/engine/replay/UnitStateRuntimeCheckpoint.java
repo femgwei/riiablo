@@ -16,7 +16,7 @@ import java.util.*;
  * the owning TARGETS image; only explicitly typed removal lifecycles are supported.
  */
 public final class UnitStateRuntimeCheckpoint {
-  private static final int VERSION = 6;
+  private static final int VERSION = 7;
   public static final int MAX_BYTES = 1024 * 1024;
   private final byte[] bytes;
   private UnitStateRuntimeCheckpoint(byte[] bytes) { this.bytes = bytes; }
@@ -280,6 +280,7 @@ public final class UnitStateRuntimeCheckpoint {
         throw new IllegalStateException("unsupported state removal lifecycle: " + state.stateId);
       }
       state.writeCheckpoint(out, true);
+      out.writeInt(state.presentationRevision);
       out.writeByte(kind); if (kind == 2) out.writeByte(lifetime);
     }
     StateFlags flags = h.stateList.getFlags();
@@ -301,6 +302,7 @@ public final class UnitStateRuntimeCheckpoint {
       int count = CheckpointIO.count(in, 4096);
       for (int i = 0; i < count; i++) {
         UnitState state = UnitState.readCheckpoint(in, version >= 2);
+        if (version >= 7) state.presentationRevision = in.readInt();
         int kind = version >= 2 ? in.readUnsignedByte() : 0;
         int lifetime = kind == 2 ? in.readUnsignedByte() : 0;
         if (kind > 2 || lifetime > 2 || kind == 1 && state.stateId != StateId.CONVERSION

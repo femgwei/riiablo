@@ -25,6 +25,9 @@ import com.riiablo.logger.Logger;
  * @author riiablo team
  */
 public class StateList {
+  private int presentationRevision;
+  /** Presentation-only activation token, retained even if a state expires between casts. */
+  public int nextPresentationRevision() { return ++presentationRevision; }
   private static final Logger log = LogManager.getLogger(StateList.class);
 
   /** 状态实例对象池 */
@@ -947,6 +950,7 @@ public class StateList {
     for (UnitState source : restored) {
       UnitState state = statePool.obtain();
       state.copyFrom(source);
+      presentationRevision = Math.max(presentationRevision, state.presentationRevision);
       states.add(state);
     }
     flags.copyFrom(restoredFlags);

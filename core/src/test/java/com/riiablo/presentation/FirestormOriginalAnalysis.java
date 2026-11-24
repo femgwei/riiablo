@@ -61,7 +61,7 @@ public final class FirestormOriginalAnalysis {
     AssetManager saved = Riiablo.assets;
     AssetManager manager = Riiablo.assets = mock(AssetManager.class);
     Map<String, DCC> dccs = new HashMap<>();
-    for (String name : new String[] {"firestormmaker", "firestorm"}) {
+    for (String name : new String[] {"firestormmaker", "firestorm", "firesmall", "firemedium"}) {
       Missiles.Entry row = Riiablo.files.Missiles.get(name);
       DCC dcc = spy(DCC.loadFromFile(Riiablo.mpqs.resolve("data/global/missiles/" + row.CelFile + ".dcc")));
       doNothing().when(dcc).loadDirection(anyInt());
@@ -89,7 +89,7 @@ public final class FirestormOriginalAnalysis {
       JsonValue cast = original.get("identity");
       int owner = world.create();
       CharData data = CharData.createRemote("firestorm-probe", (byte) Riiablo.DRUID);
-      data.setSkillLevel(225, 1);
+      Map<String, Integer> hardPoints = DruidReplayLoadout.apply(data, original, 225);
       world.getMapper(Player.class).create(owner).data = data;
       world.getMapper(Position.class).create(owner).position.set(cast.getInt("x"), cast.getInt("y"));
       Attributes attrs = Attributes.obtainStandard();
@@ -116,7 +116,7 @@ public final class FirestormOriginalAnalysis {
       Set<Integer> phases = new TreeSet<>();
       Map<Integer, Float> lanes = new LinkedHashMap<>();
       world.setDelta(1f / 25f);
-      for (int tick = 1; tick <= 120; tick++) {
+      for (int tick = 1; tick <= 160; tick++) {
         factory.tick = tick;
         world.process();
         int headCount = 0, serverFire = 0, clientFire = 0;
@@ -133,7 +133,7 @@ public final class FirestormOriginalAnalysis {
             if (emitter != null) lanes.put(id, emitter.firestormLaneAngle);
             if (tick == 39) lastHeads.add(Map.of("position", vector(world.getMapper(Position.class).get(id).position),
                 "velocity", vector(world.getMapper(Velocity.class).get(id).velocity), "age", m.nativeFrame));
-          } else if ("firestorm".equals(m.missile.Missile)) {
+          } else if (Set.of("firestorm", "firesmall", "firemedium").contains(m.missile.Missile)) {
             if (m.presentationOnly) clientFire++; else serverFire++;
             ReferenceElementalEffect effect = world.getMapper(ReferenceElementalEffect.class).get(id);
             if (effect != null) phases.add(effect.phase);
@@ -149,12 +149,14 @@ public final class FirestormOriginalAnalysis {
             "damage_ground_fires", serverFire, "visual_ground_fires", clientFire));
       }
       List<Object> births = new ArrayList<>();
+      Map<String, Integer> variants = new LinkedHashMap<>();
       int damageFireBirths = 0, visualFireBirths = 0;
       for (Birth birth : factory.births) {
-        if (!"firestorm".equals(birth.name)) continue;
+        if (!Set.of("firestorm", "firesmall", "firemedium").contains(birth.name)) continue;
         if (birth.visual) visualFireBirths++; else damageFireBirths++;
+        if (birth.visual) variants.merge(birth.name, 1, Integer::sum);
         births.add(Map.of("tick", birth.tick, "position", vector(birth.position),
-            "lifetime", birth.lifetime, "presentation_only", birth.visual));
+            "lifetime", birth.lifetime, "presentation_only", birth.visual, "missile", birth.name));
       }
       int makerSamples = 0, makerMismatch = 0;
       for (JsonValue sample : original.get("samples")) if ("firestormmaker".equals(sample.getString("missile"))) {
@@ -171,11 +173,13 @@ public final class FirestormOriginalAnalysis {
         if (NativeFirestormPresentation.frameAt(fire, 37, sample.getInt("native_age")) != sample.getInt("frame")) fireMismatch++;
       }
       Map<String, Object> result = new LinkedHashMap<>();
+      result.put("hard_points", hardPoints);
       result.put("head_births", headBirths);
       result.put("heads_at_age39", lastHeads);
       result.put("visual_lane_angles", new ArrayList<>(lanes.values()));
       result.put("damage_ground_fire_births", damageFireBirths);
       result.put("visual_ground_fire_births", visualFireBirths);
+      result.put("visual_ground_fire_variants", variants);
       result.put("ground_fire_births", births);
       result.put("timeline", timeline);
       result.put("maker_sprite_samples", makerSamples);

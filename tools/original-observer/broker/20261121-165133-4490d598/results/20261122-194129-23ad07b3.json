@@ -1,0 +1,29 @@
+{
+  "id": "20261122-194129-23ad07b3",
+  "status": "completed",
+  "started": 1795347689.8457658,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_jobs",
+    "jobs": [
+      "druid-raven-level8-private-desktop",
+      "druid-raven-level20-private-desktop"
+    ]
+  },
+  "result": {
+    "status": "completed",
+    "jobs": [
+      {
+        "job": "druid-raven-level8-private-desktop",
+        "status": "passed",
+        "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261122-194129-23ad07b3\\batch-001-druid-raven-level8-private-desktop\\orchestrator\\orchestrator.json"
+      },
+      {
+        "job": "druid-raven-level20-private-desktop",
+        "status": "passed",
+        "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261122-194129-23ad07b3\\batch-002-druid-raven-level20-private-desktop\\orchestrator\\orchestrator.json"
+      }
+    ]
+  },
+  "finished": 1795347800.4282281
+}

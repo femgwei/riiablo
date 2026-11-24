@@ -1,0 +1,225 @@
+{
+  "date": "2026-11-21",
+  "tests": {
+    "tests": 50,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "file": "TEST-com.riiablo.engine.server.DruidFirestormIntegrationTest.xml",
+      "name": "com.riiablo.engine.server.DruidFirestormIntegrationTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:12:09",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.004"
+    },
+    {
+      "file": "TEST-com.riiablo.engine.server.FirestormGroundDamageTest.xml",
+      "name": "com.riiablo.engine.server.FirestormGroundDamageTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:12:12",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.01"
+    },
+    {
+      "file": "TEST-com.riiablo.engine.server.MoltenBoulderLifecycleTest.xml",
+      "name": "com.riiablo.engine.server.MoltenBoulderLifecycleTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:12:15",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.022"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.FirestormOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.FirestormOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:11:59",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.851"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.FirestormVariantOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.FirestormVariantOriginalParityTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:12:03",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.156"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.MissileLoaderTest.xml",
+      "name": "com.riiablo.presentation.MissileLoaderTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:12:18",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.001"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.MoltenBoulderOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.MoltenBoulderOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:12:21",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.318"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.NativeGroundFirePresentationTest.xml",
+      "name": "com.riiablo.presentation.NativeGroundFirePresentationTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:12:24",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.098"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.OriginalFirestormFixtureTest.xml",
+      "name": "com.riiablo.presentation.OriginalFirestormFixtureTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:12:24",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.043"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.OriginalMoltenBoulderFixtureTest.xml",
+      "name": "com.riiablo.presentation.OriginalMoltenBoulderFixtureTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:12:24",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.052"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.ReferenceElementalPresentationTest.xml",
+      "name": "com.riiablo.presentation.ReferenceElementalPresentationTest",
+      "tests": "21",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T02:12:06",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.242"
+    }
+  ],
+  "test_log": "druid-variant-fix-final-validation.log",
+  "comparisons": {
+    "firestorm": {
+      "status": "compared_scoped_match",
+      "checks": {
+        "maker_count": true,
+        "maker_lifetimes": true,
+        "initial_velocity": true,
+        "damage_fire_count": true,
+        "damage_fire_lifetimes": true,
+        "visual_fire_lifetimes": true,
+        "maker_frames": true,
+        "ground_fire_frames": true,
+        "all_declared_visual_variants": true
+      }
+    },
+    "molten-boulder": {
+      "status": "compared_scoped_match",
+      "checks": {
+        "rolling_motion": true,
+        "rolling_velocity": true,
+        "rolling_lifetime": true,
+        "emerge_lifetime": true,
+        "rolling_frames": true,
+        "visual_child_counts": true,
+        "server_fire_lifetimes_and_count": true,
+        "lifetime_firewall": true,
+        "lifetime_firesmall": true,
+        "lifetime_firemedium": true,
+        "lifetime_moltenboulderexplode": true,
+        "lifetime_moltenboulderfirepath": true,
+        "lifetime_moltenboulder-flyingrocks": true,
+        "fragment_displacements": true
+      }
+    }
+  },
+  "callback_evidence": {
+    "run_id": "20261121-100617-f1e0bced",
+    "choices": 35,
+    "variants": {
+      "firestorm": 16,
+      "firesmall": 8,
+      "firemedium": 11
+    },
+    "clocks": 490,
+    "fixture_sha256": "ff8b1b85045ea3e6190198eb872e592ff3e5ca84ad5ec86ee1dffc1c320e8db6"
+  },
+  "coverage": {
+    "captured_druid_skills": 4,
+    "scoped_compared_druid_skills": 2,
+    "total_druid_skills": 30
+  },
+  "runs": {
+    "20261121-095015-f801398c": {
+      "background_verified": true,
+      "owned_game_closed": true,
+      "private_desktop_not_input_checks": 108
+    },
+    "20261121-100206-a3b6202a": {
+      "background_verified": true,
+      "owned_game_closed": true,
+      "private_desktop_not_input_checks": 107
+    },
+    "20261121-100617-f1e0bced": {
+      "background_verified": true,
+      "owned_game_closed": true,
+      "private_desktop_not_input_checks": 106
+    }
+  },
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/presentation/MissileImpactPresentationSystem.java": "2e1a40554d423aed1998b668cafe0329249d7cb3bfa047d0c1230130c7f9400f",
+    "core/src/main/java/com/riiablo/presentation/NativeFirestormPresentation.java": "6dd8cde2ac9c2fc69bf683f0513216a9654eb8f26f33708298f42829e987078e",
+    "core/src/test/java/com/riiablo/presentation/FirestormVariantOriginalParityTest.java": "7b0258ceb77643d8f8b7773a5f920d180eccea904afa80c8c9d8ac169e7df75c",
+    "core/src/test/java/com/riiablo/presentation/DruidReplayLoadout.java": "685702aa59db09a9417967f9383b4cc270ec1cdf236a50972f2d4e641e37e973",
+    "core/src/test/java/com/riiablo/presentation/DruidBatchOriginalAnalysis.java": "471ff6e3e075a18e07f22b77bd55ee6080e770e225e592d4e1a8828b613c325e",
+    "core/src/test/java/com/riiablo/presentation/FirestormOriginalAnalysis.java": "92fefa3abbf7d13e55d8bb0b09c96e5f477470f8378ccb06e9216dec8c81a70e",
+    "core/src/test/java/com/riiablo/presentation/MoltenBoulderOriginalAnalysis.java": "3778bfe4dea17ed2f394df7da5c23883821aff3adc4c67f2ceac1db22ff63f21",
+    "tools/original-observer/compare_druid_class_batch.py": "0895fb2ecf4130c19e8f9beec323eac70168d4c4673d4fb2e81450472090f73d",
+    "tools/original-observer/export_firestorm_variants.py": "039513bc43e59c6c32905dd5a2794a6ee5ba0bf3a666d0433a54f34c895049e8",
+    "tools/original-observer/prepare_druid_batch_fixture.py": "3113b569cb3964642250ad37638ec42ade1b3ea09d58aa65c7fa53e0fc06976d"
+  },
+  "limits": [
+    "Full input/sequence timing, global RNG allocation, all directions/levels, collision, damage and GPU parity not established",
+    "First Firestorm capture filtered out two alternatives; its 17-vs-34 count is not comparable",
+    "Conditioned per-callback RNG verifies selection, not global production/native variant counts",
+    "Fissure and Volcano captured but matched production replay pending"
+  ],
+  "retained_failed_runs": [
+    "20261121-095537-51f4e492",
+    "20261121-095725-5e67a789",
+    "20261121-100013-a6811ebf"
+  ],
+  "retained_failed_test_log": "druid-variant-fix-validation.log"
+}

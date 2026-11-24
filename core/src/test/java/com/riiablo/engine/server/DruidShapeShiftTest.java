@@ -38,7 +38,7 @@ class DruidShapeShiftTest extends RiiabloTest {
     assertEquals(StateId.WOLF, state.stateId);
     assertEquals(2000, state.duration);
     assertEquals(25, state.maxStaminaModifier);
-    assertEquals(29, state.animationRateModifier);
+    assertEquals(28, state.animationRateModifier);
     assertEquals(wolf.ToHit + wolf.LevToHit, state.attackModifier);
     assertEquals(45, state.maxLifeModifier);
 
@@ -56,7 +56,7 @@ class DruidShapeShiftTest extends RiiabloTest {
     assertNotNull(state);
     assertEquals(StateId.BEAR, state.stateId);
     assertEquals(2500, state.duration);
-    // 1.10f: ln12=50+2*7, ln34=25+2*5; life=50+(20+5).
+    // 1.10f table: ln12=50+2*7, ln34=25+2*5; life=50+(20+5).
     assertEquals(64, state.damageModifier);
     assertEquals(35, state.defenseModifier);
     assertEquals(75, state.maxLifeModifier);

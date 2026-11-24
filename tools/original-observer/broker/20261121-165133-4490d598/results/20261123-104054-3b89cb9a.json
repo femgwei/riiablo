@@ -1,0 +1,29 @@
+{
+  "id": "20261123-104054-3b89cb9a",
+  "status": "completed",
+  "started": 1795401654.5505283,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_jobs",
+    "jobs": [
+      "druid-raven-target-harness-private-desktop",
+      "druid-raven-town-orbit-private-desktop"
+    ]
+  },
+  "result": {
+    "status": "completed",
+    "jobs": [
+      {
+        "job": "druid-raven-target-harness-private-desktop",
+        "status": "passed",
+        "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-104054-3b89cb9a\\batch-001-druid-raven-target-harness-private-desktop\\orchestrator\\orchestrator.json"
+      },
+      {
+        "job": "druid-raven-town-orbit-private-desktop",
+        "status": "passed",
+        "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-104054-3b89cb9a\\batch-002-druid-raven-town-orbit-private-desktop\\orchestrator\\orchestrator.json"
+      }
+    ]
+  },
+  "finished": 1795401740.9981067
+}

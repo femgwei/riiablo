@@ -1,0 +1,5357 @@
+{
+  "schema": 1,
+  "run_id": "20261121-231927-f587a20d",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "captures": [
+    {
+      "name": "birth-3",
+      "requested_birth_boundary": 3,
+      "total_births": 6,
+      "scans": 1820,
+      "equal_endpoint_scans": 1800,
+      "rejected_endpoint_scans": 20,
+      "births": [
+        {
+          "unit_id": 215,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 336,
+            "scan_before_perf_counter_ns": 555000300,
+            "scan_after_perf_counter_ns": 555094800,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2763027906,
+              "seed_high": 1754633519,
+              "client_allocation_counter": 214,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2763027906,
+              "seed_high": 1754633519,
+              "client_allocation_counter": 214,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": []
+          },
+          "first_published": {
+            "snapshot_index": 337,
+            "scan_before_perf_counter_ns": 556181700,
+            "scan_after_perf_counter_ns": 556482800,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 3380040242,
+              "seed_high": 246546515,
+              "client_allocation_counter": 215,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 3380040242,
+              "seed_high": 246546515,
+              "client_allocation_counter": 215,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 368,
+            "scan_before_perf_counter_ns": 596184900,
+            "scan_after_perf_counter_ns": 596336000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 366086033,
+              "seed_high": 54488778,
+              "client_allocation_counter": 215,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 366086033,
+              "seed_high": 54488778,
+              "client_allocation_counter": 215,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 216,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 398,
+            "scan_before_perf_counter_ns": 635008100,
+            "scan_after_perf_counter_ns": 635157200,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 3594965343,
+              "seed_high": 152691690,
+              "client_allocation_counter": 215,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 3594965343,
+              "seed_high": 152691690,
+              "client_allocation_counter": 215,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 399,
+            "scan_before_perf_counter_ns": 636240500,
+            "scan_after_perf_counter_ns": 636497400,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1176990926,
+              "seed_high": 1349452180,
+              "client_allocation_counter": 216,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1176990926,
+              "seed_high": 1349452180,
+              "client_allocation_counter": 216,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 429,
+            "scan_before_perf_counter_ns": 676182200,
+            "scan_after_perf_counter_ns": 676507100,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 567526426,
+              "seed_high": 490913934,
+              "client_allocation_counter": 216,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 567526426,
+              "seed_high": 490913934,
+              "client_allocation_counter": 216,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 217,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 457,
+            "scan_before_perf_counter_ns": 714179100,
+            "scan_after_perf_counter_ns": 714586300,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 683567510,
+              "seed_high": 877131927,
+              "client_allocation_counter": 216,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 683567510,
+              "seed_high": 877131927,
+              "client_allocation_counter": 216,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 459,
+            "scan_before_perf_counter_ns": 717114700,
+            "scan_after_perf_counter_ns": 717405400,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 2045965261,
+              "seed_high": 361816008,
+              "client_allocation_counter": 217,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 2045965261,
+              "seed_high": 361816008,
+              "client_allocation_counter": 217,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 488,
+            "scan_before_perf_counter_ns": 757189000,
+            "scan_after_perf_counter_ns": 757435000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1021503267,
+              "seed_high": 1068803736,
+              "client_allocation_counter": 217,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1021503267,
+              "seed_high": 1068803736,
+              "client_allocation_counter": 217,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 218,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 513,
+            "scan_before_perf_counter_ns": 794625000,
+            "scan_after_perf_counter_ns": 794911700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1021503267,
+              "seed_high": 1068803736,
+              "client_allocation_counter": 217,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1021503267,
+              "seed_high": 1068803736,
+              "client_allocation_counter": 217,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 514,
+            "scan_before_perf_counter_ns": 795999300,
+            "scan_after_perf_counter_ns": 796294900,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 3596528726,
+              "seed_high": 47644175,
+              "client_allocation_counter": 218,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 3596528726,
+              "seed_high": 47644175,
+              "client_allocation_counter": 218,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 218,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 542,
+            "scan_before_perf_counter_ns": 836425400,
+            "scan_after_perf_counter_ns": 836729100,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1612757584,
+              "seed_high": 301534066,
+              "client_allocation_counter": 218,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1612757584,
+              "seed_high": 301534066,
+              "client_allocation_counter": 218,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 218,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 219,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 567,
+            "scan_before_perf_counter_ns": 874740600,
+            "scan_after_perf_counter_ns": 875402500,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1612757584,
+              "seed_high": 301534066,
+              "client_allocation_counter": 218,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1612757584,
+              "seed_high": 301534066,
+              "client_allocation_counter": 218,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 218,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 569,
+            "scan_before_perf_counter_ns": 878718400,
+            "scan_after_perf_counter_ns": 879263900,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 820870241,
+              "seed_high": 457962728,
+              "client_allocation_counter": 219,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 820870241,
+              "seed_high": 457962728,
+              "client_allocation_counter": 219,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 218,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 219,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 594,
+            "scan_before_perf_counter_ns": 917168000,
+            "scan_after_perf_counter_ns": 917971700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 2567186505,
+              "seed_high": 72758418,
+              "client_allocation_counter": 219,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 2567186505,
+              "seed_high": 72758418,
+              "client_allocation_counter": 219,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 218,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 219,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 220,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 618,
+            "scan_before_perf_counter_ns": 954090300,
+            "scan_after_perf_counter_ns": 954443200,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 2567186505,
+              "seed_high": 72758418,
+              "client_allocation_counter": 219,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 2567186505,
+              "seed_high": 72758418,
+              "client_allocation_counter": 219,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 218,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 219,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 621,
+            "scan_before_perf_counter_ns": 958603100,
+            "scan_after_perf_counter_ns": 958992000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2816,
+              "source_cursor": 2560,
+              "remaining": 512,
+              "action_frame": 0,
+              "seed_low": 1571723682,
+              "seed_high": 1377403916,
+              "client_allocation_counter": 220,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2816,
+              "source_cursor": 2560,
+              "remaining": 512,
+              "action_frame": 0,
+              "seed_low": 1571723682,
+              "seed_high": 1377403916,
+              "client_allocation_counter": 220,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 218,
+                "class_id": 460,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 219,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 220,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 645,
+            "scan_before_perf_counter_ns": 997164600,
+            "scan_after_perf_counter_ns": 997559700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 3072,
+              "source_cursor": 2816,
+              "remaining": 256,
+              "action_frame": 0,
+              "seed_low": 1404024684,
+              "seed_high": 772019234,
+              "client_allocation_counter": 220,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 3072,
+              "source_cursor": 2816,
+              "remaining": 256,
+              "action_frame": 0,
+              "seed_low": 1404024684,
+              "seed_high": 772019234,
+              "client_allocation_counter": 220,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 215,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 216,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 217,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 218,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 219,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 220,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        }
+      ],
+      "release_boundary": {
+        "observed_births": 3,
+        "snapshot_index": 459,
+        "elapsed_ms": 579,
+        "sequence_cursor": 2304,
+        "source_cursor": 2304,
+        "remaining": 1024
+      },
+      "client_game_type": 0,
+      "owner_unit_id": 1,
+      "observation_clock": {
+        "name": "perf_counter",
+        "resolution_seconds": 1e-07,
+        "implementation": "QueryPerformanceCounter()"
+      },
+      "sampling_profile": "1ms minimum yield-paced first2.1s/max1800 scans, then sleep5ms; no timer-resolution change"
+    },
+    {
+      "name": "birth-15",
+      "requested_birth_boundary": 15,
+      "total_births": 18,
+      "scans": 1650,
+      "equal_endpoint_scans": 1628,
+      "rejected_endpoint_scans": 22,
+      "births": [
+        {
+          "unit_id": 221,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 330,
+            "scan_before_perf_counter_ns": 527938500,
+            "scan_after_perf_counter_ns": 528066000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 1234193422,
+              "seed_high": 154961132,
+              "client_allocation_counter": 220,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 1234193422,
+              "seed_high": 154961132,
+              "client_allocation_counter": 220,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": []
+          },
+          "first_published": {
+            "snapshot_index": 331,
+            "scan_before_perf_counter_ns": 529137800,
+            "scan_after_perf_counter_ns": 529388100,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 876082259,
+              "seed_high": 1381147759,
+              "client_allocation_counter": 221,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 876082259,
+              "seed_high": 1381147759,
+              "client_allocation_counter": 221,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 361,
+            "scan_before_perf_counter_ns": 569482500,
+            "scan_after_perf_counter_ns": 569632200,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 345983675,
+              "seed_high": 355325957,
+              "client_allocation_counter": 221,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 345983675,
+              "seed_high": 355325957,
+              "client_allocation_counter": 221,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 222,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 391,
+            "scan_before_perf_counter_ns": 608141600,
+            "scan_after_perf_counter_ns": 608536100,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 345983675,
+              "seed_high": 355325957,
+              "client_allocation_counter": 221,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 345983675,
+              "seed_high": 355325957,
+              "client_allocation_counter": 221,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 392,
+            "scan_before_perf_counter_ns": 609732800,
+            "scan_after_perf_counter_ns": 610130800,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 2831984725,
+              "seed_high": 815450495,
+              "client_allocation_counter": 222,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 2831984725,
+              "seed_high": 815450495,
+              "client_allocation_counter": 222,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 422,
+            "scan_before_perf_counter_ns": 649923800,
+            "scan_after_perf_counter_ns": 650129600,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2593006466,
+              "seed_high": 1630848370,
+              "client_allocation_counter": 222,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2593006466,
+              "seed_high": 1630848370,
+              "client_allocation_counter": 222,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 223,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 451,
+            "scan_before_perf_counter_ns": 688713000,
+            "scan_after_perf_counter_ns": 688944700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2593006466,
+              "seed_high": 1630848370,
+              "client_allocation_counter": 222,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2593006466,
+              "seed_high": 1630848370,
+              "client_allocation_counter": 222,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 452,
+            "scan_before_perf_counter_ns": 690056200,
+            "scan_after_perf_counter_ns": 690310000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 3817248978,
+              "seed_high": 1077020112,
+              "client_allocation_counter": 223,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 3817248978,
+              "seed_high": 1077020112,
+              "client_allocation_counter": 223,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 480,
+            "scan_before_perf_counter_ns": 729446400,
+            "scan_after_perf_counter_ns": 729711500,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 585311891,
+              "seed_high": 1397234310,
+              "client_allocation_counter": 223,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 585311891,
+              "seed_high": 1397234310,
+              "client_allocation_counter": 223,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 224,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 507,
+            "scan_before_perf_counter_ns": 768117700,
+            "scan_after_perf_counter_ns": 768361400,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 585311891,
+              "seed_high": 1397234310,
+              "client_allocation_counter": 223,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 585311891,
+              "seed_high": 1397234310,
+              "client_allocation_counter": 223,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 508,
+            "scan_before_perf_counter_ns": 769449700,
+            "scan_after_perf_counter_ns": 769737200,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1892603232,
+              "seed_high": 1558119412,
+              "client_allocation_counter": 224,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1892603232,
+              "seed_high": 1558119412,
+              "client_allocation_counter": 224,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 534,
+            "scan_before_perf_counter_ns": 810123000,
+            "scan_after_perf_counter_ns": 810520800,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 43190220,
+              "seed_high": 780617251,
+              "client_allocation_counter": 224,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 43190220,
+              "seed_high": 780617251,
+              "client_allocation_counter": 224,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 225,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 560,
+            "scan_before_perf_counter_ns": 847181800,
+            "scan_after_perf_counter_ns": 847576100,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 43190220,
+              "seed_high": 780617251,
+              "client_allocation_counter": 224,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 43190220,
+              "seed_high": 780617251,
+              "client_allocation_counter": 224,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 562,
+            "scan_before_perf_counter_ns": 850136800,
+            "scan_after_perf_counter_ns": 850489700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1392428206,
+              "seed_high": 104329674,
+              "client_allocation_counter": 225,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1392428206,
+              "seed_high": 104329674,
+              "client_allocation_counter": 225,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 588,
+            "scan_before_perf_counter_ns": 890081800,
+            "scan_after_perf_counter_ns": 890429000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 2471046531,
+              "seed_high": 291798243,
+              "client_allocation_counter": 225,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 2471046531,
+              "seed_high": 291798243,
+              "client_allocation_counter": 225,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 226,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 614,
+            "scan_before_perf_counter_ns": 928582400,
+            "scan_after_perf_counter_ns": 928915000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2471046531,
+              "seed_high": 291798243,
+              "client_allocation_counter": 225,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2471046531,
+              "seed_high": 291798243,
+              "client_allocation_counter": 225,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 615,
+            "scan_before_perf_counter_ns": 930010400,
+            "scan_after_perf_counter_ns": 930393500,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 2172250078,
+              "seed_high": 1251324524,
+              "client_allocation_counter": 226,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 2172250078,
+              "seed_high": 1251324524,
+              "client_allocation_counter": 226,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 638,
+            "scan_before_perf_counter_ns": 969170200,
+            "scan_after_perf_counter_ns": 969890600,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 907373841,
+              "seed_high": 1406656795,
+              "client_allocation_counter": 226,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 907373841,
+              "seed_high": 1406656795,
+              "client_allocation_counter": 226,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 227,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 663,
+            "scan_before_perf_counter_ns": 1007541300,
+            "scan_after_perf_counter_ns": 1007929700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 907373841,
+              "seed_high": 1406656795,
+              "client_allocation_counter": 226,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 907373841,
+              "seed_high": 1406656795,
+              "client_allocation_counter": 226,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 665,
+            "scan_before_perf_counter_ns": 1010507100,
+            "scan_after_perf_counter_ns": 1011276000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 3783458362,
+              "seed_high": 372420175,
+              "client_allocation_counter": 227,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 3783458362,
+              "seed_high": 372420175,
+              "client_allocation_counter": 227,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 689,
+            "scan_before_perf_counter_ns": 1049098600,
+            "scan_after_perf_counter_ns": 1049555700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 3708809572,
+              "seed_high": 751796785,
+              "client_allocation_counter": 227,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 3708809572,
+              "seed_high": 751796785,
+              "client_allocation_counter": 227,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 228,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 714,
+            "scan_before_perf_counter_ns": 1088158700,
+            "scan_after_perf_counter_ns": 1088580000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 3708809572,
+              "seed_high": 751796785,
+              "client_allocation_counter": 227,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 3708809572,
+              "seed_high": 751796785,
+              "client_allocation_counter": 227,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 715,
+            "scan_before_perf_counter_ns": 1089722900,
+            "scan_after_perf_counter_ns": 1090738600,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 2836773201,
+              "seed_high": 944951182,
+              "client_allocation_counter": 228,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 2836773201,
+              "seed_high": 944951182,
+              "client_allocation_counter": 228,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 738,
+            "scan_before_perf_counter_ns": 1130450600,
+            "scan_after_perf_counter_ns": 1130928400,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 122946163,
+              "seed_high": 604173945,
+              "client_allocation_counter": 228,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 122946163,
+              "seed_high": 604173945,
+              "client_allocation_counter": 228,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 229,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 761,
+            "scan_before_perf_counter_ns": 1167934500,
+            "scan_after_perf_counter_ns": 1168428700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 122946163,
+              "seed_high": 604173945,
+              "client_allocation_counter": 228,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 122946163,
+              "seed_high": 604173945,
+              "client_allocation_counter": 228,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968192,
+                "unit_id": 221,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 762,
+            "scan_before_perf_counter_ns": 1169544300,
+            "scan_after_perf_counter_ns": 1170056500,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1123619842,
+              "seed_high": 1613126420,
+              "client_allocation_counter": 229,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1123619842,
+              "seed_high": 1613126420,
+              "client_allocation_counter": 229,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 786,
+            "scan_before_perf_counter_ns": 1210191200,
+            "scan_after_perf_counter_ns": 1210663700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 3508672776,
+              "seed_high": 1127502735,
+              "client_allocation_counter": 229,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 3508672776,
+              "seed_high": 1127502735,
+              "client_allocation_counter": 229,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 230,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 808,
+            "scan_before_perf_counter_ns": 1247443100,
+            "scan_after_perf_counter_ns": 1248161700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 3508672776,
+              "seed_high": 1127502735,
+              "client_allocation_counter": 229,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 3508672776,
+              "seed_high": 1127502735,
+              "client_allocation_counter": 229,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968704,
+                "unit_id": 222,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 809,
+            "scan_before_perf_counter_ns": 1249294100,
+            "scan_after_perf_counter_ns": 1250061200,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 954412356,
+              "seed_high": 136448121,
+              "client_allocation_counter": 230,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 954412356,
+              "seed_high": 136448121,
+              "client_allocation_counter": 230,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 834,
+            "scan_before_perf_counter_ns": 1291525500,
+            "scan_after_perf_counter_ns": 1292285600,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 975513003,
+              "seed_high": 499799551,
+              "client_allocation_counter": 230,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 975513003,
+              "seed_high": 499799551,
+              "client_allocation_counter": 230,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 231,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 856,
+            "scan_before_perf_counter_ns": 1327450600,
+            "scan_after_perf_counter_ns": 1327949700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 975513003,
+              "seed_high": 499799551,
+              "client_allocation_counter": 230,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 975513003,
+              "seed_high": 499799551,
+              "client_allocation_counter": 230,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90412544,
+                "unit_id": 223,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 858,
+            "scan_before_perf_counter_ns": 1330612400,
+            "scan_after_perf_counter_ns": 1331159700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 763824871,
+              "seed_high": 1214395312,
+              "client_allocation_counter": 231,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 763824871,
+              "seed_high": 1214395312,
+              "client_allocation_counter": 231,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 882,
+            "scan_before_perf_counter_ns": 1369870500,
+            "scan_after_perf_counter_ns": 1370347500,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 4090326901,
+              "seed_high": 1514358756,
+              "client_allocation_counter": 231,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 4090326901,
+              "seed_high": 1514358756,
+              "client_allocation_counter": 231,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 232,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 904,
+            "scan_before_perf_counter_ns": 1408197600,
+            "scan_after_perf_counter_ns": 1408690600,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 4090326901,
+              "seed_high": 1514358756,
+              "client_allocation_counter": 231,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 4090326901,
+              "seed_high": 1514358756,
+              "client_allocation_counter": 231,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90399744,
+                "unit_id": 224,
+                "class_id": 460,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 905,
+            "scan_before_perf_counter_ns": 1409782300,
+            "scan_after_perf_counter_ns": 1410341300,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 800428824,
+              "seed_high": 1627245842,
+              "client_allocation_counter": 232,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 800428824,
+              "seed_high": 1627245842,
+              "client_allocation_counter": 232,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 929,
+            "scan_before_perf_counter_ns": 1449991500,
+            "scan_after_perf_counter_ns": 1450520300,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2986558263,
+              "seed_high": 306742088,
+              "client_allocation_counter": 232,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2986558263,
+              "seed_high": 306742088,
+              "client_allocation_counter": 232,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 233,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 952,
+            "scan_before_perf_counter_ns": 1488081300,
+            "scan_after_perf_counter_ns": 1488582900,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2986558263,
+              "seed_high": 306742088,
+              "client_allocation_counter": 232,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2986558263,
+              "seed_high": 306742088,
+              "client_allocation_counter": 232,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90400256,
+                "unit_id": 225,
+                "class_id": 460,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 953,
+            "scan_before_perf_counter_ns": 1489715300,
+            "scan_after_perf_counter_ns": 1490301700,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 84921714,
+              "seed_high": 206840277,
+              "client_allocation_counter": 233,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 84921714,
+              "seed_high": 206840277,
+              "client_allocation_counter": 233,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 977,
+            "scan_before_perf_counter_ns": 1529943800,
+            "scan_after_perf_counter_ns": 1530415000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 1289383215,
+              "seed_high": 1232881165,
+              "client_allocation_counter": 233,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 1289383215,
+              "seed_high": 1232881165,
+              "client_allocation_counter": 233,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 234,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 999,
+            "scan_before_perf_counter_ns": 1566700100,
+            "scan_after_perf_counter_ns": 1567548800,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 1289383215,
+              "seed_high": 1232881165,
+              "client_allocation_counter": 233,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 1289383215,
+              "seed_high": 1232881165,
+              "client_allocation_counter": 233,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90400768,
+                "unit_id": 226,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 1001,
+            "scan_before_perf_counter_ns": 1570837700,
+            "scan_after_perf_counter_ns": 1571330400,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 3525076486,
+              "seed_high": 1759293445,
+              "client_allocation_counter": 234,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 3525076486,
+              "seed_high": 1759293445,
+              "client_allocation_counter": 234,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 1025,
+            "scan_before_perf_counter_ns": 1610284000,
+            "scan_after_perf_counter_ns": 1611070300,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2423646648,
+              "seed_high": 772754296,
+              "client_allocation_counter": 234,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2423646648,
+              "seed_high": 772754296,
+              "client_allocation_counter": 234,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 235,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 1046,
+            "scan_before_perf_counter_ns": 1646941000,
+            "scan_after_perf_counter_ns": 1647476800,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2423646648,
+              "seed_high": 772754296,
+              "client_allocation_counter": 234,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2048,
+              "source_cursor": 2304,
+              "remaining": 1280,
+              "action_frame": 1,
+              "seed_low": 2423646648,
+              "seed_high": 772754296,
+              "client_allocation_counter": 234,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90401024,
+                "unit_id": 227,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 1048,
+            "scan_before_perf_counter_ns": 1650176900,
+            "scan_after_perf_counter_ns": 1650890300,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 285270803,
+              "seed_high": 1130400709,
+              "client_allocation_counter": 235,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 285270803,
+              "seed_high": 1130400709,
+              "client_allocation_counter": 235,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 1072,
+            "scan_before_perf_counter_ns": 1689900800,
+            "scan_after_perf_counter_ns": 1690420300,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 4013953469,
+              "seed_high": 613933675,
+              "client_allocation_counter": 235,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 4013953469,
+              "seed_high": 613933675,
+              "client_allocation_counter": 235,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 236,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 1095,
+            "scan_before_perf_counter_ns": 1727980500,
+            "scan_after_perf_counter_ns": 1728477000,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 4013953469,
+              "seed_high": 613933675,
+              "client_allocation_counter": 235,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 4013953469,
+              "seed_high": 613933675,
+              "client_allocation_counter": 235,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 90401536,
+                "unit_id": 228,
+                "class_id": 460,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 1096,
+            "scan_before_perf_counter_ns": 1729578600,
+            "scan_after_perf_counter_ns": 1730085500,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1283103700,
+              "seed_high": 1054296157,
+              "client_allocation_counter": 236,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1283103700,
+              "seed_high": 1054296157,
+              "client_allocation_counter": 236,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 236,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 1119,
+            "scan_before_perf_counter_ns": 1770758800,
+            "scan_after_perf_counter_ns": 1771666100,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 4251177428,
+              "seed_high": 912306269,
+              "client_allocation_counter": 236,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 4251177428,
+              "seed_high": 912306269,
+              "client_allocation_counter": 236,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 236,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 237,
+          "class_id": 460,
+          "pre_allocation_action": {
+            "snapshot_index": 1141,
+            "scan_before_perf_counter_ns": 1808108700,
+            "scan_after_perf_counter_ns": 1808583300,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 4251177428,
+              "seed_high": 912306269,
+              "client_allocation_counter": 236,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 4251177428,
+              "seed_high": 912306269,
+              "client_allocation_counter": 236,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152967936,
+                "unit_id": 229,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 236,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 1142,
+            "scan_before_perf_counter_ns": 1809662600,
+            "scan_after_perf_counter_ns": 1810160900,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1270432554,
+              "seed_high": 1606460628,
+              "client_allocation_counter": 237,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2304,
+              "source_cursor": 2304,
+              "remaining": 1024,
+              "action_frame": 0,
+              "seed_low": 1270432554,
+              "seed_high": 1606460628,
+              "client_allocation_counter": 237,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 236,
+                "class_id": 459,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 237,
+                "class_id": 460,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 1165,
+            "scan_before_perf_counter_ns": 1850437300,
+            "scan_after_perf_counter_ns": 1850915200,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1391138897,
+              "seed_high": 1215632473,
+              "client_allocation_counter": 237,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1391138897,
+              "seed_high": 1215632473,
+              "client_allocation_counter": 237,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 236,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 237,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        },
+        {
+          "unit_id": 238,
+          "class_id": 459,
+          "pre_allocation_action": {
+            "snapshot_index": 1187,
+            "scan_before_perf_counter_ns": 1888260600,
+            "scan_after_perf_counter_ns": 1888745400,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1391138897,
+              "seed_high": 1215632473,
+              "client_allocation_counter": 237,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2560,
+              "source_cursor": 2304,
+              "remaining": 768,
+              "action_frame": 1,
+              "seed_low": 1391138897,
+              "seed_high": 1215632473,
+              "client_allocation_counter": 237,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968448,
+                "unit_id": 230,
+                "class_id": 460,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 236,
+                "class_id": 459,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 237,
+                "class_id": 460,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_published": {
+            "snapshot_index": 1188,
+            "scan_before_perf_counter_ns": 1889826900,
+            "scan_after_perf_counter_ns": 1890313600,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 2816,
+              "source_cursor": 2560,
+              "remaining": 512,
+              "action_frame": 0,
+              "seed_low": 2684609538,
+              "seed_high": 458322389,
+              "client_allocation_counter": 238,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 2816,
+              "source_cursor": 2560,
+              "remaining": 512,
+              "action_frame": 0,
+              "seed_low": 2684609538,
+              "seed_high": 458322389,
+              "client_allocation_counter": 238,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 15,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 13,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 11,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 9,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 7,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 236,
+                "class_id": 459,
+                "native_age": 5,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 237,
+                "class_id": 460,
+                "native_age": 3,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968192,
+                "unit_id": 238,
+                "class_id": 459,
+                "native_age": 0,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_observed_update": {
+            "snapshot_index": 1210,
+            "scan_before_perf_counter_ns": 1930053600,
+            "scan_after_perf_counter_ns": 1930573400,
+            "before": {
+              "mode": 18,
+              "sequence_cursor": 3072,
+              "source_cursor": 2816,
+              "remaining": 256,
+              "action_frame": 0,
+              "seed_low": 1094664777,
+              "seed_high": 361182861,
+              "client_allocation_counter": 238,
+              "client_frame": 0
+            },
+            "after": {
+              "mode": 18,
+              "sequence_cursor": 3072,
+              "source_cursor": 2816,
+              "remaining": 256,
+              "action_frame": 0,
+              "seed_low": 1094664777,
+              "seed_high": 361182861,
+              "client_allocation_counter": 238,
+              "client_frame": 0
+            },
+            "endpoint_markers_equal": true,
+            "units": [
+              {
+                "unit": 152968960,
+                "unit_id": 231,
+                "class_id": 459,
+                "native_age": 16,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90399488,
+                "unit_id": 232,
+                "class_id": 460,
+                "native_age": 14,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400000,
+                "unit_id": 233,
+                "class_id": 460,
+                "native_age": 12,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90400512,
+                "unit_id": 234,
+                "class_id": 459,
+                "native_age": 10,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967424,
+                "unit_id": 235,
+                "class_id": 459,
+                "native_age": 8,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 90401024,
+                "unit_id": 236,
+                "class_id": 459,
+                "native_age": 6,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152967936,
+                "unit_id": 237,
+                "class_id": 460,
+                "native_age": 4,
+                "hash_table_rva": 1162240
+              },
+              {
+                "unit": 152968192,
+                "unit_id": 238,
+                "class_id": 459,
+                "native_age": 2,
+                "hash_table_rva": 1162240
+              }
+            ]
+          },
+          "first_native_age": 0,
+          "first_observed_updated_age": 2,
+          "first_position": [
+            296321024,
+            369786880
+          ],
+          "updated_position": [
+            296394752,
+            369786880
+          ]
+        }
+      ],
+      "release_boundary": {
+        "observed_births": 15,
+        "snapshot_index": 1048,
+        "elapsed_ms": 1523,
+        "sequence_cursor": 2304,
+        "source_cursor": 2304,
+        "remaining": 1024
+      },
+      "client_game_type": 0,
+      "owner_unit_id": 1,
+      "observation_clock": {
+        "name": "perf_counter",
+        "resolution_seconds": 1e-07,
+        "implementation": "QueryPerformanceCounter()"
+      },
+      "sampling_profile": "1ms minimum yield-paced first2.1s/max1800 scans, then sleep5ms; no timer-resolution change"
+    }
+  ],
+  "source_hashes": {
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\orchestrator.json": "4e5c47298e98dc601fd6c174fbb321e4151e01429ad818438870575e1e68a8af",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\birth-3\\publication.json": "1426b6b6e222058c5bc78439fd50c490d6d2896994fd866820c7a2c0ba7ece42",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\birth-3\\missiles.jsonl": "727ecf845358d9a5529984f6ab7459e47762e33ca2e0b3835d60caa349c376b0",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\birth-3\\summary.json": "b70af3ced239c014a6c851948523932a15241cc6d9213f027c3ddabff0f9a023",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\birth-15\\publication.json": "a0324e1fc1a74f35450af14072eadd6414c220d6a1ba620d3619e0ab3eda0e0d",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\birth-15\\missiles.jsonl": "77187c8ae43ca9b035de81168029ec324800ed2ce88958ade1baf79a01553c29",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\birth-15\\summary.json": "2ce2714af2721d3e9624a134450113691ff05a502cf4130fc3431e580910fdf8",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\provenance\\arctic_blast_background.py": "8adc404203b30fc1c6f696aa268624a4bee471c50623ecc93c6a8d16cf429589",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\provenance\\arctic_blast_passive.py": "7f4a40f8fe69e5a1e63cd2f8171ffcf04cced916dc2aea638f0131d72af3ffed",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\provenance\\observer.py": "7df3b7dbce28ea8c373548188d9e2da3c2d816e5d502316f97eaff832571c005",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\provenance\\prepare_arctic_blast_fixture.py": "45af75e968b3055a17880f55efd0d35ca3bce61e22841cbb541c2e8ff0e5106b",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\provenance\\scene_reader.py": "e2158994363c1ea95fed002d63af24de8d1017c1525f503220ea2d87f76ccf89",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-231927-f587a20d\\orchestrator\\worker\\provenance\\test-character.py": "ce966ead4086ff4cd16698ed5b5e148058ff5b19e39d466aabde99cdc4f54305"
+  },
+  "limitations": [
+    "Equal scan endpoints exclude detected transitions, but do not make reads atomic or exclude ABA changes.",
+    "Action byte 1 is a unit animation marker, not a captured CltDo24 invocation.",
+    "The first observed update at age2 does not prove that internal age1 or GPU submissions never occur.",
+    "Native client allocation counter is global; this fixture checks its increment against each observed new unit ID.",
+    "No original process suspension, memory write, injected call or stack capture."
+  ],
+  "player_unit_id": 1,
+  "scope": "Native local player/type0; action before allocation; first stable update at age2, supported by pinned CltDo1 repeat branch"
+}

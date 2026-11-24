@@ -112,7 +112,11 @@ int wmain(int argc, wchar_t** argv) {
     require(d.get<BYTE>(returnTo-5)==0xE8 && returnTo+d.get(returnTo-4)==entry, "Update caller mismatch");
     validateGame(d,game,127897359,player);
     char name[16]{}; d.read(d.get(player+0x14),name,16);
+#ifdef D2_DRUID_BATCH_FIXTURE
+    require(std::strcmp(name,"CXDruBatch")==0 && d.get(player+4)==playerClass, "Require fixed Druid batch fixture");
+#else
     require(std::strcmp(name,"CXMolten")==0 && d.get(player+4)==playerClass, "Require separate fixed skill fixture");
+#endif
     U skills=d.get(player+0xA8), skill=d.get(skills+0xC);
     require(skill && d.get<std::uint16_t>(d.get(skill))==skillId && d.get(skill+0x28)==1, "Require selected Molten Boulder level one");
     U path=d.get(player+0x2C), room=d.get(path+0x1C);

@@ -1640,6 +1640,7 @@ public class ServerEntityFactory extends EntityFactory {
         || NativePoisonJavelinMotion.usesCellOrigin(missile)
         || NativeFirestormMotion.maker(missile)
         || NativeFirestormMotion.fire(missile)
+        || com.riiablo.engine.server.missile.NativeInfernoMotion.handles(missile)
         || com.riiablo.engine.server.missile.NativeMoltenBoulder.moves(missile)) {
       int cellX = com.badlogic.gdx.math.MathUtils.floor(position.x + .5f);
       int cellY = com.badlogic.gdx.math.MathUtils.floor(position.y + .5f);
@@ -1677,6 +1678,8 @@ public class ServerEntityFactory extends EntityFactory {
     } else if (com.riiablo.engine.server.missile.NativeMoltenBoulder.moves(missile)) {
       com.riiablo.engine.server.missile.NativeMoltenBoulder.velocity(
           missile, damageLevel, angle, missileVelocity);
+    } else if (com.riiablo.engine.server.missile.NativeInfernoMotion.handles(missile)) {
+      com.riiablo.engine.server.missile.NativeInfernoMotion.velocity(missile, damageLevel, angle, missileVelocity);
     } else if (NativePoisonJavelinMotion.handles(missile)) {
       NativePoisonJavelinMotion.initialVelocity(missile, damageLevel, slowPercent, angle, missileVelocity);
     } else {

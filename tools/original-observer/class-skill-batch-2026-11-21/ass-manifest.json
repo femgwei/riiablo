@@ -1,0 +1,856 @@
+{
+  "schema": 1,
+  "class_code": "ass",
+  "priority": 5,
+  "deferred": false,
+  "source_inventory_sha256": "11b24a3fc8d01529146304b770a44fbf3c2b38f016a39fe0163bf4573bef7b2f",
+  "fixture_policy": "Record learned skills/equipment/synergies; separate loadouts or sessions when prerequisites conflict",
+  "family_classification": "Table-based scheduling hint, requires per-skill review",
+  "skills": [
+    {
+      "skill_id": 251,
+      "skill": "Fire Trauma",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/expansion\\FireTraumaGround.dcc",
+        "data/global/missiles/expansion\\FireTraumaMissile.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 252,
+      "skill": "Claw Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 253,
+      "skill": "Psychic Hammer",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/Expansion\\PsyHammerHit.dcc",
+        "data/global/overlays/Expansion\\PsyHammerOverlay.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 254,
+      "skill": "Tiger Strike",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/Expansion\\DeadlyFistHit.dcc",
+        "data/global/overlays/expansion\\MISSILE_A_A.dcc",
+        "data/global/overlays/expansion\\tiger_Strike_A.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 255,
+      "skill": "Dragon Talon",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 256,
+      "skill": "Shock Field",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "charge_build_and_release"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/Expansion\\ShockField.dcc",
+        "data/global/missiles/expansion\\caltrops.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 257,
+      "skill": "Blade Sentinel",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 258,
+      "skill": "Quickness",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/expansion\\quickness.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 259,
+      "skill": "Fists of Fire",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry",
+        "charge_build_and_release"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/ExpArrowExplode.dcc",
+        "data/global/missiles/groundFireSmall.dcc",
+        "data/global/overlays/expansion\\MISSILE_RED_A.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 260,
+      "skill": "Dragon Claw",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 261,
+      "skill": "Charged Bolt Sentry",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 262,
+      "skill": "Wake of Fire Sentry",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 263,
+      "skill": "Weapon Block",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 264,
+      "skill": "Cloak of Shadows",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/Expansion\\CloakOfShadows.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 265,
+      "skill": "Cobra Strike",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/expansion\\Cobra_Strike_A.dcc",
+        "data/global/overlays/expansion\\MISSILE_B_A.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 266,
+      "skill": "Blade Fury",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "charge_build_and_release"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/Expansion\\bladefury.dcc",
+        "data/global/missiles/Expansion\\bladefury_B.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 267,
+      "skill": "Fade",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/expansion\\fade.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 268,
+      "skill": "Shadow Warrior",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 269,
+      "skill": "Claws of Thunder",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry",
+        "charge_build_and_release"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/ChargedBolt.dcc",
+        "data/global/missiles/ElectricNova.dcc",
+        "data/global/overlays/expansion\\MISSILE_WHITE_A.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 270,
+      "skill": "Dragon Tail",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/ExpArrowExplode.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 271,
+      "skill": "Lightning Sentry",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 272,
+      "skill": "Inferno Sentry",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 273,
+      "skill": "Mind Blast",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/Expansion\\Mindblast.dcc",
+        "data/global/overlays/Expansion\\PsyHammerOverlay.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 274,
+      "skill": "Blades of Ice",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry",
+        "charge_build_and_release"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/IceArrowExplode.dcc",
+        "data/global/missiles/IceBreakSmall.dcc",
+        "data/global/overlays/expansion\\MISSILE_BLUE_A.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 275,
+      "skill": "Dragon Flight",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/expansion\\DragonFlight.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 276,
+      "skill": "Death Sentry",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 277,
+      "skill": "Blade Shield",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/Expansion\\blade_shield_missile.dcc",
+        "data/global/overlays/Expansion\\blade_shield.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 278,
+      "skill": "Venom",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/expansion\\venomclaws.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 279,
+      "skill": "Shadow Master",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 280,
+      "skill": "Royal Strike",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry",
+        "charge_build_and_release"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/ExpArrowExplode.dcc",
+        "data/global/missiles/IceBolt.dcc",
+        "data/global/missiles/LightningStrike.dcc",
+        "data/global/missiles/Meteor.dcc",
+        "data/global/missiles/MeteorTail.dcc",
+        "data/global/missiles/MeteorTargetIndicator.dcc",
+        "data/global/missiles/groundFireMedium.dcc",
+        "data/global/missiles/groundFireSmall.dcc",
+        "data/global/overlays/expansion\\MISSILE_C_A.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    }
+  ]
+}

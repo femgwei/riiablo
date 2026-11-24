@@ -99,6 +99,24 @@ public final class StateP extends Table {
   public IntVector periodicCountdownFramesVector(IntVector obj) { int o = __offset(30); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
   public ByteBuffer periodicCountdownFramesAsByteBuffer() { return __vector_as_bytebuffer(30, 4); }
   public ByteBuffer periodicCountdownFramesInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 30, 4); }
+  public int presentationRevision(int j) { int o = __offset(32); return o != 0 ? bb.getInt(__vector(o) + j * 4) : 0; }
+  public int presentationRevisionLength() { int o = __offset(32); return o != 0 ? __vector_len(o) : 0; }
+  public IntVector presentationRevisionVector() { return presentationRevisionVector(new IntVector()); }
+  public IntVector presentationRevisionVector(IntVector obj) { int o = __offset(32); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer presentationRevisionAsByteBuffer() { return __vector_as_bytebuffer(32, 4); }
+  public ByteBuffer presentationRevisionInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 32, 4); }
+  public int cycloneArmorCurrentFixed(int j) { int o = __offset(34); return o != 0 ? bb.getInt(__vector(o) + j * 4) : 0; }
+  public int cycloneArmorCurrentFixedLength() { int o = __offset(34); return o != 0 ? __vector_len(o) : 0; }
+  public IntVector cycloneArmorCurrentFixedVector() { return cycloneArmorCurrentFixedVector(new IntVector()); }
+  public IntVector cycloneArmorCurrentFixedVector(IntVector obj) { int o = __offset(34); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer cycloneArmorCurrentFixedAsByteBuffer() { return __vector_as_bytebuffer(34, 4); }
+  public ByteBuffer cycloneArmorCurrentFixedInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 34, 4); }
+  public int cycloneArmorMaximumFixed(int j) { int o = __offset(36); return o != 0 ? bb.getInt(__vector(o) + j * 4) : 0; }
+  public int cycloneArmorMaximumFixedLength() { int o = __offset(36); return o != 0 ? __vector_len(o) : 0; }
+  public IntVector cycloneArmorMaximumFixedVector() { return cycloneArmorMaximumFixedVector(new IntVector()); }
+  public IntVector cycloneArmorMaximumFixedVector(IntVector obj) { int o = __offset(36); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer cycloneArmorMaximumFixedAsByteBuffer() { return __vector_as_bytebuffer(36, 4); }
+  public ByteBuffer cycloneArmorMaximumFixedInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 36, 4); }
 
   public static int createStateP(FlatBufferBuilder builder,
       int stateIdOffset,
@@ -114,8 +132,14 @@ public final class StateP extends Table {
       int sourceEntityIdOffset,
       int skillIdOffset,
       int periodicDelayFramesOffset,
-      int periodicCountdownFramesOffset) {
-    builder.startTable(14);
+      int periodicCountdownFramesOffset,
+      int presentationRevisionOffset,
+      int cycloneArmorCurrentFixedOffset,
+      int cycloneArmorMaximumFixedOffset) {
+    builder.startTable(17);
+    StateP.addCycloneArmorMaximumFixed(builder, cycloneArmorMaximumFixedOffset);
+    StateP.addCycloneArmorCurrentFixed(builder, cycloneArmorCurrentFixedOffset);
+    StateP.addPresentationRevision(builder, presentationRevisionOffset);
     StateP.addPeriodicCountdownFrames(builder, periodicCountdownFramesOffset);
     StateP.addPeriodicDelayFrames(builder, periodicDelayFramesOffset);
     StateP.addSkillId(builder, skillIdOffset);
@@ -133,7 +157,7 @@ public final class StateP extends Table {
     return StateP.endStateP(builder);
   }
 
-  public static void startStateP(FlatBufferBuilder builder) { builder.startTable(14); }
+  public static void startStateP(FlatBufferBuilder builder) { builder.startTable(17); }
   public static void addStateId(FlatBufferBuilder builder, int stateIdOffset) { builder.addOffset(0, stateIdOffset, 0); }
   public static int createStateIdVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
   public static void startStateIdVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
@@ -177,6 +201,15 @@ public final class StateP extends Table {
   public static void addPeriodicCountdownFrames(FlatBufferBuilder builder, int periodicCountdownFramesOffset) { builder.addOffset(13, periodicCountdownFramesOffset, 0); }
   public static int createPeriodicCountdownFramesVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addInt(data[i]); return builder.endVector(); }
   public static void startPeriodicCountdownFramesVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void addPresentationRevision(FlatBufferBuilder builder, int presentationRevisionOffset) { builder.addOffset(14, presentationRevisionOffset, 0); }
+  public static int createPresentationRevisionVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addInt(data[i]); return builder.endVector(); }
+  public static void startPresentationRevisionVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void addCycloneArmorCurrentFixed(FlatBufferBuilder builder, int cycloneArmorCurrentFixedOffset) { builder.addOffset(15, cycloneArmorCurrentFixedOffset, 0); }
+  public static int createCycloneArmorCurrentFixedVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addInt(data[i]); return builder.endVector(); }
+  public static void startCycloneArmorCurrentFixedVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void addCycloneArmorMaximumFixed(FlatBufferBuilder builder, int cycloneArmorMaximumFixedOffset) { builder.addOffset(16, cycloneArmorMaximumFixedOffset, 0); }
+  public static int createCycloneArmorMaximumFixedVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addInt(data[i]); return builder.endVector(); }
+  public static void startCycloneArmorMaximumFixedVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
   public static int endStateP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

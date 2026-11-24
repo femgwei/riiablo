@@ -1,0 +1,15 @@
+{
+  "id": "20261121-090722-a91508f2",
+  "status": "completed",
+  "started": 1795223243.0393946,
+  "broker_pid": 2616,
+  "command": {
+    "op": "run_job",
+    "job": "druid-elemental-batch-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-073727-5ce591f8\\runs\\20261121-090722-a91508f2\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795223304.2566106
+}

@@ -17,6 +17,54 @@ import com.riiablo.codec.util.BBox;
 import com.riiablo.graphics.BlendMode;
 
 class AuraOverlayResourceTest extends RiiabloTest {
+  @Test void dimVisionWaitsForTheRealCastOverlayIncludingPendingAssets() {
+    AssetManager saved = Riiablo.assets;
+    com.riiablo.Colors savedColors = Riiablo.colors;
+    Riiablo.colors = new com.riiablo.Colors();
+    AssetManager assets = Riiablo.assets = mock(AssetManager.class);
+    DCC dcc = mock(DCC.class);
+    when(dcc.getNumDirections()).thenReturn(1);
+    when(dcc.getNumFramesPerDir()).thenReturn(10);
+    when(dcc.getBox(anyInt())).thenReturn(new BBox());
+    when(assets.isLoaded(any(AssetDescriptor.class))).thenReturn(false);
+    when(assets.get(any(AssetDescriptor.class))).thenReturn(dcc);
+    OverlayManager manager = new OverlayManager();
+    World world = new World(new WorldConfigurationBuilder().with(
+        new net.mostlyoriginal.api.event.common.EventSystem(),
+        new com.riiablo.engine.server.CofManager(), manager, new StateOverlaySystem())
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int entity = world.create();
+      world.getMapper(com.riiablo.engine.server.component.UnitStates.class).create(entity)
+          .init(entity).stateList.addState(com.riiablo.engine.server.state.StateId.DIMVISION, 100, 1, entity);
+      world.process();
+      world.process();
+      com.riiablo.presentation.component.Overlay cast = world.getMapper(
+          com.riiablo.presentation.component.Overlay.class).get(entity);
+      assertFalse(cast.isLoaded);
+      assertEquals(69, Riiablo.files.Overlay.index(cast.entry.overlay));
+      assertEquals(0, cast.layers.size, "persistent marker must not bypass a pending cast asset");
+      assertTrue(manager.isOneShotActive(entity, cast.entry.overlay));
+      when(assets.isLoaded(any(AssetDescriptor.class))).thenReturn(true);
+      world.process();
+      assertTrue(cast.isLoaded);
+      String castKey = cast.entry.overlay;
+      cast.animation.setFrame(cast.animation.getNumFramesPerDir() - 1);
+      for (int i = 0; i < 12; i++) world.process();
+      assertFalse(manager.isOneShotActive(entity, castKey));
+      com.riiablo.presentation.component.Overlay marker = world.getMapper(
+          com.riiablo.presentation.component.Overlay.class).get(entity);
+      assertNotNull(marker);
+      assertTrue(marker.persistent);
+      assertEquals(129, Riiablo.files.Overlay.index(marker.entry.overlay));
+      assertEquals(0, marker.layers.size);
+    } finally {
+      world.dispose();
+      Riiablo.assets = saved;
+      Riiablo.colors = savedColors;
+    }
+  }
+
   @Test void barbarianStateLayersAndActivationFlashesUseNativeAnimationParameters() {
     AssetManager saved = Riiablo.assets;
     com.riiablo.Colors savedColors = Riiablo.colors;

@@ -218,7 +218,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     int callbackFrame = missile.nativeFrame;
     missile.nativeFrame += elapsedFrames;
 
-    processDruidRecyclerRecovery(missile, callbackFrame);
+    processDruidRecyclerRecovery(entityId, missile, callbackFrame);
 
     if (NativeMoltenBoulder.isRolling(missile.missile)) {
       processMoltenBoulderTrail(missile, position);
@@ -359,6 +359,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
 
     if (missile.chargedBoltPath && !NativeFirestormMotion.maker(missile.missile)
+        && !com.riiablo.engine.server.missile.NativeDruidWindMotion.handles(missile)
         && !missile.attached
         && missile.distanceTraveled >= missile.chargedBoltNextTurnDistance) {
       while (missile.distanceTraveled >= missile.chargedBoltNextTurnDistance) {
@@ -430,7 +431,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     // 更新导弹位置（VelocityAdder 系统被注释掉了，所以在这里更新）
     float moveDistance;
-    if (NativeFirestormMotion.maker(missile.missile)) {
+    if (NativeFirestormMotion.maker(missile.missile)
+        || com.riiablo.engine.server.missile.NativeDruidWindMotion.handles(missile)) {
       NativeFirestormMotion.Sample next =
           NativeFirestormMotion.sample(missile, missile.nativeFrame);
       next.position(tmpVec);
@@ -449,6 +451,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
       boolean fixedPoisonPath = NativeFrozenOrbMotion.handles(missile.missile)
           || NativeMoltenBoulder.moves(missile.missile)
+          || com.riiablo.engine.server.missile.NativeInfernoMotion.handles(missile.missile)
           || com.riiablo.engine.server.missile.NativeBoneSpearMotion.handles(missile.missile)
           || com.riiablo.engine.server.missile.NativePoisonJavelinMotion.usesCellOrigin(missile.missile)
           || missile.poisonCloudTraveling && missile.missile != null
@@ -591,7 +594,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   /** Native SrvDo29/SrvDo33 recovery callback for Carrion/Solar Creeper. */
-  private void processDruidRecyclerRecovery(Missile missile, int previousFrame) {
+  private void processDruidRecyclerRecovery(int entityId, Missile missile, int previousFrame) {
     if (missile == null || missile.recyclerRecovered || missile.missile == null
         || (missile.missile.pSrvDoFunc != 29 && missile.missile.pSrvDoFunc != 33)
         || missile.ownerId < 0 || !mAttributesWrapper.has(missile.ownerId)) return;
@@ -602,20 +605,40 @@ public class MissileCollisionSystem extends IteratingSystem {
     int previousRemaining = lifetime - previousFrame;
     int currentRemaining = lifetime - missile.nativeFrame;
     if (!(previousRemaining > trigger && currentRemaining <= trigger)) return;
+    missile.recyclerRecovered = true;
+    if (!isAlive(missile.ownerId)) return;
     Skills.Entry skill = missile.skillId >= 0 ? files().skills.get(missile.skillId) : null;
     if (skill == null) return;
     int level = Math.max(1, missile.damageLevel);
-    int percent = SkillFormula.evaluate(skill.calc1, skill, level);
     Attributes attrs = mAttributesWrapper.get(missile.ownerId).attrs;
+    if (attrs == null) return;
     boolean mana = missile.missile.pSrvDoFunc == 33;
     short currentStat = mana ? Stat.mana : Stat.hitpoints;
     short maximumStat = mana ? Stat.maxmana : Stat.maxhp;
     StatRef current = attrs.get(currentStat, StatRef.obtain());
     StatRef maximum = attrs.get(maximumStat, StatRef.obtain());
     if (current == null || maximum == null) return;
-    float amount = Math.max(0f, maximum.asFixed() * percent / 100f);
-    current.set(Math.min(maximum.asFixed(), current.asFixed() + amount));
-    missile.recyclerRecovered = true;
+    // SrvDo29/33 shift BOTH values out of 8.8 before comparing, calculating
+    // the percentage and writing the result back. Preserve fractional bars
+    // unchanged when already full, and never resurrect a dead owner.
+    int before = (int) current.asFixed(), limit = (int) maximum.asFixed();
+    if (before >= limit) return;
+    int percent = SkillFormula.evaluate(skill.calc1, skill, level,
+        name -> baseSkillLevel(missile.ownerId, name), name -> files().skills.get(name));
+    int amount = (int) Math.max(0L, (long) limit * percent / 100L);
+    int after = (int) Math.min(limit, (long) before + amount);
+    current.setEncoded(after << 8);
+    String overlay = missile.missile.ProgOverlay;
+    if (events != null && overlay != null && !overlay.isEmpty()
+        && files().Overlay != null && files().Overlay.index(overlay) > 0
+        && mPosition.has(missile.ownerId)) {
+      // This is a progress overlay on the OWNER, not an impact on the corpse.
+      // Reuse the replicated target-overlay event without consuming the delay
+      // missile's later client children or marking it as an ordinary impact.
+      events.dispatch(MissileImpactEvent.obtain(entityId, missile.missile.Id,
+          missile.ownerId, missile.ownerId, mPosition.get(missile.ownerId).position)
+          .withTargetOverlay(overlay));
+    }
     log.info("[VINE_RECYCLER] owner={} missile={} skill={} resource={} percent={} amount={}",
         missile.ownerId, missile.missile.Missile, skill.skill,
         mana ? "mana" : "life", percent, amount);
@@ -1324,7 +1347,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       int entityId, Missile controller, Position position, int elapsedFrames) {
     int infectedId = controller.attachedEntityId;
     if (infectedId < 0 || !world.getEntityManager().isActive(infectedId)
-        || !mPosition.has(infectedId) || !mUnitStates.has(infectedId)
+        || !mPosition.has(infectedId) || !isAlive(infectedId) || !mUnitStates.has(infectedId)
         || mUnitStates.get(infectedId).stateList == null
         || !mUnitStates.get(infectedId).stateList.hasState(StateId.RABIES)) {
       log.info("[DRUID_RABIES] phase=controller_remove missileId={} infected={} reason=state_missing",
@@ -1340,6 +1363,10 @@ public class MissileCollisionSystem extends IteratingSystem {
       world.delete(entityId);
       return;
     }
+    // SrvHit53 only propagates an infection with at least ten frames left.
+    // Clamping a shorter tail back up to ten extends the epidemic and its
+    // client state overlay beyond the originating infection's deadline.
+    if (controller.remainingFrames < 10) return;
     int interval = controller.missile != null && controller.missile.Param != null
         && controller.missile.Param.length > 0 && controller.missile.Param[0] > 0
         ? controller.missile.Param[0] : 5;
@@ -1362,7 +1389,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       Attributes attrs = mAttributesWrapper.get(targetId).attrs;
       StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null || hp.asFixed() <= 0f) continue;
-      int duration = Math.max(10, controller.remainingFrames);
+      int duration = controller.remainingFrames;
       int difficulty = combatDifficulty(controller.rabiesSourceId, targetId);
       CombatSystem.CombatResult poison =
           combatSystemResolver.calculateFixedPoisonDamageSnapshot(

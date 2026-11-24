@@ -1,0 +1,7 @@
+{
+  "op": "run_jobs",
+  "jobs": [
+    "druid-raven-level8-private-desktop",
+    "druid-raven-level20-private-desktop"
+  ]
+}

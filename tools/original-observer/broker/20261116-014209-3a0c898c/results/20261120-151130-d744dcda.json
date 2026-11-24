@@ -1,0 +1,15 @@
+{
+  "id": "20261120-151130-d744dcda",
+  "status": "completed",
+  "started": 1795158691.037427,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "molten-boulder-expiry-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261120-151130-d744dcda\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795158741.6387885
+}

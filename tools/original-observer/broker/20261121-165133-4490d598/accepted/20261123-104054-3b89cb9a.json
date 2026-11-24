@@ -1,0 +1,7 @@
+{
+  "op": "run_jobs",
+  "jobs": [
+    "druid-raven-target-harness-private-desktop",
+    "druid-raven-town-orbit-private-desktop"
+  ]
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.presentation.PresentationAssetLifecycleTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T08:07:12" hostname="DESKTOP-7GGAVHU" time="3.186">
+  <properties/>
+  <testcase name="[1] entity" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="3.137"/>
+  <testcase name="[2] component" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.014"/>
+  <testcase name="[3] earlyEntity" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.011"/>
+  <testcase name="[4] earlyComponent" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

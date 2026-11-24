@@ -25,6 +25,8 @@ public class PoisonJavelinAssetProbe {
       String mode = args.length > 2 ? args[2] : "poison-javelin";
       Set<String> selected = "firestorm".equals(mode)
           ? Set.of("firestormmaker", "firestorm")
+          : "inferno".equals(mode)
+              ? Set.of("infernoflame1", "infernoflame2")
           : "moltenboulder".equals(mode)
               ? Set.of("moltenboulderemerge", "moltenboulder", "moltenboulderfirepath",
                   "moltenboulderexplode", "moltenboulder-flyingrocks", "firewall", "firesmall", "firemedium")
@@ -51,12 +53,13 @@ public class PoisonJavelinAssetProbe {
         json.pop();
       }
       json.pop();
-      if ("firestorm".equals(mode) || "moltenboulder".equals(mode)) {
+      if ("firestorm".equals(mode) || "moltenboulder".equals(mode) || "inferno".equals(mode)) {
         String[] skills = resolver.resolve("data/global/excel/skills.txt").readString("ISO-8859-1").split("\\r?\\n");
         String[] header = skills[0].split("\\t", -1);
         for (String line : skills) {
           String[] values = line.split("\\t", -1);
           if (!("firestorm".equals(mode) && "Firestorm".equalsIgnoreCase(values[0]))
+              && !("inferno".equals(mode) && "Inferno".equalsIgnoreCase(values[0]))
               && !("moltenboulder".equals(mode) && "Molten Boulder".equalsIgnoreCase(values[0]))) continue;
           json.object("skill");
           for (int i = 0; i < Math.min(values.length, header.length); i++)

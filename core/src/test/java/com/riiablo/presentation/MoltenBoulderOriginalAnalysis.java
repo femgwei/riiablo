@@ -95,7 +95,7 @@ public final class MoltenBoulderOriginalAnalysis {
       JsonValue cast = original.get("identity");
       int owner = world.create();
       CharData data = CharData.createRemote("molten-probe", (byte) Riiablo.DRUID);
-      data.setSkillLevel(229, 1);
+      Map<String, Integer> hardPoints = DruidReplayLoadout.apply(data, original, 229);
       world.getMapper(Player.class).create(owner).data = data;
       world.getMapper(Position.class).create(owner).position.set(cast.getInt("x"), cast.getInt("y"));
       Attributes attrs = Attributes.obtainStandard();
@@ -152,6 +152,7 @@ public final class MoltenBoulderOriginalAnalysis {
             "dcc_direction", birth.direction));
       }
       Map<String, Object> result = new LinkedHashMap<>();
+      result.put("hard_points", hardPoints);
       result.put("emerge_birth", root);
       result.put("rolling_birth", rollingBirth);
       result.put("rolling_states", rollingStates);

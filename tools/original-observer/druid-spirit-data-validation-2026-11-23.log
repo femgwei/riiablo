@@ -1,0 +1,749 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnamed module (file:/F:/Gradle/wrapper/dists/gradle-7.3-bin/ddwl0k7mt9g6ak16i1m905vyv/gradle-7.3/lib/native-platform-0.22-milestone-21.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Initialized native services in: F:\Gradle\native
+Initialized jansi services in: F:\Gradle\native
+Starting process 'command 'C:\Program Files\Java\jdk-17\bin\java.exe''. Working directory: F:\Gradle\.tmp\tmp-jvm6201643881581578693probe Command: C:\Program Files\Java\jdk-17\bin\java.exe -cp . JavaProbe
+Successfully started process 'command 'C:\Program Files\Java\jdk-17\bin\java.exe''
+To honour the JVM settings for this build a single-use Daemon process will be forked. See https://docs.gradle.org/7.3/userguide/gradle_daemon.html#sec:disabling_the_daemon.
+Starting process 'Gradle build daemon'. Working directory: F:\Gradle\daemon\7.3 Command: C:\Program Files\Java\jdk-17\bin\java.exe -XX:MaxMetaspaceSize=256M --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.invoke=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.prefs/java.util.prefs=ALL-UNNAMED --add-opens java.prefs/java.util.prefs=ALL-UNNAMED --add-opens java.base/java.nio.charset=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED -Xms512M -Xmx1G -Dfile.encoding=UTF-8 -Duser.country=CN -Duser.language=zh -Duser.variant -cp F:\Gradle\wrapper\dists\gradle-7.3-bin\ddwl0k7mt9g6ak16i1m905vyv\gradle-7.3\lib\gradle-launcher-7.3.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 7.3
+Successfully started process 'Gradle build daemon'
+An attempt to start the daemon took 3.411 secs.
+The client will now receive all logging from the daemon (pid: 32344). The daemon log file: F:\Gradle\daemon\7.3\daemon-32344.out.log
+Closing daemon's stdin at end of input.
+The daemon will no longer process any standard input.
+Daemon will be stopped at the end of the build 
+Using 8 worker leases.
+Watching the file system is configured to be enabled if available
+Now considering [F:\3rd_src\riiablo] as hierarchies to watch
+File system watching is active
+Starting Build
+Settings evaluated using settings file 'F:\3rd_src\riiablo\settings.gradle'.
+Projects loaded. Root project using build file 'F:\3rd_src\riiablo\build.gradle'.
+Included projects: [root project 'riiablo', project ':android', project ':core', project ':D2MOO_JAVA', project ':desktop', project ':excel', project ':game-data', project ':quests', project ':server', project ':server-domain', project ':server-systems', project ':shared', project ':table', project ':tester', project ':tools', project ':excel:annotation-processor', project ':excel:annotations', project ':excel:core', project ':excel:excel-test', project ':server:bncs', project ':server:bnls', project ':server:d2gs', project ':server:mcp', project ':server:netty', project ':table:annotation-processor', project ':table:annotations', project ':table:core', project ':table:integration', project ':tools:backends', project ':tools:camera', project ':tools:d2s-reader', project ':tools:direction', project ':tools:ds1-viewer', project ':tools:excel-serializer-generator', project ':tools:font-metrics', project ':tools:map-debugger', project ':tools:map-viewer', project ':tools:mpq-viewer', project ':tools:old', project ':tools:physics', project ':tools:skill-viewer', project ':tools:video-player', project ':tools:backends:backend-core', project ':tools:backends:backend-headless', project ':tools:backends:backend-lwjgl', project ':tools:backends:backend-lwjgl3']
+
+> Configure project :
+Evaluating root project 'riiablo' using build file 'F:\3rd_src\riiablo\build.gradle'.
+
+> Configure project :android
+Evaluating project ':android' using build file 'F:\3rd_src\riiablo\android\build.gradle'.
+java.lang.RuntimeException: Configuration 'natives' was resolved during configuration time.
+This is a build performance and scalability issue.
+See https://github.com/gradle/gradle/issues/2298
+	at com.android.build.gradle.internal.DependencyResolutionChecks$registerDependencyCheck$3$1.execute(DependencyResolutionChecks.kt:77)
+	at com.android.build.gradle.internal.DependencyResolutionChecks$registerDependencyCheck$3$1.execute(DependencyResolutionChecks.kt:53)
+	at org.gradle.configuration.internal.DefaultUserCodeApplicationContext$CurrentApplication$1.execute(DefaultUserCodeApplicationContext.java:123)
+	at org.gradle.internal.event.BroadcastDispatch$ActionInvocationHandler.dispatch(BroadcastDispatch.java:95)
+	at org.gradle.internal.event.BroadcastDispatch$ActionInvocationHandler.dispatch(BroadcastDispatch.java:83)
+	at org.gradle.internal.event.AbstractBroadcastDispatch.dispatch(AbstractBroadcastDispatch.java:43)
+	at org.gradle.internal.event.BroadcastDispatch$SingletonDispatch.dispatch(BroadcastDispatch.java:245)
+	at org.gradle.internal.event.BroadcastDispatch$SingletonDispatch.dispatch(BroadcastDispatch.java:157)
+	at org.gradle.internal.event.AbstractBroadcastDispatch.dispatch(AbstractBroadcastDispatch.java:61)
+	at org.gradle.internal.event.BroadcastDispatch$CompositeDispatch.dispatch(BroadcastDispatch.java:346)
+	at org.gradle.internal.event.BroadcastDispatch$CompositeDispatch.dispatch(BroadcastDispatch.java:249)
+	at org.gradle.internal.event.ListenerBroadcast.dispatch(ListenerBroadcast.java:141)
+	at org.gradle.internal.event.ListenerBroadcast.dispatch(ListenerBroadcast.java:37)
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:94)
+	at jdk.proxy1/jdk.proxy1.$Proxy46.beforeResolve(Unknown Source)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration.performPreResolveActions(DefaultConfiguration.java:794)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration.access$400(DefaultConfiguration.java:152)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration$1.call(DefaultConfiguration.java:642)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration$1.call(DefaultConfiguration.java:635)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration.resolveGraphIfRequired(DefaultConfiguration.java:635)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration.lambda$resolveExclusively$4(DefaultConfiguration.java:615)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$CalculatedModelValueImpl.update(DefaultProjectStateRegistry.java:478)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration.resolveExclusively(DefaultConfiguration.java:612)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration.resolveToStateOrLater(DefaultConfiguration.java:599)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration.access$1900(DefaultConfiguration.java:152)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration$SelectedArtifactsProvider.getValue(DefaultConfiguration.java:1344)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration$SelectedArtifactsProvider.getValue(DefaultConfiguration.java:1334)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration$ConfigurationFileCollection.getSelectedArtifacts(DefaultConfiguration.java:1406)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration$ConfigurationFileCollection.visitContents(DefaultConfiguration.java:1393)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration.visitContents(DefaultConfiguration.java:498)
+	at org.gradle.api.internal.file.AbstractFileCollection.getFiles(AbstractFileCollection.java:130)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration_Decorated.getFiles(Unknown Source)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:107)
+	at groovy.lang.MetaBeanProperty.getProperty(MetaBeanProperty.java:59)
+	at org.gradle.internal.metaobject.BeanDynamicObject$MetaClassAdapter.getProperty(BeanDynamicObject.java:233)
+	at org.gradle.internal.metaobject.BeanDynamicObject.tryGetProperty(BeanDynamicObject.java:176)
+	at org.gradle.internal.metaobject.CompositeDynamicObject.tryGetProperty(CompositeDynamicObject.java:55)
+	at org.gradle.internal.metaobject.AbstractDynamicObject.getProperty(AbstractDynamicObject.java:60)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration_Decorated.getProperty(Unknown Source)
+	at org.codehaus.groovy.runtime.callsite.PogoGetPropertySite.getProperty(PogoGetPropertySite.java:49)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callGetProperty(AbstractCallSite.java:329)
+	at build_6qusrhcmpl2pklwd5mc4nbtim$_run_closure6.doCall(F:\3rd_src\riiablo\android\build.gradle:76)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:107)
+	at groovy.lang.MetaMethod.doMethodInvoke(MetaMethod.java:323)
+	at org.codehaus.groovy.runtime.metaclass.ClosureMetaClass.invokeMethod(ClosureMetaClass.java:274)
+	at groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1035)
+	at groovy.lang.Closure.call(Closure.java:412)
+	at groovy.lang.Closure.call(Closure.java:428)
+	at org.gradle.util.internal.ClosureBackedAction.execute(ClosureBackedAction.java:72)
+	at org.gradle.util.internal.ConfigureUtil.configureTarget(ConfigureUtil.java:155)
+	at org.gradle.util.internal.ConfigureUtil.configureSelf(ConfigureUtil.java:131)
+	at org.gradle.api.internal.AbstractTask.configure(AbstractTask.java:637)
+	at org.gradle.api.DefaultTask.configure(DefaultTask.java:309)
+	at org.gradle.api.internal.project.DefaultProject.task(DefaultProject.java:1271)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:107)
+	at groovy.lang.MetaMethod.doMethodInvoke(MetaMethod.java:323)
+	at org.gradle.internal.metaobject.BeanDynamicObject$MetaClassAdapter.invokeMethod(BeanDynamicObject.java:484)
+	at org.gradle.internal.metaobject.BeanDynamicObject.tryInvokeMethod(BeanDynamicObject.java:196)
+	at org.gradle.internal.metaobject.CompositeDynamicObject.tryInvokeMethod(CompositeDynamicObject.java:98)
+	at org.gradle.internal.extensibility.MixInClosurePropertiesAsMethodsDynamicObject.tryInvokeMethod(MixInClosurePropertiesAsMethodsDynamicObject.java:34)
+	at org.gradle.groovy.scripts.BasicScript$ScriptDynamicObject.tryInvokeMethod(BasicScript.java:135)
+	at org.gradle.internal.metaobject.AbstractDynamicObject.invokeMethod(AbstractDynamicObject.java:163)
+	at org.gradle.groovy.scripts.BasicScript.invokeMethod(BasicScript.java:84)
+	at org.codehaus.groovy.runtime.callsite.PogoMetaClassSite.callCurrent(PogoMetaClassSite.java:68)
+	at org.codehaus.groovy.runtime.callsite.CallSiteArray.defaultCallCurrent(CallSiteArray.java:51)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:171)
+	at org.codehaus.groovy.runtime.callsite.AbstractCallSite.callCurrent(AbstractCallSite.java:194)
+	at build_6qusrhcmpl2pklwd5mc4nbtim.run(F:\3rd_src\riiablo\android\build.gradle:69)
+	at org.gradle.groovy.scripts.internal.DefaultScriptRunnerFactory$ScriptRunnerImpl.run(DefaultScriptRunnerFactory.java:91)
+	at org.gradle.configuration.DefaultScriptPluginFactory$ScriptPluginImpl.lambda$apply$0(DefaultScriptPluginFactory.java:133)
+	at org.gradle.configuration.ProjectScriptTarget.addConfiguration(ProjectScriptTarget.java:79)
+	at org.gradle.configuration.DefaultScriptPluginFactory$ScriptPluginImpl.apply(DefaultScriptPluginFactory.java:136)
+	at org.gradle.configuration.BuildOperationScriptPlugin$1.run(BuildOperationScriptPlugin.java:65)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+	at org.gradle.internal.operations.DefaultBuildOperationExecutor.run(DefaultBuildOperationExecutor.java:68)
+	at org.gradle.configuration.BuildOperationScriptPlugin.lambda$apply$0(BuildOperationScriptPlugin.java:62)
+	at org.gradle.configuration.internal.DefaultUserCodeApplicationContext.apply(DefaultUserCodeApplicationContext.java:44)
+	at org.gradle.configuration.BuildOperationScriptPlugin.apply(BuildOperationScriptPlugin.java:62)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.lambda$applyToMutableState$0(DefaultProjectStateRegistry.java:366)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.fromMutableState(DefaultProjectStateRegistry.java:393)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.applyToMutableState(DefaultProjectStateRegistry.java:365)
+	at org.gradle.configuration.project.BuildScriptProcessor.execute(BuildScriptProcessor.java:42)
+	at org.gradle.configuration.project.BuildScriptProcessor.execute(BuildScriptProcessor.java:26)
+	at org.gradle.configuration.project.ConfigureActionsProjectEvaluator.evaluate(ConfigureActionsProjectEvaluator.java:35)
+	at org.gradle.configuration.project.LifecycleProjectEvaluator$EvaluateProject.lambda$run$0(LifecycleProjectEvaluator.java:100)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.lambda$applyToMutableState$0(DefaultProjectStateRegistry.java:366)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.lambda$withProjectLock$3(DefaultProjectStateRegistry.java:426)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:211)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.withProjectLock(DefaultProjectStateRegistry.java:426)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.fromMutableState(DefaultProjectStateRegistry.java:407)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.applyToMutableState(DefaultProjectStateRegistry.java:365)
+	at org.gradle.configuration.project.LifecycleProjectEvaluator$EvaluateProject.run(LifecycleProjectEvaluator.java:91)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+	at org.gradle.internal.operations.DefaultBuildOperationExecutor.run(DefaultBuildOperationExecutor.java:68)
+	at org.gradle.configuration.project.LifecycleProjectEvaluator.evaluate(LifecycleProjectEvaluator.java:63)
+	at org.gradle.api.internal.project.DefaultProject.evaluate(DefaultProject.java:751)
+	at org.gradle.api.internal.project.DefaultProject.evaluate(DefaultProject.java:151)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.ensureConfigured(DefaultProjectStateRegistry.java:339)
+	at org.gradle.execution.TaskPathProjectEvaluator.configure(TaskPathProjectEvaluator.java:41)
+	at org.gradle.execution.TaskPathProjectEvaluator.configureHierarchy(TaskPathProjectEvaluator.java:57)
+	at org.gradle.configuration.DefaultProjectsPreparer.prepareProjects(DefaultProjectsPreparer.java:48)
+	at org.gradle.configuration.BuildTreePreparingProjectsPreparer.prepareProjects(BuildTreePreparingProjectsPreparer.java:64)
+	at org.gradle.configuration.BuildOperationFiringProjectsPreparer$ConfigureBuild.run(BuildOperationFiringProjectsPreparer.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+	at org.gradle.internal.operations.DefaultBuildOperationExecutor.run(DefaultBuildOperationExecutor.java:68)
+	at org.gradle.configuration.BuildOperationFiringProjectsPreparer.prepareProjects(BuildOperationFiringProjectsPreparer.java:40)
+	at org.gradle.initialization.VintageBuildModelController.lambda$prepareProjects$1(VintageBuildModelController.java:93)
+	at org.gradle.internal.build.StateTransitionController.lambda$doTransition$1(StateTransitionController.java:222)
+	at org.gradle.internal.build.StateTransitionController.doTransition(StateTransitionController.java:243)
+	at org.gradle.internal.build.StateTransitionController.doTransition(StateTransitionController.java:221)
+	at org.gradle.internal.build.StateTransitionController.transitionIfNotPreviously(StateTransitionController.java:190)
+	at org.gradle.initialization.VintageBuildModelController.prepareProjects(VintageBuildModelController.java:93)
+	at org.gradle.initialization.VintageBuildModelController.doBuildStages(VintageBuildModelController.java:77)
+	at org.gradle.initialization.VintageBuildModelController.prepareToScheduleTasks(VintageBuildModelController.java:64)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$prepareToScheduleTasks$0(DefaultBuildLifecycleController.java:105)
+	at org.gradle.internal.build.StateTransitionController.lambda$doTransition$1(StateTransitionController.java:222)
+	at org.gradle.internal.build.StateTransitionController.doTransition(StateTransitionController.java:243)
+	at org.gradle.internal.build.StateTransitionController.doTransition(StateTransitionController.java:221)
+	at org.gradle.internal.build.StateTransitionController.maybeTransition(StateTransitionController.java:174)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.prepareToScheduleTasks(DefaultBuildLifecycleController.java:103)
+	at org.gradle.internal.buildtree.DefaultBuildTreeWorkPreparer.scheduleRequestedTasks(DefaultBuildTreeWorkPreparer.java:33)
+	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.lambda$doScheduleAndRunTasks$2(DefaultBuildTreeLifecycleController.java:86)
+	at org.gradle.composite.internal.DefaultIncludedBuildTaskGraph.withNewTaskGraph(DefaultIncludedBuildTaskGraph.java:94)
+	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.doScheduleAndRunTasks(DefaultBuildTreeLifecycleController.java:85)
+	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.lambda$runBuild$4(DefaultBuildTreeLifecycleController.java:103)
+	at org.gradle.internal.build.StateTransitionController.lambda$transition$0(StateTransitionController.java:145)
+	at org.gradle.internal.build.StateTransitionController.doTransition(StateTransitionController.java:243)
+	at org.gradle.internal.build.StateTransitionController.transition(StateTransitionController.java:145)
+	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.runBuild(DefaultBuildTreeLifecycleController.java:100)
+	at org.gradle.internal.buildtree.DefaultBuildTreeLifecycleController.scheduleAndRunTasks(DefaultBuildTreeLifecycleController.java:66)
+	at org.gradle.tooling.internal.provider.ExecuteBuildActionRunner.run(ExecuteBuildActionRunner.java:31)
+	at org.gradle.launcher.exec.ChainingBuildActionRunner.run(ChainingBuildActionRunner.java:35)
+	at org.gradle.internal.buildtree.ProblemReportingBuildActionRunner.run(ProblemReportingBuildActionRunner.java:49)
+	at org.gradle.launcher.exec.BuildOutcomeReportingBuildActionRunner.run(BuildOutcomeReportingBuildActionRunner.java:69)
+	at org.gradle.tooling.internal.provider.FileSystemWatchingBuildActionRunner.run(FileSystemWatchingBuildActionRunner.java:114)
+	at org.gradle.launcher.exec.BuildCompletionNotifyingBuildActionRunner.run(BuildCompletionNotifyingBuildActionRunner.java:41)
+	at org.gradle.launcher.exec.RootBuildLifecycleBuildActionExecutor.lambda$execute$0(RootBuildLifecycleBuildActionExecutor.java:40)
+	at org.gradle.composite.internal.DefaultRootBuildState.run(DefaultRootBuildState.java:155)
+	at org.gradle.launcher.exec.RootBuildLifecycleBuildActionExecutor.execute(RootBuildLifecycleBuildActionExecutor.java:40)
+	at org.gradle.internal.buildtree.DefaultBuildTreeContext.execute(DefaultBuildTreeContext.java:40)
+	at org.gradle.launcher.exec.BuildTreeLifecycleBuildActionExecutor.lambda$execute$0(BuildTreeLifecycleBuildActionExecutor.java:65)
+	at org.gradle.internal.buildtree.BuildTreeState.run(BuildTreeState.java:53)
+	at org.gradle.launcher.exec.BuildTreeLifecycleBuildActionExecutor.execute(BuildTreeLifecycleBuildActionExecutor.java:65)
+	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor$3.call(RunAsBuildOperationBuildActionExecutor.java:61)
+	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor$3.call(RunAsBuildOperationBuildActionExecutor.java:57)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+	at org.gradle.launcher.exec.RunAsBuildOperationBuildActionExecutor.execute(RunAsBuildOperationBuildActionExecutor.java:57)
+	at org.gradle.launcher.exec.RunAsWorkerThreadBuildActionExecutor.lambda$execute$0(RunAsWorkerThreadBuildActionExecutor.java:38)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:211)
+	at org.gradle.launcher.exec.RunAsWorkerThreadBuildActionExecutor.execute(RunAsWorkerThreadBuildActionExecutor.java:38)
+	at org.gradle.tooling.internal.provider.ContinuousBuildActionExecutor.execute(ContinuousBuildActionExecutor.java:103)
+	at org.gradle.tooling.internal.provider.SubscribableBuildActionExecutor.execute(SubscribableBuildActionExecutor.java:64)
+	at org.gradle.internal.session.DefaultBuildSessionContext.execute(DefaultBuildSessionContext.java:46)
+	at org.gradle.tooling.internal.provider.BuildSessionLifecycleBuildActionExecuter$ActionImpl.apply(BuildSessionLifecycleBuildActionExecuter.java:100)
+	at org.gradle.tooling.internal.provider.BuildSessionLifecycleBuildActionExecuter$ActionImpl.apply(BuildSessionLifecycleBuildActionExecuter.java:88)
+	at org.gradle.internal.session.BuildSessionState.run(BuildSessionState.java:69)
+	at org.gradle.tooling.internal.provider.BuildSessionLifecycleBuildActionExecuter.execute(BuildSessionLifecycleBuildActionExecuter.java:62)
+	at org.gradle.tooling.internal.provider.BuildSessionLifecycleBuildActionExecuter.execute(BuildSessionLifecycleBuildActionExecuter.java:41)
+	at org.gradle.tooling.internal.provider.GradleThreadBuildActionExecuter.execute(GradleThreadBuildActionExecuter.java:36)
+	at org.gradle.tooling.internal.provider.GradleThreadBuildActionExecuter.execute(GradleThreadBuildActionExecuter.java:25)
+	at org.gradle.tooling.internal.provider.StartParamsValidatingActionExecuter.execute(StartParamsValidatingActionExecuter.java:63)
+	at org.gradle.tooling.internal.provider.StartParamsValidatingActionExecuter.execute(StartParamsValidatingActionExecuter.java:31)
+	at org.gradle.tooling.internal.provider.SessionFailureReportingActionExecuter.execute(SessionFailureReportingActionExecuter.java:58)
+	at org.gradle.tooling.internal.provider.SessionFailureReportingActionExecuter.execute(SessionFailureReportingActionExecuter.java:42)
+	at org.gradle.tooling.internal.provider.SetupLoggingActionExecuter.execute(SetupLoggingActionExecuter.java:47)
+	at org.gradle.tooling.internal.provider.SetupLoggingActionExecuter.execute(SetupLoggingActionExecuter.java:31)
+	at org.gradle.launcher.daemon.server.exec.ExecuteBuild.doBuild(ExecuteBuild.java:65)
+	at org.gradle.launcher.daemon.server.exec.BuildCommandOnly.execute(BuildCommandOnly.java:37)
+	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+	at org.gradle.launcher.daemon.server.exec.WatchForDisconnection.execute(WatchForDisconnection.java:39)
+	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+	at org.gradle.launcher.daemon.server.exec.ResetDeprecationLogger.execute(ResetDeprecationLogger.java:29)
+	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+	at org.gradle.launcher.daemon.server.exec.RequestStopIfSingleUsedDaemon.execute(RequestStopIfSingleUsedDaemon.java:35)
+	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+	at org.gradle.launcher.daemon.server.exec.ForwardClientInput$2.create(ForwardClientInput.java:78)
+	at org.gradle.launcher.daemon.server.exec.ForwardClientInput$2.create(ForwardClientInput.java:75)
+	at org.gradle.util.internal.Swapper.swap(Swapper.java:38)
+	at org.gradle.launcher.daemon.server.exec.ForwardClientInput.execute(ForwardClientInput.java:75)
+	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+	at org.gradle.launcher.daemon.server.exec.LogAndCheckHealth.execute(LogAndCheckHealth.java:50)
+	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+	at org.gradle.launcher.daemon.server.exec.LogToClient.doBuild(LogToClient.java:63)
+	at org.gradle.launcher.daemon.server.exec.BuildCommandOnly.execute(BuildCommandOnly.java:37)
+	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+	at org.gradle.launcher.daemon.server.exec.EstablishBuildEnvironment.doBuild(EstablishBuildEnvironment.java:84)
+	at org.gradle.launcher.daemon.server.exec.BuildCommandOnly.execute(BuildCommandOnly.java:37)
+	at org.gradle.launcher.daemon.server.api.DaemonCommandExecution.proceed(DaemonCommandExecution.java:104)
+	at org.gradle.launcher.daemon.server.exec.StartBuildOrRespondWithBusy$1.run(StartBuildOrRespondWithBusy.java:52)
+	at org.gradle.launcher.daemon.server.DaemonStateCoordinator$1.run(DaemonStateCoordinator.java:297)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.ManagedExecutorImpl$1.run(ManagedExecutorImpl.java:48)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at org.gradle.internal.concurrent.ThreadFactoryImpl$ManagedThreadRunnable.run(ThreadFactoryImpl.java:61)
+	at java.base/java.lang.Thread.run(Thread.java:833)
+
+
+> Configure project :core
+Evaluating project ':core' using build file 'F:\3rd_src\riiablo\core\build.gradle'.
+
+> Configure project :D2MOO_JAVA
+Evaluating project ':D2MOO_JAVA' using build file 'F:\3rd_src\riiablo\D2MOO_JAVA\build.gradle'.
+
+> Configure project :desktop
+Evaluating project ':desktop' using build file 'F:\3rd_src\riiablo\desktop\build.gradle'.
+
+> Configure project :excel
+Evaluating project ':excel' using build file 'F:\3rd_src\riiablo\excel\build.gradle'.
+
+> Configure project :game-data
+Evaluating project ':game-data' using build file 'F:\3rd_src\riiablo\game-data\build.gradle'.
+
+> Configure project :quests
+Evaluating project ':quests' using build file 'F:\3rd_src\riiablo\quests\build.gradle'.
+
+> Configure project :server
+Evaluating project ':server' using build file 'F:\3rd_src\riiablo\server\build.gradle'.
+
+> Configure project :server-domain
+Evaluating project ':server-domain' using build file 'F:\3rd_src\riiablo\server-domain\build.gradle'.
+
+> Configure project :server-systems
+Evaluating project ':server-systems' using build file 'F:\3rd_src\riiablo\server-systems\build.gradle'.
+
+> Configure project :shared
+Evaluating project ':shared' using build file 'F:\3rd_src\riiablo\shared\build.gradle'.
+
+> Configure project :table
+Evaluating project ':table' using build file 'F:\3rd_src\riiablo\table\build.gradle'.
+
+> Configure project :tester
+Evaluating project ':tester' using build file 'F:\3rd_src\riiablo\tester\build.gradle'.
+
+> Configure project :tools
+Evaluating project ':tools' using build file 'F:\3rd_src\riiablo\tools\build.gradle'.
+
+> Configure project :excel:annotation-processor
+Evaluating project ':excel:annotation-processor' using build file 'F:\3rd_src\riiablo\excel\annotation-processor\build.gradle'.
+
+> Configure project :excel:annotations
+Evaluating project ':excel:annotations' using build file 'F:\3rd_src\riiablo\excel\annotations\build.gradle'.
+
+> Configure project :excel:core
+Evaluating project ':excel:core' using build file 'F:\3rd_src\riiablo\excel\core\build.gradle'.
+
+> Configure project :excel:excel-test
+Evaluating project ':excel:excel-test' using build file 'F:\3rd_src\riiablo\excel\excel-test\build.gradle'.
+
+> Configure project :server:bncs
+Evaluating project ':server:bncs' using build file 'F:\3rd_src\riiablo\server\bncs\build.gradle'.
+
+> Configure project :server:bnls
+Evaluating project ':server:bnls' using build file 'F:\3rd_src\riiablo\server\bnls\build.gradle'.
+
+> Configure project :server:d2gs
+Evaluating project ':server:d2gs' using build file 'F:\3rd_src\riiablo\server\d2gs\build.gradle'.
+
+> Configure project :server:mcp
+Evaluating project ':server:mcp' using build file 'F:\3rd_src\riiablo\server\mcp\build.gradle'.
+
+> Configure project :server:netty
+Evaluating project ':server:netty' using build file 'F:\3rd_src\riiablo\server\netty\build.gradle'.
+
+> Configure project :table:annotation-processor
+Evaluating project ':table:annotation-processor' using build file 'F:\3rd_src\riiablo\table\annotation-processor\build.gradle'.
+
+> Configure project :table:annotations
+Evaluating project ':table:annotations' using build file 'F:\3rd_src\riiablo\table\annotations\build.gradle'.
+
+> Configure project :table:core
+Evaluating project ':table:core' using build file 'F:\3rd_src\riiablo\table\core\build.gradle'.
+
+> Configure project :table:integration
+Evaluating project ':table:integration' using build file 'F:\3rd_src\riiablo\table\integration\build.gradle'.
+
+> Configure project :tools:backends
+Evaluating project ':tools:backends' using build file 'F:\3rd_src\riiablo\tools\backends\build.gradle'.
+
+> Configure project :tools:camera
+Evaluating project ':tools:camera' using build file 'F:\3rd_src\riiablo\tools\camera\build.gradle'.
+
+> Configure project :tools:d2s-reader
+Evaluating project ':tools:d2s-reader' using build file 'F:\3rd_src\riiablo\tools\d2s-reader\build.gradle'.
+
+> Configure project :tools:direction
+Evaluating project ':tools:direction' using build file 'F:\3rd_src\riiablo\tools\direction\build.gradle'.
+
+> Configure project :tools:ds1-viewer
+Evaluating project ':tools:ds1-viewer' using build file 'F:\3rd_src\riiablo\tools\ds1-viewer\build.gradle'.
+
+> Configure project :tools:excel-serializer-generator
+Evaluating project ':tools:excel-serializer-generator' using build file 'F:\3rd_src\riiablo\tools\excel-serializer-generator\build.gradle'.
+
+> Configure project :tools:font-metrics
+Evaluating project ':tools:font-metrics' using build file 'F:\3rd_src\riiablo\tools\font-metrics\build.gradle'.
+
+> Configure project :tools:map-debugger
+Evaluating project ':tools:map-debugger' using build file 'F:\3rd_src\riiablo\tools\map-debugger\build.gradle'.
+
+> Configure project :tools:map-viewer
+Evaluating project ':tools:map-viewer' using build file 'F:\3rd_src\riiablo\tools\map-viewer\build.gradle'.
+
+> Configure project :tools:mpq-viewer
+Evaluating project ':tools:mpq-viewer' using build file 'F:\3rd_src\riiablo\tools\mpq-viewer\build.gradle'.
+
+> Configure project :tools:old
+Evaluating project ':tools:old' using build file 'F:\3rd_src\riiablo\tools\old\build.gradle'.
+
+> Configure project :tools:physics
+Evaluating project ':tools:physics' using build file 'F:\3rd_src\riiablo\tools\physics\build.gradle'.
+
+> Configure project :tools:skill-viewer
+Evaluating project ':tools:skill-viewer' using build file 'F:\3rd_src\riiablo\tools\skill-viewer\build.gradle'.
+
+> Configure project :tools:video-player
+Evaluating project ':tools:video-player' using build file 'F:\3rd_src\riiablo\tools\video-player\build.gradle'.
+
+> Configure project :tools:backends:backend-core
+Evaluating project ':tools:backends:backend-core' using build file 'F:\3rd_src\riiablo\tools\backends\backend-core\build.gradle'.
+
+> Configure project :tools:backends:backend-headless
+Evaluating project ':tools:backends:backend-headless' using build file 'F:\3rd_src\riiablo\tools\backends\backend-headless\build.gradle'.
+
+> Configure project :tools:backends:backend-lwjgl
+Evaluating project ':tools:backends:backend-lwjgl' using build file 'F:\3rd_src\riiablo\tools\backends\backend-lwjgl\build.gradle'.
+
+> Configure project :tools:backends:backend-lwjgl3
+Evaluating project ':tools:backends:backend-lwjgl3' using build file 'F:\3rd_src\riiablo\tools\backends\backend-lwjgl3\build.gradle'.
+All projects evaluated.
+Selected primary task ':core:test' from project :core
+Tasks to be executed: [task ':core:createFlatBuffers', task ':core:createVersionSource', task ':core:generateSources', task ':verifyModuleBoundaries', task ':D2MOO_JAVA:compileJava', task ':shared:compileJava', task ':game-data:compileJava', task ':server-domain:compileJava', task ':quests:compileJava', task ':server-systems:compileJava', task ':table:core:compileJava', task ':table:annotations:compileJava', task ':core:compileJava', task ':core:processResources', task ':core:classes', task ':core:compileTestJava', task ':core:processTestResources', task ':core:testClasses', task ':D2MOO_JAVA:processResources', task ':D2MOO_JAVA:classes', task ':D2MOO_JAVA:jar', task ':game-data:processResources', task ':game-data:classes', task ':game-data:jar', task ':quests:processResources', task ':quests:classes', task ':quests:jar', task ':server-domain:processResources', task ':server-domain:classes', task ':server-domain:jar', task ':server-systems:processResources', task ':server-systems:classes', task ':server-systems:jar', task ':shared:processResources', task ':shared:classes', task ':shared:jar', task ':table:annotations:processResources', task ':table:annotations:classes', task ':table:annotations:jar', task ':table:core:processResources', task ':table:core:classes', task ':table:core:jar', task ':core:test']
+Tasks that were excluded: []
+:core:createFlatBuffers (Thread[Execution worker for ':',5,main]) started.
+
+> Task :core:createFlatBuffers UP-TO-DATE
+Watching 1 directory hierarchies to track changes
+Caching disabled for task ':core:createFlatBuffers' because:
+  Build cache is disabled
+Skipping task ':core:createFlatBuffers' as it is up-to-date.
+:core:createFlatBuffers (Thread[Execution worker for ':',5,main]) completed. Took 0.23 secs.
+:core:createVersionSource (Thread[Execution worker for ':',5,main]) started.
+
+> Task :core:createVersionSource
+Caching disabled for task ':core:createVersionSource' because:
+  Build cache is disabled
+Task ':core:createVersionSource' is not up-to-date because:
+  Task.upToDateWhen is false.
+:core:createVersionSource (Thread[Execution worker for ':',5,main]) completed. Took 0.038 secs.
+:core:generateSources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :core:generateSources
+Skipping task ':core:generateSources' as it has no actions.
+:core:generateSources (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:verifyModuleBoundaries (Thread[Execution worker for ':',5,main]) started.
+
+> Task :verifyModuleBoundaries
+Caching disabled for task ':verifyModuleBoundaries' because:
+  Build cache is disabled
+Task ':verifyModuleBoundaries' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Module boundaries verified: strict project DAG and zero host/presentation/global RNG access in extracted modules.
+:verifyModuleBoundaries (Thread[Execution worker for ':',5,main]) completed. Took 2.348 secs.
+:D2MOO_JAVA:compileJava (Thread[Execution worker for ':',5,main]) started.
+
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+Caching disabled for task ':D2MOO_JAVA:compileJava' because:
+  Build cache is disabled
+Skipping task ':D2MOO_JAVA:compileJava' as it is up-to-date.
+:D2MOO_JAVA:compileJava (Thread[Execution worker for ':',5,main]) completed. Took 0.186 secs.
+:shared:compileJava (Thread[Execution worker for ':',5,main]) started.
+
+> Task :shared:compileJava UP-TO-DATE
+Caching disabled for task ':shared:compileJava' because:
+  Build cache is disabled
+Skipping task ':shared:compileJava' as it is up-to-date.
+:shared:compileJava (Thread[Execution worker for ':',5,main]) completed. Took 0.083 secs.
+:game-data:compileJava (Thread[Execution worker for ':',5,main]) started.
+
+> Task :game-data:compileJava UP-TO-DATE
+Caching disabled for task ':game-data:compileJava' because:
+  Build cache is disabled
+Skipping task ':game-data:compileJava' as it is up-to-date.
+:game-data:compileJava (Thread[Execution worker for ':',5,main]) completed. Took 0.211 secs.
+:server-domain:compileJava (Thread[Execution worker for ':',5,main]) started.
+
+> Task :server-domain:compileJava UP-TO-DATE
+Caching disabled for task ':server-domain:compileJava' because:
+  Build cache is disabled
+Skipping task ':server-domain:compileJava' as it is up-to-date.
+:server-domain:compileJava (Thread[Execution worker for ':',5,main]) completed. Took 0.286 secs.
+:quests:compileJava (Thread[Execution worker for ':',5,main]) started.
+
+> Task :quests:compileJava UP-TO-DATE
+Caching disabled for task ':quests:compileJava' because:
+  Build cache is disabled
+Skipping task ':quests:compileJava' as it is up-to-date.
+:quests:compileJava (Thread[Execution worker for ':',5,main]) completed. Took 0.11 secs.
+:server-systems:compileJava (Thread[Execution worker for ':',5,main]) started.
+
+> Task :server-systems:compileJava UP-TO-DATE
+Caching disabled for task ':server-systems:compileJava' because:
+  Build cache is disabled
+Skipping task ':server-systems:compileJava' as it is up-to-date.
+:server-systems:compileJava (Thread[Execution worker for ':',5,main]) completed. Took 0.082 secs.
+:table:core:compileJava (Thread[Execution worker for ':',5,main]) started.
+
+> Task :table:core:compileJava UP-TO-DATE
+Caching disabled for task ':table:core:compileJava' because:
+  Build cache is disabled
+Skipping task ':table:core:compileJava' as it is up-to-date.
+:table:core:compileJava (Thread[Execution worker for ':',5,main]) completed. Took 0.046 secs.
+:table:annotations:compileJava (Thread[Execution worker for ':',5,main]) started.
+
+> Task :table:annotations:compileJava UP-TO-DATE
+Caching disabled for task ':table:annotations:compileJava' because:
+  Build cache is disabled
+Skipping task ':table:annotations:compileJava' as it is up-to-date.
+:table:annotations:compileJava (Thread[Execution worker for ':',5,main]) completed. Took 0.092 secs.
+:core:compileJava (Thread[Execution worker for ':',5,main]) started.
+
+> Task :core:compileJava
+Caching disabled for task ':core:compileJava' because:
+  Build cache is disabled
+Task ':core:compileJava' is not up-to-date because:
+  Input property 'stableSources' file F:\3rd_src\riiablo\core\build\generated-src\main\java\com\riiablo\RiiabloVersion.java has changed.
+Created classpath snapshot for incremental compilation in 0.107 secs.
+Compiling with toolchain 'C:\Program Files\Java\jdk-17'.
+Compiling with JDK Java compiler API.
+Incremental compilation of 4 classes completed in 6.305 secs.
+Class dependency analysis for incremental compilation took 0.639 secs.
+:core:compileJava (Thread[Execution worker for ':',5,main]) completed. Took 8.299 secs.
+:core:processResources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :core:processResources UP-TO-DATE
+file or directory 'F:\3rd_src\riiablo\core\src\main\resources', not found
+Caching disabled for task ':core:processResources' because:
+  Build cache is disabled
+Skipping task ':core:processResources' as it is up-to-date.
+:core:processResources (Thread[Execution worker for ':',5,main]) completed. Took 0.141 secs.
+:core:classes (Thread[Execution worker for ':',5,main]) started.
+
+> Task :core:classes
+Skipping task ':core:classes' as it has no actions.
+:core:classes (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:core:compileTestJava (Thread[Execution worker for ':',5,main]) started.
+
+> Task :core:compileTestJava
+Caching disabled for task ':core:compileTestJava' because:
+  Build cache is disabled
+Task ':core:compileTestJava' is not up-to-date because:
+  Input property 'classpath' file F:\3rd_src\riiablo\core\build\classes\java\main\com\riiablo\RiiabloVersion.class has changed.
+  Input property 'stableSources' file F:\3rd_src\riiablo\core\src\test\java\com\riiablo\presentation\DruidSpiritPresentationTest.java has been added.
+Created classpath snapshot for incremental compilation in 0.233 secs.
+Compiling with toolchain 'C:\Program Files\Java\jdk-17'.
+Compiling with JDK Java compiler API.
+ע: ĳЩ�����ļ�ʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+Incremental compilation of 672 classes completed in 39.811 secs.
+Class dependency analysis for incremental compilation took 0.826 secs.
+:core:compileTestJava (Thread[Execution worker for ':',5,main]) completed. Took 42.772 secs.
+:core:processTestResources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :core:processTestResources UP-TO-DATE
+Caching disabled for task ':core:processTestResources' because:
+  Build cache is disabled
+Skipping task ':core:processTestResources' as it is up-to-date.
+:core:processTestResources (Thread[Execution worker for ':',5,main]) completed. Took 0.082 secs.
+:core:testClasses (Thread[Execution worker for ':',5,main]) started.
+
+> Task :core:testClasses
+Skipping task ':core:testClasses' as it has no actions.
+:core:testClasses (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:D2MOO_JAVA:processResources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+file or directory 'F:\3rd_src\riiablo\D2MOO_JAVA\src\main\resources', not found
+Skipping task ':D2MOO_JAVA:processResources' as it has no source files and no previous output files.
+:D2MOO_JAVA:processResources (Thread[Execution worker for ':',5,main]) completed. Took 0.003 secs.
+:D2MOO_JAVA:classes (Thread[Execution worker for ':',5,main]) started.
+
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+Skipping task ':D2MOO_JAVA:classes' as it has no actions.
+:D2MOO_JAVA:classes (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:D2MOO_JAVA:jar (Thread[Execution worker for ':',5,main]) started.
+
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+Caching disabled for task ':D2MOO_JAVA:jar' because:
+  Build cache is disabled
+Skipping task ':D2MOO_JAVA:jar' as it is up-to-date.
+:D2MOO_JAVA:jar (Thread[Execution worker for ':',5,main]) completed. Took 0.017 secs.
+:game-data:processResources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :game-data:processResources NO-SOURCE
+file or directory 'F:\3rd_src\riiablo\game-data\src\main\resources', not found
+Skipping task ':game-data:processResources' as it has no source files and no previous output files.
+:game-data:processResources (Thread[Execution worker for ':',5,main]) completed. Took 0.001 secs.
+:game-data:classes (Thread[Execution worker for ':',5,main]) started.
+
+> Task :game-data:classes UP-TO-DATE
+Skipping task ':game-data:classes' as it has no actions.
+:game-data:classes (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:game-data:jar (Thread[Execution worker for ':',5,main]) started.
+
+> Task :game-data:jar UP-TO-DATE
+Caching disabled for task ':game-data:jar' because:
+  Build cache is disabled
+Skipping task ':game-data:jar' as it is up-to-date.
+:game-data:jar (Thread[Execution worker for ':',5,main]) completed. Took 0.018 secs.
+:quests:processResources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :quests:processResources NO-SOURCE
+file or directory 'F:\3rd_src\riiablo\quests\src\main\resources', not found
+Skipping task ':quests:processResources' as it has no source files and no previous output files.
+:quests:processResources (Thread[Execution worker for ':',5,main]) completed. Took 0.001 secs.
+:quests:classes (Thread[Execution worker for ':',5,main]) started.
+
+> Task :quests:classes UP-TO-DATE
+Skipping task ':quests:classes' as it has no actions.
+:quests:classes (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:quests:jar (Thread[Execution worker for ':',5,main]) started.
+
+> Task :quests:jar UP-TO-DATE
+Caching disabled for task ':quests:jar' because:
+  Build cache is disabled
+Skipping task ':quests:jar' as it is up-to-date.
+:quests:jar (Thread[Execution worker for ':',5,main]) completed. Took 0.018 secs.
+:server-domain:processResources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :server-domain:processResources NO-SOURCE
+file or directory 'F:\3rd_src\riiablo\server-domain\src\main\resources', not found
+Skipping task ':server-domain:processResources' as it has no source files and no previous output files.
+:server-domain:processResources (Thread[Execution worker for ':',5,main]) completed. Took 0.001 secs.
+:server-domain:classes (Thread[Execution worker for ':',5,main]) started.
+
+> Task :server-domain:classes UP-TO-DATE
+Skipping task ':server-domain:classes' as it has no actions.
+:server-domain:classes (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:server-domain:jar (Thread[Execution worker for ':',5,main]) started.
+
+> Task :server-domain:jar UP-TO-DATE
+Caching disabled for task ':server-domain:jar' because:
+  Build cache is disabled
+Skipping task ':server-domain:jar' as it is up-to-date.
+:server-domain:jar (Thread[Execution worker for ':',5,main]) completed. Took 0.014 secs.
+:server-systems:processResources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :server-systems:processResources NO-SOURCE
+file or directory 'F:\3rd_src\riiablo\server-systems\src\main\resources', not found
+Skipping task ':server-systems:processResources' as it has no source files and no previous output files.
+:server-systems:processResources (Thread[Execution worker for ':',5,main]) completed. Took 0.003 secs.
+:server-systems:classes (Thread[Execution worker for ':',5,main]) started.
+
+> Task :server-systems:classes UP-TO-DATE
+Skipping task ':server-systems:classes' as it has no actions.
+:server-systems:classes (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:server-systems:jar (Thread[Execution worker for ':',5,main]) started.
+
+> Task :server-systems:jar UP-TO-DATE
+Caching disabled for task ':server-systems:jar' because:
+  Build cache is disabled
+Skipping task ':server-systems:jar' as it is up-to-date.
+:server-systems:jar (Thread[Execution worker for ':',5,main]) completed. Took 0.024 secs.
+:shared:processResources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :shared:processResources NO-SOURCE
+file or directory 'F:\3rd_src\riiablo\shared\src\main\resources', not found
+Skipping task ':shared:processResources' as it has no source files and no previous output files.
+:shared:processResources (Thread[Execution worker for ':',5,main]) completed. Took 0.001 secs.
+:shared:classes (Thread[Execution worker for ':',5,main]) started.
+
+> Task :shared:classes UP-TO-DATE
+Skipping task ':shared:classes' as it has no actions.
+:shared:classes (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:shared:jar (Thread[Execution worker for ':',5,main]) started.
+
+> Task :shared:jar UP-TO-DATE
+Caching disabled for task ':shared:jar' because:
+  Build cache is disabled
+Skipping task ':shared:jar' as it is up-to-date.
+:shared:jar (Thread[Execution worker for ':',5,main]) completed. Took 0.012 secs.
+:table:annotations:processResources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :table:annotations:processResources NO-SOURCE
+file or directory 'F:\3rd_src\riiablo\table\annotations\src\main\resources', not found
+Skipping task ':table:annotations:processResources' as it has no source files and no previous output files.
+:table:annotations:processResources (Thread[Execution worker for ':',5,main]) completed. Took 0.001 secs.
+:table:annotations:classes (Thread[Execution worker for ':',5,main]) started.
+
+> Task :table:annotations:classes UP-TO-DATE
+Skipping task ':table:annotations:classes' as it has no actions.
+:table:annotations:classes (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:table:annotations:jar (Thread[Execution worker for ':',5,main]) started.
+
+> Task :table:annotations:jar UP-TO-DATE
+Caching disabled for task ':table:annotations:jar' because:
+  Build cache is disabled
+Skipping task ':table:annotations:jar' as it is up-to-date.
+:table:annotations:jar (Thread[Execution worker for ':',5,main]) completed. Took 0.019 secs.
+:table:core:processResources (Thread[Execution worker for ':',5,main]) started.
+
+> Task :table:core:processResources NO-SOURCE
+file or directory 'F:\3rd_src\riiablo\table\core\src\main\resources', not found
+Skipping task ':table:core:processResources' as it has no source files and no previous output files.
+:table:core:processResources (Thread[Execution worker for ':',5,main]) completed. Took 0.001 secs.
+:table:core:classes (Thread[Execution worker for ':',5,main]) started.
+
+> Task :table:core:classes UP-TO-DATE
+Skipping task ':table:core:classes' as it has no actions.
+:table:core:classes (Thread[Execution worker for ':',5,main]) completed. Took 0.0 secs.
+:table:core:jar (Thread[Execution worker for ':',5,main]) started.
+
+> Task :table:core:jar UP-TO-DATE
+Caching disabled for task ':table:core:jar' because:
+  Build cache is disabled
+Skipping task ':table:core:jar' as it is up-to-date.
+:table:core:jar (Thread[Execution worker for ':',5,main]) completed. Took 0.016 secs.
+:core:test (Thread[Execution worker for ':',5,main]) started.
+
+> Task :core:test
+Caching disabled for task ':core:test' because:
+  Build cache is disabled
+Task ':core:test' is not up-to-date because:
+  Value of input property 'filter.commandLineIncludePatterns' has changed for task ':core:test'
+Starting process 'Gradle Test Executor 1'. Working directory: F:\3rd_src\riiablo\core Command: C:\Program Files\Java\jdk-17\bin\java.exe -Dgdx.test.headless=true -Djava.awt.headless=true -Dorg.gradle.internal.worker.tmpdir=F:\3rd_src\riiablo\core\build\tmp\test\work -Dorg.gradle.native=false @F:\Gradle\.tmp\gradle-worker-classpath1209982742142140860txt -Xmx2g -Dfile.encoding=UTF-8 -Duser.country=CN -Duser.language=zh -Duser.variant -ea worker.org.gradle.process.internal.worker.GradleWorkerMain 'Gradle Test Executor 1'
+Successfully started process 'Gradle Test Executor 1'
+
+Gradle Test Executor 1 started executing tests.
+
+> Task :core:test
+
+Gradle Test Executor 1 STANDARD_ERROR
+    11�� 23, 2026 4:49:20 ���� org.junit.platform.launcher.core.EngineDiscoveryOrchestrator lambda$logTestDescriptorExclusionReasons$7
+    ��Ϣ: 178 containers and 5727 tests were Method or class mismatch
+
+DruidSpiritPresentationTest STANDARD_OUT
+    [MPQ] Loading patch_d2.mpq...
+    [MPQ] Loading d2exp.mpq...
+    [MPQ] Loading d2xmusic.mpq...
+    [MPQ] Loading d2xtalk.mpq...
+    [MPQ] Loading d2xvideo.mpq...
+    [MPQ] Loading d2data.mpq...
+    [MPQ] Loading d2char.mpq...
+    [MPQ] Loading d2sfx.mpq...
+    [MPQ] Loading d2music.mpq...
+    [MPQ] Loading d2speech.mpq...
+    [MPQ] Loading d2video.mpq...
+
+DruidSpiritPresentationTest STANDARD_ERROR
+    [Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+    [Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+
+DruidSpiritPresentationTest > linkedAuraRowsSeparateControllerAndBeneficiaryStates() STANDARD_OUT
+    SPIRIT_AURA skill=226 aura=298 name=Oak Sage Aura source=oaksagecontrol target=oaksage filter=65795 range=ln12
+    SPIRIT_AURA skill=236 aura=297 name=Wolverine Aura source=wolverinecontrol target=wolverine filter=65795 range=ln12
+    SPIRIT_AURA skill=246 aura=296 name=Barbs Aura source=barbscontrol target=barbs filter=65795 range=ln12
+
+Gradle Test Executor 1 finished executing tests.
+
+> Task :core:test
+Finished generating test XML results (0.025 secs) into: F:\3rd_src\riiablo\core\build\test-results\test
+Generating HTML test report...
+Finished generating test html results (0.047 secs) into: F:\3rd_src\riiablo\core\build\reports\tests\test
+:core:test (Thread[Execution worker for ':',5,main]) completed. Took 21.119 secs.
+
+BUILD SUCCESSFUL in 1m 40s
+24 actionable tasks: 5 executed, 19 up-to-date
+Watched directory hierarchies: [F:\3rd_src\riiablo]

@@ -1,0 +1,15 @@
+{
+  "id": "20261120-084807-09f7690b",
+  "status": "completed",
+  "started": 1795135687.3395662,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "poison-javelin-directions-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261120-084807-09f7690b\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795135748.2530417
+}

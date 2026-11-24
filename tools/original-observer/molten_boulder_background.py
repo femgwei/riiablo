@@ -49,12 +49,12 @@ def input_desktop_name(win):
         win.close_desktop(handle)
 
 
-def run_private(home, output, expiry_probe=False, direction_batch=False):
+def run_private(home, output, expiry_probe=False, direction_batch=False, class_batch=False, surface_batch=False, firestorm_callbacks=False, volcano_hits=False, wind_batch=False, wind_passive=False):
     output.mkdir(parents=True, exist_ok=False)
     win = Win32()
     private = None
     child = None
-    report = dict(status="starting", background_probe="molten-boulder", batches=[],
+    report = dict(status="starting", background_probe="druid-wind-batch" if wind_batch else "druid-surface-batch" if surface_batch else "druid-elemental-batch" if class_batch else "molten-boulder", batches=[],
                   switched_desktop=False, scope="private desktop original runtime; no pixel comparison")
     try:
         if existing_loader_pids():
@@ -84,6 +84,18 @@ def run_private(home, output, expiry_probe=False, direction_batch=False):
             arguments.append("--expiry-probe")
         if direction_batch:
             arguments.append("--directions")
+        if class_batch:
+            arguments.append("--class-batch")
+        if surface_batch:
+            arguments.append("--surface-batch")
+        if wind_batch:
+            arguments.append("--wind-batch")
+        if wind_passive:
+            arguments.append("--wind-passive")
+        if firestorm_callbacks:
+            arguments.append("--firestorm-callbacks")
+        if volcano_hits:
+            arguments.append("--volcano-hits")
         command = C.create_unicode_buffer(subprocess.list2cmdline(arguments))
         info = PROCESS_INFORMATION()
         win.checked(win.create_process(sys.executable, command, None, None, False,
@@ -159,7 +171,8 @@ def prepare_fixture(home, output):
                 source_sha256=hashlib.sha256(source).hexdigest())
 
 
-def worker(home, output, expiry_probe=False, direction_batch=False):
+def worker(home, output, expiry_probe=False, direction_batch=False, class_batch=False, surface_batch=False, firestorm_callbacks=False, volcano_hits=False, wind_batch=False, wind_passive=False):
+    class_batch = class_batch or surface_batch or wind_batch
     output.mkdir(parents=True, exist_ok=False)
     win = Win32()
     game = None
@@ -173,7 +186,16 @@ def worker(home, output, expiry_probe=False, direction_batch=False):
             raise ValueError("Worker must run on a non-input private desktop")
         if existing_loader_pids():
             raise ValueError("Another original game appeared before launch")
-        report["fixture"] = prepare_fixture(home, output)
+        if wind_passive:
+            preflight = subprocess.run([sys.executable, str(ROOT / "druid_wind_passive.py"), "--help"],
+                cwd=str(ROOT), creationflags=subprocess.CREATE_NO_WINDOW, capture_output=True)
+            if preflight.returncode:
+                raise RuntimeError("Passive collector import preflight failed: " + preflight.stderr.decode("utf8", errors="replace"))
+        if class_batch:
+            from prepare_druid_batch_fixture import prepare
+            report["fixture"] = prepare(home, output, surface=surface_batch, wind=wind_batch)
+        else:
+            report["fixture"] = prepare_fixture(home, output)
         game = subprocess.Popen([str(home / LOADER_NAME), "-w", "-res800"], cwd=str(home))
         report.update(status="loading", pid=game.pid)
         write_json(output / "summary.json", report)
@@ -199,18 +221,66 @@ def worker(home, output, expiry_probe=False, direction_batch=False):
                        ROOT / "native-harness" / "d2game_controller.cpp", Path(__file__).resolve(),
                        ROOT / "prepare_molten_boulder_fixture.py", ROOT / "test-character.py"):
             shutil.copy2(source, provenance / source.name)
+        if class_batch:
+            collectors = ("d2game_druid_fissure", "d2game_druid_volcano") if surface_batch else ("d2game_druid_firestorm", "d2game_druid_molten")
+            if wind_batch:
+                collectors = ("d2game_druid_twister", "d2game_druid_tornado")
+            if firestorm_callbacks:
+                collectors = ("d2game_druid_firestorm_callbacks", "d2game_druid_molten")
+            if volcano_hits:
+                collectors = ("d2game_druid_fissure", "d2game_druid_volcano_hits")
+            for filename in tuple(name + ".cpp" for name in collectors) + ("d2game_poison_javelin.cpp",):
+                shutil.copy2(ROOT / "native-harness" / filename, provenance / filename)
+            shutil.copy2(ROOT / "prepare_druid_batch_fixture.py", provenance / "prepare_druid_batch_fixture.py")
+            for filename in (name + ".exe" for name in collectors):
+                shutil.copy2(ROOT / "native-harness" / "build" / filename, provenance / filename)
+        if wind_passive:
+            for filename in ("druid_wind_passive.py", "observer.py", "scene_reader.py"):
+                shutil.copy2(ROOT / filename, provenance / filename)
         report["controller_source_sha256"] = digest(provenance / "d2game_controller.cpp")
         report["runner_source_sha256"] = digest(provenance / Path(__file__).name)
         # Execute the frozen copy, so later builds cannot race this batch.
         native = provenance / native.name
         report["captures"] = []
-        for direction in (range(8) if direction_batch else [-1]):
-            capture_name = "capture" if direction < 0 else "capture-dir-" + str(direction)
-            arguments = [str(native), str(game.pid), str(home), str(output / capture_name)]
-            arguments.extend([str(direction), "expiry" if expiry_probe else "molten"])
+        cases = ([dict(name="firestorm", skill_id=225, key=0x70, collector="d2game_druid_firestorm.exe", mode="firestorm", direction=-1),
+                  dict(name="molten-boulder", skill_id=229, key=0x71, collector="d2game_druid_molten.exe", mode="molten", direction=-1)]
+                 if class_batch else [dict(name="capture" if direction < 0 else "capture-dir-" + str(direction),
+                     direction=direction, mode="expiry" if expiry_probe else "molten")
+                     for direction in (range(8) if direction_batch else [-1])])
+        if surface_batch:
+            cases = [dict(name="fissure", skill_id=234, key=0x70, collector="d2game_druid_fissure.exe", mode="fissure", direction=-1),
+                     dict(name="volcano", skill_id=244, key=0x71, collector="d2game_druid_volcano.exe", mode="volcano", direction=-1)]
+        if wind_batch:
+            cases = [dict(name="twister", skill_id=240, key=0x70, collector="d2game_druid_twister.exe", mode="twister", direction=-1),
+                     dict(name="tornado", skill_id=245, key=0x71, collector="d2game_druid_tornado.exe", mode="tornado", direction=-1)]
+        if firestorm_callbacks:
+            cases[0]["collector"] = "d2game_druid_firestorm_callbacks.exe"
+        if volcano_hits:
+            cases[1]["collector"] = "d2game_druid_volcano_hits.exe"
+        game_identity = None
+        for case in cases:
+            direction, capture_name = case["direction"], case["name"]
+            if class_batch:
+                windows = [w for w in win.windows(current, game.pid) if w["class"] == "Diablo II"]
+                if len(windows) != 1:
+                    raise RuntimeError("Expected one private game window for skill hotkey")
+                # Target only the private HWND. Native collector independently
+                # verifies selected server skill and its hard-point level.
+                key = case["key"]
+                scan = api(win.u, "MapVirtualKeyW", W.UINT, W.UINT, W.UINT)(key, 0)
+                win.post(windows[0]["hwnd"], 0x100, key, 1 | scan << 16)
+                win.post(windows[0]["hwnd"], 0x101, key, 1 | scan << 16 | 0xC0000000)
+                time.sleep(0.8)
+            executable = provenance / case["collector"] if class_batch else native
+            arguments = [str(executable), str(game.pid), str(home), str(output / capture_name),
+                         str(direction), case["mode"]]
+            if wind_passive:
+                executable = provenance / "druid_wind_passive.py"
+                arguments = [sys.executable, str(executable), "--pid", str(game.pid), "--home", str(home),
+                             "--output", str(output / capture_name), "--skill", str(case["skill_id"])]
             with (output / (capture_name + "-stdout.log")).open("w", encoding="utf8") as out, (output / (capture_name + "-stderr.log")).open("w", encoding="utf8") as err:
                 helper = subprocess.Popen(arguments, cwd=str(ROOT), creationflags=subprocess.CREATE_NO_WINDOW, stdout=out, stderr=err)
-                report.update(status="capturing", helper_pid=helper.pid, direction=direction, cleanup_attention_required=True)
+                report.update(status="capturing", helper_pid=helper.pid, direction=direction, cleanup_attention_required=not wind_passive)
                 write_json(output / "summary.json", report)
                 helper.wait()  # Helper owns debugger cleanup; do not terminate it.
             native_report = json.loads((output / capture_name / "summary.json").read_text(encoding="utf8"))
@@ -218,11 +288,38 @@ def worker(home, output, expiry_probe=False, direction_batch=False):
             report["cleanup_attention_required"] = not native_report.get("cleanup_confirmed", False)
             skipped = (direction_batch and not report["cleanup_attention_required"]
                        and native_report.get("error", "").startswith("No clear 12-subtile Molten Boulder corridor"))
-            report["captures"].append(dict(direction=direction, path=capture_name,
+            report["captures"].append(dict(direction=direction, path=capture_name, skill_id=case.get("skill_id", 229),
+                game_pid=game.pid, collector_sha256=digest(executable),
                 status="skipped_no_clear_corridor" if skipped else native_report["status"], native=native_report))
             write_json(output / "summary.json", report)
             if (helper.returncode or report["cleanup_attention_required"]) and not skipped:
                 raise RuntimeError("Original Molten Boulder capture failed; inspect native report")
+            if class_batch:
+                identity = json.loads((output / capture_name / "identity.json").read_text(encoding="utf8"))
+                if identity["skill"] != case["skill_id"]:
+                    raise RuntimeError("Capture skill identity mismatch")
+                session_identity = identity["client_player"] if wind_passive else identity["game"]
+                if game_identity is not None and game_identity != session_identity:
+                    raise RuntimeError("Batch unexpectedly changed the game session")
+                game_identity = session_identity
+                residual = []
+                with (output / capture_name / "missiles.jsonl").open(encoding="utf8") as stream:
+                    for line in stream:
+                        sample = json.loads(line)
+                        if not wind_passive and sample["step"] == 240:
+                            residual.append(sample)
+                if wind_passive and native_report.get("final_client_units") != 0:
+                    raise RuntimeError("Passive client missiles remain at batch boundary")
+                report["captures"][-1]["residual_sample_count"] = len(residual)
+                if residual:
+                    raise RuntimeError("Skill effects still active at batch boundary; extend capture before proceeding")
+        if class_batch:
+            report["same_process_verified"] = len({c["game_pid"] for c in report["captures"]}) == 1
+            report["same_game_address"] = None if wind_passive else game_identity
+            if wind_passive:
+                report["same_client_player_address"] = game_identity
+                report["observation_mode"] = "unsuspended_client_memory_polling"
+            report["launch_count"] = 1
         if not any(c["status"] == "passed" for c in report["captures"]):
             raise RuntimeError("No requested direction could be captured in the current room")
         report["status"] = "passed"
@@ -254,7 +351,19 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--expiry-probe", action="store_true")
     parser.add_argument("--directions", action="store_true")
+    parser.add_argument("--class-batch", action="store_true")
+    parser.add_argument("--surface-batch", action="store_true")
+    parser.add_argument("--wind-batch", action="store_true")
+    parser.add_argument("--wind-passive", action="store_true")
+    parser.add_argument("--firestorm-callbacks", action="store_true")
+    parser.add_argument("--volcano-hits", action="store_true")
     args = parser.parse_args()
-    if args.expiry_probe and args.directions:
+    if sum((args.expiry_probe, args.directions, args.class_batch, args.surface_batch, args.wind_batch)) > 1:
         parser.error("Expiry probe is a fixed single-cast experiment")
-    raise SystemExit(worker(args.home, args.output, args.expiry_probe, args.directions))
+    if args.firestorm_callbacks and not args.class_batch:
+        parser.error("Callback trace requires the fixed elemental batch fixture")
+    if args.volcano_hits and not args.surface_batch:
+        parser.error("Volcano hit trace requires the fixed surface batch fixture")
+    if args.wind_passive and not args.wind_batch:
+        parser.error("Passive wind polling requires the fixed wind fixture")
+    raise SystemExit(worker(args.home, args.output, args.expiry_probe, args.directions, args.class_batch, args.surface_batch, args.firestorm_callbacks, args.volcano_hits, args.wind_batch, args.wind_passive))

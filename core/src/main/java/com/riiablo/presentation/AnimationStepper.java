@@ -51,6 +51,14 @@ public class AnimationStepper extends IntervalIteratingSystem {
       phase = "standalone";
       if (mMissile.has(entityId)) {
         Missile missile = mMissile.get(entityId);
+        if (NativeDruidWindPresentation.handles(missile)) {
+          NativeDruidWindPresentation.initialize(missile, wrapper.animation);
+          return;
+        }
+        if (NativeInfernoPresentation.handles(missile)) {
+          NativeInfernoPresentation.initialize(missile, wrapper.animation);
+          return;
+        }
         if (NativeMoltenBoulderPresentation.handles(missile)) {
           if (!missile.authoritative
               && com.riiablo.engine.server.missile.NativeMoltenBoulder.isEmerge(missile.missile))

@@ -1,0 +1,876 @@
+{
+  "schema": 1,
+  "class_code": "nec",
+  "priority": 2,
+  "deferred": false,
+  "source_inventory_sha256": "11b24a3fc8d01529146304b770a44fbf3c2b38f016a39fe0163bf4573bef7b2f",
+  "fixture_policy": "Record learned skills/equipment/synergies; separate loadouts or sessions when prerequisites conflict",
+  "family_classification": "Table-based scheduling hint, requires per-skill review",
+  "skills": [
+    {
+      "skill_id": 66,
+      "skill": "Amplify Damage",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CurseArea.dcc",
+        "data/global/missiles/CurseCast.dcc",
+        "data/global/overlays/CurseAmplifyDamageEffect.dcc",
+        "data/global/overlays/CurseHit.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 67,
+      "skill": "Teeth",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BoneCast.dcc",
+        "data/global/missiles/teethMissile.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 68,
+      "skill": "Bone Armor",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/BoneShieldBack.dcc",
+        "data/global/overlays/BoneShieldEmerge.dcc",
+        "data/global/overlays/BoneShieldFront.dcc",
+        "data/global/overlays/null.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 69,
+      "skill": "Skeleton Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 70,
+      "skill": "Raise Skeleton",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BloodLarge01.dcc",
+        "data/global/missiles/BloodLarge02.dcc",
+        "data/global/missiles/CorpseExplodeGuts.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 71,
+      "skill": "Dim Vision",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CurseArea.dcc",
+        "data/global/missiles/CurseCast.dcc",
+        "data/global/overlays/CurseDimVisionEffect.dcc",
+        "data/global/overlays/CurseHit.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 72,
+      "skill": "Weaken",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CurseArea.dcc",
+        "data/global/missiles/CurseCast.dcc",
+        "data/global/overlays/CurseHit.dcc",
+        "data/global/overlays/CurseWeakenEffect.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 73,
+      "skill": "Poison Dagger",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 74,
+      "skill": "Corpse Explosion",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BloodLarge01.dcc",
+        "data/global/missiles/BloodLarge02.dcc",
+        "data/global/missiles/CorpseExplodeGuts.dcc",
+        "data/global/missiles/ExpArrowExplode.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 75,
+      "skill": "Clay Golem",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 76,
+      "skill": "Iron Maiden",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CurseArea.dcc",
+        "data/global/missiles/CurseCast.dcc",
+        "data/global/overlays/CurseHit.dcc",
+        "data/global/overlays/CurseIronMaidenEffect.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 77,
+      "skill": "Terror",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CurseArea.dcc",
+        "data/global/missiles/CurseCast.dcc",
+        "data/global/overlays/CurseHit.dcc",
+        "data/global/overlays/CurseTerrorEffect.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 78,
+      "skill": "Bone Wall",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 79,
+      "skill": "Golem Mastery",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 80,
+      "skill": "Raise Skeletal Mage",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BloodLarge01.dcc",
+        "data/global/missiles/BloodLarge02.dcc",
+        "data/global/missiles/CorpseExplodeGuts.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 81,
+      "skill": "Confuse",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CurseArea.dcc",
+        "data/global/missiles/CurseCast.dcc",
+        "data/global/overlays/CurseConfuseEffect.dcc",
+        "data/global/overlays/CurseHit.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 82,
+      "skill": "Life Tap",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CurseArea.dcc",
+        "data/global/missiles/CurseCast.dcc",
+        "data/global/overlays/CurseHit.dcc",
+        "data/global/overlays/CurseRevVampireHit.dcc",
+        "data/global/overlays/CurseReverseVampireEffect.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 83,
+      "skill": "Poison Explosion",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CorpseExplodeGutsPoison.dcc",
+        "data/global/missiles/PoisonSmokePuff.dcc",
+        "data/global/missiles/PoisonSparks.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 84,
+      "skill": "Bone Spear",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": "core/src/test/resources/original/bone-spear-1.10f.json",
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BoneCast.dcc",
+        "data/global/missiles/BoneSpear.dcc",
+        "data/global/missiles/BoneSpearTrail.dcc",
+        "data/global/missiles/teethexplode.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 85,
+      "skill": "BloodGolem",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 86,
+      "skill": "Attract",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CurseArea.dcc",
+        "data/global/missiles/CurseCast.dcc",
+        "data/global/overlays/CurseAttractHarmEffect.dcc",
+        "data/global/overlays/CurseHit.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 87,
+      "skill": "Decrepify",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CurseArea.dcc",
+        "data/global/missiles/CurseCast.dcc",
+        "data/global/overlays/CurseDecrepifyEffect.dcc",
+        "data/global/overlays/CurseHit.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 88,
+      "skill": "Bone Prison",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": "core/src/test/resources/original/bone-prison-states-1.10f.json",
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 89,
+      "skill": "Summon Resist",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 90,
+      "skill": "IronGolem",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/overlays/AuraThornsBack.dcc",
+        "data/global/overlays/AuraThornsFront.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 91,
+      "skill": "Lower Resist",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/CurseArea.dcc",
+        "data/global/missiles/CurseCast.dcc",
+        "data/global/overlays/CurseHit.dcc",
+        "data/global/overlays/CurseLowerResistEffect.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 92,
+      "skill": "Poison Nova",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/poisonNova.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 93,
+      "skill": "Bone Spirit",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/BoneSpirit.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 94,
+      "skill": "FireGolem",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 95,
+      "skill": "Revive",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [
+        "data/global/missiles/Revive.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    }
+  ]
+}

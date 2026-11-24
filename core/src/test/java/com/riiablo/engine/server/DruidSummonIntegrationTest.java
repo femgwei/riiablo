@@ -39,6 +39,181 @@ import org.junit.jupiter.api.Test;
 
 /** ECS wiring for authoritative Druid SrvDo114/115/119 summon creation. */
 class DruidSummonIntegrationTest extends RiiabloTest {
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.CsvSource({"1,1068,true", "5,1068,true", "1,5,false"})
+  void ravenSummonAiAttackKeyframeReachesPhysicalSettlement(int level, int seed, boolean hit) {
+    RecordingFactory factory = new RecordingFactory();
+    MonsterModeMeleeIntegrationTest.Probe probe = new MonsterModeMeleeIntegrationTest.Probe();
+    CofManager cofs = new CofManager();
+    World previous = Riiablo.engine;
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, new Actioneer(), new Pathfinder(), cofs,
+            new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0))
+        .register("serverContext", new ServerGameplayContext(Riiablo.files, 1234)));
+    Riiablo.engine = world;
+    try {
+      int owner = createPlayer(world, "raven-combat", 10, 10);
+      CharData data = world.getMapper(Player.class).get(owner).data;
+      data.setSkillLevel(SkillId.RAVEN, level);
+      world.getMapper(AttributesWrapper.class).get(owner).attrs.base().put(Stat.level, 99);
+      world.getMapper(AttributesWrapper.class).get(owner).attrs.reset();
+      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(SkillId.RAVEN);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(owner, SkillId.RAVEN,
+          Engine.INVALID_ENTITY, new Vector2(10, 10), skill.srvdofunc, skill.cltdofunc));
+      int raven = factory.lastEntity;
+      assertEquals(-1, world.getMapper(AttributesWrapper.class).get(raven).attrs
+          .getValue(Stat.item_stupidity, 0), "Raven's negative blind-target stat is intentional");
+      com.riiablo.codec.excel.MonStats.Entry row = Riiablo.files.monstats.get("druidhawk");
+      world.getMapper(Monster.class).get(raven).set(row, Riiablo.files.monstats2.get(row.MonStatsEx));
+      world.getMapper(com.riiablo.engine.server.component.Class.class).create(raven).type =
+          com.riiablo.engine.server.component.Class.Type.MON;
+      world.getMapper(com.riiablo.engine.server.component.Angle.class).create(raven);
+      world.getMapper(com.riiablo.engine.server.component.Size.class).create(raven).size = 1;
+      world.getMapper(com.riiablo.engine.server.component.CofReference.class).create(raven).mode =
+          Engine.Monster.MODE_NU;
+      world.getMapper(com.riiablo.engine.server.component.MovementModes.class).create(raven)
+          .set(Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
+      int target = world.create();
+      initUnit(world, target, 11, 10);
+      com.riiablo.codec.excel.MonStats.Entry victimRow = Riiablo.files.monstats.get(0);
+      world.getMapper(Monster.class).create(target).set(victimRow,
+          Riiablo.files.monstats2.get(victimRow.MonStatsEx));
+      world.getMapper(com.riiablo.engine.server.component.CofReference.class).create(target)
+          .set(victimRow.Code, Engine.Monster.MODE_NU);
+      world.getMapper(com.riiablo.engine.server.component.AnimData.class).create(target).numFrames = 512;
+      world.getMapper(com.riiablo.engine.server.component.Class.class).create(target).type =
+          com.riiablo.engine.server.component.Class.Type.MON;
+      world.getMapper(com.riiablo.engine.server.component.Size.class).create(target).size = 1;
+      Attributes victim = world.getMapper(AttributesWrapper.class).get(target).attrs;
+      victim.base().put(Stat.hitpoints, 10000f);
+      victim.base().put(Stat.maxhp, 10000f);
+      victim.reset();
+      world.process();
+      com.riiablo.engine.server.ai.Raven ai = new com.riiablo.engine.server.ai.Raven(raven);
+      world.getInjector().inject(ai);
+      ai.initialize();
+      for (int tick = 0; tick < 500 && !world.getMapper(
+          com.riiablo.engine.server.component.Casting.class).has(raven); tick++) ai.update(1f / 25f);
+      com.riiablo.engine.server.component.Casting cast = world.getMapper(
+          com.riiablo.engine.server.component.Casting.class).get(raven);
+      org.junit.jupiter.api.Assertions.assertNotNull(cast, "Raven AI must start its ordinary A1");
+      assertEquals(target, cast.targetId);
+      assertEquals(com.riiablo.skill.SkillCodes.attack, cast.skillId);
+      assertEquals(10000 * 256, victim.get(Stat.hitpoints).encodedValues(),
+          "starting A1 must not apply damage before its action keyframe");
+      org.junit.jupiter.api.Assertions.assertNull(world.getMapper(UnitStates.class).get(target)
+          .stateList.getState(StateId.DIMVISION), "starting A1 must not blind before the hit roll");
+      cofs.setMode(raven, Engine.Monster.MODE_A1, true);
+      // A reproducible successful hit, without replacing the combat resolver.
+      world.getMapper(Monster.class).get(raven).rngState = seed;
+      world.getSystem(EventSystem.class).dispatch(
+          com.riiablo.engine.server.event.AnimDataKeyframeEvent.obtain(raven, Engine.KEYFRAME_ATK));
+      if (!hit) {
+        org.junit.jupiter.api.Assertions.assertNull(probe.applied);
+        assertEquals(10000 * 256, victim.get(Stat.hitpoints).encodedValues());
+        org.junit.jupiter.api.Assertions.assertNull(world.getMapper(UnitStates.class).get(target)
+            .stateList.getState(StateId.DIMVISION), "a missed peck must not trigger blindness");
+        return;
+      }
+      org.junit.jupiter.api.Assertions.assertNotNull(probe.applied,
+          "production A1 keyframe must reach DamageAppliedEvent");
+      assertEquals(raven, probe.applied.attacker);
+      assertEquals(target, probe.applied.victim);
+      int lost = 10000 * 256 - victim.get(Stat.hitpoints).encodedValues();
+      assertEquals(probe.applied.lifeLost, lost / 256f);
+      assertEquals(Engine.Monster.MODE_NU, world.getMapper(
+          com.riiablo.engine.server.component.CofReference.class).get(target).mode,
+          "the high-HP control must receive soft hit, not unconditional GH");
+      assertEquals(19, world.getMapper(com.riiablo.engine.server.component.NativeAiState.class)
+          .get(target).previousMode);
+      // Native Raven level-one packets occupy the 2..4 physical range.
+      int min = level + 1, max = level + 3;
+      assertTrue(lost >= min * 256 && lost <= max * 256,
+          "skill damage must survive summon initialization and the real A1 pipeline: " + lost);
+      assertEquals(0f, probe.request.fireDamage);
+      UnitState blindness = world.getMapper(UnitStates.class).get(target).stateList
+          .getState(StateId.DIMVISION);
+      org.junit.jupiter.api.Assertions.assertNotNull(blindness,
+          "a successful Raven A1 must run its blind-target item event");
+      assertEquals(SkillId.DIM_VISION, blindness.skillId);
+      assertEquals(raven, blindness.sourceEntityId);
+      assertTrue(blindness.duration > 0 && blindness.needsSync);
+      assertBlindStateReachesClientAndExpires(world, target, blindness);
+    } finally {
+      world.dispose();
+      Riiablo.engine = previous;
+    }
+  }
+
+  private static void syncBlindState(World authority, int target, World client, int replica) {
+    StateSerializer serializer = new StateSerializer();
+    FlatBufferBuilder builder = new FlatBufferBuilder(256);
+    int stateOffset = serializer.putData(builder, authority.getMapper(UnitStates.class).get(target));
+    int types = EntitySync.createComponentTypeVector(builder, new byte[] {ComponentP.StateP});
+    int components = EntitySync.createComponentVector(builder, new int[] {stateOffset});
+    builder.finish(EntitySync.createEntitySync(builder, target, 0, 0, types, components,
+        0L, 0L, 0L, 0L, 0L, -1));
+    serializer.getData(EntitySync.getRootAsEntitySync(builder.dataBuffer()), 0,
+        client.getMapper(UnitStates.class).get(replica));
+  }
+
+  private static void assertBlindStateReachesClientAndExpires(World authority, int target, UnitState blind) {
+    BlindOverlays overlays = new BlindOverlays();
+    World client = new World(new WorldConfigurationBuilder().with(new EventSystem(),
+        new CofManager(), overlays, new com.riiablo.presentation.StateOverlaySystem())
+        .build().register("clientContext", com.riiablo.presentation.ClientGameplayContext.fromGlobals()));
+    try {
+      int replica = client.create();
+      client.getMapper(UnitStates.class).create(replica).init(replica);
+      syncBlindState(authority, target, client, replica);
+      UnitState received = client.getMapper(UnitStates.class).get(replica).stateList.getState(StateId.DIMVISION);
+      org.junit.jupiter.api.Assertions.assertNotNull(received);
+      assertEquals(blind.sourceEntityId, received.sourceEntityId);
+      assertEquals(blind.skillId, received.skillId);
+      assertEquals(blind.level, received.level);
+      assertEquals(blind.duration, received.duration);
+      client.process();
+      org.junit.jupiter.api.Assertions.assertNull(overlays.persistent,
+          "the persistent marker must wait for the initial curse animation");
+      assertEquals(69, Riiablo.files.Overlay.index(overlays.activation),
+          "native capture starts with cast overlay 69");
+      client.process();
+      org.junit.jupiter.api.Assertions.assertNull(overlays.persistent,
+          "an active cast animation must continue to hold the persistent marker");
+      overlays.playing = false;
+      client.process();
+      assertEquals(129, Riiablo.files.Overlay.index(overlays.persistent),
+          "native capture retains Dim Vision overlay 129 after the cast finishes");
+      int frames = blind.duration + 1;
+      authority.setDelta(1f / 25f);
+      for (int i = 0; i < frames; i++) authority.process();
+      org.junit.jupiter.api.Assertions.assertNull(authority.getMapper(UnitStates.class).get(target)
+          .stateList.getState(StateId.DIMVISION));
+      syncBlindState(authority, target, client, replica);
+      client.process();
+      org.junit.jupiter.api.Assertions.assertNull(overlays.persistent,
+          "the client must clear the overlay when authority removes blindness");
+    } finally {
+      client.dispose();
+    }
+  }
+
+  @com.artemis.annotations.All(com.riiablo.presentation.component.Overlay.class)
+  private static final class BlindOverlays extends com.riiablo.presentation.OverlayManager {
+    String persistent, activation;
+    boolean playing;
+    @Override public void setPersistent(int entity, int state, String overlay) {
+      if (state == StateId.DIMVISION) persistent = overlay;
+    }
+    @Override public void clearPersistent(int entity, int state) {
+      if (state == StateId.DIMVISION) persistent = null;
+    }
+    @Override public void set(int entity, String overlay) { activation = overlay; playing = true; }
+    @Override public boolean isOneShotActive(int entity, String overlay) { return playing; }
+  }
+
   @Test
   void allNativeDruidSummonFunctionsCreateOwnedEntities() {
     RecordingFactory factory = new RecordingFactory();
@@ -147,9 +322,12 @@ class DruidSummonIntegrationTest extends RiiabloTest {
       UnitState aura = world.getMapper(UnitStates.class).get(owner).stateList
           .getStateLayer(StateId.OAKSAGE, source, SkillId.OAK_SAGE);
       UnitState sourceAura = world.getMapper(UnitStates.class).get(source).stateList
-          .getState(StateId.OAKSAGE);
+          .getState(StateId.OAKSAGECONTROL);
       assertTrue(aura != null,
           "Oak Sage must project a source-owned aura layer to its owner");
+      assertTrue(sourceAura != null, "the source carries the native controller state");
+      assertTrue(!world.getMapper(UnitStates.class).get(source).stateList.hasState(StateId.OAKSAGE),
+          "the aura source must not receive its own beneficiary overlay");
       assertEquals(source, aura.sourceEntityId);
       assertEquals(SkillId.OAK_SAGE, aura.skillId);
       assertTrue(aura.maxLifeModifier > 0,
@@ -179,6 +357,10 @@ class DruidSummonIntegrationTest extends RiiabloTest {
 
       int[] skills = {SkillId.OAK_SAGE, SkillId.HEART_OF_WOLVERINE, SkillId.SPIRIT_OF_BARBS};
       int[] sources = new int[skills.length];
+      int noAuraPet = createSummon(world, owner, 10, 10);
+      com.riiablo.codec.excel.MonStats.Entry noAura = new com.riiablo.codec.excel.MonStats.Entry();
+      noAura.noAura = true;
+      world.getMapper(Monster.class).create(noAuraPet).monstats = noAura;
       for (int i = 0; i < skills.length; i++) {
         data.setSkillLevel(skills[i], 8);
         com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skills[i]);
@@ -197,6 +379,16 @@ class DruidSummonIntegrationTest extends RiiabloTest {
           StateId.WOLVERINE, sources[1], SkillId.HEART_OF_WOLVERINE);
       UnitState barbs = ownerStates.stateList.getStateLayer(
           StateId.BARBS, sources[2], SkillId.SPIRIT_OF_BARBS);
+      int[] beneficiaryStates = {StateId.OAKSAGE, StateId.WOLVERINE, StateId.BARBS};
+      int[] controllerStates = {StateId.OAKSAGECONTROL, StateId.WOLVERINECONTROL, StateId.BARBSCONTROL};
+      for (int i = 0; i < sources.length; i++) {
+        com.riiablo.engine.server.state.StateList sourceStates =
+            world.getMapper(UnitStates.class).get(sources[i]).stateList;
+        assertTrue(sourceStates.hasState(controllerStates[i]));
+        assertTrue(!sourceStates.hasState(beneficiaryStates[i]), "source is excluded from its own aura scan");
+        assertTrue(!world.getMapper(UnitStates.class).get(noAuraPet).stateList.hasState(beneficiaryStates[i]),
+            "native noAura monsters cannot receive the projected aura");
+      }
       assertEquals(65, oak.maxLifeModifier,
           "Oak Sage must use linked Oak Sage Aura ln34");
       assertEquals(74, wolverine.resolvedAttackModifier(),
@@ -419,7 +611,7 @@ class DruidSummonIntegrationTest extends RiiabloTest {
     // Deliberately omit sourceEntityId/skillId and the newer optional vectors:
     // this is the shape emitted by a pre-source-layer client.
     int stateOffset = StateP.createStateP(builder, stateIds, durations, levels,
-        0, 0, 0, 0, maxLife, 0, 0, 0, 0, 0, 0);
+        0, 0, 0, 0, maxLife, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     int typeOffset = EntitySync.createComponentTypeVector(builder,
         new byte[] {ComponentP.StateP});
     int componentOffset = EntitySync.createComponentVector(builder,

@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "date": "2026-11-21",
+  "run_id": "20261121-073752-f6bf3010",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "production_fixes_applied": false,
+  "fixture_sha256": "041c58f70198e11e7813c199133c10bd130ebb99243e26cff9744911ae8f3cb6",
+  "findings": {
+    "speed_shortfall_percent": 14.66666666666666,
+    "paired_dcc_samples": 116,
+    "frame_mismatches": 54,
+    "independent_original_client_stream": true
+  },
+  "checks": {
+    "lifetime_matches": true,
+    "animation_rate_formula_matches": true,
+    "movement_speed_matches": false,
+    "actual_animation_frames_match": false,
+    "complete_production_client_cadence_verified": false
+  },
+  "junit": {
+    "scope": "Focused Inferno contracts and original fixture integrity; not full production parity",
+    "tests": 14,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "name": "com.riiablo.engine.server.SorceressFireAreaIntegrationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.riiablo.presentation.AuthoritativeAreaSkillPresentationTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.riiablo.presentation.InfernoAudioSystemTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.riiablo.presentation.MissileLoaderTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.riiablo.presentation.OriginalInfernoFixtureTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "log": "tools/original-observer/inferno-focused-tests.log"
+  },
+  "broader_run": {
+    "tests": 23,
+    "passed": 22,
+    "failed": 1,
+    "known_failure": "SorceressFireAreaIntegrationTest.blazeStateEmitsOnlyAfterActualMovementAndKeepsFractionalDamage",
+    "message": "expected duration 120 but actual 117; unrelated existing Blaze assertion, unchanged production and test source",
+    "log": "tools/original-observer/inferno-validation.log"
+  },
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/engine/server/ServerEntityFactory.java": "20ba1fdb4f5c7beb5eeb58dafe0cd00db623a1273cb220bfd64cc58511c9fe11",
+    "core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java": "d042f9316105da65904fdb55183cd8a69b1fa23c6e74aad2d7604287a83f56ea",
+    "core/src/main/java/com/riiablo/presentation/MissileLoader.java": "f451623990fd2a3c52018950612537aa2d709fe8fec7b18adadd7caf5424a469",
+    "core/src/main/java/com/riiablo/presentation/MissileImpactPresentationSystem.java": "39d07dfb972f7194c68b1e9b227479a3db83e2eb18aae77d54cfdf94cf0474ac",
+    "core/src/main/java/com/riiablo/presentation/SkillCastHandler.java": "f10228835e76169d84b13fccec88e0a21e46ca99bb03e54f04643ae332d0387d",
+    "core/src/main/java/com/riiablo/presentation/AnimationStepper.java": "be00fd77840092060cec5c818b06dc26c80463ffd1e86c908cb393183488be8f"
+  },
+  "limitations": [
+    "One stream; no original client cadence replay or caster sequence/GPU comparison",
+    "No map collision, targets, damage values or held-input mana comparison",
+    "Riiablo cell coordinates correspond to native fixed-point cell centres minus 0.5"
+  ]
+}

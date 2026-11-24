@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-23T08:55:47" hostname="DESKTOP-7GGAVHU" time="0.131">
+  <properties/>
+  <testcase name="snapshotWriterPreservesEnchantActivationRevision()" classname="com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest" time="0.106"/>
+  <testcase name="modeOnlyDeathAndReviveDoNotDependOnPreviousVitals()" classname="com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest" time="0.005"/>
+  <testcase name="cyclonePoolsSurviveDetachedSnapshotBufferReuseAndReplicaReplacement()" classname="com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest" time="0.005"/>
+  <testcase name="valuesAndStateListSurviveBufferReuseAndReplicaMutation()" classname="com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest" time="0.004"/>
+  <testcase name="replicaWriterPreservesIndependentSourceLayers()" classname="com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest" time="0.001"/>
+  <testcase name="newerRespawnCannotBeOverwrittenByOldDeathOrClockRegression()" classname="com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest" time="0.002"/>
+  <testcase name="emptyStatesClearWhileUnrelatedPartialPacketsRetainAlivePhase()" classname="com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest" time="0.001"/>
+  <testcase name="removeAndBaselineClearDropSnapshotsAndIncarnationWatermarks()" classname="com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

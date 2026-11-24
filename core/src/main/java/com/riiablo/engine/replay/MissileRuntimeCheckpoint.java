@@ -34,7 +34,7 @@ public final class MissileRuntimeCheckpoint {
   /** Client-only caches deliberately omitted from the server codec. */
   public static Set<String> presentationLocalFields() {
     return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-        "clientSeed", "clientPathX", "clientPathY", "clientSnapshotKnown",
+        "clientSeed", "clientPathX", "clientPathY", "clientSnapshotKnown", "infernoPresentationTime",
         "clientSampleFrame", "clientSamplePosition")));
   }
 
@@ -55,7 +55,7 @@ public final class MissileRuntimeCheckpoint {
       "diabWallCastId", "fixedPoisonRate", "poisonMinRateFixed", "poisonMaxRateFixed", "poisonDurationFrames",
       "poisonPiercePercent", "poisonAttackerPlayer", "poisonCloudLoops", "poisonCloudTraveling", "poisonTrailMoved", "targetId",
       "homing", "homingNextTurnFrame", "attachedEntityId", "attached", "nativeFrame",
-      "clientFrame", "clientFlightInitialized", "clientSeed", "clientPathX", "clientPathY",
+      "clientFrame", "clientFlightInitialized", "clientSeed", "clientPathX", "clientPathY", "infernoPresentationTime",
       "clientRecyclerVineSpawned", "clientRecyclerExplosionSpawned", "nativeLifetimeFrames",
       "deathMaul", "wakeMaker", "wakeSpawned", "wakeTargetX", "wakeTargetY",
       "wakeDirectionX", "wakeDirectionY", "damageOwnerId", "chargedBoltPath", "chargedBoltMainDirection",
@@ -172,6 +172,7 @@ public final class MissileRuntimeCheckpoint {
       // Restore authority state without retaining a previous client's local
       // smoke RNG or observed path cells. Version 2 also preserves birth seed.
       live.clientSeed = null;
+      live.infernoPresentationTime = 0;
       live.clientPathX = 0;
       live.clientPathY = 0;
       live.clientSnapshotKnown = false;

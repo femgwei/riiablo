@@ -1,0 +1,15 @@
+{
+  "id": "20261122-195544-f61250e8",
+  "status": "completed",
+  "started": 1795348545.0862753,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "druid-raven-target-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261122-195544-f61250e8\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795348598.0107126
+}

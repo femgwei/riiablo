@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "source_run_id": "20261121-165203-4158d94f",
+  "skill_id": 245,
+  "comparison_status": "compared_client_path_clock_with_remaining_differences",
+  "observation_mode": "unsuspended_client_memory_polling",
+  "fixed_scope": "Client skill rate, native waypoint movement and fixed-direction mapping; local authority shares path; no original server or GPU parity",
+  "before": {
+    "observed_cursor_states": 74,
+    "unloaded_birth_age_samples": 1,
+    "paired_cursor_states": 73,
+    "frame_mismatches": 70
+  },
+  "after": {
+    "observed_cursor_states": 74,
+    "unloaded_birth_age_samples": 1,
+    "paired_cursor_states": 73,
+    "frame_mismatches": 0
+  },
+  "original_client_count": 1,
+  "production_count": 1,
+  "original_lifetimes": [
+    75
+  ],
+  "production_lifetimes": [
+    75
+  ],
+  "original_animation_rates": [
+    512
+  ],
+  "production_removed_ticks": [
+    75
+  ],
+  "remaining_differences": [
+    "Sprite variants use the static native direction mapping and stay fixed; original global allocation RNG is not matched",
+    "No actual DCC submission/direction trace or GPU pixel comparison in this polling batch",
+    "One level-one cast/direction in a clear initial corridor; full wall/room removal and all-direction cases remain unverified",
+    "Local damage carriers share the audited native path; actual original server collision/damage is not captured",
+    "Restored carriers without a SkillDo visual retain snapshot fallback; old rolled path seeds retain legacy movement"
+  ],
+  "limitations": [
+    "Unsuspended memory polling is non-atomic and may miss ticks or contain mixed-update fields",
+    "No actual DCC selection, sprite submission, GPU pixels or stack trace was captured",
+    "Client state only; server damage/collision/counts remain unobserved",
+    "One cast/direction at level one, two-skill recorded loadout, native synergies active",
+    "Pairing by missile row/age; age-zero units precede first resource publication and are compared only by the pure clock regression"
+  ],
+  "sha256": {
+    "original": "9c0e263822bf745f931b55ea2afaa65842dc3b1453b2101fc1a00af09686e571",
+    "before": "41e3d3c2d9bac4b27233c49baa343848adff12f6debf8bb246e5c7328505ad5a",
+    "after": "b64fb22aa791330e25bbfbcb9d0beac3dd7562bf176f297643c683f37c4d4391"
+  },
+  "path_evidence": {
+    "file": "druid-tornado-path-comparison-1.10f.json",
+    "sha256": "2568fd4b8b4889978319aea78d0e85b998fb3ea7bd614a9c26e041f12b43c8bd",
+    "checks": {
+      "client_visual": {
+        "samples": 74,
+        "missing": 0,
+        "position_mismatches": 0,
+        "velocity_mismatches": 0,
+        "combat_carrier_duplicate_draw_candidates": 0
+      },
+      "local_authority_vs_client_oracle": {
+        "samples": 74,
+        "missing": 0,
+        "position_mismatches": 0,
+        "velocity_mismatches": 0,
+        "combat_carrier_duplicate_draw_candidates": 0
+      }
+    }
+  }
+}

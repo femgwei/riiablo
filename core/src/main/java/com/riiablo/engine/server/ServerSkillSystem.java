@@ -82,6 +82,8 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 import com.badlogic.gdx.ai.utils.Collision;
 import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.math.Vector2;
+import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.seed.Seed;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.IntSet;
 import com.badlogic.gdx.utils.IntIntMap;
@@ -536,6 +538,7 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<com.riiablo.engine.server.component.Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.SkillRandom> mSkillRandom;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
@@ -3609,6 +3612,12 @@ public class ServerSkillSystem extends PassiveSystem {
     if (state == null) return;
     state.skillId = skill.Id;
     state.sourceEntityId = event.entityId;
+    if (skill.Id == SkillId.ARMAGEDDON) {
+      // SrvDo124's one cast-time ITEMS_RollRandomNumber becomes Param1 for
+      // the subsequent SrvActive146 periodic random-cell stream.
+      D2Seed seed = new D2Seed(gameSeed() ^ event.entityId * 0x45D9F3B, 666);
+      state.runtimeValue = (int) (Seed.rollRandomNumber(seed) & 0xFFFF);
+    }
     state.periodicDelayFrames = delay;
     state.periodicCountdownFrames = delay;
     state.needsSync = true;
@@ -4103,6 +4112,19 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   public boolean startInfernoChannel(int source, Skills.Entry skill, int target, Vector2 targetVec) {
+    return startInfernoChannel(source, skill, target, targetVec, false);
+  }
+
+  /** A live native player SQ owns its callbacks; refreshing must not emit an extra missile. */
+  public boolean refreshArcticBlastSequence(int source, Skills.Entry skill, int target, Vector2 targetVec) {
+    com.riiablo.engine.server.component.Sequence sequence = world.getMapper(
+        com.riiablo.engine.server.component.Sequence.class).get(source);
+    return sequence != null && sequence.nativeArcticBlast && skill != null
+        && skill.Id == SkillId.ARCTIC_BLAST && startInfernoChannel(source, skill, target, targetVec, true);
+  }
+
+  private boolean startInfernoChannel(int source, Skills.Entry skill, int target, Vector2 targetVec,
+      boolean sequenceRefresh) {
     if (!isInfernoChannelSkill(skill) || !mPosition.has(source)
         || files().Missiles.get(skill.srvmissilea) == null) return false;
     UnitStates holder = mUnitStates.has(source) ? mUnitStates.get(source)
@@ -4129,7 +4151,7 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     channel.skillId = skill.Id;
     channel.needsSync = true;
-    if (refresh) {
+    if (refresh && !sequenceRefresh) {
       rewindInfernoChannel(source);
       SkillDoEvent event = SkillDoEvent.obtain(source, skill.Id, target, targetVec,
           skill.srvdofunc, skill.cltdofunc);
@@ -4147,6 +4169,9 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private void rewindInfernoChannel(int source) {
+    com.riiablo.engine.server.component.Sequence sequence = world.getMapper(
+        com.riiablo.engine.server.component.Sequence.class).get(source);
+    if (sequence != null && sequence.nativeArcticBlast) return;
     com.riiablo.engine.server.component.AnimData anim = world.getMapper(
         com.riiablo.engine.server.component.AnimData.class).get(source);
     if (anim != null && mPlayer.has(source)) {
@@ -4199,13 +4224,13 @@ public class ServerSkillSystem extends PassiveSystem {
         name -> getBaseSkillLevel(event.entityId, name));
     if (count <= 0) return;
     Vector2 target = resolveTargetPoint(event, start, new Vector2());
-    int x = MathUtils.floor(start.x), y = MathUtils.floor(start.y);
-    int tx = MathUtils.floor(target.x), ty = MathUtils.floor(target.y);
+    int x = MathUtils.floor(start.x+.5f), y = MathUtils.floor(start.y+.5f);
+    int tx = MathUtils.floor(target.x+.5f), ty = MathUtils.floor(target.y+.5f);
     int main = AssassinTrapSystem.chargedBoltMainDirection(x, y, tx, ty);
     for (int i = 0; i < count; i++) {
-      long rolled = AssassinTrapSystem.chargedBoltRoll(x + i, 666);
-      Vector2 direction = AssassinTrapSystem.chargedBoltVector(
-          AssassinTrapSystem.chargedBoltDirection(main, (int) rolled), new Vector2());
+      Vector2 direction = new Vector2(tx-x,ty-y);
+      if (direction.isZero()) direction.set(Vector2.X);
+      direction.nor();
       int id = createMissile(row, direction, new Vector2(x, y), event.entityId, null, level);
       if (id < 0 || !mMissile.has(id)) continue;
       Missile child = mMissile.get(id);
@@ -4213,13 +4238,19 @@ public class ServerSkillSystem extends PassiveSystem {
       child.damageLevel = level;
       child.chargedBoltPath = true;
       child.chargedBoltMainDirection = main;
-      child.chargedBoltSeedLow = (int) rolled;
-      child.chargedBoltSeedHigh = (int) (rolled >>> 32);
+      // Native PathGetFirstPointX is targetCoord.X (+0x10), not origin.X.
+      // Retain the initializer seed for age-seeking and checkpoint restoration.
+      child.chargedBoltSeedLow = tx+i;
+      child.chargedBoltSeedHigh = 666;
       child.chargedBoltNextTurnDistance = 2f;
       child.chargedBoltTargetX = tx;
       child.chargedBoltTargetY = ty;
       child.nativeLifetimeFrames = Missile.chargedBoltLifetimeFrames(row, level);
       child.range = 0f;
+      if (mPosition.has(id) && x>=0 && y>=0 && x<=65535 && y<=65535)
+        mPosition.get(id).initializeNativeCell(x,y);
+      com.riiablo.engine.server.missile.NativeFirestormMotion.initialVelocity(
+          row,level,direction,mVelocity.get(id).velocity);
       initializeSkillDamage(id, skill, event.entityId, level);
     }
   }
@@ -4531,6 +4562,15 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
 
+    // SrvDo119 passes Skills.Summode to the native summon allocator.
+    // createMonster only knows MonStats.spawnmode, so it cannot supply the
+    // wolf/bear's skill-specific S1 birth animation on its own.
+    if (skill.srvdofunc == 119 && hasText(skill.summode)) {
+      int mode = files().MonMode.index(skill.summode);
+      if (mode >= 0 && mode != Engine.Monster.MODE_NU)
+        mSequence.create(petId).sequence((byte) mode, Engine.Monster.MODE_NU);
+    }
+
     Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
         ? mAttributesWrapper.get(event.entityId).attrs : null;
     Attributes petAttrs = mAttributesWrapper.has(petId)
@@ -4557,11 +4597,18 @@ public class ServerSkillSystem extends PassiveSystem {
       petAttrs.reset();
       applySummonGrantedSkills(event.entityId, petId, skill, skillLevel);
       applyDruidSkillDamage(event.entityId, petId, summon);
+      if (skill.srvdofunc == 114 && "druidhawk".equals(summon.Id)) {
+        // Stock 1.10 Raven monster properties supply this signed event stat.
+        // The factory does not yet install generic MonProp item-event lists.
+        // Keep -1: EventFunc09 tests nonzero, not a positive percent chance.
+        petAttrs.base().put(Stat.item_stupidity, -1);
+        petAttrs.reset();
+      }
     }
     if (mUnitStates.has(petId)) {
       UnitStates states = mUnitStates.get(petId);
       if (states.stateList == null) states.init(world, petId);
-      int auraState = DruidSkills.getSummonAuraState(skill);
+      int auraState = DruidSkills.getSummonAuraControllerState(files(), skill);
       if (auraState != StateId.NONE) {
         UnitState state = states.stateList.addState(auraState,
             Math.max(0, SkillFormula.evaluate(skill.auralencalc, skill, skillLevel,

@@ -1,0 +1,13 @@
+{
+  "id": "20261121-161347-c52c6924",
+  "status": "failed",
+  "started": 1795248827.6536756,
+  "broker_pid": 2616,
+  "command": {
+    "op": "run_job",
+    "job": "druid-wind-observe-private-desktop"
+  },
+  "error": "previous native helper cleanup is unresolved; refusing another game task",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 345, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 211, in execute\n    raise RuntimeError(\"previous native helper cleanup is unresolved; refusing another game task\")\nRuntimeError: previous native helper cleanup is unresolved; refusing another game task\n",
+  "finished": 1795248827.6857069
+}

@@ -1,0 +1,304 @@
+{
+  "schema": 1,
+  "date": "2026-11-23",
+  "status": "passed_after_scoped_java17_retry",
+  "d2_home": "G:/BaiduNetdiskDownload/Diablo II 1.10F",
+  "skills": [
+    231,
+    241
+  ],
+  "foreground_used": false,
+  "original_runtime_started": false,
+  "original_animation_parity_claimed": false,
+  "evidence_type": "D2MOO Fn111/SrvSt63/SrvDo29/33 source, effective 1.10F MPQ tables and headless production tests",
+  "summary": {
+    "tests": 93,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "class": "com.riiablo.engine.replay.MissileRuntimeCheckpointTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.replay.MissileRuntimeCheckpointTest.xml",
+      "sha256": "a65ffdd26b2495f9647ee8744fa10b411e46dd526211d096fc4e6e8f2369ae9a",
+      "cases": [
+        "conflictingSharedGroupsAndMissingCurrentOwnerAreRejectedBeforeMutation()",
+        "localSmokeCachesDoNotChangeAuthorityBytesAndAreClearedOnRestore()",
+        "versionThreeWithoutFrozenOrbSpeedStillLoads()",
+        "sharedCastSetsAndAliasesToOtherMissilesHitSetsKeepTheirIdentity()",
+        "versionTwoWithoutMoltenCellStateStillLoads()",
+        "versionOneWithoutBirthSeedStillLoads()",
+        "versionFourWithoutPoisonPathFlagStillLoads()",
+        "schemaCoversEveryMissileFieldExplicitly()",
+        "everyScalarVectorPacketAndEncodedStatRoundTripsWithoutResourcesDuringDecode()",
+        "malformedBooleansFloatsVersionsTruncationAndTrailingBytesAreRejected()",
+        "currentAndRetiredOwnerLifetimeReferencesDoNotBindToTheWrongIncarnation()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.ai.AiRuntimeStateTest",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.ai.AiRuntimeStateTest.xml",
+      "sha256": "de1028afa9277ac1d38600e9016b05e2636100cf869597ce4b29b0aca60e33ad",
+      "cases": [
+        "turretAndInfernoLocalFloatClocksRejectNonfiniteImages()",
+        "stateMachineOwnerCannotSilentlyDriftFromItsHost()",
+        "wrapperAbsenceNullAndSharedIdleAreDistinctAndNeverMutateTheSentinel()",
+        "unsupportedTypesAndForeignOwnerOrConfigurationCannotBeRestored()",
+        "malformedImagesAndNonfiniteValuesFailBeforeChangingTheHost()",
+        "nestedWrapperImagesRejectTruncationBadKindsAndInvalidStateNames()",
+        "independentAiTimersDistinguishSleepSentinelsFromFiniteNestClocks()",
+        "allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects()",
+        "everyExtendedSchemaRejectsEachTruncationAndNonfiniteLocalClocks()",
+        "explicitSchemaGuardsRequireAFieldDecisionForEverySupportedClass()",
+        "nullRngAndPositiveInfinitySentinelsAreNotTurnedIntoFreshStreams()",
+        "tentacleUninitializedLifetimeIsExplicitAndDoesNotRearmAnExistingClock()",
+        "allHostsArePreflightedAndLegacyV3DoesNotClaimAnAiImage()",
+        "fsmRestorePreservesRevertHistoryWithoutAnyEnterExitCallbacks()",
+        "bossAnchorIsHistoryRatherThanScratchAndKeepsTheTargetVectorIdentity()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.ai.CycleOfLifeAiIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.ai.CycleOfLifeAiIntegrationTest.xml",
+      "sha256": "9752231a09f22b7ba063f07dc4dc1cbdfe6c95c9de3515f69b5dcf941008b943",
+      "cases": [
+        "skillSearchRadiusIsClampedToFiveThroughFifty()",
+        "ownerLeashWinsOverAnAdjacentCorpse()",
+        "reservedConvertedAndOtherMapCorpsesAreNotConsumed()",
+        "fullLifeOrManaBlocksSkillButDoesNotSkipApproachingACorpse()",
+        "cooldownEqualityCannotStartAnotherSkillAndCheckpointPreservesTheDeadline()",
+        "bothCyclersCastS1OnAUsableCorpseRegardlessOfItsPoisonResistance()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.ai.DruidBearAiIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.ai.DruidBearAiIntegrationTest.xml",
+      "sha256": "3d975a5f5ea807bfdffe3ccdc6c9b7477b0932be5efead35fcfb773e8d1e0532",
+      "cases": [
+        "approachChanceInstallsNativeVelocityBonusWithoutRunMode()",
+        "ownTargetWinsOverOwnerTargetAndTargetsBeyondRangeAreNotChased()",
+        "threeBlockedRaysFallBackToOwnerTargetButOneClearEdgeKeepsOwnTarget()",
+        "noTargetUsesSixteenCellIdleBandAndTenFrameMissingOwnerDelay()",
+        "ownerMovementAndDistanceChooseRegroupBeforeAttacking()",
+        "meleeRollSelectsOrdinaryA1OrTheNativeBearSmiteSequence()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.DruidFeralMaulTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.DruidFeralMaulTest.xml",
+      "sha256": "d8ceaf3c005b521d7df322b76ee9a0c41371b1822c6ede7b45a7496b52c85c3e",
+      "cases": [
+        "wrongShapeAndOutOfRangeNeverPrepareCombatRecord()",
+        "maulRebuildsDamageAndStunFromStackCountWithoutCompounding()",
+        "fireClawsConsumesSrvSt58RecordWithoutGenericSecondHit()",
+        "multiplayerSnapshotCarriesFeralStateDurationLevelStacksAndVelocity()",
+        "rabiesConsumesPreparedHitAndMarksTargetInfected()",
+        "losingShapeRemovesOnlyItsDependentChargeState()",
+        "shapeRestrictionsFollowRestrictAndStateColumns()",
+        "srvSt56ResultIsConsumedOnceAndMissDoesNotBuildAStack()",
+        "successfulHitsBuildRefreshAndCapNativeFeralStacks()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.DruidRecyclerRecoveryTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.DruidRecyclerRecoveryTest.xml",
+      "sha256": "e4f2a20a0b80c785c9b62ff32574c92332051f8ab69d4a7aa0f90bb7483fb9fb",
+      "cases": [
+        "[1] CorpseCycler",
+        "[2] VineCycler",
+        "[1] CorpseCycler",
+        "[2] VineCycler"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.DruidShapePresentationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.DruidShapePresentationTest.xml",
+      "sha256": "26eedfbe10ec60cdb013676efc059d1d71445a1eef75f483f81e39dd162864b7",
+      "cases": [
+        "nativePlayerModesMapToMonsterFormModes()",
+        "stateChangesVisualCompositeButKeepsLogicalPlayerType()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.DruidShapeShiftTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.DruidShapeShiftTest.xml",
+      "sha256": "1ab29e8ceeb40ed26003a42423b32f111d9372485a87e659b3f5461b647a55e6",
+      "cases": [
+        "actioneerDoesNotToggleShapeForEveryAnimationKeyframe()",
+        "werebearUsesNativeDamageDefenseAndLycanthropyLife()",
+        "actioneerDispatchesSrvDo116AtAnimationKeyframe()",
+        "werewolfBuildsNativeStateWithoutFrameCompounding()",
+        "activeTransformIsRemovedBeforeAnotherCanBeApplied()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.DruidSummonIntegrationTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.DruidSummonIntegrationTest.xml",
+      "sha256": "fd12b96e36935f6a3a7e99d16570fabcb3b379a2a6312c19ca2069148b6a122f",
+      "cases": [
+        "summonBaseLevelUsesNativeCalc2InsteadOfOwnerLevelHeuristic()",
+        "spiritAurasUseLinkedNativeAuraRowsAndRevokeWhenOutOfRangeOrDismissed()",
+        "spiritAuraCannotCrossMapZoneEvenWhenCoordinatesOverlap()",
+        "vinesInstallNativeSumSkillLevelAndVineBeastStateWithoutAuraProjection()",
+        "reusedSpiritEntityIdCannotResurrectTheOldAuraLayer()",
+        "spiritAuraSnapshotPreservesIndependentSourceLayersAcrossReconnect()",
+        "[1] 1, 1068, true",
+        "[2] 5, 1068, true",
+        "[3] 1, 5, false",
+        "spiritAuraProjectsToOwnerWithPetSourceIdentity()",
+        "spiritAuraTargetsOnlyOwnerPartyMercenaryAndSummonThenRevokesOnDeath()",
+        "legacySpiritAuraSnapshotWithoutSourceVectorsFallsBackSafely()",
+        "allThreeSpiritsReachPartyHirelingsAndPetsButNotOutsiders()",
+        "allNativeDruidSummonFunctionsCreateOwnedEntities()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.DruidVineCorpseCyclerTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.DruidVineCorpseCyclerTest.xml",
+      "sha256": "556e372e8e9127097cc6c632dc4c9a6f82e00dc91cbda9e9e91eeeb769f8b0b4",
+      "cases": [
+        "plagueVinesTrailUsesNativeHitDelayWindowWithoutImplicitDamage()",
+        "recyclerDelayUsesNativeLifetimeAndDoesNotConsumeCorpse()",
+        "[1] CorpseCycler",
+        "[2] VineCycler"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.NativeDruidSummonDataTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.NativeDruidSummonDataTest.xml",
+      "sha256": "264deba9c51abad09f3355474fde1aa4630b4b90d086fdba2d07f7732909d55a",
+      "cases": [
+        "plaguePoppyUsesNativeVinesAiAndVineAttackContract()",
+        "nativePetMaxFormulasMatchD2MooFamilies()",
+        "allDruidSummonRowsAreDataBacked()",
+        "corpseCyclersUseFn111WithSeparateLifeAndManaDelayMissiles()",
+        "grizzlyUsesNativeFn112AiParameters()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.SpecialMissileLifecycleTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.engine.server.SpecialMissileLifecycleTest.xml",
+      "sha256": "435f295f3bd7f26d36a2536dcad6fc6c3d8258092a3e1e73c9f6b35d181f2a1c",
+      "cases": [
+        "guidedRetargetUsesCountdownBeforeDecrement()",
+        "stalledWakeMakerExpiresWithoutEmittingWaves()",
+        "specialCallbackLifetimesAreIndependentOfVelocity()",
+        "persistentEffectsKeepTheirExplicitRemainingFramePolicy()",
+        "attachedCallbacksFollowOwnerUntilOwnerIsRemoved()",
+        "novaRotatesElapsedIntegerOffsetsAndPreservesSlowedSpeed()",
+        "zeroAndNegativeNativeRangeExpireOnFirstUpdate()"
+      ]
+    },
+    {
+      "class": "com.riiablo.presentation.DruidVineRecyclerPresentationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java25/TEST-com.riiablo.presentation.DruidVineRecyclerPresentationTest.xml",
+      "sha256": "d787ab31f9ef39cb543cf3392a5603ea88c42f3e3599bfbf149024d674e947f4",
+      "cases": [
+        "vineRecyclerUsesNativeDelayedClientChildren()"
+      ]
+    },
+    {
+      "class": "com.riiablo.presentation.MissileTargetOverlayTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "tools/original-observer/cycle-of-life-test-results-2026-11-23/java17-final/TEST-com.riiablo.presentation.MissileTargetOverlayTest.xml",
+      "sha256": "77c856050fc08f2e29de05b0c555a726ed58fbb524dd741d37ad76f6352c13c3",
+      "cases": [
+        "explicitTargetOverlayOverridesNativeHitTenFallback()",
+        "[1] CorpseCycler",
+        "[2] VineCycler",
+        "holyBoltOnlyShowsHealingForAuthoritativeHeal()"
+      ]
+    }
+  ],
+  "primary_run": {
+    "log": "tools/original-observer/cycle-of-life-final-validation-2026-11-23.log",
+    "summary": {
+      "tests": 91,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0
+    },
+    "failures": "Two legacy client overlay tests blocked by Byte Buddy/Java 25 compatibility."
+  },
+  "client_retry": {
+    "log": "tools/original-observer/cycle-of-life-client-final-java17-2026-11-23.log",
+    "jdk": "C:/Program Files/Java/jdk-17",
+    "fixture_repairs": [
+      "Bound legacy test to Artemis World.",
+      "Excluded normal factory initialization interactions from event-only assertions."
+    ],
+    "new_coverage": "CorpseCycler and VineCycler owner overlays with no impact child creation."
+  },
+  "source_hashes": {
+    "core/src/main/java/com/riiablo/engine/server/ai/CycleOfLife.java": "68b98f6f06ca014a54d1e76b70649c9177d3b5f4f0a357f2900f2fa32259698f",
+    "core/src/main/java/com/riiablo/engine/server/ai/Vines.java": "27c656eaa3c03a288334f571db07efe8796ed05f22c02e83116b595c9b9f3ec9",
+    "core/src/main/java/com/riiablo/engine/server/MissileCollisionSystem.java": "a3cdd4eaabbdb01f6b8ba949a534072007cec10adaf773e571b681464d3099bf",
+    "core/src/test/java/com/riiablo/engine/server/ai/CycleOfLifeAiIntegrationTest.java": "60b516dad9957d15d7dfaa08690f827603b57d65291cd3baef32fedf332257e0",
+    "core/src/test/java/com/riiablo/engine/server/DruidRecyclerRecoveryTest.java": "33ad4341b17836eb55c8e561b7960e56fed1e630f30067c3a09d176c5914d616",
+    "core/src/test/java/com/riiablo/engine/server/DruidVineCorpseCyclerTest.java": "b5624e40c2380255d3d2a5b0c82ac30010232c06a16265b5f73cb63cb2b2f6af",
+    "core/src/test/java/com/riiablo/engine/server/NativeDruidSummonDataTest.java": "c4d20a19079c50225c398ead78a72b3cf44a745b53a19f8e41bcd1e13926e377",
+    "core/src/test/java/com/riiablo/presentation/MissileTargetOverlayTest.java": "35422446731fdca79d91dee0c3707f5d637310dd556eb60bd12e15b2d9c34b0f"
+  },
+  "limitations": [
+    "No new original client animation or pixel capture.",
+    "ECS corpse iteration is not native room-chain ordering.",
+    "PetMove coordinates/RegionId are projected through generic follow, and first cooldown phase is local.",
+    "PvP corpses and the 25 percent escape random stream do not have dedicated parity evidence."
+  ]
+}

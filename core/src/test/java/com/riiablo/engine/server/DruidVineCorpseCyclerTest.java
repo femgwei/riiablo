@@ -36,8 +36,9 @@ import org.junit.jupiter.api.Test;
 
 /** Direct ECS coverage for D2MOO SrvSt63_Corpse_VineCycler. */
 class DruidVineCorpseCyclerTest extends RiiabloTest {
-  @Test
-  void startSelectsCorpseAndCreatesOwnerMissileAtCorpseOrigin() {
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"CorpseCycler", "VineCycler"})
+  void startSelectsCorpseAndCreatesOwnerMissileAtCorpseOrigin(String skillName) {
     RecordingFactory factory = new RecordingFactory();
     Actioneer actioneer = new Actioneer();
     World world = new World(new WorldConfigurationBuilder()
@@ -47,7 +48,7 @@ class DruidVineCorpseCyclerTest extends RiiabloTest {
     try {
       // Cycle of Life/Vines use the native VineCycler monster skill.  The
       // parent summon rows (231/241) only install this skill through AI.
-      Skills.Entry skill = Riiablo.files.skills.get("VineCycler");
+      Skills.Entry skill = Riiablo.files.skills.get(skillName);
       assertNotNull(skill);
       assertEquals(63, skill.srvstfunc);
       assertNotNull(skill.srvmissilea);

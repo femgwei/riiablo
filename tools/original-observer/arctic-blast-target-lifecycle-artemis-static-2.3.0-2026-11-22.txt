@@ -1,0 +1,59 @@
+Local dependency source inspection; not native runtime or REA Evidence.
+
+artemis-odb 2.3.0 source archive sha256=2d474178dd53d80000911bb39af5cb607e9591eb41904576d7786e749897f583
+
+com/artemis/World.java sha256=baa92cb849bba3d9f6db3523b3c14457c674a04dfffcb487dc0354c03ec04688
+
+public void process() {
+		invocationStrategy.process();
+
+		IntBag pendingPurge = batchProcessor.getPendingPurge();
+		if (!pendingPurge.isEmpty()) {
+			cm.clean(pendingPurge);
+			em.clean(pendingPurge);
+
+			batchProcessor.purgeComponents();
+		}
+	}
+
+com/artemis/EntityManager.java sha256=91495bb0d210f7475c0f34dda233e23b719ef24862828b45939ba0112d27ff97
+
+public boolean isActive(int entityId) {
+		return !recycled.unsafeGet(entityId);
+	}
+
+com/artemis/EntitySubscription.java sha256=df6b520911f3b59990293c63a455278c0ac53d80fed2fac2629b00d8f87b7ad6
+
+private void deleted(IntBag entities) {
+        int[] ids = entities.getData();
+        for (int i = 0, s = entities.size(); s > i; i++) {
+            int id = ids[i];
+            if (activeEntityIds.unsafeGet(id))
+                remove(id);
+        }
+    }
+
+com/artemis/BatchChangeProcessor.java sha256=db6a035cb729c70b251159c171fc49604118f148cdef61d822d988861b093589
+
+void delete(int entityId) {
+		deleted.unsafeSet(entityId);
+		pendingPurge.unsafeSet(entityId);
+
+		// guarding against previous transmutations
+		changed.unsafeClear(entityId);
+	}
+
+com/artemis/InvocationStrategy.java sha256=ed01d95486b90815e1c0da384574da9c9252761214797be76bf55a06dc2f22c4
+
+protected void process() {
+        BaseSystem[] systemsData = systems.getData();
+        for (int i = 0, s = systems.size(); s > i; i++) {
+            if (disabled.get(i))
+                continue;
+
+            updateEntityStates();
+            systemsData[i].process();
+        }
+
+        updateEntityStates();
+    }

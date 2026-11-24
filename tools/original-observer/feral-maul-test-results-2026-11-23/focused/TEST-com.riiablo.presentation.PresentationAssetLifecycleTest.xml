@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.presentation.PresentationAssetLifecycleTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-23T08:02:41" hostname="DESKTOP-7GGAVHU" time="3.588">
+  <properties/>
+  <testcase name="twoEntitiesShareAssetAndDeletingOneCannotResetReusedComponent()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="3.169"/>
+  <testcase name="sameFrameReplacementAndDeferredRemovalKeepNewOwner()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.02"/>
+  <testcase name="rejectedOverlaySubmissionRemovesComponentWithoutUnloadingUnownedAsset()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.132"/>
+  <testcase name="overlayWorldExitBeforeProcessingAndRepeatedDisposeReleaseQueuedSharedRequest()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.014"/>
+  <testcase name="transientKeepsExistingHoldFramesThenReleases()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.012"/>
+  <testcase name="overlaySameStateIsIdempotentAndWrongClearDoesNotRelease()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.016"/>
+  <testcase name="overlayUsesOriginalManagerAndDisposalErrorStillReleasesOtherEntities()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.029"/>
+  <testcase name="[1] false" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.053"/>
+  <testcase name="[2] true" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.015"/>
+  <testcase name="deletingEntityReleasesEveryLoadedAndQueuedLayer()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.01"/>
+  <testcase name="externalReplacementReleasesOldLedgerWithoutResettingNewComponent()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.009"/>
+  <testcase name="cursesBuffsAndImpactsOwnIndependentLayersAndReferences()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.013"/>
+  <testcase name="missingOverlayLeavesPreviousPresentationOwned()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.017"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

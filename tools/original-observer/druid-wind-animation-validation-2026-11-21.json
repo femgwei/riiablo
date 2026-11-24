@@ -1,0 +1,136 @@
+{
+  "date": "2026-11-21",
+  "scope": "Scoped wind client skill rates and countdown animation clocks; motion, DCC direction, server damage and GPU parity unresolved",
+  "new_original_process_launched": false,
+  "source_run_id": "20261121-165203-4158d94f",
+  "tests": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "test_suites": [
+    {
+      "file": "TEST-com.riiablo.engine.server.DruidWindCollisionTest.xml",
+      "name": "com.riiablo.engine.server.DruidWindCollisionTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T09:09:40",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.181"
+    },
+    {
+      "file": "TEST-com.riiablo.engine.server.DruidWindStreamIntegrationTest.xml",
+      "name": "com.riiablo.engine.server.DruidWindStreamIntegrationTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T09:09:55",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.312"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.DruidSurfaceOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.DruidSurfaceOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T09:10:13",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "3.596"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.DruidWindOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.DruidWindOriginalParityTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T09:12:27",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.768"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.MissileAnimationCatchupTest.xml",
+      "name": "com.riiablo.presentation.MissileAnimationCatchupTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T09:10:32",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.945"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.MissileLoaderTest.xml",
+      "name": "com.riiablo.presentation.MissileLoaderTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T09:10:49",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.078"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.VolcanoOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.VolcanoOriginalParityTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T09:11:05",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "3.431"
+    }
+  ],
+  "test_execution": "24 unchanged regression tests plus 5 corrected wind fixture tests, frozen per-suite XML; not one single all-pass invocation",
+  "original_cursor_states": 221,
+  "paired_production_states": 217,
+  "unloaded_birth_age_samples": 4,
+  "production_comparisons": {
+    "twister": {
+      "observed_cursor_states": 147,
+      "unloaded_birth_age_samples": 3,
+      "paired_cursor_states": 144,
+      "frame_mismatches": 0
+    },
+    "tornado": {
+      "observed_cursor_states": 74,
+      "unloaded_birth_age_samples": 1,
+      "paired_cursor_states": 73,
+      "frame_mismatches": 0
+    }
+  },
+  "module_boundaries_passed": true,
+  "python_compile_passed": true,
+  "diff_check_passed": true,
+  "broker": {
+    "pid": 25512,
+    "status": "ready",
+    "active": null,
+    "cleanup_blocked": false
+  },
+  "sha256": {
+    "core/src/main/java/com/riiablo/presentation/NativeDruidWindPresentation.java": "56a941570dcea6090ed4e506b7565a6c2e55bf9dfd7656f5c9ee5719e9648eea",
+    "core/src/main/java/com/riiablo/presentation/MissileLoader.java": "4aac29c31f432d6ab2829ac7959e222bc237e7733918b27956d2f7e612b5db33",
+    "core/src/main/java/com/riiablo/presentation/AnimationStepper.java": "0f2fabca4463730583605b98681e6a7bdd6cb51f8c3c994bcf550d70ac294c48",
+    "core/src/main/java/com/riiablo/presentation/MissileImpactPresentationSystem.java": "2f1dc5e0ed32d5528e5bb0a1ddb724b8f7c549835c0b1657b4ec513ea7b7c1ed",
+    "core/src/main/java/com/riiablo/presentation/component/DruidWindAnimationClock.java": "fe53cf82e7502fdc22c5f83da4aaafd4ea82b221952d676a402c384ff6798a05",
+    "core/src/test/java/com/riiablo/presentation/DruidWindOriginalParityTest.java": "00cd9ae3eee2963f974fbd5f8a706d4310950639143d1c6cd3367a993519030d",
+    "core/src/test/resources/original/druid-wind-animation-1.10f.json": "c236ab3c99a77369f3cbbb760cf2e0682a284a53c425d42864ca07e171fcf0ff",
+    "docs/druid-wind-client-analysis-2026-11-21.md": "af3a9a16d000b8cf20d0bb060e90091259cb60e4a974e1234bec689f1f092934",
+    "tools/original-observer/compare_druid_wind.py": "801249e2d9fa5ce62ff5a0229e9eebe904c82252cfe611fa2651b2745605d621",
+    "tools/original-observer/export_druid_wind_animation.py": "ccd947dbace0469a27fd64336fa2e6f965f910e1796b6bfedbd0cc4ca999c2a6",
+    "tools/original-observer/inspect_druid_wind.py": "084fea4c1ea2226ef37d205eee5bd37d05fc040f14d91685d042b3a5087e67d4",
+    "tools/original-observer/druid-wind-static-1.10f.txt": "0acc7014c05118e39f994b89cdcfef625fb498d730c40eb4ed9465e21f564026",
+    "tools/original-observer/druid-wind-replica-final-validation.log": "91ec9df3487d86c63c7b1978aceba88411740c55235d63f129ad338a59c77fcf",
+    "tools/original-observer/druid-wind-animation-final2-validation.log": "7ec1f240e8dbf3ccf1e0cd43b33649d96c777ffbfdabbe6b07b33ebd5fd07349",
+    "tools/original-observer/class-skill-batch-2026-11-21/druid-twister-comparison-1.10f.json": "5284d1c536fb561d13ecdf76c70d96622dbcb1b95e6fc21630019bddcc715c6f",
+    "tools/original-observer/class-skill-batch-2026-11-21/druid-tornado-comparison-1.10f.json": "4663ef8f36bbb35783e011efa2652e8b76c4fe05ce01902dc16bfaf36c62f84e"
+  }
+}

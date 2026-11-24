@@ -1,0 +1,182 @@
+{
+  "schema": 1,
+  "date": "2026-11-23",
+  "status": "passed",
+  "d2_home": "G:/BaiduNetdiskDownload/Diablo II 1.10F",
+  "foreground_used": false,
+  "original_runtime_started": false,
+  "evidence_type": "headless Riiablo ECS tests with effective 1.10F MPQ data and D2MOO source reference",
+  "log": "tools/original-observer/druid-bear-final-validation-2026-11-23.log",
+  "summary": {
+    "tests": 68,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "class": "com.riiablo.engine.server.ai.DruidBearAiIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "599f2db6171874502ec6c175ea8829ec7e1f10b207189225463211776c8d0c00",
+      "cases": [
+        "approachChanceInstallsNativeVelocityBonusWithoutRunMode()",
+        "ownTargetWinsOverOwnerTargetAndTargetsBeyondRangeAreNotChased()",
+        "threeBlockedRaysFallBackToOwnerTargetButOneClearEdgeKeepsOwnTarget()",
+        "noTargetUsesSixteenCellIdleBandAndTenFrameMissingOwnerDelay()",
+        "ownerMovementAndDistanceChooseRegroupBeforeAttacking()",
+        "meleeRollSelectsOrdinaryA1OrTheNativeBearSmiteSequence()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.DruidFeralMaulTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "7a9bc47872ee7601fe34d738cb5255141e8ce6f1a3cb4d76a27cf649f6dbc8ee",
+      "cases": [
+        "wrongShapeAndOutOfRangeNeverPrepareCombatRecord()",
+        "maulRebuildsDamageAndStunFromStackCountWithoutCompounding()",
+        "fireClawsConsumesSrvSt58RecordWithoutGenericSecondHit()",
+        "multiplayerSnapshotCarriesFeralStateDurationLevelStacksAndVelocity()",
+        "rabiesConsumesPreparedHitAndMarksTargetInfected()",
+        "losingShapeRemovesOnlyItsDependentChargeState()",
+        "shapeRestrictionsFollowRestrictAndStateColumns()",
+        "srvSt56ResultIsConsumedOnceAndMissDoesNotBuildAStack()",
+        "successfulHitsBuildRefreshAndCapNativeFeralStacks()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.DruidShapePresentationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "3fad89278460d403fe9c60ddda3d9cf014b29c442a2bac82c8f282f8e82e3be6",
+      "cases": [
+        "nativePlayerModesMapToMonsterFormModes()",
+        "stateChangesVisualCompositeButKeepsLogicalPlayerType()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.DruidShapeShiftTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "e9672e9f511adafbb215b705f6471fea3bd2fa0ffafc92341874b87a05c7593d",
+      "cases": [
+        "actioneerDoesNotToggleShapeForEveryAnimationKeyframe()",
+        "werebearUsesNativeDamageDefenseAndLycanthropyLife()",
+        "actioneerDispatchesSrvDo116AtAnimationKeyframe()",
+        "werewolfBuildsNativeStateWithoutFrameCompounding()",
+        "activeTransformIsRemovedBeforeAnotherCanBeApplied()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.DruidSummonIntegrationTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "5372d45284bc545d39c4ef0d2ad883d79ab481336c03b75a4cc0f343bc4fc281",
+      "cases": [
+        "summonBaseLevelUsesNativeCalc2InsteadOfOwnerLevelHeuristic()",
+        "spiritAurasUseLinkedNativeAuraRowsAndRevokeWhenOutOfRangeOrDismissed()",
+        "spiritAuraCannotCrossMapZoneEvenWhenCoordinatesOverlap()",
+        "vinesInstallNativeSumSkillLevelAndVineBeastStateWithoutAuraProjection()",
+        "reusedSpiritEntityIdCannotResurrectTheOldAuraLayer()",
+        "spiritAuraSnapshotPreservesIndependentSourceLayersAcrossReconnect()",
+        "[1] 1, 1068, true",
+        "[2] 5, 1068, true",
+        "[3] 1, 5, false",
+        "spiritAuraProjectsToOwnerWithPetSourceIdentity()",
+        "spiritAuraTargetsOnlyOwnerPartyMercenaryAndSummonThenRevokesOnDeath()",
+        "legacySpiritAuraSnapshotWithoutSourceVectorsFallsBackSafely()",
+        "allThreeSpiritsReachPartyHirelingsAndPetsButNotOutsiders()",
+        "allNativeDruidSummonFunctionsCreateOwnedEntities()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.NativeDruidShapeDataTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "edea1e27cf3bad10a5729aa19253b978eb7b1f3ac9a5d6bfb133a269fe30246e",
+      "cases": [
+        "werewolfAndWerebearUseNativeSrvDo116AndAuraStats()",
+        "nativeReferencedLnAndToHitOperandsAreEvaluated()",
+        "transformGfxClassesResolveToNativeMonsterTokens()",
+        "druidConstantsFollowNativeInterleavedSkillRows()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.NativeDruidSummonDataTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "5d694fd7c973ab1566a2d9be1dc86a5842efe0257efec32a3c2469800fbad1c9",
+      "cases": [
+        "plaguePoppyUsesNativeVinesAiAndVineAttackContract()",
+        "nativePetMaxFormulasMatchD2MooFamilies()",
+        "allDruidSummonRowsAreDataBacked()",
+        "grizzlyUsesNativeFn112AiParameters()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.NativePlayerCombat110fAuditTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "02be8014c5a392c36ccecb11bd083e6394deb7a593c26cbcc0eda960ec2a8707",
+      "cases": [
+        "rawPoisonNovaRowUses110fRates()",
+        "rawSixMeleeRowsHaveFullSourceAndNoOwnElementalDamage()",
+        "rawWerebearRowAndProductionStateUse110fCoefficients()",
+        "rawHammerRowHasUndeadBonusButNoDemonBonus()",
+        "rawOrdinaryWeaponCoefficientsAndMissileSourceAreLoadedUnchanged()",
+        "rawShockwaveRowUsesFourFrameTargetWideDelay()"
+      ]
+    },
+    {
+      "class": "com.riiablo.engine.server.SummonedPetSystemTest",
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_sha256": "4a8a992ee52bd670710e83ed995794855ae10e0c59c9e26188c5df465b6382a9",
+      "cases": [
+        "timedPetExpiresInNativeFrames()",
+        "wolvesReserveSeparateLandingFootprintsDuringWarpAndRegroup()",
+        "nonWarpPetIsRemovedAcrossZoneBoundary()",
+        "nonAdjacentRoomWithoutPathUsesOwnerTrailFallback()",
+        "clayAndBloodGolemCorpsesOutlivePetListRemovalAndCannotBeConsumed()",
+        "petIsRemovedWhenOwnerDies()",
+        "druidWolfFollowsOwnerAcrossZoneBoundaryWithSkillSourceMetadata()",
+        "nativeNecromancerPetTypesShareGolemQuotaAndFollowOwner()",
+        "druidVineFollowsOwnerAcrossZoneBoundaryWithSkillSourceMetadata()",
+        "distantMobilePetRegroupsInsideSameZone()",
+        "necromancerReviveAndGolemFollowOwnerAcrossZoneBoundary()",
+        "necromancerPetsAreRemovedTogetherWhenOwnerLeaves()",
+        "landingSearchExpandsBeyondInitialEightSubtiles()",
+        "nativeDruidPetListsShareWolfAndSpiritFamilies()",
+        "crossZoneWarpClearsOldMovementCombatAndAiIntent()",
+        "petIsRemovedWhenOwnerNoLongerExists()",
+        "ownerDistanceUsesNativeIntegerApproximationAndPetFootprint()",
+        "stationaryBoneWallDoesNotRegroupInsideSameZone()"
+      ]
+    }
+  ],
+  "limitations": [
+    "No new original private-desktop Werebear or Grizzly animation capture.",
+    "Native PetMove offsets, retries and RegionId are still projected through generic follow.",
+    "Grizzly target threat ranking and exact footprint-aware scan are not fully reconstructed.",
+    "BearSmite final damage and client frame timing are not claimed as native parity."
+  ]
+}

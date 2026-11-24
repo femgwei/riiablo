@@ -34,7 +34,7 @@ class AiRuntimeStateTest {
       Griswold::new, HellMeteor::new, Minion::new, Smith::new,
       DarkWanderer::new, Imp::new, Vulture::new, Nihlathak::new,
       Arach::new, AssassinSentry::new, BonePrison::new, FoulCrowNest::new,
-      GargoyleTrap::new, Vines::new, Regurgitator::new, BloodRaven::new,
+      GargoyleTrap::new, Vines::new, Regurgitator::new, BloodRaven::new, Raven::new,
       FrogDemon::new, CycleOfLife::new, DeathSentry::new,
       Baboon::new, Bighead::new, BloodHawk::new, ClawViper::new,
       CorruptLancer::new, CorruptRogue::new, Goatman::new,
@@ -182,9 +182,11 @@ class AiRuntimeStateTest {
     expected.put(BonePrison.class, "dead");
     expected.put(FoulCrowNest.class, "elapsedFrames lastSpawnFrame nextThink spawned state");
     expected.put(GargoyleTrap.class, "nextThink state");
-    expected.put(Vines.class, "nextThink state corpseEntities");
+    expected.put(Vines.class, "nextThink skillCooldown state corpseEntities");
     expected.put(Regurgitator.class, "phase attempts food foodIdentity");
     expected.put(BloodRaven.class, "anchor nextThink quickStrikeRollChance returningToAnchor specialUses state");
+    expected.put(DruidPet.class, "nextThink targetId state corpses");
+    expected.put(Raven.class, "pecks attackDueFrame nextDecisionFrame elapsedFrames clockwise moving");
     expected.put(FrogDemon.class, "phase hiddenDecisions");
     expected.put(CycleOfLife.class, "");
     expected.put(DeathSentry.class, "");

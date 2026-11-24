@@ -19,6 +19,42 @@ import org.junit.jupiter.params.provider.EnumSource;
 import static org.junit.jupiter.api.Assertions.*;
 
 class HitReactionResolverTest extends RiiabloTest {
+  @ParameterizedTest
+  @org.junit.jupiter.params.provider.CsvSource({"9,false", "9,true", "10000,false", "10000,true"})
+  void physicalMonsterPacketChoosesHardOrSoftHitAndCanInterruptOrdinaryA1(int maxHp, boolean active) {
+    World world = world();
+    try {
+      int target = monster(world, "skeleton1");
+      int source = monster(world, "druidhawk");
+      com.riiablo.attributes.Attributes attrs = com.riiablo.attributes.Attributes.obtainStandard();
+      attrs.base().put(com.riiablo.attributes.Stat.maxhp, (float) maxHp);
+      attrs.base().put(com.riiablo.attributes.Stat.hitpoints, (float) maxHp);
+      attrs.reset();
+      world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).create(target).attrs = attrs;
+      Casting action = active ? world.getMapper(Casting.class).create(target)
+          .set(com.riiablo.skill.SkillCodes.attack, source, new Vector2()) : null;
+      if (active) {
+        world.getMapper(Sequence.class).create(target)
+            .sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
+        world.getMapper(CofReference.class).get(target).mode = Engine.Monster.MODE_A1;
+      }
+      CombatSystem.CombatResult packet = new CombatSystem.CombatResult();
+      packet.hit = true;
+      packet.physicalDamage = packet.totalDamage = 3;
+      HitReactionResolver.queueMonsterMeleeDamage(world, Riiablo.files, source, target, packet, 1234);
+      if (maxHp == 9) {
+        assertEquals(Engine.Monster.MODE_GH, world.getMapper(CofReference.class).get(target).mode);
+        assertFalse(world.getMapper(Casting.class).has(target));
+      } else {
+        assertEquals(active ? Engine.Monster.MODE_A1 : Engine.Monster.MODE_NU,
+            world.getMapper(CofReference.class).get(target).mode);
+        assertSame(action, world.getMapper(Casting.class).get(target));
+        assertEquals(19, world.getMapper(com.riiablo.engine.server.component.NativeAiState.class)
+            .get(target).previousMode);
+      }
+    } finally { world.dispose(); }
+  }
+
   @ParameterizedTest @EnumSource(HitReactionResolver.Source.class)
   void blockTransitionsAreSharedAndCannotRestartDeath(HitReactionResolver.Source source) {
     World world = world();

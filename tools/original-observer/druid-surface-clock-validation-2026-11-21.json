@@ -1,0 +1,194 @@
+{
+  "date": "2026-11-21",
+  "new_original_process_launched": false,
+  "source_run_id": "20261121-095015-f801398c",
+  "tests": {
+    "tests": 51,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "test_suites": [
+    {
+      "file": "TEST-com.riiablo.engine.server.DruidFirestormIntegrationTest.xml",
+      "name": "com.riiablo.engine.server.DruidFirestormIntegrationTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:04:43",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.153"
+    },
+    {
+      "file": "TEST-com.riiablo.engine.server.FirestormGroundDamageTest.xml",
+      "name": "com.riiablo.engine.server.FirestormGroundDamageTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:04:46",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.069"
+    },
+    {
+      "file": "TEST-com.riiablo.engine.server.MoltenBoulderLifecycleTest.xml",
+      "name": "com.riiablo.engine.server.MoltenBoulderLifecycleTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:04:48",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.035"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.DruidSurfaceOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.DruidSurfaceOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:04:52",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.671"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.FirestormOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.FirestormOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:04:55",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.091"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.FirestormVariantOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.FirestormVariantOriginalParityTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:04:58",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.086"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.MissileLoaderTest.xml",
+      "name": "com.riiablo.presentation.MissileLoaderTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:05:01",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.001"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.MoltenBoulderOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.MoltenBoulderOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:05:04",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.268"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.OriginalFirestormFixtureTest.xml",
+      "name": "com.riiablo.presentation.OriginalFirestormFixtureTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:05:04",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.034"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.OriginalMoltenBoulderFixtureTest.xml",
+      "name": "com.riiablo.presentation.OriginalMoltenBoulderFixtureTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:05:04",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.045"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.ReferenceElementalPresentationTest.xml",
+      "name": "com.riiablo.presentation.ReferenceElementalPresentationTest",
+      "tests": "22",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T05:05:07",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.226"
+    }
+  ],
+  "test_log": "druid-surface-clock-validation.log",
+  "scope": "51 focused tests, not the full repository suite",
+  "paired_original_dcc_samples": 2575,
+  "frame_mismatches": 0,
+  "missing_age_samples": 0,
+  "fixed_checks": {
+    "fissure": {
+      "erruption crack 1:count": true,
+      "erruption crack 1:lifetime": true,
+      "erruption crack 1:cadence": true,
+      "erruption crack 1:frames": true,
+      "erruption smoke 1:count": true,
+      "erruption smoke 1:lifetime": true,
+      "erruption smoke 1:cadence": true,
+      "erruption smoke 1:frames": true
+    },
+    "volcano": {
+      "volcano:count": true,
+      "volcano:lifetime": true,
+      "volcano:cadence": true,
+      "volcano:frames": true,
+      "volcano overlay fire:count": true,
+      "volcano overlay fire:lifetime": true,
+      "volcano overlay fire:cadence": true,
+      "volcano overlay fire:frames": true
+    }
+  },
+  "remaining_differences": {
+    "fissure": [
+      "Vent positions/RNG and crack direction sequence are not matched; current scatter remains a reference fallback",
+      "Server vent count/cadence differs in an empty-map replay; controlled collision and damage not verified"
+    ],
+    "volcano": [
+      "Debris count, birth cadence, flight lifetime/trajectory and landing conditions still use the reference fallback",
+      "Original explosion/lava counts can differ; production currently creates both on every visual landing",
+      "Server emission count differs; client/server ownership and controlled collision remain to be reconstructed"
+    ]
+  },
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/presentation/NativeDruidSurfacePresentation.java": "64338288fa7c7d3ef0c475aeea70d0b65323b3c018ab01306766bbc2572ceb7b",
+    "core/src/main/java/com/riiablo/presentation/ReferenceElementalPresentationSystem.java": "a1588f30b3a596ced00b2ffb18357b78271b842a62f56122a8209631576189a3",
+    "core/src/main/java/com/riiablo/presentation/component/ReferenceElementalEffect.java": "265649bbb9bd2ef8e22893a3a35c120039760bbc7205fc1bd99f8ba8ad33876a",
+    "core/src/test/java/com/riiablo/presentation/DruidSurfaceOriginalAnalysis.java": "ff4276818233e4a46abdb8be00c5e3622e96481cb12b8f95ab6974d22b7fbf59",
+    "core/src/test/java/com/riiablo/presentation/DruidSurfaceOriginalParityTest.java": "34d90fbd810667eb6ca74326a407982371e2e2212da058bc39e1333ec038c9d7",
+    "core/src/test/resources/original/druid-surface-animation-1.10f.json": "259a038b6dc996a1bec42e5347ad4b4510136ed34f7f1b974f9558852ffcfc48",
+    "core/src/test/java/com/riiablo/presentation/ReferenceElementalPresentationTest.java": "647be80d3ec82867602f5d2dd8ca45bf642184cf03679a2cd791e4243c0d5229",
+    "tools/original-observer/export_druid_surface_animation.py": "aaca4f3d1915729122d606b49fad4a5093ac9f20626a8ca3b58e133511e32988",
+    "tools/original-observer/compare_druid_surface.py": "c261ad30d9c023b725e8a0e5a35f4e300bb863f15365267519cc982050b20633",
+    "tools/original-observer/prepare_class_batch_replay.py": "5a09364a9cdff684fa2e33cc9943a09f78032bd3f53d0bab39f7328732ecf596"
+  },
+  "comparison_sha256": {
+    "fissure": "be9ad2efaca5271f34d2d93f0ec5bcae1c05537e1dca9a4bbaeee2f5165f99cf",
+    "volcano": "cd6ba705b49af32e21755c411bd3b76d5f3710b4a209201d3d668e59a2168e25"
+  },
+  "notes": [
+    "Original traces reused, no foreground or UAC action",
+    "Initial diagnostic mock incorrectly treated null.dcc as loaded; failed log preserved",
+    "Raw original oracles and successful production baseline preserved before fixes",
+    "Comparison status retains remaining differences rather than claiming full skill parity"
+  ]
+}

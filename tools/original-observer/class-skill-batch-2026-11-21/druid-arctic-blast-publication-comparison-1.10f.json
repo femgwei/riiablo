@@ -1,0 +1,216 @@
+{
+  "schema": 1,
+  "source_run_id": "20261121-223507-1d2b1d4b",
+  "comparison_status": "localized_action_allocation_and_first_update_phases_with_legacy_fixture_order_bias",
+  "production_gameplay_changed": false,
+  "native_units": 24,
+  "native_birth_ages": [
+    0
+  ],
+  "native_first_observed_update_ages": [
+    2
+  ],
+  "native_action_marker_precedes_allocation_in_all_samples": true,
+  "client_assembly_relative_order": {
+    "allocation": {
+      "phase": "factory_return_before_client_flags",
+      "tick": 11,
+      "subject": 1,
+      "allocation_count": 1,
+      "sequence_cursor": 2560,
+      "sequence_remaining": 1280,
+      "source_frame": 9,
+      "missiles": [
+        {
+          "entity": 1,
+          "missile": "arcticblast1",
+          "native_age": 0,
+          "presentation_only": false,
+          "x_fixed": 296353792,
+          "y_fixed": 369754112,
+          "animation_frame": null
+        }
+      ]
+    },
+    "insertion": {
+      "phase": "missile_subscription_inserted",
+      "tick": 11,
+      "subject": 1,
+      "allocation_count": 1,
+      "sequence_cursor": 2048,
+      "sequence_remaining": 1280,
+      "source_frame": 9,
+      "missiles": [
+        {
+          "entity": 1,
+          "missile": "arcticblast1",
+          "native_age": 0,
+          "presentation_only": true,
+          "x_fixed": 296353792,
+          "y_fixed": 369754112,
+          "animation_frame": null
+        }
+      ]
+    },
+    "end_of_birth_tick": {
+      "phase": "world_process_finished",
+      "tick": 11,
+      "subject": -1,
+      "allocation_count": 1,
+      "sequence_cursor": 2048,
+      "sequence_remaining": 1280,
+      "source_frame": 9,
+      "missiles": [
+        {
+          "entity": 1,
+          "missile": "arcticblast1",
+          "native_age": 0,
+          "presentation_only": true,
+          "x_fixed": 296353792,
+          "y_fixed": 369754112,
+          "animation_frame": 0
+        }
+      ]
+    },
+    "following_tick": {
+      "phase": "world_process_finished",
+      "tick": 12,
+      "subject": -1,
+      "allocation_count": 1,
+      "sequence_cursor": 2304,
+      "sequence_remaining": 1024,
+      "source_frame": 9,
+      "missiles": [
+        {
+          "entity": 1,
+          "missile": "arcticblast1",
+          "native_age": 1,
+          "presentation_only": true,
+          "x_fixed": 296390656,
+          "y_fixed": 369754112,
+          "animation_frame": 0
+        }
+      ]
+    },
+    "birth_tick_end_age": 0,
+    "following_tick_age": 1,
+    "allocation_and_insertion_same_tick": true,
+    "allocation_stack": [
+      [
+        "com.riiablo.engine.server.ArcticBlastPublicationOriginalAnalysis.lambda$simulate$3",
+        "com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest$RecordingFactory.createMissile",
+        "com.riiablo.presentation.InfernoPresentationSystem.onSkillDo",
+        "com.riiablo.engine.server.Actioneer.onAnimDataKeyframe",
+        "com.riiablo.engine.server.AnimStepper.processArcticBlast",
+        "com.riiablo.engine.server.AnimStepper.process",
+        "com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest$Fixture.step",
+        "com.riiablo.engine.server.ArcticBlastPublicationOriginalAnalysis.simulate",
+        "com.riiablo.engine.server.ArcticBlastPublicationOriginalAnalysis.main"
+      ]
+    ]
+  },
+  "legacy_fixture_order": {
+    "allocation": {
+      "phase": "factory_return_before_client_flags",
+      "tick": 11,
+      "subject": 1,
+      "allocation_count": 1,
+      "sequence_cursor": 2560,
+      "sequence_remaining": 1280,
+      "source_frame": 9,
+      "missiles": [
+        {
+          "entity": 1,
+          "missile": "arcticblast1",
+          "native_age": 0,
+          "presentation_only": false,
+          "x_fixed": 296353792,
+          "y_fixed": 369754112,
+          "animation_frame": null
+        }
+      ]
+    },
+    "insertion": {
+      "phase": "missile_subscription_inserted",
+      "tick": 11,
+      "subject": 1,
+      "allocation_count": 1,
+      "sequence_cursor": 2048,
+      "sequence_remaining": 1280,
+      "source_frame": 9,
+      "missiles": [
+        {
+          "entity": 1,
+          "missile": "arcticblast1",
+          "native_age": 0,
+          "presentation_only": true,
+          "x_fixed": 296353792,
+          "y_fixed": 369754112,
+          "animation_frame": null
+        }
+      ]
+    },
+    "end_of_birth_tick": {
+      "phase": "world_process_finished",
+      "tick": 11,
+      "subject": -1,
+      "allocation_count": 1,
+      "sequence_cursor": 2048,
+      "sequence_remaining": 1280,
+      "source_frame": 9,
+      "missiles": [
+        {
+          "entity": 1,
+          "missile": "arcticblast1",
+          "native_age": 1,
+          "presentation_only": true,
+          "x_fixed": 296390656,
+          "y_fixed": 369754112,
+          "animation_frame": 0
+        }
+      ]
+    },
+    "following_tick": {
+      "phase": "world_process_finished",
+      "tick": 12,
+      "subject": -1,
+      "allocation_count": 1,
+      "sequence_cursor": 2304,
+      "sequence_remaining": 1024,
+      "source_frame": 9,
+      "missiles": [
+        {
+          "entity": 1,
+          "missile": "arcticblast1",
+          "native_age": 2,
+          "presentation_only": true,
+          "x_fixed": 296427520,
+          "y_fixed": 369754112,
+          "animation_frame": 1
+        }
+      ]
+    },
+    "birth_tick_end_age": 1,
+    "following_tick_age": 2,
+    "allocation_and_insertion_same_tick": true,
+    "allocation_stack": [
+      [
+        "com.riiablo.engine.server.ArcticBlastPublicationOriginalAnalysis.lambda$simulate$3",
+        "com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest$RecordingFactory.createMissile",
+        "com.riiablo.presentation.InfernoPresentationSystem.onSkillDo",
+        "com.riiablo.engine.server.Actioneer.onAnimDataKeyframe",
+        "com.riiablo.engine.server.AnimStepper.processArcticBlast",
+        "com.riiablo.engine.server.AnimStepper.process",
+        "com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest$Fixture.step",
+        "com.riiablo.engine.server.ArcticBlastPublicationOriginalAnalysis.simulate",
+        "com.riiablo.engine.server.ArcticBlastPublicationOriginalAnalysis.main"
+      ]
+    ]
+  },
+  "unresolved": [
+    "Native action marker, CltSt15 state refresh and CltDo24 execution have not been traced as individual calls.",
+    "Native first observed age2 does not prove no transient age1 update or rendering occurred.",
+    "Assembly-relative ECS replay covers relevant system order, not the complete live application or GPU.",
+    "No fixed one-tick delay or skipped movement should be added solely to force matching sampled cursors."
+  ]
+}

@@ -29,7 +29,7 @@ NAME = re.compile(r"[a-zA-Z0-9_-]{1,80}\Z")
 # used only for read-only map/waypoint sampling.
 CHARACTERS = {"CXSorc", "CXBarb", "aaa", "CensusB", "CensusSorc"}
 SCHEMAS = {
-    "ping": set(), "shutdown": set(), "launch": set(),
+    "ping": set(), "shutdown": set(), "launch": set(), "recover_cleanup": set(),
     "snapshot": set(), "controls": set(), "enter": {"character"}, "enter_town": {"character"}, "install_cxbarb": set(),
     "client_animation_probe": set(),
     "get_registry": set(), "run_job": {"job"}, "run_jobs": {"jobs"},
@@ -207,6 +207,37 @@ class Broker:
             return dict(shutdown=True)
         if op == "get_registry":
             return dict(operations=sorted(SCHEMAS), jobs=job_names(), pid=os.getpid())
+        if op == "recover_cleanup":
+            # Clear only after recorded game/helper processes have exited.
+            # This never detaches a debugger or kills a process.
+            from observer import Win32, api
+            from ctypes import wintypes as W
+            from orchestrator import existing_loader_pids
+            if existing_loader_pids():
+                raise RuntimeError("An original loader is still running; cleanup remains locked")
+            checked = set()
+            win = Win32()
+            for path in self.runs.glob("*/orchestrator/worker/summary.json"):
+                report = json.loads(path.read_text(encoding="utf8"))
+                if not report.get("cleanup_attention_required"):
+                    continue
+                for key in ("pid", "helper_pid"):
+                    pid = report.get(key)
+                    if not pid or pid in checked:
+                        continue
+                    checked.add(pid)
+                    ctypes.set_last_error(0)
+                    handle = api(win.k, "OpenProcess", W.HANDLE, W.DWORD, W.BOOL, W.DWORD)(0x100000, False, pid)
+                    if handle:
+                        try:
+                            if win.wait(handle, 0) != 0:
+                                raise RuntimeError("Recorded process still active: " + str(pid))
+                        finally:
+                            win.close(handle)
+                    elif ctypes.get_last_error() not in (0, 87):
+                        raise RuntimeError("Cannot prove process exited: " + str(pid))
+            self.cleanup_blocked = False
+            return dict(status="cleanup_recovered", verified_exited_pids=sorted(checked), process_termination=False)
         if self.cleanup_blocked:
             raise RuntimeError("previous native helper cleanup is unresolved; refusing another game task")
         if op == "install_cxbarb":

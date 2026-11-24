@@ -1,0 +1,256 @@
+0009E770 add byte ptr [ebx - 0x7ad382], cl
+0009E776 jne 0x6fb3e78c
+0009E778 mov edx, dword ptr [esi]
+0009E77A mov ecx, dword ptr [esi + 0xc]
+0009E77D call 0x6fb26c70
+0009E782 xor eax, eax
+0009E784 pop edi
+0009E785 pop esi
+0009E786 pop ebp
+0009E787 pop ebx
+0009E788 add esp, 0x24
+0009E78B ret 
+0009E78C push 0x1ef4
+0009E791 push 0x6fb91518
+0009E796 push 0
+0009E798 push edi
+0009E799 call 0x6fb6addc ; D2Common.dll#10146
+0009E79E test ebx, ebx
+0009E7A0 je 0x6fb3e7ab
+0009E7A2 push ebx
+0009E7A3 push edi
+0009E7A4 call 0x6fb6ae00 ; D2Common.dll#10179
+0009E7A9 jmp 0x6fb3e7bb
+0009E7AB mov eax, dword ptr [esp + 0x18]
+0009E7AF mov ecx, dword ptr [esp + 0x1c]
+0009E7B3 push eax
+0009E7B4 push ecx
+0009E7B5 push edi
+0009E7B6 call 0x6fb6aba2 ; D2Common.dll#10170
+0009E7BB test ebp, ebp
+0009E7BD je 0x6fb3e7d9
+0009E7BF push 0x1eff
+0009E7C4 push 0x6fb91518
+0009E7C9 push ebp
+0009E7CA push edi
+0009E7CB call 0x6fb6addc ; D2Common.dll#10146
+0009E7D0 push 0
+0009E7D2 push esi
+0009E7D3 push edi
+0009E7D4 call 0x6fb6ad6a ; D2Common.dll#10142
+0009E7D9 mov edx, dword ptr [esp + 0x20]
+0009E7DD mov al, byte ptr [edx + 0x135]
+0009E7E3 test al, al
+0009E7E5 je 0x6fb3e7f1
+0009E7E7 or dword ptr [esi + 0xc8], 0x40000
+0009E7F1 mov ebx, dword ptr [esp + 0x10]
+0009E7F5 mov eax, dword ptr [ebx + 4]
+0009E7F8 push eax
+0009E7F9 push esi
+0009E7FA call 0x6fb6b4f6 ; D2Common.dll#11129
+0009E7FF mov ecx, dword ptr [esp + 0x20]
+0009E803 movsx edx, word ptr [ecx + 0x9e]
+0009E80A push edx
+0009E80B push edi
+0009E80C call 0x6fb6b574 ; D2Common.dll#10150
+0009E811 xor eax, eax
+0009E813 mov ecx, dword ptr [esp + 0x20]
+0009E817 mov ah, byte ptr [ecx + 0x9c]
+0009E81D push eax
+0009E81E push edi
+0009E81F call 0x6fb6b56e ; D2Common.dll#10148
+0009E824 mov eax, dword ptr [ebx]
+0009E826 test ah, 0x20
+0009E829 je 0x6fb3e855
+0009E82B mov eax, dword ptr [esi + 0x20]
+0009E82E mov edx, 0x6ac690c5
+0009E833 mul edx
+0009E835 mov ecx, dword ptr [esi + 0x24]
+0009E838 xor ebx, ebx
+0009E83A add eax, ecx
+0009E83C adc edx, ebx
+0009E83E mov dword ptr [esi + 0x20], eax
+0009E841 mov dword ptr [esi + 0x24], edx
+0009E844 mov edx, dword ptr [esi + 0x2c]
+0009E847 and eax, 0x3f
+0009E84A push eax
+0009E84B push edx
+0009E84C call 0x6fb6acc2 ; D2Common.dll#10161
+0009E851 mov ebx, dword ptr [esp + 0x10]
+0009E855 push esi
+0009E856 call 0x6fb5fb10
+0009E85B push esi
+0009E85C call 0x6fb60130
+0009E861 mov eax, dword ptr [ebx]
+0009E863 test ah, 4
+0009E866 je 0x6fb3e89d
+0009E868 mov eax, dword ptr [esp + 0x18]
+0009E86C mov ecx, dword ptr [esp + 0x1c]
+0009E870 push eax
+0009E871 push ecx
+0009E872 push esi
+0009E873 call 0x6fb6ab2a ; D2Common.dll#10398
+0009E878 test eax, eax
+0009E87A jne 0x6fb3e881
+0009E87C mov eax, 1
+0009E881 shl ebp, 4
+0009E884 je 0x6fb3e89d
+0009E886 shl eax, 0x10
+0009E889 xor edx, edx
+0009E88B div ebp
+0009E88D mov ebp, eax
+0009E88F push ebp
+0009E890 push esi
+0009E891 call 0x6fb6aaa0 ; D2Common.dll#11123
+0009E896 push ebp
+0009E897 push esi
+0009E898 call 0x6fb6ad7c ; D2Common.dll#11121
+0009E89D mov eax, dword ptr [ebx]
+0009E89F test ah, 1
+0009E8A2 je 0x6fb3e8d7
+0009E8A4 push esi
+0009E8A5 call 0x6fb6ad82 ; D2Common.dll#11122
+0009E8AA mov edx, dword ptr [ebx + 0x24]
+0009E8AD mov ecx, esi
+0009E8AF push eax
+0009E8B0 call 0x6fb60080
+0009E8B5 push esi
+0009E8B6 call 0x6fb5fe00
+0009E8BB mov dl, byte ptr [esp + 0x18]
+0009E8BF mov cl, byte ptr [esp + 0x1c]
+0009E8C3 add dl, cl
+0009E8C5 and dl, 0x3f
+0009E8C8 push edx
+0009E8C9 push edi
+0009E8CA call 0x6fb6acc2 ; D2Common.dll#10161
+0009E8CF push 0
+0009E8D1 push edi
+0009E8D2 call 0x6fb6ae24 ; D2Common.dll#10203
+0009E8D7 mov eax, dword ptr [ebx + 0x2c]
+0009E8DA push eax
+0009E8DB push esi
+0009E8DC call 0x6fb6b568 ; D2Common.dll#11126
+0009E8E1 mov ecx, dword ptr [ebx + 0x30]
+0009E8E4 push ecx
+0009E8E5 push esi
+0009E8E6 call 0x6fb6b562 ; D2Common.dll#11119
+0009E8EB mov eax, dword ptr [ebx + 4]
+0009E8EE test eax, eax
+0009E8F0 je 0x6fb3ea0c
+0009E8F6 push eax
+0009E8F7 push esi
+0009E8F8 call 0x6fb6b55c ; D2Common.dll#10415
+0009E8FD mov edi, dword ptr [ebx + 4]
+0009E900 test edi, edi
+0009E902 mov dword ptr [esp + 0x24], 0
+0009E90A je 0x6fb3e91b
+0009E90C mov eax, dword ptr [edi]
+0009E90E test eax, eax
+0009E910 je 0x6fb3e91b
+0009E912 cmp eax, 1
+0009E915 jne 0x6fb3ea0c
+0009E91B push esi
+0009E91C call 0x6fb6b52c ; D2Common.dll#11128
+0009E921 test eax, eax
+0009E923 jl 0x6fb3e94f
+0009E925 mov edx, dword ptr [0x6fb6d4ac]
+0009E92B mov edx, dword ptr [edx]
+0009E92D cmp eax, dword ptr [edx + 0xb6c]
+0009E933 jge 0x6fb3e94f
+0009E935 lea ecx, [eax*8]
+0009E93C sub ecx, eax
+0009E93E lea ecx, [ecx + ecx*2]
+0009E941 lea eax, [ecx + ecx*4]
+0009E944 mov ecx, dword ptr [edx + 0xb64]
+0009E94A lea eax, [ecx + eax*4]
+0009E94D jmp 0x6fb3e951
+0009E94F xor eax, eax
+0009E951 mov dl, byte ptr [eax + 4]
+0009E954 mov eax, dword ptr [0x6fb6ddb4]
+0009E959 test byte ptr [eax + 8], dl
+0009E95C je 0x6fb3ea0c
+0009E962 push 0
+0009E964 push 0xa6
+0009E969 push edi
+0009E96A call 0x6fb6aa82 ; D2Common.dll#10519
+0009E96F mov ebp, eax
+0009E971 push 0
+0009E973 push 0x9c
+0009E978 push edi
+0009E979 call 0x6fb6abd8 ; D2Common.dll#10520
+0009E97E add ebp, eax
+0009E980 je 0x6fb3ea0c
+0009E986 test edi, edi
+0009E988 je 0x6fb3e9a1
+0009E98A cmp dword ptr [edi], 0
+0009E98D jne 0x6fb3e9a1
+0009E98F call 0x6fb283d0
+0009E994 cmp eax, edi
+0009E996 je 0x6fb3e9a1
+0009E998 mov ebp, 0x64
+0009E99D xor edx, edx
+0009E99F jmp 0x6fb3e9b0
+0009E9A1 push 0
+0009E9A3 push 0x148
+0009E9A8 push edi
+0009E9A9 call 0x6fb6aa22 ; D2Common.dll#10521
+0009E9AE mov edx, eax
+0009E9B0 lea ecx, [esp + 0x2c]
+0009E9B4 call 0x6fb6a9ec ; D2Common.dll#10913
+0009E9B9 mov ecx, dword ptr [esp + 0x30]
+0009E9BD mov edi, dword ptr [esp + 0x2c]
+0009E9C1 cmp dword ptr [esp + 0x24], 4
+0009E9C6 jge 0x6fb3e9ee
+0009E9C8 mov eax, edi
+0009E9CA mov edx, 0x6ac690c5
+0009E9CF mul edx
+0009E9D1 xor edi, edi
+0009E9D3 add eax, ecx
+0009E9D5 adc edx, edi
+0009E9D7 mov ebx, 0x64
+0009E9DC mov ecx, edx
+0009E9DE xor edx, edx
+0009E9E0 mov edi, eax
+0009E9E2 div ebx
+0009E9E4 cmp edx, ebp
+0009E9E6 jge 0x6fb3e9ee
+0009E9E8 inc dword ptr [esp + 0x24]
+0009E9EC jmp 0x6fb3e9c1
+0009E9EE mov eax, dword ptr [esp + 0x24]
+0009E9F2 push 0
+0009E9F4 push eax
+0009E9F5 push 0x148
+0009E9FA push esi
+0009E9FB mov dword ptr [esp + 0x3c], edi
+0009E9FF mov dword ptr [esp + 0x40], ecx
+0009EA03 call 0x6fb6aa0a ; D2Common.dll#10517
+0009EA08 mov ebx, dword ptr [esp + 0x10]
+0009EA0C mov ecx, dword ptr [esi + 0xc4]
+0009EA12 and ecx, 0xfffffff7
+0009EA15 mov dword ptr [esi + 0xc4], ecx
+0009EA1B mov eax, dword ptr [0x6fb91214]
+0009EA20 test eax, eax
+0009EA22 je 0x6fb3ea7b
+0009EA24 mov eax, dword ptr [ebx]
+0009EA26 test ah, 0x40
+0009EA29 jne 0x6fb3ea7b
+0009EA2B mov edi, dword ptr [esp + 0x20]
+0009EA2F mov al, byte ptr [edi + 0x130]
+0009EA35 test al, al
+0009EA37 jne 0x6fb3ea40
+0009EA39 mov al, byte ptr [ebx + 0x50]
+0009EA3C test al, al
+0009EA3E je 0x6fb3ea86
+0009EA40 mov ecx, esi
+0009EA42 call 0x6fb296e0
+0009EA47 mov cl, byte ptr [edi + 0x134]
+0009EA4D mov dl, byte ptr [edi + 0x133]
+0009EA53 mov al, byte ptr [edi + 0x132]
+0009EA59 push ecx
+0009EA5A xor ecx, ecx
+0009EA5C push edx
+0009EA5D mov cl, byte ptr [edi + 0x130]
+0009EA63 push eax
+0009EA64 push 0xff
+0009EA69 push ecx
+0009EA6A mov edx, 1

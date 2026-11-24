@@ -1,0 +1,139 @@
+Local PE/Capstone inspection, not a native runtime stack or REA Evidence.
+D2Client.dll sha256=94466b84c0593ab682f1d3d8dc65ef4f8170f33e430865d802bc752458b2b282
+896A0 validates the current target reference before returning it.
+ADEC0 compares the target type/GUID lookup with the stored pointer; mismatch clears the path reference.
+This resolver chain has no HP check. Other input/death paths may clear the reference separately.
+Current target getter RVA=0x896a0
+000896A0 push esi
+000896A1 mov esi, ecx
+000896A3 call 0x6fb4dec0
+000896A8 mov esi, dword ptr [esi + 0x2c]
+000896AB test esi, esi
+000896AD jne 0x6fb296cd
+000896AF push 0x944
+000896B4 push 0x6fb90938
+000896B9 push 0x6fb90a70
+000896BE call 0x6fb6a6b6
+000896C3 add esp, 0xc
+000896C6 push -1
+000896C8 call 0x6fb606b3
+000896CD push esi
+000896CE call 0x6fb6ae66
+000896D3 pop esi
+000896D4 ret 
+Reference identity check and clear RVA=0xadec0
+000ADEC0 sub esp, 8
+000ADEC3 test ecx, ecx
+000ADEC5 push esi
+000ADEC6 jne 0x6fb4dee3
+000ADEC8 push 0x26
+000ADECA push 0x6fb94090
+000ADECF push 0x6fb76b10
+000ADED4 call 0x6fb6a6b6
+000ADED9 add esp, 0xc
+000ADEDC push -1
+000ADEDE call 0x6fb606b3
+000ADEE3 mov esi, dword ptr [ecx + 0x2c]
+000ADEE6 test esi, esi
+000ADEE8 jne 0x6fb4df05
+000ADEEA push 0x2a
+000ADEEC push 0x6fb94090
+000ADEF1 push 0x6fb90a70
+000ADEF6 call 0x6fb6a6b6
+000ADEFB add esp, 0xc
+000ADEFE push -1
+000ADF00 call 0x6fb606b3
+000ADF05 push esi
+000ADF06 call 0x6fb6ae66
+000ADF0B test eax, eax
+000ADF0D je 0x6fb4df42
+000ADF0F lea eax, [esp + 8]
+000ADF13 push edi
+000ADF14 lea ecx, [esp + 8]
+000ADF18 push eax
+000ADF19 push ecx
+000ADF1A push esi
+000ADF1B call 0x6fb6b5ce
+000ADF20 mov edx, dword ptr [esp + 8]
+000ADF24 mov ecx, dword ptr [esp + 0xc]
+000ADF28 call 0x6fb269f0
+000ADF2D mov edi, eax
+000ADF2F push esi
+000ADF30 call 0x6fb6ae66
+000ADF35 cmp edi, eax
+000ADF37 pop edi
+000ADF38 je 0x6fb4df42
+000ADF3A push 0
+000ADF3C push esi
+000ADF3D call 0x6fb6ae00
+000ADF42 pop esi
+000ADF43 add esp, 8
+000ADF46 ret 
+Target position or current path fallback RVA=0x1a950
+0001A950 sub esp, 0x40
+0001A953 push ebx
+0001A954 push ebp
+0001A955 push esi
+0001A956 push edi
+0001A957 mov ebp, edx
+0001A959 mov edi, ecx
+0001A95B call 0x6fb296a0
+0001A960 mov esi, eax
+0001A962 xor ebx, ebx
+0001A964 cmp esi, ebx
+0001A966 je 0x6faba9d3
+0001A968 mov eax, dword ptr [esi]
+0001A96A cmp eax, 2
+0001A96D je 0x6faba98c
+0001A96F cmp eax, 3
+0001A972 jle 0x6faba979
+0001A974 cmp eax, 5
+0001A977 jle 0x6faba98c
+0001A979 mov eax, dword ptr [esi + 0x2c]
+0001A97C cmp eax, ebx
+0001A97E je 0x6faba988
+0001A980 push eax
+0001A981 call 0x6fb6a926
+0001A986 jmp 0x6faba992
+0001A988 xor eax, eax
+0001A98A jmp 0x6faba992
+0001A98C mov eax, dword ptr [esi + 0x2c]
+0001A98F mov eax, dword ptr [eax + 0xc]
+0001A992 mov dword ptr [ebp], eax
+0001A995 mov eax, dword ptr [esi]
+0001A997 cmp eax, 2
+0001A99A je 0x6faba9c5
+0001A99C cmp eax, 3
+0001A99F jle 0x6faba9a6
+0001A9A1 cmp eax, 5
+0001A9A4 jle 0x6faba9c5
+0001A9A6 mov esi, dword ptr [esi + 0x2c]
+0001A9A9 cmp esi, ebx
+0001A9AB je 0x6faba9bb
+0001A9AD push esi
+0001A9AE call 0x6fb6a920
+0001A9B3 mov edx, dword ptr [esp + 0x54]
+0001A9B7 mov dword ptr [edx], eax
+0001A9B9 jmp 0x6faba9eb
+0001A9BB mov edx, dword ptr [esp + 0x54]
+0001A9BF xor eax, eax
+0001A9C1 mov dword ptr [edx], eax
+0001A9C3 jmp 0x6faba9eb
+0001A9C5 mov ecx, dword ptr [esi + 0x2c]
+0001A9C8 mov edx, dword ptr [esp + 0x54]
+0001A9CC mov eax, dword ptr [ecx + 0x10]
+0001A9CF mov dword ptr [edx], eax
+0001A9D1 jmp 0x6faba9eb
+0001A9D3 mov esi, dword ptr [edi + 0x2c]
+0001A9D6 push esi
+0001A9D7 call 0x6fb6abae
+0001A9DC mov dword ptr [ebp], eax
+0001A9DF push esi
+0001A9E0 call 0x6fb6aba8
+0001A9E5 mov ecx, dword ptr [esp + 0x54]
+0001A9E9 mov dword ptr [ecx], eax
+0001A9EB cmp dword ptr [ebp], ebx
+0001A9EE je 0x6faba9fc
+0001A9F0 mov edx, dword ptr [esp + 0x54]
+0001A9F4 cmp dword ptr [edx], ebx
+0001A9F6 jne 0x6fabab06

@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "source_run_id": "20261121-231927-f587a20d",
+  "comparison_status": "matched_local_arctic_action_consumption_and_initial_update_phases",
+  "production_presentation_changed": true,
+  "server_damage_and_mana_path_changed": false,
+  "native_units": 24,
+  "local_emissions": 11,
+  "local_phases": [
+    {
+      "callback_tick": 11,
+      "birth_tick": 12,
+      "source_frame": 9,
+      "sequence_cursor": 2304,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    },
+    {
+      "callback_tick": 13,
+      "birth_tick": 14,
+      "source_frame": 9,
+      "sequence_cursor": 2304,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    },
+    {
+      "callback_tick": 15,
+      "birth_tick": 16,
+      "source_frame": 9,
+      "sequence_cursor": 2304,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    },
+    {
+      "callback_tick": 17,
+      "birth_tick": 18,
+      "source_frame": 9,
+      "sequence_cursor": 2304,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    },
+    {
+      "callback_tick": 19,
+      "birth_tick": 20,
+      "source_frame": 9,
+      "sequence_cursor": 2304,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    },
+    {
+      "callback_tick": 21,
+      "birth_tick": 22,
+      "source_frame": 9,
+      "sequence_cursor": 2304,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    },
+    {
+      "callback_tick": 23,
+      "birth_tick": 24,
+      "source_frame": 9,
+      "sequence_cursor": 2304,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    },
+    {
+      "callback_tick": 25,
+      "birth_tick": 26,
+      "source_frame": 9,
+      "sequence_cursor": 2304,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    },
+    {
+      "callback_tick": 27,
+      "birth_tick": 28,
+      "source_frame": 9,
+      "sequence_cursor": 2304,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    },
+    {
+      "callback_tick": 29,
+      "birth_tick": 30,
+      "source_frame": 9,
+      "sequence_cursor": 2304,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    },
+    {
+      "callback_tick": 31,
+      "birth_tick": 32,
+      "source_frame": 10,
+      "sequence_cursor": 2816,
+      "native_age_at_birth": 0,
+      "native_age_at_first_update": 2,
+      "displacement_fixed": 73728
+    }
+  ],
+  "local_allocation_stack": [
+    [
+      "com.riiablo.engine.server.ArcticBlastPublicationOriginalAnalysis.lambda$simulate$3",
+      "com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest$RecordingFactory.createMissile",
+      "com.riiablo.presentation.InfernoPresentationSystem.emit",
+      "com.riiablo.presentation.InfernoPresentationSystem.begin",
+      "com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest$Fixture.step",
+      "com.riiablo.engine.server.ArcticBlastPublicationOriginalAnalysis.simulate",
+      "com.riiablo.engine.server.ArcticBlastPublicationOriginalAnalysis.main"
+    ]
+  ],
+  "native_observation_clock": {
+    "name": "perf_counter",
+    "resolution_seconds": 1e-07,
+    "implementation": "QueryPerformanceCounter()"
+  },
+  "limitations": [
+    "Native runtime call stacks/GPU draws were not captured.",
+    "Native owner/type0 free-flight only; other game types, collision and all FCR/state combinations are not established.",
+    "Local replay exercises the relevant actual systems in client assembly relative order, not a complete live GameScreen.",
+    "Absolute origin centering and A/B allocation RNG are outside this phase comparison."
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "original": {
+    "server_counts": {
+      "infernoflame1": 14
+    },
+    "client_counts": {
+      "infernoflame1": 6,
+      "infernoflame2": 12
+    },
+    "lifetime_frames": 10,
+    "velocity_subtiles_per_second": [
+      14.0625,
+      0.0
+    ],
+    "client_frame_delta": 384,
+    "server_birth_frames": [
+      466,
+      468,
+      470,
+      472,
+      474,
+      476,
+      478,
+      480,
+      482,
+      484,
+      486,
+      488,
+      490,
+      494
+    ],
+    "client_birth_frames": [
+      467,
+      469,
+      471,
+      473,
+      475,
+      477,
+      479,
+      481,
+      483,
+      485,
+      487,
+      489,
+      491,
+      493,
+      495,
+      497,
+      499,
+      501
+    ],
+    "release_game_frame": 495,
+    "last_client_birth_after_release": 6,
+    "last_client_observed_frame": 509
+  },
+  "speed_shortfall_percent": 0.0,
+  "paired_dcc_samples": 116,
+  "frame_mismatches": 0
+}

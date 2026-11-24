@@ -1,0 +1,94 @@
+{
+  "date": "2026-11-21",
+  "status": "static_and_production_baseline_complete_runtime_blocked",
+  "runtime_capture_success": false,
+  "new_original_skill_samples": 0,
+  "skill_ids": [
+    240,
+    245
+  ],
+  "tests": {
+    "tests": 17,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "test_suites": [
+    {
+      "file": "TEST-com.riiablo.engine.server.DruidWindCollisionTest.xml",
+      "name": "com.riiablo.engine.server.DruidWindCollisionTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T08:20:02",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.149"
+    },
+    {
+      "file": "TEST-com.riiablo.engine.server.DruidWindStreamIntegrationTest.xml",
+      "name": "com.riiablo.engine.server.DruidWindStreamIntegrationTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T08:20:14",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.452"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.DruidSurfaceOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.DruidSurfaceOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T08:20:28",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.066"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.MissileAnimationCatchupTest.xml",
+      "name": "com.riiablo.presentation.MissileAnimationCatchupTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T08:20:42",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.269"
+    }
+  ],
+  "known_differences": [
+    "Generic client waits for full 41-frame DCC before entering subloop; native CltDo1 loops at SubStop36",
+    "Native loop exit depends on remaining frames; actual timing and phase await runtime sampling"
+  ],
+  "broker_status": "restart_required",
+  "automatic_broker_restart_error": "Windows UAC startup returned 5",
+  "original_process_cleanup": "Owned loader PID16192 closed after collector import failure; subsequent process check shows no original",
+  "failed_runs": [
+    "20261121-160225-314acbe0",
+    "20261121-160334-6c47f292",
+    "20261121-160659-416c2046",
+    "20261121-161131-36cbbaa7",
+    "20261121-161347-c52c6924"
+  ],
+  "coverage_unchanged": "Druid 4/30 collected and scoped compared; wind not counted",
+  "sha256": {
+    "druid_wind_passive.py": "92f9a9ec33d2475575b94f3044a45dd5bdf7aaf983e6181cdf5b927e1a46f59e",
+    "export_druid_wind_polling.py": "edcaf2ad7670aff0b3d44ecdde14cdb84bb8cbf86ea52b1903110eba26c76db1",
+    "inspect_druid_wind.py": "6c3664790654733f83330d6676073a8e7e2b2c61f3ec7090838c054f0d891dad",
+    "prepare_druid_batch_fixture.py": "d942dc69b279ba36fda85facf3a6b82a5f622b3d7cf038254e87eb6b0b3f25bf",
+    "molten_boulder_background.py": "5a994d8214d87d7f427904c64cac01959dff0155f8212cb687700999f41f6c5a",
+    "orchestrator.py": "13401c85440a8c54f63ce97d37a7c6877a525eebe815732c4a2df29a9f13e4b8",
+    "resident_broker.py": "c29fed7c70a9a791e10a97a55bf0ef7d118045d7749b7d6bec467c6455700d39",
+    "druid-wind-static-1.10f.txt": "06a671e334002a3e4e0906f30069bcd64f228127d386491db6c07fe37cd1da8c",
+    "druid-wind-baseline-validation.log": "516d6846127820c3d2c6e4cce26c26564c8af7cdc6ccd7f5c112421fb6a3bbc5",
+    "class-skill-batch-2026-11-21/druid-twister-production-static-baseline.json": "5d4c0360ae45b97a7b92ed064e6e4001ca6fdf4108b6ed5aa227b26e051c1006",
+    "class-skill-batch-2026-11-21/druid-tornado-production-static-baseline.json": "8a506a052b1293bd2deb3c330796745811551d88c0a4cfc7d2236540ef84dc5e"
+  },
+  "module_boundaries_passed": true,
+  "python_compile_passed": true,
+  "collector_help_preflight_passed": true,
+  "diff_check_passed": true
+}

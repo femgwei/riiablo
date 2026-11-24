@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "run_id": "20261121-081404-1ed47852",
+  "background_verified": true,
+  "production_fixes_applied": false,
+  "fixture_sha256": "a748d6aada9ab15871eb4df239ed10775be5e68d1a88f29b38902ef84644eba9",
+  "replay_sha256": "23dfb831dcd17b368d7789e6fdf2e8b66354a63d388d3f49233c786c2022dc56",
+  "original": {
+    "state_stats": [
+      [
+        8,
+        10,
+        20
+      ]
+    ],
+    "duration_frames": [
+      3600
+    ],
+    "activation_calls": 2,
+    "draw_calls": 32,
+    "overlay_frames": [
+      17
+    ],
+    "overlay_frame_delta": [
+      256
+    ],
+    "frames_per_second": 25.0,
+    "draw_modes": [
+      3
+    ],
+    "cast_frames": [
+      466,
+      511
+    ]
+  },
+  "production": {
+    "duration_frames": 3600,
+    "state_stats": [
+      8,
+      10,
+      20
+    ],
+    "activation_requests": 1,
+    "request_ticks": [
+      0
+    ],
+    "overlay_frames_per_second": 16.0,
+    "native_rendering": false,
+    "blend_mode": 2,
+    "blend_mode_name": "LUMINOSITY",
+    "original_drawmode3_policy_blend_mode": 14,
+    "enchanted_hand_transforms": [
+      10,
+      10
+    ],
+    "restored_hand_transforms": [
+      3,
+      7
+    ]
+  },
+  "checks": {
+    "level_one_state_stats": true,
+    "state_duration": true,
+    "refresh_activation_count": false,
+    "overlay_rate": false,
+    "uses_existing_native_overlay_blend_policy": false,
+    "restores_synthetic_hand_base": true
+  },
+  "findings": [
+    "Enchant's level-one state values and expiry duration match this original sample",
+    "Production suppresses the second activation overlay because the state id remains active",
+    "Overlay AnimRate=16 is used as 16 FPS; native uses AnimRate<<4 as an 8.8 increment at 25 Hz",
+    "Production uses luminosity alpha-over; observed original draw mode 3 maps to the existing additive overlay policy",
+    "Numeric native draw modes and Java BlendMode values are different enums; compare mapped behavior, not integers"
+  ],
+  "limitations": [
+    "Two self casts, level one, no synergies/mastery, fixed plain right-hand javelin",
+    "Overlay draw arguments and returns were observed; DCC internal selections and final GPU pixels were not",
+    "Native overlay field +28 is retained raw; draw-mode claims use the actual graphics call argument",
+    "No target attack damage, full 3600-tick expiry, allied target, shield or palette-pixel comparison",
+    "Server and client updates are asynchronous; game_frame is the server sample clock",
+    "SkillDo is injected directly; caster keyframes and start audio are not simulated",
+    "Initial hand transforms are synthetic; original weapon pixels/palette tables are not compared",
+    "State expiry is emulated by removing it after capture; no full 3600-tick production lifecycle",
+    "No target attack damage, PvP, mastery, synergy, networking or different skill levels"
+  ]
+}

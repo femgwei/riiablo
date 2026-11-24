@@ -1,0 +1,15 @@
+{
+  "id": "20261122-014022-d9d92f67",
+  "status": "completed",
+  "started": 1795282822.6736145,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "druid-storm-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261122-014022-d9d92f67\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795282901.8517685
+}

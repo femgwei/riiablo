@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.DruidSummonIntegrationTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-23T08:55:51" hostname="DESKTOP-7GGAVHU" time="0.57">
+  <properties/>
+  <testcase name="summonBaseLevelUsesNativeCalc2InsteadOfOwnerLevelHeuristic()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.168"/>
+  <testcase name="spiritAurasUseLinkedNativeAuraRowsAndRevokeWhenOutOfRangeOrDismissed()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.036"/>
+  <testcase name="spiritAuraCannotCrossMapZoneEvenWhenCoordinatesOverlap()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.015"/>
+  <testcase name="vinesInstallNativeSumSkillLevelAndVineBeastStateWithoutAuraProjection()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.002"/>
+  <testcase name="reusedSpiritEntityIdCannotResurrectTheOldAuraLayer()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.005"/>
+  <testcase name="spiritAuraSnapshotPreservesIndependentSourceLayersAcrossReconnect()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.001"/>
+  <testcase name="[1] 1, 1068, true" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.197"/>
+  <testcase name="[2] 5, 1068, true" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.036"/>
+  <testcase name="[3] 1, 5, false" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.005"/>
+  <testcase name="spiritAuraProjectsToOwnerWithPetSourceIdentity()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.002"/>
+  <testcase name="spiritAuraTargetsOnlyOwnerPartyMercenaryAndSummonThenRevokesOnDeath()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.01"/>
+  <testcase name="legacySpiritAuraSnapshotWithoutSourceVectorsFallsBackSafely()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.0"/>
+  <testcase name="allThreeSpiritsReachPartyHirelingsAndPetsButNotOutsiders()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.006"/>
+  <testcase name="allNativeDruidSummonFunctionsCreateOwnedEntities()" classname="com.riiablo.engine.server.DruidSummonIntegrationTest" time="0.006"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=221 target=-1 srvDoFunc=114 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=226 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=236 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=246 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=226 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=226 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=221 target=-1 srvDoFunc=114 cltDoFunc=0
+WARN  [Pathfinder] [PATH_RESULT] entity=1 accepted=false reason=no_velocity
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=221 target=-1 srvDoFunc=114 cltDoFunc=0
+WARN  [Pathfinder] [PATH_RESULT] entity=1 accepted=false reason=no_velocity
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=221 target=-1 srvDoFunc=114 cltDoFunc=0
+WARN  [Pathfinder] [PATH_RESULT] entity=1 accepted=false reason=no_velocity
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=226 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=226 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=226 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=236 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=246 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=221 target=-1 srvDoFunc=114 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=222 target=-1 srvDoFunc=115 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=226 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=227 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=231 target=-1 srvDoFunc=115 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=236 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=237 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=241 target=-1 srvDoFunc=115 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=246 target=-1 srvDoFunc=119 cltDoFunc=0
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=247 target=-1 srvDoFunc=119 cltDoFunc=0
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

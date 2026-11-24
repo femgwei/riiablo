@@ -200,6 +200,7 @@ public class SequenceHandler extends IteratingSystem {
       // repeated action uses the same mode (for example consecutive Throws),
       // otherwise it inherits the previous frame and can skip its keyframe.
       cofs.setMode(entityId, sequence.mode1, true);
+      if (sequence.nativeArcticBlast) mCofReference.get(entityId).sequenceFrame = 0;
       if (sequence.nativeLeap) mCofReference.get(entityId).sequenceFrame = 0;
       mAnimData.get(entityId).override = -1;
       if (sequence.nativeMonster != null) {
@@ -224,6 +225,10 @@ public class SequenceHandler extends IteratingSystem {
       log.trace("Starting sequence for entity {}: setting mode to {}", entityId, sequence.mode1);
       cofs.setMode(entityId, sequence.mode1);
       mAnimData.get(entityId).override = -1;
+    }
+    if (sequence.nativeArcticBlast) {
+      mAnimData.get(entityId).override = 256;
+      return;
     }
     if (sequence.nativeJab) {
       // D2Common's UNITS_UpdateAttackAnimRateAndVelocity applies the fixed

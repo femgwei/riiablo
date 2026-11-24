@@ -1,0 +1,13 @@
+{
+  "id": "20261121-080313-b91fa68e",
+  "status": "failed",
+  "started": 1795219393.258301,
+  "broker_pid": 2616,
+  "command": {
+    "op": "run_job",
+    "job": "enchant-private-desktop"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-073727-5ce591f8\\runs\\20261121-080313-b91fa68e\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 345, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 312, in execute\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-073727-5ce591f8\\runs\\20261121-080313-b91fa68e\\orchestrator\n",
+  "finished": 1795219432.683343
+}

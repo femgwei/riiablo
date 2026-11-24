@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "run_id": "20261121-181537-2a5ba484",
+  "scope": "Level-one single-stream motion/clock and client resource wiring; full held-input cadence and GPU not validated",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "tests": [
+    {
+      "name": "com.riiablo.engine.server.DruidWindStreamIntegrationTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.ArcticBlastOriginalParityTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.AuthoritativeAreaSkillPresentationTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.InfernoAudioSystemTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.SorceressPresentationParityTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "test_total": 24,
+  "hashes": {
+    "core/src/test/resources/original/arctic-blast-1.10f.json": "2f4b73a31d416f70d614b7aab5aa38e04feb14a02790674e2c59376728e46470",
+    "tools/original-observer/arctic-blast-before-fix-1.10f.json": "35839f2dae5dee4a2685652dc48562934a30d437a0ef131f92df2318d83fb49f",
+    "tools/original-observer/arctic-blast-after-fix-1.10f.json": "1627ab645b6c987943fbdbe3c66d343f831ec169bf284259038f4e288ff2d05d",
+    "tools/original-observer/arctic-blast-static-1.10f.txt": "6b5ecf9f84587e944be1370ffb22c0b972b2b02fcff0607e205aa3ae061ee78b",
+    "tools/original-observer/class-skill-batch-2026-11-21/druid-arctic-blast-comparison-1.10f.json": "e3ee2bbe5d6b6ae5075b06966d6eb9436d24135ae346a4638984e6b1c07f200c",
+    "tools/original-observer/arctic-blast-validation.log": "16262dd8cec2534cea270afe5b330d3a5f000515b67218b48ee5f940cb177200",
+    "tools/original-observer/arctic-blast-test-results/TEST-com.riiablo.engine.server.DruidWindStreamIntegrationTest.xml": "1248d857d5fb5e30968803871420f24e60b5f28b0b5b0572c9ec9187fb34fe03",
+    "tools/original-observer/arctic-blast-test-results/TEST-com.riiablo.presentation.ArcticBlastOriginalParityTest.xml": "5778ca29cd0ab617ac0809c76ebd2c79f07587865d4367b6d79f972cd4b4f4f3",
+    "tools/original-observer/arctic-blast-test-results/TEST-com.riiablo.presentation.AuthoritativeAreaSkillPresentationTest.xml": "f4747088330c8288a642c87d4f7af9de43cb94253cae90c84ebbea1035feadd6",
+    "tools/original-observer/arctic-blast-test-results/TEST-com.riiablo.presentation.InfernoAudioSystemTest.xml": "7ef6d1b91a3f19fd80f48dafbdb3e4b009d8da3907c8a275c302241a44787bab",
+    "tools/original-observer/arctic-blast-test-results/TEST-com.riiablo.presentation.SorceressPresentationParityTest.xml": "36f6cf1a0ac43d2f771f92c4d45a5f6ebc5f06248b71cf5f66093292759a20aa",
+    "core/src/main/java/com/riiablo/engine/server/missile/NativeInfernoMotion.java": "a755d2727d4fe29ab5a5fb6804d7b32648fb0907aad183393dd9bd800fd9bc17",
+    "core/src/main/java/com/riiablo/presentation/InfernoPresentationSystem.java": "a6a6ffcaf9e68034f3db12f8ba3cc06105379bfcef8ddb0aed142f218e146d8b",
+    "core/src/main/java/com/riiablo/presentation/NativeInfernoPresentation.java": "fa18e4bec9b7ab495c187aa45d0d910972eadb6176370930ef5cc3c01069d6f3",
+    "core/src/main/java/com/riiablo/presentation/SkillCastHandler.java": "66f63b069520a8a3893eed8c12edbf0ddcbcfcf30ba6ae1c442bc0e61e1595de",
+    "core/src/test/java/com/riiablo/presentation/ArcticBlastOriginalAnalysis.java": "f6378d95121bd3b0095d49281f41c49287b07330999658e3f4862728764954bd",
+    "core/src/test/java/com/riiablo/presentation/ArcticBlastOriginalParityTest.java": "eb06226eec43a008f814f0b5f3638f1201a50a1b76fc72cb637a025e4b5a70a7"
+  }
+}

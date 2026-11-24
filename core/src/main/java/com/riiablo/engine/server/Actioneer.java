@@ -281,14 +281,47 @@ public class Actioneer extends PassiveSystem {
     return mSequence.has(entityId);
   }
 
+  public boolean hasArcticBlastSequence(int entityId) {
+    Sequence sequence = mSequence.get(entityId);
+    return sequence != null && sequence.nativeArcticBlast && mCasting.has(entityId);
+  }
+
+  /** Local fixed-step input and repeated network cast requests share this keepalive. */
+  public boolean updateArcticBlastInput(int entityId, boolean held, int targetId, Vector2 target) {
+    if (!hasArcticBlastSequence(entityId)) return false;
+    if (!isAlive(entityId)) return false;
+    Sequence sequence = mSequence.get(entityId);
+    sequence.nativeArcticInputLease = held ? 2 : 0;
+    if (held) {
+      Casting casting = mCasting.get(entityId);
+      casting.targetId = targetId >= 0 && isAlive(targetId) ? targetId : Engine.INVALID_ENTITY;
+      if (target != null) casting.targetVec.set(target);
+      if (mAngle.has(entityId) && mPosition.has(entityId)) {
+        Vector2 facing = new Vector2(casting.targetVec).sub(mPosition.get(entityId).position);
+        if (!facing.isZero()) mAngle.get(entityId).target.set(facing).nor();
+      }
+    }
+    return true;
+  }
+
   /** Cancels a locally predicted network cast after an authoritative reject. */
   public void cancelCasting(int entityId, String reason) {
     if (entityId == Engine.INVALID_ENTITY) return;
     boolean hadCasting = mCasting.has(entityId);
     boolean hadSequence = mSequence.has(entityId);
+    boolean arctic = hadSequence && mSequence.get(entityId).nativeArcticBlast;
     if (hadCasting && mCasting.get(entityId).diabRun != null) pathfinder.findPath(entityId, null);
     if (hadCasting) mCasting.remove(entityId);
     if (hadSequence) mSequence.remove(entityId);
+    if (arctic) {
+      UnitStates states = mUnitStates.get(entityId);
+      if (states != null && states.stateList != null) states.stateList.removeState(StateId.INFERNO);
+      if (mCofReference.has(entityId)) {
+        mCofReference.get(entityId).sequenceFrame = -1;
+        CofManager manager = world.getSystem(CofManager.class);
+        if (manager != null && mMovementModes.has(entityId)) manager.setMode(entityId, mMovementModes.get(entityId).NU);
+      }
+    }
     if (mTarget.has(entityId)) mTarget.remove(entityId);
     if (hadCasting || hadSequence) {
       log.info("[SKILL_CAST] phase=authoritative_cancel entity={} reason={}",
@@ -322,6 +355,10 @@ public class Actioneer extends PassiveSystem {
 
   private void castInternal(int entityId, int skillId, int targetId, Vector2 targetVec,
       byte requestedMode, long snapshotTick) {
+    if (skillId == SkillId.ARCTIC_BLAST && hasArcticBlastSequence(entityId)) {
+      lastCastAccepted = updateArcticBlastInput(entityId, true, targetId, targetVec);
+      return;
+    }
     if (!canCast(entityId)) {
       log.info("[SKILL_CAST] rejected_busy entity={} skill={} casting={} sequence={}",
           entityId, skillId, mCasting.has(entityId), mSequence.has(entityId));
@@ -468,6 +505,12 @@ public class Actioneer extends PassiveSystem {
     mAngle.get(entityId).target.set(targetVec).sub(entityPos).nor();
     Sequence actionSequence = mSequence.create(entityId)
         .sequence(mode, mMovementModes.get(entityId).NU);
+    if (type == Class.Type.PLR && nativeArcticBlast(skill)) {
+      actionSequence.nativeArcticBlast = true;
+      actionSequence.nativeArcticFirstTick = true;
+      actionSequence.nativeArcticRemaining = NativeArcticBlastSequence.LENGTH;
+      actionSequence.nativeArcticInputLease = 2;
+    }
     LeapSystem leapSystem = world.getSystem(LeapSystem.class);
     if (type == Class.Type.PLR && (skill.Id == SkillId.LEAP || skill.Id == SkillId.LEAP_ATTACK)
         && (leapSystem == null || leapSystem.isAuthoritative())) {
@@ -508,6 +551,7 @@ public class Actioneer extends PassiveSystem {
     switch (type) {
       case MON: return type.getMode(skill.monanim);
       case PLR: {
+        if (nativeArcticBlast(skill)) return Engine.Player.MODE_S1;
         if (skill.Id == SkillId.LEAP || skill.Id == SkillId.LEAP_ATTACK) return Engine.Player.MODE_S1;
         int mode = type.getMode(skill.anim);
         // Player SQ is a hard-coded native sequence rather than a COF mode.
@@ -521,6 +565,11 @@ public class Actioneer extends PassiveSystem {
         log.error("Unsupported mode translation for class type: " + type);
         return type.getMode(skill.anim);
     }
+  }
+
+  private static boolean nativeArcticBlast(Skills.Entry skill) {
+    return skill != null && skill.Id == SkillId.ARCTIC_BLAST && skill.seqnum == 18
+        && "SQ".equalsIgnoreCase(skill.anim) && skill.srvstfunc == 11 && skill.srvdofunc == 19;
   }
 
   /**
@@ -2521,6 +2570,8 @@ public class Actioneer extends PassiveSystem {
           durabilityWeapon = null;
         }
         drainSharedMeleeDurability(entityId, durabilityWeapon, targetId);
+        com.riiablo.engine.server.combat.NativeBlindTargetApplier.apply(
+            world, files(), entityId, targetId, combatDifficulty(), gameSeed());
 
         AssassinSkills.ProgressiveRelease progressiveRelease = null;
         if (AssassinSkills.isFinishingMove(srvdofunc) && mUnitStates.has(entityId)
@@ -2627,7 +2678,8 @@ public class Actioneer extends PassiveSystem {
               damage, appliedDamage, hpBefore, hpAfter, attackingMonster.resurrected,
               attackingMonster.resurrectedBy, attackingMonster.playerRevive);
         }
-        if (hpAfter > 0f) queueHitReaction(targetId, false);
+        if (hpAfter > 0f) HitReactionResolver.queueMonsterMeleeDamage(
+            world, files(), entityId, targetId, combat, gameSeed());
 
         // Bash carries the native knockback result flag. Apply it only after
         // a successful, unblocked hit so misses never move the target.
@@ -3786,6 +3838,16 @@ public class Actioneer extends PassiveSystem {
     casting.fireClawsCombat = null;
     casting.fireClawsTargetId = Engine.INVALID_ENTITY;
     casting.fireClawsPrepared = false;
+    // Native SrvDo002 selects SrvOverlay from the prepared successful-hit
+    // record, including zero-damage hits. A blocked hit clears that flag.
+    com.riiablo.codec.excel.NativeSkills.Entry skill = files().NativeSkills == null
+        ? null : files().NativeSkills.get(SkillId.FIRE_CLAWS);
+    String overlay = skill == null ? null : skill.string("srvoverlay");
+    if (combat.hit && !combat.blocked && isAlive(targetId)
+        && overlay != null && !overlay.isEmpty()) {
+      events.dispatch(com.riiablo.engine.server.event.UnitOverlayEvent.obtain(
+          targetId, overlay));
+    }
     resolveDruidElementalMeleeDamage(entityId, targetId, combat, "FIRE_CLAWS");
   }
 

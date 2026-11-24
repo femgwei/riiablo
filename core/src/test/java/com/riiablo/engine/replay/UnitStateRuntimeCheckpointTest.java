@@ -45,7 +45,7 @@ class UnitStateRuntimeCheckpointTest {
   }
   @Test void schemaAndEveryScalarIncludePrivateCompatibilityProjectionBaselines() throws Exception {
     Set<String> expected = new HashSet<>(Arrays.asList(
-      "stateId", "level", "duration", "initialDuration",
+      "stateId", "level", "duration", "initialDuration", "presentationRevision",
       "sourceEntityId", "skillId", "curseGroup", "curseStrength",
       "damageModifier", "defenseModifier", "attackModifier", "velocityModifier",
       "runtimeValue", "animationRateModifier", "lifeLeechModifier", "stunLength",

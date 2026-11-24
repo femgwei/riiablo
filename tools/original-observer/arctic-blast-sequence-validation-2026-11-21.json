@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "source_run_id": "20261121-185938-70b0693c",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "test_total": 40,
+  "suites": [
+    {
+      "name": "com.riiablo.engine.client.CursorArcticBlastInputTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T11:26:01",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.65"
+    },
+    {
+      "name": "com.riiablo.engine.replay.ActionRuntimeCheckpointTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T11:26:11",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.102"
+    },
+    {
+      "name": "com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T11:26:24",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.512"
+    },
+    {
+      "name": "com.riiablo.engine.server.DruidWindStreamIntegrationTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T11:26:39",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.322"
+    },
+    {
+      "name": "com.riiablo.engine.server.PlayerLeapPresentationTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T11:26:52",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.257"
+    },
+    {
+      "name": "com.riiablo.presentation.ArcticBlastOriginalParityTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T11:27:06",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.213"
+    },
+    {
+      "name": "com.riiablo.presentation.AuthoritativeAreaSkillPresentationTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T11:27:20",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.029"
+    },
+    {
+      "name": "com.riiablo.presentation.InfernoAudioSystemTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T11:27:33",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.225"
+    },
+    {
+      "name": "com.riiablo.presentation.SorceressPresentationParityTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T11:27:46",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.687"
+    }
+  ],
+  "comparison_status": "compared_caster_source_frame_stages_with_remaining_phase_differences",
+  "hashes": {
+    "server-domain/src/main/java/com/riiablo/engine/server/NativeArcticBlastSequence.java": "51617340549f9fa82a7195196577ea67fb5f5b90505778217e35a5152c7d4756",
+    "core/src/main/java/com/riiablo/engine/server/component/Sequence.java": "e02cc350e0af1d19782558bb9ffffa9d16adaf145fbe95d80a921716b479ffbd",
+    "core/src/main/java/com/riiablo/engine/server/Actioneer.java": "9271cf9d98bd8f5b9761b056340b08120e9c33c4c667db4d92a63e1a278900dd",
+    "core/src/main/java/com/riiablo/engine/server/AnimStepper.java": "41fd2d8a43c3ec4131a678254b66940e996a3d04c55b65472f22da4612745266",
+    "core/src/main/java/com/riiablo/engine/server/SequenceHandler.java": "06b5caa0928df6b66fcb0dd091d02ff27d6081437aba36da0010851b706e6bfe",
+    "core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java": "0fe7c30d3127d71b606208f512a3eb30762721c2456596c314cc28735fe8f389",
+    "core/src/main/java/com/riiablo/engine/client/CursorMovementSystem.java": "44dd7a58cca9ff2d105a9165f39aede5958a0a1807b1491c0c832c0e8a274a9b",
+    "core/src/test/java/com/riiablo/engine/server/ArcticBlastSequenceIntegrationTest.java": "c39a5f399ca1aad6468b139fe2253862edfa6f087d7a269cd9d95d5c57aa108d",
+    "core/src/test/java/com/riiablo/engine/server/ArcticBlastSequenceOriginalAnalysis.java": "35f07e9521a2d511ee12c65908ac696efafd8cbeb490a126ba7199eb764b0be4",
+    "core/src/test/java/com/riiablo/engine/client/CursorArcticBlastInputTest.java": "637dc6ae8d6964614add95390c69fb059856d513b2b1b6636b5639563d5ec4b5",
+    "core/src/test/resources/original/arctic-blast-sequence-1.10f.json": "cc2602049abb3ddf80835d0435b721e7bf55950229bd5caa7b6a20ac063b6619",
+    "docs/arctic-blast-caster-sequence-analysis-2026-11-21.md": "a599b6811873339f5f90e6884c1ea7fdabccdca62812d280f3eef7de7f953f3e",
+    "tools/original-observer/arctic_blast_passive.py": "6e67e4e24a9cf8a65feefc7e12b4e899e9bc1ac8cbeee6224844a8470ca7d612",
+    "tools/original-observer/export_arctic_sequence.py": "08b3fbaa9762fdbf71c91b3a44f9da54b10cd46292886b6717441ade331634de",
+    "tools/original-observer/inspect_arctic_sequence.py": "40dce1923b7e7553f9fca52f92148cd37688b17bacaca3b2c8bbafc913d12b80",
+    "tools/original-observer/compare_arctic_sequence.py": "68d516b8791a25260aa491558dca91c42cc59cac1ca31a7994d4a137d0cb5698",
+    "tools/original-observer/arctic-blast-sequence-production-1.10f.json": "5a653728c2f3e160a49e32ab3b5b77baeeeef760d51b4503b44e839c947ce113",
+    "tools/original-observer/arctic-blast-sequence-static-1.10f.txt": "16d9f72e65d63bd7308920d283a4e0d9b334c31f2d410981655913b8de2952bd",
+    "tools/original-observer/arctic-blast-sequence-final-validation.log": "1e8893e8d095ff587ed810e24f80b1d2cde181ca1c2b4cecd536c11b7e3e3e46",
+    "tools/original-observer/class-skill-batch-2026-11-21/druid-arctic-blast-caster-comparison-1.10f.json": "3a89f56c01d2494697ca5e22ab3780736f3e6ee42b1a285c4846e5142e01bbd9",
+    "tools/original-observer/arctic-blast-sequence-test-results/TEST-com.riiablo.engine.client.CursorArcticBlastInputTest.xml": "8988dd240eb84327debf8b15699c8af3be69701ad9075b695aa2e9bee5a058cc",
+    "tools/original-observer/arctic-blast-sequence-test-results/TEST-com.riiablo.engine.replay.ActionRuntimeCheckpointTest.xml": "c42b5ace7f3f2e8b4199a0b7b0e0fc5dc31d55948ab3d17466f81677b34fa85e",
+    "tools/original-observer/arctic-blast-sequence-test-results/TEST-com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest.xml": "e5fe9ecc085aff9cf526f1b5f2bb81487f2092b8d7eb4050b4045292ce67f1a1",
+    "tools/original-observer/arctic-blast-sequence-test-results/TEST-com.riiablo.engine.server.DruidWindStreamIntegrationTest.xml": "c109a3968ca9367514ff165b80bd189e7319278f02463b41e4253cf18c09d99c",
+    "tools/original-observer/arctic-blast-sequence-test-results/TEST-com.riiablo.engine.server.PlayerLeapPresentationTest.xml": "f7deb926a25ddbba5479cd32521369d9dc9cdb81cff3431438bd6db0ed500ecf",
+    "tools/original-observer/arctic-blast-sequence-test-results/TEST-com.riiablo.presentation.ArcticBlastOriginalParityTest.xml": "99ec1df1ff71890dafbd2f2d526d6da047d1105251f3a01bcd223b37d0a8b92d",
+    "tools/original-observer/arctic-blast-sequence-test-results/TEST-com.riiablo.presentation.AuthoritativeAreaSkillPresentationTest.xml": "c80fdad068a63d24038b6a805e3f6d1e2b9d9042acbef43a4feea089cdf49e3a",
+    "tools/original-observer/arctic-blast-sequence-test-results/TEST-com.riiablo.presentation.InfernoAudioSystemTest.xml": "4f175c88c43ac15692415c2d2a8cf58aef2edd859401fc1097eb9fc1cbf35a43",
+    "tools/original-observer/arctic-blast-sequence-test-results/TEST-com.riiablo.presentation.SorceressPresentationParityTest.xml": "fb453f720389ea33c5de01013bcda7671f3c726383c3d3d229f7b7e2c047dcff"
+  }
+}

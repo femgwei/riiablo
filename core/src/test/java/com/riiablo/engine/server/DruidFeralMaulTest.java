@@ -275,6 +275,60 @@ class DruidFeralMaulTest extends RiiabloTest {
         .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
   }
 
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.CsvSource({
+      "wolf,true,false,true,normal", "bear,true,false,true,normal",
+      "wolf,false,false,false,normal", "bear,true,true,false,normal",
+      "wolf,true,false,true,zero", "bear,true,false,true,lethal",
+      "wolf,true,false,false,dead"})
+  void fireClawsOverlayFollowsPreparedHitExactlyOnce(String shape, boolean hit,
+      boolean blocked, boolean visible, String damageCase) {
+    Actioneer actioneer = new Actioneer();
+    World world = world(actioneer, new DummyFactory());
+    try {
+      java.util.List<com.riiablo.engine.server.event.UnitOverlayEvent> overlays = new java.util.ArrayList<>();
+      world.getSystem(EventSystem.class).registerEvents(new Object() {
+        @net.mostlyoriginal.api.event.common.Subscribe
+        public void overlay(com.riiablo.engine.server.event.UnitOverlayEvent e) { overlays.add(e); }
+      });
+      Skills.Entry claws = Riiablo.files.skills.get(SkillId.FIRE_CLAWS);
+      int druid = player(world, 0, 0, attributes(1000, 10, 10, 100000));
+      CharData data = CharData.createRemote("claws-overlay", (byte) Riiablo.DRUID);
+      data.setSkillLevel(claws.Id, 1);
+      world.getMapper(Player.class).get(druid).data = data;
+      world.getMapper(UnitStates.class).get(druid).stateList.addState(
+          "wolf".equals(shape) ? StateId.WOLF : StateId.BEAR, 2000, 1, druid);
+      int target = monster(world, 1, 0, attributes(1000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(druid)
+          .set(claws.Id, target, new Vector2(1, 0));
+      actioneer.onSkillStart(SkillStartEvent.obtain(
+          druid, claws.Id, target, new Vector2(1, 0), claws.srvstfunc, claws.cltstfunc));
+      assertNotNull(casting.fireClawsCombat);
+      casting.fireClawsCombat.hit = hit; casting.fireClawsCombat.blocked = blocked;
+      if ("zero".equals(damageCase) || "lethal".equals(damageCase)) {
+        casting.fireClawsCombat.physicalScale = casting.fireClawsCombat.elementalScale = 1;
+        java.util.Arrays.fill(casting.fireClawsCombat.elementalDamage, 0);
+        casting.fireClawsCombat.physicalDamage = "zero".equals(damageCase) ? 0 : 2000;
+        casting.fireClawsCombat.totalDamage = casting.fireClawsCombat.physicalDamage;
+      }
+      if ("dead".equals(damageCase)) world.getMapper(AttributesWrapper.class)
+          .get(target).attrs.get(Stat.hitpoints).set(0f);
+      assertTrue(overlays.isEmpty(), "SrvSt58 must not draw before the attack keyframe");
+      actioneer.onAnimDataKeyframe(AnimDataKeyframeEvent.obtain(druid, Engine.KEYFRAME_ATK));
+      assertEquals(visible ? 1 : 0, overlays.size());
+      if (visible) {
+        assertEquals(target, overlays.get(0).entityId);
+        assertEquals("fire_hit", overlays.get(0).overlay);
+      }
+      float after = hp(world, target);
+      if ("zero".equals(damageCase)) assertEquals(1000f, after);
+      if ("lethal".equals(damageCase) || "dead".equals(damageCase)) assertEquals(0f, after);
+      actioneer.onAnimDataKeyframe(AnimDataKeyframeEvent.obtain(druid, Engine.KEYFRAME_ATK));
+      assertEquals(visible ? 1 : 0, overlays.size(), "consumed combat cannot replay a flash");
+      assertEquals(after, hp(world, target), "consumed combat cannot deal damage twice");
+    } finally { world.dispose(); }
+  }
+
   private static int player(World world, float x, float y, Attributes attrs) {
     int id = world.create();
     world.getMapper(Player.class).create(id);

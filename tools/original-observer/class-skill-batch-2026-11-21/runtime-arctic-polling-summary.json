@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "run_id": "20261121-181537-2a5ba484",
+  "source": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-181537-2a5ba484",
+  "class_code": "dru",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "launch_count": 1,
+  "observation_mode": "unsuspended_client_memory_polling",
+  "fixture": {
+    "name": "CXArctic",
+    "path": "G:\\BaiduNetdiskDownload\\Diablo II\\Save\\CXArctic.d2s",
+    "sha256": "482f6993d6180daeff07ddd3ec49a64852ababdcf9a9366c44e16464fa83a904",
+    "class_id": 5,
+    "skill_id": 230,
+    "skill_level": 1,
+    "map_seed": 127897359,
+    "source_sha256": "21349fff66d97e0d8270ed15c2d1148e5c4c38e46e28621757987f18f5415374"
+  },
+  "provenance_sha256": {
+    "arctic_blast_background.py": "6b7d901e72d8d3d7820adb8299cd2a0c8a93b292fa51669ec5668b5101ea961b",
+    "arctic_blast_passive.py": "3fd236f86db5f7ba5e8e9bf315e92f656ab4800ea77a529b0a60a233fb962e08",
+    "observer.py": "7df3b7dbce28ea8c373548188d9e2da3c2d816e5d502316f97eaff832571c005",
+    "prepare_arctic_blast_fixture.py": "45af75e968b3055a17880f55efd0d35ca3bce61e22841cbb541c2e8ff0e5106b",
+    "scene_reader.py": "e2158994363c1ea95fed002d63af24de8d1017c1525f503220ea2d87f76ccf89",
+    "test-character.py": "ce966ead4086ff4cd16698ed5b5e148058ff5b19e39d466aabde99cdc4f54305"
+  },
+  "captures": [
+    {
+      "skill_id": 230,
+      "file": "druid-arctic-blast-replay-input-1.10f.json",
+      "sha256": "2f4b73a31d416f70d614b7aab5aa38e04feb14a02790674e2c59376728e46470",
+      "runtime_status": "captured_client_polling",
+      "comparison_status": "pending_matched_loadout_replay",
+      "observation_mode": "unsuspended_client_memory_polling",
+      "unique_client_units": 25,
+      "unique_states": 400,
+      "dcc_selections": 0
+    }
+  ]
+}

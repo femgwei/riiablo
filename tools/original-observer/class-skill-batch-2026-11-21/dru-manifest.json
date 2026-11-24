@@ -1,0 +1,1059 @@
+{
+  "schema": 1,
+  "class_code": "dru",
+  "priority": 1,
+  "deferred": false,
+  "source_inventory_sha256": "11b24a3fc8d01529146304b770a44fbf3c2b38f016a39fe0163bf4573bef7b2f",
+  "fixture_policy": "Record learned skills/equipment/synergies; separate loadouts or sessions when prerequisites conflict",
+  "family_classification": "Table-based scheduling hint, requires per-skill review",
+  "skills": [
+    {
+      "skill_id": 221,
+      "skill": "Raven",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "partial_lifecycle_combat_and_blind_feedback_validated",
+        "evidence": "core/src/test/resources/original/druid-raven-lifecycle-1.10f.json",
+        "analysis": "docs/druid-raven-lifecycle-fix-2026-11-22.md",
+        "validated": "Original level 1/5 A1-entry budgets 12/16 followed by DT/DD; Riiablo level source, exhaustion death and checkpoint repaired. Original level-one fixed-target combat: seven successful pecks with packet-exact HP loss after disabling target regeneration; Riiablo level 1/5 summon/AI/A1-keyframe settlement integration passed.",
+        "combat_evidence": "core/src/test/resources/original/druid-raven-combat-1.10f.json",
+        "combat_analysis": "docs/druid-raven-combat-analysis-2026-11-23.md",
+        "blind_feedback_evidence": "core/src/test/resources/original/druid-raven-feedback-1.10f.json",
+        "blind_feedback_fix": "docs/druid-raven-feedback-fix-2026-11-23.md",
+        "hit_recovery_evidence": "core/src/test/resources/original/druid-raven-hit-recovery-1.10f.json",
+        "hit_recovery_fix": "docs/druid-raven-hit-recovery-fix-2026-11-23.md",
+        "motion_evidence": "core/src/test/resources/original/druid-raven-motion-1.10f.json",
+        "motion_fix": "docs/druid-raven-motion-fix-2026-11-23.md",
+        "path_consumer_analysis": "docs/druid-raven-path-consumer-analysis-2026-11-23.md",
+        "path_consumer_validation": "tools/original-observer/druid-raven-path-consumer-validation-2026-11-23.log",
+        "waypoint_replay_analysis": "docs/druid-raven-waypoint-replay-2026-11-23.md",
+        "remaining": "Same-layout Riiablo grid import and waypoint replay; all-direction animation and new_direction commit timing, far-owner PetMove parity, complete combat RNG and exact animation clocks remain unproven.",
+        "invalidated_prior_evidence": "Old level 5/8/20 quota files did not establish the loaded skill level; do not count as parity.",
+        "waypoint_replay_evidence": "tools/original-observer/druid-raven-motion-waypoint-replay-2026-11-23.json",
+        "waypoint_replay_validator": "tools/original-observer/compare_druid_raven_waypoints.py"
+      }
+    },
+    {
+      "skill_id": 222,
+      "skill": "Plague Poppy",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "server_ai_data_reconstructed",
+      "observation_mode": null,
+      "comparison_status": "static_native_contract_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_vines_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "ai_data_and_cooldown_reconstructed",
+        "analysis": "docs/druid-plague-poppy-analysis-2026-11-23.md",
+        "validated": "Riiablo Vines now follows native Plague Poppy AI parameters, owner leash, poison escape and 100-frame Vine Attack cooldown; MPQ DCC audit passes.",
+        "remaining": "Original private-desktop Fn110/Vine Attack runtime capture, poison-vs-immune escape trace, plague-vines trail and S1 client animation timing."
+      }
+    },
+    {
+      "skill_id": 223,
+      "skill": "Wearwolf",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "private_desktop_morph_capture_passed",
+      "observation_mode": null,
+      "comparison_status": "morph_timeline_observed_pending_replay",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_morph_collector",
+      "resource_paths": [
+        "data/global/overlays/expansion\\druidmorph.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "shape_state_and_presentation_chain_present",
+        "analysis": "docs/druid-werewolf-analysis-2026-11-23.md",
+        "validated": "SrvDo116 state group, wolf token 40, druidmorph overlay resources and mode mapping are covered by existing tests.",
+        "remaining": "Original wolf-form attack animation and frame-level overlay clock replay; transform, restore timing and 1.10f shape formulas are validated.",
+        "runtime_evidence": "tools/original-observer/druid-werewolf-original-1.10f.json"
+      }
+    },
+    {
+      "skill_id": 224,
+      "skill": "Shape Shifting",
+      "proposed_family": "passive",
+      "required_cases": [
+        "state_and_equipment"
+      ],
+      "runtime_status": "shape_synergy_and_state_rebuild_validated",
+      "observation_mode": null,
+      "comparison_status": "formula_and_state_regression_passed",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "shape_attack_replay_shared_with_werewolf",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "shape_synergy_formula_and_state_rebuild_validated",
+        "analysis": "docs/druid-shape-shifting-analysis-2026-11-23.md",
+        "validated": "ln12/ln34 synergy evaluation, form state replacement, dependent Feral Rage/Maul cleanup and client shape ownership pass 24 focused tests.",
+        "remaining": "No independent client effect; shared Werewolf/Werebear attack frame replay remains."
+      }
+    },
+    {
+      "skill_id": 225,
+      "skill": "Firestorm",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "captured",
+      "observation_mode": "stopped_states_and_dcc_calls",
+      "comparison_status": "compared_scoped_match",
+      "batch_evidence": "druid-firestorm-batch-1.10f.json",
+      "comparison_evidence": "druid-firestorm-comparison-1.10f.json",
+      "prior_individual_evidence": "core/src/test/resources/original/firestorm-1.10f.json",
+      "execution_readiness": "bounded_collector_available",
+      "resource_paths": [
+        "data/global/missiles/expansion\\FirestormEmitter.dcc",
+        "data/global/missiles/groundFireMedium.dcc",
+        "data/global/missiles/groundFireSmall.dcc",
+        "data/global/missiles/groundFiresmall.dcc",
+        "data/global/overlays/Expansion\\Fire_Overlay_A.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 226,
+      "skill": "Oak Sage",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "spirit_aura_projection_validated",
+      "observation_mode": null,
+      "comparison_status": "server_state_and_sync_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "shared_spirit_aura_chain_complete",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "oak_sage_aura_projection_and_revocation_validated",
+        "analysis": "docs/druid-oak-sage-analysis-2026-11-23.md",
+        "validated": "SrvDo119 data, source-owned Oak Sage aura layers, party/mercenary/summon filtering, range/zone/death revocation and sync are covered by existing integration tests.",
+        "remaining": "Only optional Oak Sage-specific client summon/death animation capture; shared aura chain has no remaining logic gap.",
+        "shared_presentation_analysis": "docs/druid-wolverine-presentation-analysis-2026-11-23.md",
+        "shared_presentation_validation": "tools/original-observer/druid-spirit-presentation-validation-2026-11-23.json",
+        "controller_fix": "Use linked AuraState control on the spirit and AuraTargetState on allies; exclude self and noAura targets. Beneficiary resource clock and blend preserved. 75 headless tests passed."
+      }
+    },
+    {
+      "skill_id": 227,
+      "skill": "Summon Spirit Wolf",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "spirit_wolf_ai_and_lifecycle_validated",
+      "observation_mode": null,
+      "comparison_status": "native_fn108_server_branches_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_optional_spirit_wolf_client_capture",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "spirit_wolf_native_ai_branches_reconstructed",
+        "analysis": "docs/druid-spirit-wolf-analysis-2026-11-23.md",
+        "validated": "PetMax, target sight, owner distance, Teleport 2, run/walk regroup, attack approach and lifecycle tests pass.",
+        "remaining": "Original Spirit Wolf attack/Teleport client animation timing capture."
+      }
+    },
+    {
+      "skill_id": 228,
+      "skill": "Wearbear",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "riiablo_headless_shape_validated_original_runtime_pending",
+      "observation_mode": "offline_110f_mpq_and_headless",
+      "comparison_status": "raw_110f_shape_coefficients_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_original_werebear_animation_capture",
+      "resource_paths": [
+        "data/global/overlays/expansion\\druidmorph.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "werebear_shape_coefficients_corrected",
+        "analysis": "docs/druid-werebear-analysis-2026-11-23.md",
+        "validated": "Raw 1.10F MPQ coefficients 50/7, 25/5, life base 50 agree with headless shape state and helpers; level 3 with Lycanthropy 2 yields 64/35/75 percent.",
+        "remaining": "Original private-desktop Werebear transform and attack animation timing capture.",
+        "validation": "tools/original-observer/druid-bear-final-validation-2026-11-23.json"
+      }
+    },
+    {
+      "skill_id": 229,
+      "skill": "Molten Boulder",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "captured",
+      "observation_mode": "stopped_states_and_dcc_calls",
+      "comparison_status": "compared_scoped_match",
+      "batch_evidence": "druid-molten-boulder-batch-1.10f.json",
+      "comparison_evidence": "druid-molten-boulder-comparison-1.10f.json",
+      "prior_individual_evidence": "core/src/test/resources/original/molten-boulder-1.10f.json",
+      "execution_readiness": "bounded_collector_available",
+      "resource_paths": [
+        "data/global/missiles/expansion\\MoltenBoulderEmerge.dcc",
+        "data/global/missiles/expansion\\MoltenBoulderRoll.dcc",
+        "data/global/missiles/expansion\\MoltenFragmentD.dcc",
+        "data/global/missiles/groundFireBig.dcc",
+        "data/global/missiles/groundFireMedium.dcc",
+        "data/global/missiles/groundFireSmall.dcc",
+        "data/global/overlays/Expansion\\Fire_Overlay_A.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 230,
+      "skill": "Arctic Blast",
+      "proposed_family": "channel",
+      "required_cases": [
+        "start_hold_release",
+        "direction",
+        "interrupt"
+      ],
+      "runtime_status": "captured_client_polling",
+      "observation_mode": "unsuspended_client_memory_polling",
+      "comparison_status": "compared_client_stream_motion_clock_with_remaining_differences",
+      "batch_evidence": "druid-arctic-blast-replay-input-1.10f.json",
+      "comparison_evidence": "druid-arctic-blast-comparison-1.10f.json",
+      "prior_individual_evidence": null,
+      "execution_readiness": "bounded_client_polling_available",
+      "resource_paths": [
+        "data/global/missiles/expansion\\ArcticBlastIce.dcc",
+        "data/global/missiles/expansion\\ArcticBlastIce_2.dcc",
+        "data/global/overlays/Expansion\\ColdWindOverlay.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 231,
+      "skill": "Cycle of Life",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "riiablo_headless_fn111_and_recovery_validated_original_runtime_pending",
+      "observation_mode": "d2moo_source_plus_headless_ecs",
+      "comparison_status": "corpse_cycler_and_recycler_chain_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_original_vine_corpse_capture",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "fn111_cycle_of_life_reconstructed",
+        "analysis": "docs/druid-cycle-of-life-analysis-2026-11-23.md",
+        "validated": "Fn111 corpse/resource gates, range clamp, cooldown/checkpoint, SrvSt63 life/mana creation, integer recovery/dead/full guards and owner ProgOverlay creation and client consumption pass headless tests. Escape branch is implemented but lacks a dedicated RNG parity test.",
+        "remaining": "Original private-desktop corpse ordering and animation clocks; exact PetMove coordinates, first cooldown phase and PvP corpse behavior remain unverified.",
+        "validation": "tools/original-observer/cycle-of-life-validation-2026-11-23.json"
+      }
+    },
+    {
+      "skill_id": 232,
+      "skill": "Feral Rage",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "native_static_charge_overlay_fix_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_charge_overlay_capture",
+      "resource_paths": [
+        "data/global/overlays/expansion\\feral_rage_A_Back.dcc",
+        "data/global/overlays/expansion\\feral_rage_A_Front.dcc",
+        "data/global/overlays/expansion\\feral_rage_E_Back.dcc",
+        "data/global/overlays/expansion\\feral_rage_E_Front.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "charge_dependent_front_back_overlay_selection_repaired",
+        "analysis": "docs/druid-feral-maul-presentation-analysis-2026-11-23.md",
+        "static_evidence": "tools/original-observer/feral-maul-static-1.10f-2026-11-23.json",
+        "validation": "tools/original-observer/feral-maul-presentation-validation-2026-11-23.json",
+        "validated": "D2Client setfunc16 arithmetic reconstructed offline; choose one front/back size pair, preserve same-tier animation, use native 25 Hz/additive policy, expire without clearing unrelated effects, rebuild from authoritative snapshots; headless ECS and AssetManager regression.",
+        "remaining": "No new original runtime capture or GPU validation; original creation/removal timing, full orbit, player occlusion and production rendered output remain unverified.",
+        "evidence_scope": "Offline local PE/Capstone and effective MPQ tables plus Riiablo headless tests; not live REA evidence and not complete visual parity."
+      }
+    },
+    {
+      "skill_id": 233,
+      "skill": "Maul",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "native_static_charge_overlay_fix_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_charge_overlay_capture",
+      "resource_paths": [
+        "data/global/overlays/expansion\\Maul_A_Back.dcc",
+        "data/global/overlays/expansion\\Maul_A_Front.dcc",
+        "data/global/overlays/expansion\\Maul_E_Back.dcc",
+        "data/global/overlays/expansion\\Maul_E_Front.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "charge_dependent_front_back_overlay_selection_repaired",
+        "analysis": "docs/druid-feral-maul-presentation-analysis-2026-11-23.md",
+        "static_evidence": "tools/original-observer/feral-maul-static-1.10f-2026-11-23.json",
+        "validation": "tools/original-observer/feral-maul-presentation-validation-2026-11-23.json",
+        "validated": "D2Client setfunc16 arithmetic reconstructed offline; choose one front/back size pair, preserve same-tier animation, use native 25 Hz/additive policy, expire without clearing unrelated effects, rebuild from authoritative snapshots; headless ECS and AssetManager regression.",
+        "remaining": "No new original runtime capture or GPU validation; original creation/removal timing, full orbit, player occlusion and production rendered output remain unverified.",
+        "evidence_scope": "Offline local PE/Capstone and effective MPQ tables plus Riiablo headless tests; not live REA evidence and not complete visual parity."
+      }
+    },
+    {
+      "skill_id": 234,
+      "skill": "Eruption",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "captured",
+      "observation_mode": "stopped_states_and_dcc_calls",
+      "comparison_status": "compared_with_remaining_differences",
+      "batch_evidence": "druid-fissure-batch-1.10f.json",
+      "comparison_evidence": "druid-fissure-comparison-1.10f.json",
+      "prior_individual_evidence": null,
+      "execution_readiness": "bounded_collector_available",
+      "resource_paths": [
+        "data/global/missiles/expansion\\EruptionCrack.dcc",
+        "data/global/missiles/expansion\\EruptionSmoke.dcc",
+        "data/global/overlays/Expansion\\Fire_Overlay_B.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 235,
+      "skill": "Cyclone Armor",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "native_static_absorb_stage_pairs_and_snapshot_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_cyclone_armor_overlay_capture",
+      "resource_paths": [
+        "data/global/overlays/Expansion\\CycloneArmorAFront.dcc",
+        "data/global/overlays/Expansion\\CycloneArmorBFront.dcc",
+        "data/global/overlays/Expansion\\CycloneArmorCFront.dcc",
+        "data/global/overlays/Expansion\\CycloneArmorABack.dcc",
+        "data/global/overlays/Expansion\\CycloneArmorBBack.dcc",
+        "data/global/overlays/Expansion\\CycloneArmorCBack.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "absorb_dependent_front_back_groups_and_exact_pool_sync_repaired",
+        "analysis": "docs/druid-cyclone-armor-presentation-analysis-2026-11-23.md",
+        "static_evidence": "tools/original-observer/cyclone-armor-static-1.10f-2026-11-23.json",
+        "validation": "tools/original-observer/cyclone-armor-validation-2026-11-23.json",
+        "validated": "Offline D2Client setfunc8/remfunc5: three paired overlay groups selected by rounded fixed-point absorb thresholds; decrement retains lower clocks, increment rebuilds groups. Exact int32 current/maximum values survive both StateSerializer and detached authoritative snapshots. 60 headless tests passed.",
+        "remaining": "No new original runtime or GPU observation. Equal-level list reuse derives from D2MOO source. Lower-level recast rejection remains a server audit item. Retail 1ofN=1 resources only.",
+        "evidence_scope": "Local PE/Capstone, effective MPQ tables, public reconstructed source and Riiablo headless tests; not live REA evidence or full visual parity."
+      }
+    },
+    {
+      "skill_id": 236,
+      "skill": "Heart of Wolverine",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "controller_target_states_and_snapshot_visuals_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_spirit_animation_collector",
+      "resource_paths": [
+        "data/global/overlays/expansion/Heart_of_Wolverine.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "shared_presentation_analysis": "docs/druid-wolverine-presentation-analysis-2026-11-23.md",
+        "shared_presentation_validation": "tools/original-observer/druid-spirit-presentation-validation-2026-11-23.json",
+        "controller_fix": "Use linked AuraState control on the spirit and AuraTargetState on allies; exclude self and noAura targets. Beneficiary resource clock and blend preserved. 75 headless tests passed.",
+        "status": "source_controller_and_beneficiary_overlay_roles_repaired",
+        "validated": "Actual casts produce controller states; allies retain source-owned values, range revocation and noAura exclusion; snapshots preserve invisible controllers, single beneficiary overlay, native DCC headers/clock/blend, pending-load and last-source cleanup.",
+        "remaining": "No original runtime or GPU capture; Fn109 Totem AI, periodic refresh phase, mixed aura strengths and old live summon migration remain unverified or incomplete."
+      }
+    },
+    {
+      "skill_id": 237,
+      "skill": "Summon Fenris",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "birth_sequence_and_rage_overlay_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_fenris_birth_and_rage_trace",
+      "resource_paths": [
+        "data/global/monsters/wf/cof/wfS1HTH.cof",
+        "data/global/monsters/wf/TR/wfTRLITS1hth.dcc",
+        "data/global/monsters/wf/S1/wfS1LITS1hth.dcc",
+        "data/global/overlays/expansion/DireWolfCharged.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "summode_s1_birth_and_native_rage_overlay_repaired",
+        "analysis": "docs/druid-fenris-presentation-analysis-2026-11-23.md",
+        "validation": "tools/original-observer/fenris-presentation-validation-2026-11-23.json",
+        "validated": "SrvDo119 installs Skills.Summode as a one-shot birth sequence; real animation record and COF/DCC headers resolve. SrvDo137 corpse consumption, 500-frame rage, +100% damage state, snapshot overlay and native 25 FPS/additive rendering validated headlessly.",
+        "remaining": "No original runtime/GPU capture; Fn108_Fenris corpse pursuit/probability/combat priority and full AI parity are incomplete. All-direction decoding, keyframe-exact corpse consumption and controlled rage damage comparison remain unproven.",
+        "evidence_scope": "Effective MPQ tables, COF and DCC headers, public reconstructed D2MOO source and Riiablo production headless animation/state tests; not original live observation.",
+        "validation_result": "70 tests passed on JDK 17; birth wire mode and restart ID checked; snapshotOnly state lifetime guarded by real client StateUpdater."
+      }
+    },
+    {
+      "skill_id": 238,
+      "skill": "Rabies",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "infection_overlay_and_controller_cutoff_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_rabies_hit_and_spread_capture",
+      "resource_paths": [
+        "data/global/overlays/Expansion/rabies.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "native_infection_overlay_and_remaining_lifetime_death_guards_repaired",
+        "analysis": "docs/druid-rabies-presentation-analysis-2026-11-24.md",
+        "validation": "tools/original-observer/rabies-presentation-validation-2026-11-24.json",
+        "validated": "Persistent rabies overlay uses native 25 FPS/additive/height policy; actual 30-frame DCC header read. Snapshots preserve infection vs poison/poisonhit independence. Controller no longer extends <10 remaining frames or spreads from a dead attached host. 44 JDK 17 headless tests passed.",
+        "remaining": "No original runtime/GPU capture. Radius-scan propagation still differs from native random invisible projectile/collision path; pulse phase, flight delay, cross-zone behavior and full poison combat parity remain unproven.",
+        "evidence_scope": "Effective local MPQ data, public reconstructed D2MOO source and Riiablo headless state/missile/client integration; not original live observation."
+      }
+    },
+    {
+      "skill_id": 239,
+      "skill": "Fire Claws",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "successful_hit_overlay_transport_and_shape_a1_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_fire_claws_target_overlay_runtime_capture",
+      "resource_paths": [
+        "data/global/overlays/FireHit.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "missing_skill_target_flash_repaired_with_authoritative_local_and_d2gs_event",
+        "analysis": "docs/druid-fire-claws-presentation-analysis-2026-11-24.md",
+        "validation": "tools/original-observer/fire-claws-presentation-validation-2026-11-24.json",
+        "validated": "40 JDK 17 headless tests passed. SrvSt58 hit/miss/block/zero/lethal/dead target and one-shot consumption; native fire_hit drawing policy, remote ID mapping and level scoping; both shape A1 COF/DCC/AnimData resources.",
+        "remaining": "Original live target overlay birth/expiry and table Frames=8 vs DCC frames=12 interpretation; GPU palette/occlusion/dynamic lighting and full equipment/speed/direction matrix; Socket end-to-end ordering across target death/deletion/visibility boundaries",
+        "evidence_scope": "Effective local MPQ tables and real COF/DCC/AnimData reads; public reconstructed D2MOO source; headless production ECS and packet integration. No original runtime, socket session or GPU validation."
+      }
+    },
+    {
+      "skill_id": 240,
+      "skill": "Twister",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "captured_client_polling",
+      "observation_mode": "unsuspended_client_memory_polling",
+      "comparison_status": "compared_client_path_clock_with_remaining_differences",
+      "batch_evidence": "druid-twister-replay-input-1.10f.json",
+      "comparison_evidence": "druid-twister-comparison-1.10f.json",
+      "prior_individual_evidence": null,
+      "execution_readiness": "bounded_client_polling_available",
+      "resource_paths": [
+        "data/global/missiles/expansion\\twister.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 241,
+      "skill": "Vines",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "riiablo_headless_fn111_and_recovery_validated_original_runtime_pending",
+      "observation_mode": "d2moo_source_plus_headless_ecs",
+      "comparison_status": "corpse_cycler_and_recycler_chain_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_original_vine_corpse_capture",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "fn111_cycle_of_life_reconstructed",
+        "analysis": "docs/druid-cycle-of-life-analysis-2026-11-23.md",
+        "validated": "Fn111 corpse/resource gates, range clamp, cooldown/checkpoint, SrvSt63 life/mana creation, integer recovery/dead/full guards and owner ProgOverlay creation and client consumption pass headless tests. Escape branch is implemented but lacks a dedicated RNG parity test.",
+        "remaining": "Original private-desktop corpse ordering and animation clocks; exact PetMove coordinates, first cooldown phase and PvP corpse behavior remain unverified.",
+        "validation": "tools/original-observer/cycle-of-life-validation-2026-11-23.json"
+      }
+    },
+    {
+      "skill_id": 242,
+      "skill": "Hunger",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "shape_s3_and_authoritative_leech_feedback_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_hunger_hit_and_leech_runtime_capture",
+      "resource_paths": [
+        "data/global/monsters/40/cof/40S3HTH.cof",
+        "data/global/monsters/TG/cof/TGS3HTH.cof",
+        "data/global/overlays/CurseRevVampireHit.dcc",
+        "data/global/overlays/VampiricHitMana.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "physical_penalty_order_and_remote_leech_feedback_repaired",
+        "analysis": "docs/druid-hunger-presentation-analysis-2026-11-24.md",
+        "validation": "tools/original-observer/hunger-presentation-validation-2026-11-24.json",
+        "validated": "48 JDK 17 headless tests passed. Both shapes resolve S3 and single attack marker; after-enhancement damage penalty, actual hit/physical leech/zero-drain/full-pool behavior; authority-selected cue transport and 25 FPS/additive one-shot client layers.",
+        "remaining": "Original runtime/GPU birth/expiry/direction/audio and all equipment/attack-speed combinations; Full 8.8 precision and native damage phase/critical/resistance ordering; current shape helper remains whole-HP precomputed; Live socket ordering across visibility changes and target death/deletion",
+        "evidence_scope": "Effective local MPQ data; real AnimData/COF/DCC header reads; public reconstructed D2MOO source; headless production Actioneer/settlement/presentation and packet integration. No original runtime, GPU rendering or live socket session."
+      }
+    },
+    {
+      "skill_id": 243,
+      "skill": "Shock Wave",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "bear_cast_five_wave_and_stun_presentation_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_shock_wave_presentation_runtime_capture",
+      "resource_paths": [
+        "data/global/missiles/expansion\\shockwave.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "core_presentation_chain_verified_and_srv_dmg07_hit_audio_repaired",
+        "analysis": "docs/druid-shock-wave-presentation-analysis-2026-11-24.md",
+        "validation": "tools/original-observer/shock-wave-presentation-validation-2026-11-24.json",
+        "validated": "36 JDK 17 headless tests passed. Actual bear SC/wave/stun resources; five owned local-server sprites without duplicate client fan; stun snapshot lifetime and shared combat regressions; corrected lightning-to-stun impact audio.",
+        "remaining": "Original live animation birth/expiry phase and exact path stepping; All-direction sprite pixel orientation, GPU palette/occlusion and full equipment/speed matrix; Original audio variants and live socket/collision timing",
+        "evidence_scope": "Effective local MPQ tables, real AnimData/COF/DCC header reads, public reconstructed D2MOO source, headless production ECS presentation and combat/state snapshot tests. No original runtime or GPU/socket session."
+      }
+    },
+    {
+      "skill_id": 244,
+      "skill": "Volcano",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "captured",
+      "observation_mode": "stopped_states_and_dcc_calls",
+      "comparison_status": "compared_with_remaining_differences",
+      "batch_evidence": "druid-volcano-batch-1.10f.json",
+      "comparison_evidence": "druid-volcano-comparison-1.10f.json",
+      "prior_individual_evidence": null,
+      "execution_readiness": "bounded_collector_available",
+      "resource_paths": [
+        "data/global/missiles/Expansion\\rock_lava_explosion.dcc",
+        "data/global/missiles/Expansion\\rock_lava_pool.dcc",
+        "data/global/missiles/Expansion\\volcano_Fire.dcc",
+        "data/global/missiles/Expansion\\volcano_base.dcc",
+        "data/global/missiles/expansion\\volcano_rock.dcc",
+        "data/global/overlays/Expansion\\Fire_Overlay_B.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 245,
+      "skill": "Tornado",
+      "proposed_family": "missile",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry"
+      ],
+      "runtime_status": "captured_client_polling",
+      "observation_mode": "unsuspended_client_memory_polling",
+      "comparison_status": "compared_client_path_clock_with_remaining_differences",
+      "batch_evidence": "druid-tornado-replay-input-1.10f.json",
+      "comparison_evidence": "druid-tornado-comparison-1.10f.json",
+      "prior_individual_evidence": null,
+      "execution_readiness": "bounded_client_polling_available",
+      "resource_paths": [
+        "data/global/missiles/expansion\\tornado.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 246,
+      "skill": "Spirit of Barbs",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "controller_target_states_and_snapshot_visuals_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_private_desktop_spirit_animation_collector",
+      "resource_paths": [
+        "data/global/overlays/expansion/spirit_of_barbs.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "shared_presentation_analysis": "docs/druid-wolverine-presentation-analysis-2026-11-23.md",
+        "shared_presentation_validation": "tools/original-observer/druid-spirit-presentation-validation-2026-11-23.json",
+        "controller_fix": "Use linked AuraState control on the spirit and AuraTargetState on allies; exclude self and noAura targets. Beneficiary resource clock and blend preserved. 75 headless tests passed.",
+        "status": "source_controller_and_beneficiary_overlay_roles_repaired",
+        "validated": "Actual casts produce controller states; allies retain source-owned values, range revocation and noAura exclusion; snapshots preserve invisible controllers, single beneficiary overlay, native DCC headers/clock/blend, pending-load and last-source cleanup.",
+        "remaining": "No original runtime or GPU capture; Fn109 Totem AI, periodic refresh phase, mixed aura strengths and old live summon migration remain unverified or incomplete."
+      }
+    },
+    {
+      "skill_id": 247,
+      "skill": "Summon Grizzly",
+      "proposed_family": "summon",
+      "required_cases": [
+        "create",
+        "activity",
+        "despawn"
+      ],
+      "runtime_status": "riiablo_headless_ai_validated_original_runtime_pending",
+      "observation_mode": "d2moo_source_and_headless_ecs",
+      "comparison_status": "fn112_key_decisions_headless_validated",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_original_grizzly_animation_capture",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_progress": {
+        "status": "fn112_grizzly_key_decisions_reconstructed",
+        "analysis": "docs/druid-grizzly-analysis-2026-11-23.md",
+        "validated": "Six ECS behavior tests cover BearSmite/A1, 15/40/50 parameters, owner movement, target range and three-ray approach fallback; native MPQ data contract passes.",
+        "remaining": "Original private-desktop activity and BearSmite timing/damage capture; exact PetMove offsets/RegionId and native target threat ranking remain projected.",
+        "validation": "tools/original-observer/druid-bear-final-validation-2026-11-23.json"
+      }
+    },
+    {
+      "skill_id": 248,
+      "skill": "Fury",
+      "proposed_family": "action_or_target",
+      "required_cases": [
+        "cast",
+        "direction",
+        "hit_or_expiry",
+        "target_and_equipment_preconditions"
+      ],
+      "runtime_status": "not_run_in_class_batch",
+      "observation_mode": null,
+      "comparison_status": "not_compared_in_class_batch",
+      "batch_evidence": null,
+      "comparison_evidence": null,
+      "prior_individual_evidence": null,
+      "execution_readiness": "needs_fixture_and_family_collector",
+      "resource_paths": [],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 249,
+      "skill": "Armageddon",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "captured_client_polling",
+      "observation_mode": "private_desktop_hwnd_input_and_read_only_state_path_graphics_polling",
+      "comparison_status": "compared_client_fall_and_server_target_with_rng_remaining",
+      "batch_evidence": {
+        "run_id": "20261122-014022-d9d92f67",
+        "fixture": "core/src/test/resources/original/druid-storm-1.10f.json",
+        "sha256": "8cdfad1aebc413e2aeeb48155693180599e6c43aaf43f732c0707940c0ac7e79"
+      },
+      "comparison_evidence": {
+        "static": "docs/druid-storm-server-target-analysis-2026-11-22.md",
+        "validation": "tools/original-observer/druid-storm-param1-validation-2026-11-22.log"
+      },
+      "prior_individual_evidence": null,
+      "execution_readiness": "follow_up_initial_param1_source_and_map_boundary",
+      "resource_paths": [
+        "data/global/missiles/ExpArrowExplode.dcc",
+        "data/global/missiles/expansion\\armageddon_fire.dcc",
+        "data/global/missiles/expansion\\armageddon_rock.dcc",
+        "data/global/missiles/groundFireSmall.dcc",
+        "data/global/overlays/Expansion\\Fire_Overlay_B.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    },
+    {
+      "skill_id": 250,
+      "skill": "Hurricane",
+      "proposed_family": "state",
+      "required_cases": [
+        "self_or_ally",
+        "refresh",
+        "expiry"
+      ],
+      "runtime_status": "captured_client_polling",
+      "observation_mode": "private_desktop_hwnd_input_and_read_only_state_path_graphics_polling",
+      "comparison_status": "compared_client_path_clock_with_remaining_differences",
+      "batch_evidence": {
+        "run_id": "20261122-014022-d9d92f67",
+        "fixture": "core/src/test/resources/original/druid-storm-1.10f.json",
+        "sha256": "8cdfad1aebc413e2aeeb48155693180599e6c43aaf43f732c0707940c0ac7e79"
+      },
+      "comparison_evidence": {
+        "validation": "tools/original-observer/hurricane-path-validation-2026-11-22.json",
+        "sha256": "e8afb230e70a7f683b9a29b13d39956ada4c12ad1c7b02c8ede4a7d3049bc1e5",
+        "fixture": "core/src/test/resources/original/hurricane-path-1.10f.json",
+        "fixture_sha256": "b1d78130bfadc1b9e4577a850f0350255352c16a1dec439d670f91a79d7b0c8b"
+      },
+      "prior_individual_evidence": null,
+      "execution_readiness": "follow_up_room_boundary_removal_and_state_interaction",
+      "resource_paths": [
+        "data/global/missiles/expansion\\hurricane_rocks.dcc",
+        "data/global/missiles/expansion\\hurricane_swoosh.dcc",
+        "data/global/missiles/expansion\\hurricane_tree.dcc"
+      ],
+      "required_observations": [
+        "caster_mode_sequence",
+        "client_callback_or_state_transition",
+        "created_units_or_attached_overlays",
+        "resource_direction_frame_clock",
+        "expiry_or_interrupt"
+      ],
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+    }
+  ]
+}

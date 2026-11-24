@@ -401,6 +401,37 @@ public class NetworkSynchronizer extends BaseEntitySystem {
         ? -1 : wrapper.zone.level.Id;
   }
 
+  /** Replicate the settlement-selected leech cue, without replaying damage. */
+  @Subscribe
+  public void onDamageApplied(com.riiablo.engine.server.event.DamageAppliedEvent event) {
+    // The authoritative settlement already chose one cue for dual leech.
+    // Forward it even when the attacker's pools are full; never reroll here.
+    if (event == null || event.leechOverlay == null || event.leechOverlay.isEmpty()
+        || (event.kind != com.riiablo.engine.server.event.DamageEvent.MELEE
+            && event.kind != com.riiablo.engine.server.event.DamageEvent.MISSILE)) return;
+    onUnitOverlay(com.riiablo.engine.server.event.UnitOverlayEvent.obtain(
+        event.attacker, event.leechOverlay));
+  }
+
+  /** SrvOverlay is scoped to the affected unit's room visibility. */
+  @Subscribe
+  public void onUnitOverlay(com.riiablo.engine.server.event.UnitOverlayEvent event) {
+    if (event == null || event.entityId < 0 || event.overlay == null || event.overlay.isEmpty()) return;
+    int recipients = recipientMask(event.entityId);
+    if (recipients == 0) return;
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int overlay = builder.createString(event.overlay);
+    int data = com.riiablo.net.packet.d2gs.UnitOverlayP.createUnitOverlayP(
+        builder, event.entityId, overlay);
+    int root = D2GS.createD2GS(builder, D2GSData.UnitOverlayP, data);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    byte[] copy = new byte[builder.dataBuffer().remaining()];
+    builder.dataBuffer().duplicate().get(copy);
+    if (!outPackets.offer(Packet.obtain(recipients, ByteBuffer.wrap(copy)))) {
+      Gdx.app.error(TAG, "[UNIT_OVERLAY] phase=network_drop entity=" + event.entityId);
+    }
+  }
+
   /** Number of currently networked entities included in a baseline. */
   public int subscriptionSize() {
     return subscription.getEntities().size();

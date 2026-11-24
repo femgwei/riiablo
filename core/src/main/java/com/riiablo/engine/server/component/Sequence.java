@@ -44,6 +44,13 @@ public class Sequence extends Component {
   /** seq_diablorun has RN source points and independent looping/countdown. */
   public boolean nativeDiabRun;
 
+  /** Arctic Blast's logical SQ cursor is distinct from the S1 source frame. */
+  public boolean nativeArcticBlast;
+  public boolean nativeArcticFirstTick;
+  public int nativeArcticCursor, nativeArcticRemaining;
+  /** Bounded held-input lease; UI/focus loss must not leave a permanent channel. */
+  public int nativeArcticInputLease;
+
   /** Native player Jab sequence state.  Other sequences leave these fields disabled. */
   public boolean nativeJab;
   public byte nativeJabWeaponClass;
@@ -74,6 +81,9 @@ public class Sequence extends Component {
     nativeSubmergeHeld = false;
     nativeFrogHidden = false;
     nativeDiabRun = false;
+    nativeArcticBlast = false;
+    nativeArcticFirstTick = false;
+    nativeArcticCursor = nativeArcticRemaining = nativeArcticInputLease = 0;
     nativeJab = false;
     nativeJabWeaponClass = 0;
     nativeJabFrame = 0;

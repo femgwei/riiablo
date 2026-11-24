@@ -122,10 +122,16 @@ public final class DruidSkills {
     if (current <= 0 || maximum <= 0) return null;
     int duration = Math.max(0,
         SkillFormula.evaluate(skill.auralencalc, skill, level, baseSkillLevel));
+    UnitState previous = states.getState(StateId.CYCLONEARMOR);
+    // SrvDo018 reuses its list on an equal-level recast. Keep the client
+    // activation identity even though this adapter replaces the host list.
+    int revision = previous != null && previous.level == level
+        ? previous.presentationRevision : states.nextPresentationRevision();
     states.removeState(StateId.CYCLONEARMOR);
     UnitState armor = states.addStateLayer(
         StateId.CYCLONEARMOR, duration, level, sourceEntityId, skill.Id);
     if (armor == null) return null;
+    armor.presentationRevision = revision;
     armor.setStatContribution(Stat.bonearmor, 0,
         com.riiablo.attributes.NativeStatResolver.Operation.ADD, current);
     armor.setStatContribution(Stat.bonearmormax, 0,
@@ -317,9 +323,11 @@ public final class DruidSkills {
    * @return 攻击速度加成百分比
    */
   public static int getWerewolfIasBonus(int skillLevel) {
-    // Skills.txt dm34 with Param3=10 and Param4=80.
+    // Skills.txt dm34 with Param3=10 and Param4=80. D2Common first
+    // truncates 110*level/(level+6), then applies the parameter delta.
     int level = Math.max(1, skillLevel);
-    return 10 + (int) (110L * level * 70 / (100L * (level + 6)));
+    long scaledLevel = (110L * level) / (level + 6);
+    return 10 + (int) (70L * scaledLevel / 100L);
   }
 
   /**
@@ -648,6 +656,18 @@ public final class DruidSkills {
 
   public static int[] calculateShapeWeaponDamage(
       Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon, StateList states) {
+    if (isHunger(skill)) {
+      // SrvDo122 fills the ordinary weapon packet first, then adds calc1's
+      // percentage of that completed physical channel. It is not additive ED.
+      int[] damage = calculateShapeWeaponDamageWithCalc(
+          skill, skillLevel, attacker, weapon, states, null);
+      int percent = SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel));
+      for (int i = 0; i < damage.length; i++) {
+        long adjusted = damage[i] + (long) damage[i] * percent / 100;
+        damage[i] = (int) Math.max(0L, Math.min(Integer.MAX_VALUE, adjusted));
+      }
+      return damage;
+    }
     return calculateFeralMaulWeaponDamage(skill, skillLevel, attacker, weapon, states);
   }
 
@@ -881,8 +901,8 @@ public final class DruidSkills {
    * @return 最大狼数
    */
   public static int getMaxSpiritWolves(int skillLevel) {
-    // 基础 1，每 5 级 +1（最高 5）
-    return Math.min(5, 1 + skillLevel / 5);
+    // Skills.txt PetMax=min(lvl,par3), Param3=5.
+    return Math.min(5, Math.max(1, skillLevel));
   }
 
   /**
@@ -984,6 +1004,18 @@ public final class DruidSkills {
       if (aura != null && getSummonAuraState(aura) != StateId.NONE) return aura;
     }
     return null;
+  }
+
+  /** BasicAura installs AuraState on its source and AuraTargetState on allies. */
+  public static int getSummonAuraControllerState(com.riiablo.Files files, Skills.Entry summonSkill) {
+    Skills.Entry aura = getSummonAuraSkill(files, summonSkill);
+    if (aura != null && files.States != null) {
+      com.riiablo.codec.excel.States.Entry control = files.States.get(aura.aurastate);
+      if (control != null && (control.id == StateId.OAKSAGECONTROL
+          || control.id == StateId.WOLVERINECONTROL || control.id == StateId.BARBSCONTROL))
+        return control.id;
+    }
+    return getSummonAuraState(summonSkill);
   }
 
   /** Resolves a summon-installed SumSkill level exactly like D2MOO's

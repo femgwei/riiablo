@@ -48,7 +48,10 @@ public class StateOverlaySystem extends IteratingSystem {
   private final IntMap<byte[]> weaponAppliedTransforms = new IntMap<>();
   private final IntSet coldTransformActive = new IntSet();
   private final IntMap<IntSet> overlayStates = new IntMap<>();
+  private final com.badlogic.gdx.utils.IntIntMap enchantRevisions = new com.badlogic.gdx.utils.IntIntMap();
   private final IntSet summonSpawnOverlays = new IntSet();
+  private final com.badlogic.gdx.utils.IntIntMap cycloneCounts = new com.badlogic.gdx.utils.IntIntMap();
+  private final com.badlogic.gdx.utils.IntIntMap cycloneRevisions = new com.badlogic.gdx.utils.IntIntMap();
 
   /** Native States.txt owns curse/buff visuals; damage is not required to display a state. */
   private void reconcileStateOverlays(int entity, UnitStates states) {
@@ -66,22 +69,54 @@ public class StateOverlaySystem extends IteratingSystem {
       active.add(id);
       States.Entry definition = clientContext.files() == null || clientContext.files().States == null
           ? null : clientContext.files().States.get(id);
+      if (id == StateId.CYCLONEARMOR) {
+        int count = NativeCycloneArmorPresentation.count(state);
+        // Retail rebuilds every pair on a count increase; loss only removes
+        // the higher groups and keeps the surviving animation clocks.
+        if (count > cycloneCounts.get(entity, 0)
+            || state.presentationRevision != cycloneRevisions.get(entity, -1))
+          overlays.clearPersistent(entity, id);
+        overlays.reconcilePersistent(entity, id,
+            NativeCycloneArmorPresentation.overlays(clientContext.files(), definition, count));
+        cycloneCounts.put(entity, count);
+        cycloneRevisions.put(entity, state.presentationRevision);
+        continue;
+      }
+      if (NativeFeralMaulPresentation.handles(id)) {
+        // setfunc16 overlay1..4 are FRONT/BACK range endpoints, not four
+        // simultaneous layers. Reconcile the selected pair without restarting
+        // a layer when only the state duration/charge count has refreshed.
+        overlays.reconcilePersistent(entity, id,
+            NativeFeralMaulPresentation.overlays(clientContext.files(), definition, state));
+        continue;
+      }
       boolean mapped = false;
+      boolean deferPersistent = false;
       if (definition != null) {
         if (definition.aura && !previous.contains(id)) {
           SpatialAudio.play(world, clientContext, entity, definition.onSound, true);
         }
+        boolean activation = !previous.contains(id);
+        if (id == StateId.ENCHANT) {
+          activation |= enchantRevisions.get(entity, -1) != state.presentationRevision;
+          enchantRevisions.put(entity, state.presentationRevision);
+        }
+        // Native Raven blindness starts with cursecast (69), then changes to
+        // cursedimvision (129). Do not display both stages at the same time.
+        deferPersistent = id == StateId.DIMVISION && definition.castOverlay != null
+            && !definition.castOverlay.isEmpty()
+            && (activation || overlays.isOneShotActive(entity, definition.castOverlay));
         for (String overlay : definition.overlays) {
           if (overlay == null || overlay.isEmpty()) continue;
-          overlays.setPersistent(entity, id, overlay);
+          if (!deferPersistent) overlays.setPersistent(entity, id, overlay);
           mapped = true;
         }
-        if (!previous.contains(id) && definition.castOverlay != null && !definition.castOverlay.isEmpty())
+        if (activation && definition.castOverlay != null && !definition.castOverlay.isEmpty())
           overlays.set(entity, definition.castOverlay);
       }
       if (!mapped) {
         String fallback = resolveOverlayId(id);
-        if (fallback != null) overlays.setPersistent(entity, id, fallback);
+        if (fallback != null && !deferPersistent) overlays.setPersistent(entity, id, fallback);
       }
     }
     for (IntSet.IntSetIterator it = previous.iterator(); it.hasNext;) {
@@ -94,6 +129,11 @@ public class StateOverlaySystem extends IteratingSystem {
         overlays.set(entity, definition.removeOverlay);
     }
     overlayStates.put(entity, active);
+    if (!active.contains(StateId.ENCHANT)) enchantRevisions.remove(entity, -1);
+    if (!active.contains(StateId.CYCLONEARMOR)) {
+      cycloneCounts.remove(entity, 0);
+      cycloneRevisions.remove(entity, -1);
+    }
   }
 
   @Override
@@ -268,6 +308,9 @@ public class StateOverlaySystem extends IteratingSystem {
 
   @Override
   protected void removed(int entityId) {
+    cycloneCounts.remove(entityId, 0);
+    cycloneRevisions.remove(entityId, -1);
+    enchantRevisions.remove(entityId, -1);
     summonSpawnOverlays.remove(entityId);
     IntSet previous = overlayStates.remove(entityId);
     if (previous != null && overlays != null) {

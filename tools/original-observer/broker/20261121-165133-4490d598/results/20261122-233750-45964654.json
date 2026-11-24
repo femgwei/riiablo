@@ -1,0 +1,15 @@
+{
+  "id": "20261122-233750-45964654",
+  "status": "completed",
+  "started": 1795361870.1995037,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "druid-raven-level5-exhaustion-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261122-233750-45964654\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795361963.544699
+}

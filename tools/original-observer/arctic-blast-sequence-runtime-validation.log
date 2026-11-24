@@ -1,0 +1,343 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. See https://docs.gradle.org/7.3/userguide/gradle_daemon.html#sec:disabling_the_daemon.
+Daemon will be stopped at the end of the build 
+
+> Configure project :android
+Unable to initialize metrics, ensure C:\.android is writable, details: C:\.android\analytics.settings (ϵͳ�Ҳ���ָ����·����)
+
+> Task :verifyModuleBoundaries
+Module boundaries verified: strict project DAG and zero host/presentation/global RNG access in extracted modules.
+
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :shared:compileJava UP-TO-DATE
+> Task :game-data:compileJava UP-TO-DATE
+> Task :server-domain:compileJava UP-TO-DATE
+> Task :quests:compileJava UP-TO-DATE
+> Task :server-systems:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+
+> Task :core:compileJava
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:203: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+      regCloseKey.invoke(systemRoot, new Object[]{new Integer(ret[0])});
+                                                  ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:206: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+      regCloseKey.invoke(userRoot, new Object[]{new Integer(ret[0])});
+                                                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:299: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Integer(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:299: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Integer(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:308: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+                new Integer(handles[0]), toCstr(value)
+                ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:312: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Integer(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:322: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            root, new Object[]{new Integer(hkey), toCstr(key)}
+                               ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:334: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:334: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:341: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+        root, new Object[]{new Long(handles[0]), toCstr(value)}
+                           ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:343: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:354: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:354: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:360: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    int[] info = (int[]) regQueryInfoKey.invoke(root, new Object[]{new Long(handles[0])});
+                                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                    ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:367: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                                        ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:373: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:384: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:384: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_READ)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:390: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    int[] info = (int[]) regQueryInfoKey.invoke(root, new Object[]{new Long(handles[0])});
+                                                                   ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+              ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                    ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:397: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+              new Long(handles[0]), new Integer(index), new Integer(maxlen + 1)
+                                                        ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:402: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:410: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    return (int[]) regCreateKeyEx.invoke(root, new Object[]{new Long(hkey), toCstr(key)});
+                                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:420: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:420: ����: [removal] Integer �е� Integer(int) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+            new Long(hkey), toCstr(key), new Integer(KEY_ALL_ACCESS)
+                                         ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:424: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regSetValueEx.invoke(root, new Object[]{new Long(handles[0]), toCstr(valueName), toCstr(value)});
+                                            ^
+F:\3rd_src\riiablo\core\src\main\java\com\riiablo\util\WinRegistry.java:425: ����: [removal] Long �е� Long(long) �ѹ�ʱ, �ұ��Ϊ��ɾ��
+    regCloseKey.invoke(root, new Object[]{new Long(handles[0])});
+                                          ^
+ע: ĳЩ�����ļ�ʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+30 ������
+
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+
+> Task :core:compileTestJava
+ע: ĳЩ�����ļ�ʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processTestResources
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :game-data:processResources NO-SOURCE
+> Task :game-data:classes UP-TO-DATE
+> Task :game-data:jar UP-TO-DATE
+> Task :quests:processResources NO-SOURCE
+> Task :quests:classes UP-TO-DATE
+> Task :quests:jar UP-TO-DATE
+> Task :server-domain:processResources NO-SOURCE
+> Task :server-domain:classes UP-TO-DATE
+> Task :server-domain:jar
+> Task :server-systems:processResources NO-SOURCE
+> Task :server-systems:classes UP-TO-DATE
+> Task :server-systems:jar UP-TO-DATE
+> Task :shared:processResources NO-SOURCE
+> Task :shared:classes UP-TO-DATE
+> Task :shared:jar UP-TO-DATE
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :core:test
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+ArcticBlastSequenceIntegrationTest > sequenceFrameReachesResidentS1AnimationInsteadOfPlayingScIndependently() FAILED
+    java.lang.RuntimeException: Could not call event.
+        at net.mostlyoriginal.api.event.common.EventListener.handle(EventListener.java:68)
+        at net.mostlyoriginal.api.event.dispatcher.FastEventDispatcher.dispatch(FastEventDispatcher.java:134)
+        at net.mostlyoriginal.api.event.common.EventSystem.dispatch(EventSystem.java:62)
+        at com.riiablo.engine.server.CofManager.setMode(CofManager.java:252)
+        at com.riiablo.engine.server.CofManager.setMode(CofManager.java:176)
+        at com.riiablo.engine.server.CofManager.inserted(CofManager.java:148)
+        at com.artemis.BaseEntitySystem.inserted(BaseEntitySystem.java:64)
+        at com.artemis.EntitySubscription$SubscriptionExtra.informListeners(EntitySubscription.java:273)
+        at com.artemis.EntitySubscription$SubscriptionExtra.informEntityChanges(EntitySubscription.java:260)
+        at com.artemis.EntitySubscription.informEntityChanges(EntitySubscription.java:140)
+        at com.artemis.EntitySubscription.process(EntitySubscription.java:125)
+        at com.artemis.AspectSubscriptionManager.process(AspectSubscriptionManager.java:96)
+        at com.artemis.BatchChangeProcessor.update(BatchChangeProcessor.java:76)
+        at com.artemis.SystemInvocationStrategy.updateEntityStates(SystemInvocationStrategy.java:44)
+        at com.artemis.InvocationStrategy.process(InvocationStrategy.java:24)
+        at com.artemis.World.process(World.java:385)
+        at com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest$Fixture.<init>(ArcticBlastSequenceIntegrationTest.java:181)
+        at com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest.sequenceFrameReachesResidentS1AnimationInsteadOfPlayingScIndependently(ArcticBlastSequenceIntegrationTest.java:114)
+
+        Caused by:
+        com.artemis.utils.reflect.ReflectionException: Exception occurred in method: onCofChanged
+            at app//com.artemis.utils.reflect.Method.invoke(Method.java:115)
+            at app//net.mostlyoriginal.api.event.common.EventListener.handle(EventListener.java:66)
+            ... 17 more
+
+            Caused by:
+            java.lang.reflect.InvocationTargetException
+                at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+                at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+                at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+                at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+                at com.artemis.utils.reflect.Method.invoke(Method.java:109)
+                ... 18 more
+
+                Caused by:
+                java.lang.NullPointerException: Cannot invoke "com.riiablo.codec.D2.getEntry(String)" because "com.riiablo.Riiablo.anim" is null
+                    at com.riiablo.engine.server.AnimDataResolver.updateAnimData(AnimDataResolver.java:73)
+                    at com.riiablo.engine.server.AnimDataResolver.onCofChanged(AnimDataResolver.java:42)
+                    ... 23 more
+
+ArcticBlastSequenceIntegrationTest > repeatedRequestsUpdateAimWithoutRestartingTheCastOrInitialFrames() FAILED
+    java.lang.RuntimeException: Could not call event.
+        at net.mostlyoriginal.api.event.common.EventListener.handle(EventListener.java:68)
+        at net.mostlyoriginal.api.event.dispatcher.FastEventDispatcher.dispatch(FastEventDispatcher.java:134)
+        at net.mostlyoriginal.api.event.common.EventSystem.dispatch(EventSystem.java:62)
+        at com.riiablo.engine.server.CofManager.setMode(CofManager.java:252)
+        at com.riiablo.engine.server.CofManager.setMode(CofManager.java:176)
+        at com.riiablo.engine.server.CofManager.inserted(CofManager.java:148)
+        at com.artemis.BaseEntitySystem.inserted(BaseEntitySystem.java:64)
+        at com.artemis.EntitySubscription$SubscriptionExtra.informListeners(EntitySubscription.java:273)
+        at com.artemis.EntitySubscription$SubscriptionExtra.informEntityChanges(EntitySubscription.java:260)
+        at com.artemis.EntitySubscription.informEntityChanges(EntitySubscription.java:140)
+        at com.artemis.EntitySubscription.process(EntitySubscription.java:125)
+        at com.artemis.AspectSubscriptionManager.process(AspectSubscriptionManager.java:96)
+        at com.artemis.BatchChangeProcessor.update(BatchChangeProcessor.java:76)
+        at com.artemis.SystemInvocationStrategy.updateEntityStates(SystemInvocationStrategy.java:44)
+        at com.artemis.InvocationStrategy.process(InvocationStrategy.java:24)
+        at com.artemis.World.process(World.java:385)
+        at com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest$Fixture.<init>(ArcticBlastSequenceIntegrationTest.java:181)
+        at com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest.repeatedRequestsUpdateAimWithoutRestartingTheCastOrInitialFrames(ArcticBlastSequenceIntegrationTest.java:98)
+
+        Caused by:
+        com.artemis.utils.reflect.ReflectionException: Exception occurred in method: onCofChanged
+            at app//com.artemis.utils.reflect.Method.invoke(Method.java:115)
+            at app//net.mostlyoriginal.api.event.common.EventListener.handle(EventListener.java:66)
+            ... 17 more
+
+            Caused by:
+            java.lang.reflect.InvocationTargetException
+                at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+                at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+                at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+                at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+                at com.artemis.utils.reflect.Method.invoke(Method.java:109)
+                ... 18 more
+
+                Caused by:
+                java.lang.NullPointerException: Cannot invoke "com.riiablo.codec.D2.getEntry(String)" because "com.riiablo.Riiablo.anim" is null
+                    at com.riiablo.engine.server.AnimDataResolver.updateAnimData(AnimDataResolver.java:73)
+                    at com.riiablo.engine.server.AnimDataResolver.onCofChanged(AnimDataResolver.java:42)
+                    ... 23 more
+
+ArcticBlastSequenceIntegrationTest > realCastRunsWindupHeldLoopAndBoundedReleaseWithoutInjectedSkillCallbacks() FAILED
+    java.lang.RuntimeException: Could not call event.
+        at net.mostlyoriginal.api.event.common.EventListener.handle(EventListener.java:68)
+        at net.mostlyoriginal.api.event.dispatcher.FastEventDispatcher.dispatch(FastEventDispatcher.java:134)
+        at net.mostlyoriginal.api.event.common.EventSystem.dispatch(EventSystem.java:62)
+        at com.riiablo.engine.server.CofManager.setMode(CofManager.java:252)
+        at com.riiablo.engine.server.CofManager.setMode(CofManager.java:176)
+        at com.riiablo.engine.server.CofManager.inserted(CofManager.java:148)
+        at com.artemis.BaseEntitySystem.inserted(BaseEntitySystem.java:64)
+        at com.artemis.EntitySubscription$SubscriptionExtra.informListeners(EntitySubscription.java:273)
+        at com.artemis.EntitySubscription$SubscriptionExtra.informEntityChanges(EntitySubscription.java:260)
+        at com.artemis.EntitySubscription.informEntityChanges(EntitySubscription.java:140)
+        at com.artemis.EntitySubscription.process(EntitySubscription.java:125)
+        at com.artemis.AspectSubscriptionManager.process(AspectSubscriptionManager.java:96)
+        at com.artemis.BatchChangeProcessor.update(BatchChangeProcessor.java:76)
+        at com.artemis.SystemInvocationStrategy.updateEntityStates(SystemInvocationStrategy.java:44)
+        at com.artemis.InvocationStrategy.process(InvocationStrategy.java:24)
+        at com.artemis.World.process(World.java:385)
+        at com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest$Fixture.<init>(ArcticBlastSequenceIntegrationTest.java:181)
+        at com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest.realCastRunsWindupHeldLoopAndBoundedReleaseWithoutInjectedSkillCallbacks(ArcticBlastSequenceIntegrationTest.java:57)
+
+        Caused by:
+        com.artemis.utils.reflect.ReflectionException: Exception occurred in method: onCofChanged
+            at app//com.artemis.utils.reflect.Method.invoke(Method.java:115)
+            at app//net.mostlyoriginal.api.event.common.EventListener.handle(EventListener.java:66)
+            ... 17 more
+
+            Caused by:
+            java.lang.reflect.InvocationTargetException
+                at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+                at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+                at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+                at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+                at com.artemis.utils.reflect.Method.invoke(Method.java:109)
+                ... 18 more
+
+                Caused by:
+                java.lang.NullPointerException: Cannot invoke "com.riiablo.codec.D2.getEntry(String)" because "com.riiablo.Riiablo.anim" is null
+                    at com.riiablo.engine.server.AnimDataResolver.updateAnimData(AnimDataResolver.java:73)
+                    at com.riiablo.engine.server.AnimDataResolver.onCofChanged(AnimDataResolver.java:42)
+                    ... 23 more
+
+ArcticBlastSequenceIntegrationTest > lostInputAndManaExhaustionCannotLeavePermanentS1OrIce() FAILED
+    java.lang.RuntimeException: Could not call event.
+        at net.mostlyoriginal.api.event.common.EventListener.handle(EventListener.java:68)
+        at net.mostlyoriginal.api.event.dispatcher.FastEventDispatcher.dispatch(FastEventDispatcher.java:134)
+        at net.mostlyoriginal.api.event.common.EventSystem.dispatch(EventSystem.java:62)
+        at com.riiablo.engine.server.CofManager.setMode(CofManager.java:252)
+        at com.riiablo.engine.server.CofManager.setMode(CofManager.java:176)
+        at com.riiablo.engine.server.CofManager.inserted(CofManager.java:148)
+        at com.artemis.BaseEntitySystem.inserted(BaseEntitySystem.java:64)
+        at com.artemis.EntitySubscription$SubscriptionExtra.informListeners(EntitySubscription.java:273)
+        at com.artemis.EntitySubscription$SubscriptionExtra.informEntityChanges(EntitySubscription.java:260)
+        at com.artemis.EntitySubscription.informEntityChanges(EntitySubscription.java:140)
+        at com.artemis.EntitySubscription.process(EntitySubscription.java:125)
+        at com.artemis.AspectSubscriptionManager.process(AspectSubscriptionManager.java:96)
+        at com.artemis.BatchChangeProcessor.update(BatchChangeProcessor.java:76)
+        at com.artemis.SystemInvocationStrategy.updateEntityStates(SystemInvocationStrategy.java:44)
+        at com.artemis.InvocationStrategy.process(InvocationStrategy.java:24)
+        at com.artemis.World.process(World.java:385)
+        at com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest$Fixture.<init>(ArcticBlastSequenceIntegrationTest.java:181)
+        at com.riiablo.engine.server.ArcticBlastSequenceIntegrationTest.lostInputAndManaExhaustionCannotLeavePermanentS1OrIce(ArcticBlastSequenceIntegrationTest.java:84)
+
+        Caused by:
+        com.artemis.utils.reflect.ReflectionException: Exception occurred in method: onCofChanged
+            at app//com.artemis.utils.reflect.Method.invoke(Method.java:115)
+            at app//net.mostlyoriginal.api.event.common.EventListener.handle(EventListener.java:66)
+            ... 17 more
+
+            Caused by:
+            java.lang.reflect.InvocationTargetException
+                at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+                at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+                at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+                at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+                at com.artemis.utils.reflect.Method.invoke(Method.java:109)
+                ... 18 more
+
+                Caused by:
+                java.lang.NullPointerException: Cannot invoke "com.riiablo.codec.D2.getEntry(String)" because "com.riiablo.Riiablo.anim" is null
+                    at com.riiablo.engine.server.AnimDataResolver.updateAnimData(AnimDataResolver.java:73)
+                    at com.riiablo.engine.server.AnimDataResolver.onCofChanged(AnimDataResolver.java:42)
+                    ... 23 more
+
+ArcticBlastSequenceIntegrationTest > originalLoadedTableSelectsS1AndRetainsSourceNineAtItsActionPoint() PASSED
+
+5 tests completed, 4 failed
+
+> Task :core:test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:test'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/core/build/reports/tests/test/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 1m 30s
+22 actionable tasks: 6 executed, 16 up-to-date

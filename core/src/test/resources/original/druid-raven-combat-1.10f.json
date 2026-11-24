@@ -1,0 +1,417 @@
+{
+  "schema": 1,
+  "scope": "Native Raven successful A1 pecks, target identity and physical HP settlement",
+  "binary_sha256": {
+    "D2Game.dll": "2bd92fb25e3e4b8269930712620ba9db00cdc1aa44569d87dc4aba76553272b6",
+    "D2Common.dll": "b9d1a27c6a35992932c7c47438d02e5269f878e899f6e614d507902cecd1beab"
+  },
+  "symbols": {
+    "0x91e70": "SUNITDMG_IsHitSuccessful (hit roll)",
+    "0x91ac0": "SUNITDMG_DrainItemDurability (contains melee settlement)",
+    "0x91260": "SUNITDMG_ExecuteMissileDamage (observed after HP subtraction)"
+  },
+  "limitations": [
+    "Symbol names are D2MOO references; execution evidence is from the hash-pinned 1.10F DLLs.",
+    "Only the fixed target HP/maxHP, regeneration and AI event are modified; Raven actions are native.",
+    "These short level-one traces do not cover misses, blindness, all levels or all random outcomes.",
+    "Native creation mindamage/maxdamage stats can be zero: SkillDamage supplies effective attack damage separately.",
+    "This does not establish client pixel parity or Riiablo per-packet RNG parity."
+  ],
+  "cases": [
+    {
+      "run": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-003325-127f7bea\\orchestrator",
+      "skill_id": 221,
+      "level": 1,
+      "background_verified": true,
+      "owned_game_closed": true,
+      "native_cleanup": {
+        "status": "passed",
+        "detached": true,
+        "cleanup_confirmed": true,
+        "fixtures_removed": true,
+        "memory_writes": true,
+        "remote_execution": true,
+        "debugger_attached": true,
+        "samples": 419,
+        "first_frame": 465
+      },
+      "target_intervention": {
+        "target_id": 18,
+        "target_class": 0,
+        "target_hp_fixed": 2560000,
+        "target_ai_think_deleted": true,
+        "target_pointer": 155131648,
+        "target_hp_regen_before": 1250,
+        "target_hp_regen_after": 0,
+        "room": 167793280,
+        "player_id": 1,
+        "first_frame": 465,
+        "max_frames": 2600,
+        "combat_entry_trace": true
+      },
+      "raven_creation_stats": [],
+      "attacks": [
+        {
+          "frame": 614,
+          "raven_id": 19,
+          "target_id": 18,
+          "server_mode": 4,
+          "hit": true,
+          "result_flags": 5,
+          "physical_fixed": 805,
+          "hp_before_fixed": 2560000,
+          "hp_after_fixed": 2559195,
+          "hp_loss_fixed": 805,
+          "call_sequence": [
+            {
+              "stage": "entry",
+              "function_rva": "0x91e70",
+              "caller_return_rva": "0x923ad"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91e70"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91ac0",
+              "caller_return_rva": "0x34b00"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91260",
+              "caller_return_rva": "0x91d44"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91260"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91ac0"
+            }
+          ]
+        },
+        {
+          "frame": 777,
+          "raven_id": 19,
+          "target_id": 18,
+          "server_mode": 4,
+          "hit": true,
+          "result_flags": 5,
+          "physical_fixed": 786,
+          "hp_before_fixed": 2559195,
+          "hp_after_fixed": 2558409,
+          "hp_loss_fixed": 786,
+          "call_sequence": [
+            {
+              "stage": "entry",
+              "function_rva": "0x91e70",
+              "caller_return_rva": "0x923ad"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91e70"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91ac0",
+              "caller_return_rva": "0x34b00"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91260",
+              "caller_return_rva": "0x91d44"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91260"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91ac0"
+            }
+          ]
+        }
+      ],
+      "total_hp_loss_fixed": 1591,
+      "hp_first_fixed": 2560000,
+      "hp_last_fixed": 2558409,
+      "sha256": {
+        "orchestrator.json": "2c9c878627489206cd30863c87b8011bc1c67aebd45c1594d75c8fc65c22fe4b",
+        "worker/summary.json": "7fc60d970e938e28a5d65955541d9de7e6312f2b4d0076b51b3e753866c4a876",
+        "worker/capture/summary.json": "2fd55cf0e65d3e0bb3ba03172e7145f27206bed89d01cfbfee91d43c0299e14b",
+        "worker/native-target/identity.json": "3f205a9e01f94fccf257501b360a3ad47c2fa590dbbd72e77ca3ed26abf3619c",
+        "worker/native-target/summary.json": "9d63a4f2db065c8e75bd81573ad52565196fa8f1c80177256177bd6357a85e5e",
+        "worker/native-target/combat.jsonl": "9044c0778a103a5ed36185ca707ef4ab248c2fedfe5a1b3ac35acff40c67c9a4",
+        "worker/native-target/ravens.jsonl": "45b306b04071c5e2707a337e18559ea74ea87aea1b7160a58b8601ce3e53a816",
+        "worker/native-target/frames.csv": "61d3534a098f8ffb3ebb8cfc32b2f52dc8b177a1efc58b726963506032f1b504",
+        "worker/CXDruRaven-input.d2s": "2b05407dc64a58adee412c12fb84f1469fadde45aa0a6ac28936200e7a5c1e8d"
+      }
+    },
+    {
+      "run": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-003604-ec1a9231\\orchestrator",
+      "skill_id": 221,
+      "level": 1,
+      "background_verified": true,
+      "owned_game_closed": true,
+      "native_cleanup": {
+        "status": "passed",
+        "detached": true,
+        "cleanup_confirmed": true,
+        "fixtures_removed": true,
+        "memory_writes": true,
+        "remote_execution": true,
+        "debugger_attached": true,
+        "samples": 418,
+        "first_frame": 482
+      },
+      "target_intervention": {
+        "target_id": 14,
+        "target_class": 0,
+        "target_hp_fixed": 2560000,
+        "target_ai_think_deleted": true,
+        "target_pointer": 188048640,
+        "target_hp_regen_before": 1250,
+        "target_hp_regen_after": 0,
+        "room": 188174720,
+        "player_id": 1,
+        "first_frame": 482,
+        "max_frames": 2600,
+        "combat_entry_trace": true
+      },
+      "raven_creation_stats": [
+        {
+          "frame": 499,
+          "unit_id": 15,
+          "level": 98,
+          "tohit": 1057,
+          "mindamage": 0,
+          "maxdamage": 0
+        }
+      ],
+      "attacks": [
+        {
+          "frame": 542,
+          "raven_id": 15,
+          "target_id": 14,
+          "server_mode": 4,
+          "hit": true,
+          "result_flags": 5,
+          "physical_fixed": 917,
+          "hp_before_fixed": 2560000,
+          "hp_after_fixed": 2559083,
+          "hp_loss_fixed": 917,
+          "call_sequence": [
+            {
+              "stage": "entry",
+              "function_rva": "0x91e70",
+              "caller_return_rva": "0x923ad"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91e70"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91ac0",
+              "caller_return_rva": "0x34b00"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91260",
+              "caller_return_rva": "0x91d44"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91260"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91ac0"
+            }
+          ]
+        },
+        {
+          "frame": 642,
+          "raven_id": 15,
+          "target_id": 14,
+          "server_mode": 4,
+          "hit": true,
+          "result_flags": 5,
+          "physical_fixed": 806,
+          "hp_before_fixed": 2559083,
+          "hp_after_fixed": 2558277,
+          "hp_loss_fixed": 806,
+          "call_sequence": [
+            {
+              "stage": "entry",
+              "function_rva": "0x91e70",
+              "caller_return_rva": "0x923ad"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91e70"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91ac0",
+              "caller_return_rva": "0x34b00"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91260",
+              "caller_return_rva": "0x91d44"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91260"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91ac0"
+            }
+          ]
+        },
+        {
+          "frame": 712,
+          "raven_id": 15,
+          "target_id": 14,
+          "server_mode": 4,
+          "hit": true,
+          "result_flags": 5,
+          "physical_fixed": 847,
+          "hp_before_fixed": 2558277,
+          "hp_after_fixed": 2557430,
+          "hp_loss_fixed": 847,
+          "call_sequence": [
+            {
+              "stage": "entry",
+              "function_rva": "0x91e70",
+              "caller_return_rva": "0x923ad"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91e70"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91ac0",
+              "caller_return_rva": "0x34b00"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91260",
+              "caller_return_rva": "0x91d44"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91260"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91ac0"
+            }
+          ]
+        },
+        {
+          "frame": 782,
+          "raven_id": 15,
+          "target_id": 14,
+          "server_mode": 4,
+          "hit": true,
+          "result_flags": 5,
+          "physical_fixed": 573,
+          "hp_before_fixed": 2557430,
+          "hp_after_fixed": 2556857,
+          "hp_loss_fixed": 573,
+          "call_sequence": [
+            {
+              "stage": "entry",
+              "function_rva": "0x91e70",
+              "caller_return_rva": "0x923ad"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91e70"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91ac0",
+              "caller_return_rva": "0x34b00"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91260",
+              "caller_return_rva": "0x91d44"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91260"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91ac0"
+            }
+          ]
+        },
+        {
+          "frame": 852,
+          "raven_id": 15,
+          "target_id": 14,
+          "server_mode": 4,
+          "hit": true,
+          "result_flags": 5,
+          "physical_fixed": 697,
+          "hp_before_fixed": 2556857,
+          "hp_after_fixed": 2556160,
+          "hp_loss_fixed": 697,
+          "call_sequence": [
+            {
+              "stage": "entry",
+              "function_rva": "0x91e70",
+              "caller_return_rva": "0x923ad"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91e70"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91ac0",
+              "caller_return_rva": "0x34b00"
+            },
+            {
+              "stage": "entry",
+              "function_rva": "0x91260",
+              "caller_return_rva": "0x91d44"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91260"
+            },
+            {
+              "stage": "return",
+              "function_rva": "0x91ac0"
+            }
+          ]
+        }
+      ],
+      "total_hp_loss_fixed": 3840,
+      "hp_first_fixed": 2560000,
+      "hp_last_fixed": 2556160,
+      "sha256": {
+        "orchestrator.json": "7c9a3bfe575d8b878ddec99e3cff001521caf7516ae6192a3edfa685c9346320",
+        "worker/summary.json": "e7e821b1252c81385c309c360b1040409d4fd3b306cad414599f4a3808da7f95",
+        "worker/capture/summary.json": "0742f2f9149e9d552d2f2ac3efc23a77eafb13a0e971b6e2da3e7072066656a2",
+        "worker/native-target/identity.json": "e8b7c97ddcf53ed68504dc0877d4631ce6aea323db8c8f37023b41db89371e19",
+        "worker/native-target/summary.json": "d34d88f643db8b3f05b897cb6e84ff0edd491fd17d531ccc98ef7b8b59251e79",
+        "worker/native-target/combat.jsonl": "a0543f32325d649cf4f3cbe8e05a5847d5d5efec2785dc1889c1883601dc3636",
+        "worker/native-target/ravens.jsonl": "24b3dfc887a826070f1dc5a431d5a9f67e679b3ce6ef600403589752222262bb",
+        "worker/native-target/frames.csv": "72fc84557e675883752ab1bc35ae6594687159c12db594d49e8987cb0e131b0c",
+        "worker/CXDruRaven-input.d2s": "2b05407dc64a58adee412c12fb84f1469fadde45aa0a6ac28936200e7a5c1e8d",
+        "worker/native-target/raven-stats.jsonl": "d4012741741c597eb6b1270d7847d503dd1104171df49d851fe057649caf6e41"
+      }
+    }
+  ]
+}

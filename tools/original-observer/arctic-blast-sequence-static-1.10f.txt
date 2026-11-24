@@ -1,0 +1,46 @@
+Local static Capstone/PE data, not REA Evidence or a runtime stack trace.
+D2Common.dll sha256=b9d1a27c6a35992932c7c47438d02e5269f878e899f6e614d507902cecd1beab
+SQ table RVA0x9FE10 sha256=1d24c8e224165a173bca4fff23d19fd6be625c8b7e56e494437bebe38a806e65
+point=0 mode=S1 source=0 event=0
+point=1 mode=S1 source=1 event=0
+point=2 mode=S1 source=2 event=0
+point=3 mode=S1 source=3 event=0
+point=4 mode=S1 source=4 event=0
+point=5 mode=S1 source=5 event=0
+point=6 mode=S1 source=6 event=0
+point=7 mode=S1 source=7 event=0
+point=8 mode=S1 source=8 event=0
+point=9 mode=S1 source=9 event=0
+point=10 mode=S1 source=9 event=1
+point=11 mode=S1 source=10 event=0
+point=12 mode=S1 source=11 event=0
+point=13 mode=S1 source=12 event=0
+point=14 mode=S1 source=13 event=0
+D2Client.dll sha256=94466b84c0593ab682f1d3d8dc65ef4f8170f33e430865d802bc752458b2b282
+CltDo24: INFERNO state check, seek SQ point8 and reset remaining to0x500.
+0002A358 push 0xc
+0002A35A push esi
+0002A35B call 0x6fb6ab12
+0002A360 test eax, eax
+0002A362 je 0x6faca394
+0002A364 mov eax, dword ptr [esi + 0x30]
+0002A367 test eax, eax
+0002A369 je 0x6faca386
+0002A36B push 8
+0002A36D push esi
+0002A36E call 0x6fb6ad4c
+0002A373 mov eax, edi
+0002A375 mov dword ptr [esi + 0x48], 0x500
+0002A37C pop edi
+0002A37D pop esi
+0002A37E pop ebp
+0002A37F pop ebx
+0002A380 add esp, 0x70
+0002A383 ret 4
+0002A386 mov edx, dword ptr [esi + 0x44]
+0002A389 xor dl, dl
+0002A38B sub edx, 0x200
+0002A391 mov dword ptr [esi + 0x44], edx
+0002A394 mov eax, edi
+0002A396 pop edi
+0002A397 pop esi

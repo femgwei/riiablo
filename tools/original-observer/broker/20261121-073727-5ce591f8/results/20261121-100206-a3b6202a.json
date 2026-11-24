@@ -1,0 +1,15 @@
+{
+  "id": "20261121-100206-a3b6202a",
+  "status": "completed",
+  "started": 1795226526.8050857,
+  "broker_pid": 2616,
+  "command": {
+    "op": "run_job",
+    "job": "druid-elemental-callbacks-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-073727-5ce591f8\\runs\\20261121-100206-a3b6202a\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795226581.265944
+}

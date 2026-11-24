@@ -1,0 +1,585 @@
+{
+  "schema": 1,
+  "scope": "Raven attack-attempt budget and DT/DD lifecycle, not damage or pixel parity",
+  "cases": {
+    "1": {
+      "level": 1,
+      "run": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261122-232949-a6d27f4d\\orchestrator",
+      "background_verified": true,
+      "owned_game_closed": true,
+      "selected_skill_before_cast": [
+        221,
+        1
+      ],
+      "expected_attacks": 12,
+      "ravens": [
+        {
+          "unit_id": 17,
+          "attack_entries": 12,
+          "attack_frames": [
+            514,
+            584,
+            654,
+            754,
+            824,
+            909,
+            979,
+            1049,
+            1119,
+            1189,
+            1259,
+            1359
+          ],
+          "death_frame": 1399,
+          "corpse_frame": 1413,
+          "lifecycle_complete": true,
+          "client_attack_entries": 12,
+          "mode_transitions": [
+            {
+              "frame": 482,
+              "mode": 8
+            },
+            {
+              "frame": 496,
+              "mode": 1
+            },
+            {
+              "frame": 507,
+              "mode": 2
+            },
+            {
+              "frame": 514,
+              "mode": 4
+            },
+            {
+              "frame": 539,
+              "mode": 1
+            },
+            {
+              "frame": 554,
+              "mode": 2
+            },
+            {
+              "frame": 584,
+              "mode": 4
+            },
+            {
+              "frame": 609,
+              "mode": 1
+            },
+            {
+              "frame": 624,
+              "mode": 2
+            },
+            {
+              "frame": 654,
+              "mode": 4
+            },
+            {
+              "frame": 679,
+              "mode": 1
+            },
+            {
+              "frame": 694,
+              "mode": 2
+            },
+            {
+              "frame": 754,
+              "mode": 4
+            },
+            {
+              "frame": 779,
+              "mode": 1
+            },
+            {
+              "frame": 794,
+              "mode": 2
+            },
+            {
+              "frame": 824,
+              "mode": 4
+            },
+            {
+              "frame": 849,
+              "mode": 1
+            },
+            {
+              "frame": 864,
+              "mode": 2
+            },
+            {
+              "frame": 909,
+              "mode": 4
+            },
+            {
+              "frame": 934,
+              "mode": 1
+            },
+            {
+              "frame": 949,
+              "mode": 2
+            },
+            {
+              "frame": 979,
+              "mode": 4
+            },
+            {
+              "frame": 1004,
+              "mode": 1
+            },
+            {
+              "frame": 1019,
+              "mode": 2
+            },
+            {
+              "frame": 1049,
+              "mode": 4
+            },
+            {
+              "frame": 1074,
+              "mode": 1
+            },
+            {
+              "frame": 1089,
+              "mode": 2
+            },
+            {
+              "frame": 1119,
+              "mode": 4
+            },
+            {
+              "frame": 1144,
+              "mode": 1
+            },
+            {
+              "frame": 1159,
+              "mode": 2
+            },
+            {
+              "frame": 1189,
+              "mode": 4
+            },
+            {
+              "frame": 1214,
+              "mode": 1
+            },
+            {
+              "frame": 1229,
+              "mode": 2
+            },
+            {
+              "frame": 1259,
+              "mode": 4
+            },
+            {
+              "frame": 1284,
+              "mode": 1
+            },
+            {
+              "frame": 1299,
+              "mode": 2
+            },
+            {
+              "frame": 1359,
+              "mode": 4
+            },
+            {
+              "frame": 1384,
+              "mode": 1
+            },
+            {
+              "frame": 1399,
+              "mode": 0
+            },
+            {
+              "frame": 1413,
+              "mode": 12
+            }
+          ]
+        }
+      ],
+      "target_identity": {
+        "target_id": 16,
+        "target_class": 0,
+        "target_hp_fixed": 2560000,
+        "target_ai_think_deleted": true,
+        "target_pointer": 152770560,
+        "room": 187453824,
+        "player_id": 1,
+        "first_frame": 465,
+        "max_frames": 2600
+      },
+      "target_alive_through_observation": true,
+      "target_hp_first": 2560000,
+      "target_hp_last": 2560000,
+      "target_hp_min": 2559054,
+      "native_summary": {
+        "status": "passed",
+        "detached": true,
+        "cleanup_confirmed": true,
+        "fixtures_removed": true,
+        "memory_writes": true,
+        "remote_execution": true,
+        "debugger_attached": true,
+        "samples": 1526,
+        "first_frame": 465
+      },
+      "collector_summary": {
+        "status": "passed",
+        "seconds": 60.0,
+        "nearby_target_unit_ids": [
+          14,
+          15,
+          16,
+          49,
+          50,
+          51,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101,
+          128,
+          129,
+          130,
+          131,
+          132
+        ]
+      },
+      "sha256": {
+        "summary.json": "e6b2d84722cddcfd93bed55f0ac02546f664f0facd6bf8e342f715b98bb29754",
+        "capture/summary.json": "b1aa63c1cdf9cab02f437112334308eb58eac306172d9627cc9f9560d26845c5",
+        "capture/raven-samples.json": "b1ac071a8c3fb6a200c5da61c18be01984e794db69e47d307933c5fa547f5bd4",
+        "native-target/summary.json": "49d570738df588895e729266542eac026572d96f2728a2e51a3c1143f999a89e",
+        "native-target/identity.json": "54398c3c6fa942ecda40fa8fbe8131e365e8a1b7a3792b492e1ef2fd6099c6c6",
+        "native-target/ravens.jsonl": "6e4d58dc7bafd630446c93b9821dd56d4cd85156d6fbc605fc3d547a2ed55ce3",
+        "native-target/frames.csv": "220271bd19a43f492663a0f28279e87ade2f54040d87a2bac90b212735c892d7",
+        "CXDruRaven-input.d2s": "2b05407dc64a58adee412c12fb84f1469fadde45aa0a6ac28936200e7a5c1e8d"
+      },
+      "limitations": [
+        "Target HP/AI are experimental interventions; Raven actions and death are native.",
+        "A1 entries count attack attempts, not successful hits or damage settlements.",
+        "Unchanged fixed-target HP cannot establish which other nearby monster was attacked.",
+        "Server modes are sampled on the stopped update thread; client polling is non-atomic."
+      ]
+    },
+    "5": {
+      "level": 5,
+      "run": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261122-233750-45964654\\orchestrator",
+      "background_verified": true,
+      "owned_game_closed": true,
+      "selected_skill_before_cast": [
+        221,
+        5
+      ],
+      "expected_attacks": 16,
+      "ravens": [
+        {
+          "unit_id": 20,
+          "attack_entries": 16,
+          "attack_frames": [
+            498,
+            598,
+            668,
+            768,
+            868,
+            938,
+            1008,
+            1078,
+            1148,
+            1218,
+            1288,
+            1358,
+            1428,
+            1498,
+            1598,
+            1668
+          ],
+          "death_frame": 1708,
+          "corpse_frame": 1722,
+          "lifecycle_complete": true,
+          "client_attack_entries": 16,
+          "mode_transitions": [
+            {
+              "frame": 466,
+              "mode": 8
+            },
+            {
+              "frame": 480,
+              "mode": 1
+            },
+            {
+              "frame": 491,
+              "mode": 2
+            },
+            {
+              "frame": 498,
+              "mode": 4
+            },
+            {
+              "frame": 523,
+              "mode": 1
+            },
+            {
+              "frame": 538,
+              "mode": 2
+            },
+            {
+              "frame": 598,
+              "mode": 4
+            },
+            {
+              "frame": 623,
+              "mode": 1
+            },
+            {
+              "frame": 638,
+              "mode": 2
+            },
+            {
+              "frame": 668,
+              "mode": 4
+            },
+            {
+              "frame": 693,
+              "mode": 1
+            },
+            {
+              "frame": 708,
+              "mode": 2
+            },
+            {
+              "frame": 768,
+              "mode": 4
+            },
+            {
+              "frame": 793,
+              "mode": 1
+            },
+            {
+              "frame": 808,
+              "mode": 2
+            },
+            {
+              "frame": 868,
+              "mode": 4
+            },
+            {
+              "frame": 893,
+              "mode": 1
+            },
+            {
+              "frame": 908,
+              "mode": 2
+            },
+            {
+              "frame": 938,
+              "mode": 4
+            },
+            {
+              "frame": 963,
+              "mode": 1
+            },
+            {
+              "frame": 978,
+              "mode": 2
+            },
+            {
+              "frame": 1008,
+              "mode": 4
+            },
+            {
+              "frame": 1033,
+              "mode": 1
+            },
+            {
+              "frame": 1048,
+              "mode": 2
+            },
+            {
+              "frame": 1078,
+              "mode": 4
+            },
+            {
+              "frame": 1103,
+              "mode": 1
+            },
+            {
+              "frame": 1118,
+              "mode": 2
+            },
+            {
+              "frame": 1148,
+              "mode": 4
+            },
+            {
+              "frame": 1173,
+              "mode": 1
+            },
+            {
+              "frame": 1188,
+              "mode": 2
+            },
+            {
+              "frame": 1218,
+              "mode": 4
+            },
+            {
+              "frame": 1243,
+              "mode": 1
+            },
+            {
+              "frame": 1258,
+              "mode": 2
+            },
+            {
+              "frame": 1288,
+              "mode": 4
+            },
+            {
+              "frame": 1313,
+              "mode": 1
+            },
+            {
+              "frame": 1328,
+              "mode": 2
+            },
+            {
+              "frame": 1358,
+              "mode": 4
+            },
+            {
+              "frame": 1383,
+              "mode": 1
+            },
+            {
+              "frame": 1398,
+              "mode": 2
+            },
+            {
+              "frame": 1428,
+              "mode": 4
+            },
+            {
+              "frame": 1453,
+              "mode": 1
+            },
+            {
+              "frame": 1468,
+              "mode": 2
+            },
+            {
+              "frame": 1498,
+              "mode": 4
+            },
+            {
+              "frame": 1523,
+              "mode": 1
+            },
+            {
+              "frame": 1538,
+              "mode": 2
+            },
+            {
+              "frame": 1598,
+              "mode": 4
+            },
+            {
+              "frame": 1623,
+              "mode": 1
+            },
+            {
+              "frame": 1638,
+              "mode": 2
+            },
+            {
+              "frame": 1668,
+              "mode": 4
+            },
+            {
+              "frame": 1693,
+              "mode": 1
+            },
+            {
+              "frame": 1708,
+              "mode": 0
+            },
+            {
+              "frame": 1722,
+              "mode": 12
+            }
+          ]
+        }
+      ],
+      "target_identity": {
+        "target_id": 19,
+        "target_class": 0,
+        "target_hp_fixed": 2560000,
+        "target_ai_think_deleted": true,
+        "target_pointer": 90217984,
+        "room": 171266432,
+        "player_id": 1,
+        "first_frame": 449,
+        "max_frames": 2600
+      },
+      "target_alive_through_observation": true,
+      "target_hp_first": 2560000,
+      "target_hp_last": 2560000,
+      "target_hp_min": 2558363,
+      "native_summary": {
+        "status": "passed",
+        "detached": true,
+        "cleanup_confirmed": true,
+        "fixtures_removed": true,
+        "memory_writes": true,
+        "remote_execution": true,
+        "debugger_attached": true,
+        "samples": 1525,
+        "first_frame": 449
+      },
+      "collector_summary": {
+        "status": "passed",
+        "seconds": 60.0,
+        "nearby_target_unit_ids": [
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          49,
+          50,
+          51,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101,
+          128,
+          129,
+          130,
+          131,
+          132
+        ]
+      },
+      "sha256": {
+        "summary.json": "783da9ccaca32c6d66a7d44cfa69c39fef0d0104264496e9f22d7e48976d1db4",
+        "capture/summary.json": "6625516c2c5f245adc6bd1ea400e4e97fa94d69583d323730b985779847a2d02",
+        "capture/raven-samples.json": "b3b6c0a5a01f6b04a74d2247d4e587ae8732d8e8874ad77c43b9320940a9c865",
+        "native-target/summary.json": "6a4b07178d83ca39d07c5617622564f099983672b85f23b668b997f9ffc48781",
+        "native-target/identity.json": "4ef3633a895ac154b06d7013e1b44856abc018d280b080fa295cc49a825ead2b",
+        "native-target/ravens.jsonl": "abddc980d6cfd8367d75bb5beee9864af7a4fe94582c099bbfa388d0414f017e",
+        "native-target/frames.csv": "1b09535238c51c64d211ad21386b3e119d2162b9d4bf63e286306cf817b53a00",
+        "CXDruRaven-input.d2s": "c1c1e7ea29d40add9a817944ba9185d7ac1ede0e3ef937ee14abd486d12be6ff"
+      },
+      "limitations": [
+        "Target HP/AI are experimental interventions; Raven actions and death are native.",
+        "A1 entries count attack attempts, not successful hits or damage settlements.",
+        "Unchanged fixed-target HP cannot establish which other nearby monster was attacked.",
+        "Server modes are sampled on the stopped update thread; client polling is non-atomic."
+      ]
+    }
+  }
+}

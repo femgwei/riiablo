@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "date": "2026-11-22",
+  "tests": 38,
+  "failures": 0,
+  "errors": 0,
+  "suites": [
+    {
+      "name": "com.riiablo.presentation.DruidStormOriginalParityTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.DruidSurfaceOriginalParityTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.ReferenceElementalPresentationTest",
+      "tests": "26",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.VolcanoOriginalParityTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "run_id": "20261122-014022-d9d92f67",
+  "background_verified": true,
+  "private_desktop": "riiablo_storm_276779923899",
+  "private_desktop_not_input_checks": 155,
+  "screen_before": [
+    1920,
+    1080
+  ],
+  "screen_after": [
+    1920,
+    1080
+  ],
+  "original_pids_after": [],
+  "broker": {
+    "pid": 25512,
+    "responsive": true,
+    "active": null,
+    "cleanup_blocked": false
+  },
+  "coverage": {
+    "druid_captured": 9,
+    "druid_scoped_compared": 8,
+    "hurricane_comparison": "pending_matched_production_path",
+    "armageddon_comparison": "client_fall_and_animation_clock_with_remaining_differences",
+    "gpu_or_runtime_stacks": false,
+    "combat": false
+  },
+  "accepted_armageddon_samples": 5142,
+  "rejected_nonatomic_armageddon_samples": 6,
+  "hashes": {
+    "core/src/test/resources/original/druid-storm-1.10f.json": "8cdfad1aebc413e2aeeb48155693180599e6c43aaf43f732c0707940c0ac7e79",
+    "tools/original-observer/druid-storm-static-1.10f-2026-11-22.txt": "e36e5d848df4ee09bab75a831d59d2c863148132f51cf3f804a8310e3f1c7ccd",
+    "tools/original-observer/druid-storm-final-validation-2026-11-22.log": "30fe1f8336114485f50523214435e8bc7a2097e1c672d6f42a3581fdd932579a",
+    "core/src/main/java/com/riiablo/presentation/ReferenceElementalPresentationSystem.java": "18359c66cb78cfb62fe54e16f886ef6699d9803187117bedeed0bb5cd90f6920",
+    "core/src/main/java/com/riiablo/presentation/NativeArmageddonPresentation.java": "f8b5ec7b13f0b1c2de37a907fc6e3846942e64dd91b8d9e174b3a62dba0d2723",
+    "core/src/main/java/com/riiablo/presentation/component/ReferenceElementalEffect.java": "d1a7754720549dcd494e66ca27a5ee01940bd48a7bd9fce41c358ea94ffef22e",
+    "core/src/main/java/com/riiablo/engine/server/StateUpdater.java": "0b0a1288d39902ae62483423be9f444d4950a4b8556cfa246d849c451dcac89e",
+    "core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java": "0fe7c30d3127d71b606208f512a3eb30762721c2456596c314cc28735fe8f389",
+    "core/src/test/java/com/riiablo/presentation/ReferenceElementalPresentationTest.java": "a306777ea43d56b724205663a3d8b5bf7d3667d1d6229684fb754ec363750072",
+    "core/src/test/java/com/riiablo/presentation/DruidStormOriginalParityTest.java": "a312767a31a6348de0a6dcce1d43d2b30a08ea2bfb9a377c66b01c8530fc6f3c",
+    "tools/original-observer/druid_storm_background.py": "a8292d744cd48c75f63015be3ffdb39926a44deb9eeda06829c8ef4499bca9e1",
+    "tools/original-observer/druid_storm_passive.py": "2678ea71d7ad48d20349b0ce1d82383fe593c281844472215d9c8a45733df2c9",
+    "tools/original-observer/export_druid_storm.py": "81d720829570316f095ffc38c5c1c9655bc46ea8456308c90ebe83df6fe2e2a7",
+    "tools/original-observer/inspect_druid_storm.py": "9c8da57f4e2b54f88739f84fa56b26296364ae903d1b7cd2965672d2f7cfaa63",
+    "tools/original-observer/prepare_druid_batch_fixture.py": "be583c78384b23848a496de433189f98593c0c6d900ddb7436e9909f1e818878",
+    "tools/original-observer/arctic_blast_background.py": "fc8b2eb6e6ad95194eb51d93f402e2f0498883980a49134cced638529c29c7b5",
+    "tools/original-observer/orchestrator.py": "f30c578f0d5f32f79abd56286db8ae7ce77b89c70c4e26e99123e104ab909ca3",
+    "tools/original-observer/jobs/druid-storm-private-desktop.json": "c9d9267271e763ba67ec19545d3e09c74b7d7f148614c41f1b736a404f7c6c53"
+  }
+}

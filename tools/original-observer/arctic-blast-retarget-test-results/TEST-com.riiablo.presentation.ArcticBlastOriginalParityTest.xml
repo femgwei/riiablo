@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.presentation.ArcticBlastOriginalParityTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-21T15:41:54" hostname="DESKTOP-7GGAVHU" time="2.183">
+  <properties/>
+  <testcase name="clientStreamMatchesAllFourHundredObservedPositionsAndAnimationCursors()" classname="com.riiablo.presentation.ArcticBlastOriginalParityTest" time="1.772"/>
+  <testcase name="streamPolicyRejectsMismatchedSkillsAndKeepsServerOnlyFallback()" classname="com.riiablo.presentation.ArcticBlastOriginalParityTest" time="0.126"/>
+  <testcase name="retainedPollingCoversBothResourcesAndPostReleaseTailWithoutForeground()" classname="com.riiablo.presentation.ArcticBlastOriginalParityTest" time="0.014"/>
+  <testcase name="repeatedClientCallbacksSelectBothIceResourcesWithoutDuplicatingDamage()" classname="com.riiablo.presentation.ArcticBlastOriginalParityTest" time="0.143"/>
+  <testcase name="coldAssetLoadRestoresExistingIceAgeAtSixtyHz()" classname="com.riiablo.presentation.ArcticBlastOriginalParityTest" time="0.122"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=230 target=-1 srvDoFunc=19 cltDoFunc=24
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

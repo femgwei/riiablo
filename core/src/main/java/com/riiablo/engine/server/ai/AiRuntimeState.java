@@ -181,6 +181,7 @@ public final class AiRuntimeState {
       case "Vines": return new Vines(id);
       case "Regurgitator": return new Regurgitator(id);
       case "BloodRaven": return new BloodRaven(id);
+      case "Raven": return new Raven(id);
       case "FrogDemon": return new FrogDemon(id);
       case "CycleOfLife": return new CycleOfLife(id);
       case "DeathSentry": return new DeathSentry(id);

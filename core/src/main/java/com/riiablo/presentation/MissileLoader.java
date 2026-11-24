@@ -26,6 +26,7 @@ public class MissileLoader extends IteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
   protected ComponentMapper<Angle> mAngle;
+  protected ComponentMapper<com.riiablo.presentation.component.DruidWindFlight> mDruidWindFlight;
 
   @Wire(name = "clientContext")
   protected ClientGameplayContext clientContext ;
@@ -33,8 +34,12 @@ public class MissileLoader extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Missile missile = mMissile.get(entityId);
+    DruidWindPresentationSystem wind = world.getSystem(DruidWindPresentationSystem.class);
+    if (wind != null && wind.hidesCarrier(entityId)) return;
     if (NativePoisonJavelinPresentation.serverTrailCloud(missile)) return;
     if (NativeFirestormPresentation.serverGround(missile)) return;
+    if (NativeInfernoPresentation.handles(missile) && !missile.presentationOnly
+        && world.getSystem(InfernoPresentationSystem.class) != null) return;
     // Original Bone Spear trails first draw at age 1, after the head has
     // advanced away. Publishing age 0 here (including loadNow's warm-cache
     // path) draws a fresh trail over the head at the same position.
@@ -156,7 +161,10 @@ public class MissileLoader extends IteratingSystem {
     int poisonDirection = NativePoisonJavelinPresentation.direction(missile,
         mAngle.has(entityId) ? mAngle.get(entityId).angle : com.badlogic.gdx.math.Vector2.Zero,
         animation.getNumDirections());
-    if (NativeMoltenBoulderPresentation.handles(missile) && mAngle.has(entityId)) {
+    if (mDruidWindFlight.has(entityId)) {
+      animation.setDirection(NativeDruidWindPresentation.direction(
+          mDruidWindFlight.get(entityId).pathDirection, animation.getNumDirections()));
+    } else if (NativeMoltenBoulderPresentation.handles(missile) && mAngle.has(entityId)) {
       animation.setDirection(NativeMoltenBoulderPresentation.direction(
           mAngle.get(entityId).angle, animation.getNumDirections()));
     } else if (poisonDirection >= 0) {
@@ -183,6 +191,7 @@ public class MissileLoader extends IteratingSystem {
 
   static int nativeFrameDelta(ClientGameplayContext context, Missile missile,
       Missiles.Entry visualRow) {
+    if (NativeDruidWindPresentation.handles(missile)) return NativeDruidWindPresentation.rate(missile);
     if (NativeFirestormMotion.maker(missile.missile)) return 512;
     if (missile.skillId == 308 && missile.missile.Id == 502) {
       if (context == null || context.files() == null || context.files().skills == null) return 256;
@@ -205,6 +214,7 @@ public class MissileLoader extends IteratingSystem {
   /** 1.10f CltDo24 (6FACA1D0) selects A OR B; it does not double damage. */
   static Missiles.Entry infernoVisualRow(ClientGameplayContext context, Missile missile) {
     if (missile == null || missile.skillId != 41 || missile.missile == null
+        || missile.presentationOnly
         || !"infernoflame1".equalsIgnoreCase(missile.missile.Missile)
         || context == null || context.files() == null) {
       return missile == null ? null : missile.missile;
@@ -274,6 +284,14 @@ public class MissileLoader extends IteratingSystem {
       Animation animation, int initialFrame) {
     int frames = animation.getNumFramesPerDir();
     if (frames <= 0) return;
+    if (NativeDruidWindPresentation.handles(missile)) {
+      NativeDruidWindPresentation.initialize(missile, animation);
+      return;
+    }
+    if (NativeInfernoPresentation.handles(missile)) {
+      NativeInfernoPresentation.initialize(missile, animation);
+      return;
+    }
     if (NativeFirestormPresentation.handles(missile)) {
       NativeFirestormPresentation.initialize(missile, animation);
       return;

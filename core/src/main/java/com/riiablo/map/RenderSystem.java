@@ -462,6 +462,7 @@ public class RenderSystem extends BaseEntitySystem {
 
   private int applyRenderDirection(int entityId, Animation animation) {
     int original = animation.getDirection();
+    if (world.getMapper(com.riiablo.presentation.component.DruidWindFlight.class).has(entityId)) return original;
     AuthoritativeInterpolationSystem interpolation =
         world.getSystem(AuthoritativeInterpolationSystem.class);
     if (animation.getNumDirections() > 0 && interpolation != null
@@ -1326,6 +1327,11 @@ public class RenderSystem extends BaseEntitySystem {
   }
 
   private void drawEntity(Array<Integer>[] cache, int entity) {
+      com.riiablo.presentation.DruidWindPresentationSystem wind =
+          world.getSystem(com.riiablo.presentation.DruidWindPresentationSystem.class);
+      if (mMissile.has(entity) && wind != null && wind.hidesCarrier(entity)) return;
+        if (mMissile.has(entity) && world.getSystem(com.riiablo.presentation.InfernoPresentationSystem.class) != null
+            && com.riiablo.presentation.InfernoPresentationSystem.isDamageCarrier(mMissile.get(entity))) return;
       if (mMissile.has(entity)
           && com.riiablo.presentation.NativePoisonJavelinPresentation.serverTrailCloud(
               mMissile.get(entity))) return;

@@ -1,0 +1,50 @@
+{
+  "counts": {
+    "tests": 12,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "com.riiablo.presentation.FirestormOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:45:38",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.783"
+    },
+    {
+      "name": "com.riiablo.presentation.MoltenBoulderOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:45:42",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.357"
+    },
+    {
+      "name": "com.riiablo.presentation.OriginalFirestormFixtureTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:45:43",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.048"
+    },
+    {
+      "name": "com.riiablo.presentation.OriginalMoltenBoulderFixtureTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:45:43",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.071"
+    }
+  ]
+}

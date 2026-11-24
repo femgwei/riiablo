@@ -1,0 +1,152 @@
+{
+  "date": "2026-11-21",
+  "scope": "Volcano scoped client emission/motion/height/frame/landing reconstruction; no full scene, damage or pixel parity",
+  "tests": {
+    "tests": 49,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "test_suites": [
+    {
+      "file": "TEST-com.riiablo.engine.server.DruidVolcanoIntegrationTest.xml",
+      "name": "com.riiablo.engine.server.DruidVolcanoIntegrationTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T06:19:43",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.17"
+    },
+    {
+      "file": "TEST-com.riiablo.engine.server.MoltenBoulderLifecycleTest.xml",
+      "name": "com.riiablo.engine.server.MoltenBoulderLifecycleTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T06:19:55",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.264"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.DruidSurfaceOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.DruidSurfaceOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T06:20:08",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "2.015"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.FirestormOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.FirestormOriginalParityTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T06:20:22",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.782"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.FirestormVariantOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.FirestormVariantOriginalParityTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T06:20:36",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.655"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.MissileLoaderTest.xml",
+      "name": "com.riiablo.presentation.MissileLoaderTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T06:20:50",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.042"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.ReferenceElementalPresentationTest.xml",
+      "name": "com.riiablo.presentation.ReferenceElementalPresentationTest",
+      "tests": "24",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T06:21:02",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.989"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.VolcanoOriginalParityTest.xml",
+      "name": "com.riiablo.presentation.VolcanoOriginalParityTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T06:19:29",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.902"
+    }
+  ],
+  "production_comparison": {
+    "lifetime_mismatches": 0,
+    "native_motion_samples": 910,
+    "motion_mismatches": 0,
+    "native_dcc_samples": 2591,
+    "dcc_mismatches": 0,
+    "native_arc_samples": 931,
+    "arc_mismatches": 0
+  },
+  "algorithm_motion_states": 1841,
+  "original_runs": {
+    "draw": "20261121-095015-f801398c",
+    "arc_hits": "20261121-140040-bc08d7a6"
+  },
+  "background_verified": true,
+  "owned_game_closed": true,
+  "broker_status": "ready",
+  "broker_active": null,
+  "cleanup_blocked": false,
+  "module_boundaries_passed": true,
+  "diff_check_passed": true,
+  "python_compile_passed": true,
+  "remaining_differences": [
+    "Empty-map replay lands all 62 flights; native active-room removal is not fully reconstructed",
+    "Original hit trace: four observed rocks disappeared before hit55; exact removal branch unresolved",
+    "Server empty-map replay has 25 debris, original has 62; damage and collision were not changed",
+    "Recorded TargetX seed conditions this diagnostic only; full allocator RNG and caster input are not replayed"
+  ],
+  "sha256": {
+    "core/src/test/resources/original/volcano-flight-1.10f.json": "e17a59d1b93c57c23762d7aa025762f0373ad6a9ac74d98f9b1b50540343bdd1",
+    "tools/original-observer/class-skill-batch-2026-11-21/druid-volcano-flight-comparison-1.10f.json": "ac01856b69834282c6d12e69a1586fbc28f6c96215f83350e77e2ed5d4d1d5a7",
+    "tools/original-observer/volcano-flight-final-validation.log": "aaf0128f61300600de399fb0526f87d3e5c09468cbf57f40b9149b8d804bd50d",
+    "tools/original-observer/volcano-static-reproducible-1.10f.txt": "ade02aff5be08d82b48ad632fefd1624fe40434e7c61df9b1ac71611f1eadd28",
+    "core/src/main/java/com/riiablo/presentation/NativeVolcanoPresentation.java": "513e74256d76d6be09986145ebd4630738b6b7f8c8b1f319206e5f2349897f2c",
+    "core/src/main/java/com/riiablo/presentation/ReferenceElementalPresentationSystem.java": "d7fd2d8ce0eea0b6600444e6909ff2eb1293f3bb6e70d84be9983264618fe1b3",
+    "core/src/main/java/com/riiablo/presentation/NativeDruidSurfacePresentation.java": "41aa45647a081c0adcc23bd0f7dcfa9f9998d62457ff9ecf1c14873d4412ee46",
+    "core/src/main/java/com/riiablo/presentation/component/ReferenceElementalEffect.java": "a8bf489a3520b87e5f25208d0a867a696fb098ec0b62786e0efd7eee4afc8e0f",
+    "core/src/main/java/com/riiablo/presentation/component/ReferenceElementalEmitter.java": "4f372e33d0ebb6c94da5b79b545947179247d00ba5e8039f9f1d8d0e733bc74e",
+    "core/src/test/java/com/riiablo/presentation/VolcanoOriginalParityTest.java": "044bfda8c8fb327e4665c2d2d3ebfd7134edc1669f843709f76a96b5d4c31a99",
+    "core/src/test/java/com/riiablo/presentation/DruidSurfaceOriginalAnalysis.java": "c1a4664284079a2cbb32762d3a10e0be82170cc2a444838c33df6d668b4aeed4",
+    "core/src/test/java/com/riiablo/presentation/ReferenceElementalPresentationTest.java": "608d66decac2ea3842b68677228108be4800927f024dc99feae3b1998f946995",
+    "tools/original-observer/export_volcano_flight.py": "55c68f7cc34abe13ea68b759081e9cb792a279a9f9f72894676019911611835c",
+    "tools/original-observer/compare_volcano_flight.py": "06b09d2f325a3c8db80d1ab0b2fcc0742c02cf3fadd8bd3517df156e5c91e5de",
+    "tools/original-observer/inspect_volcano.py": "aaa871350baf6c4291869896e5064f3bc3e38c822de546b8d949b9741d1c3a1e",
+    "tools/original-observer/native-harness/d2game_druid_volcano_hits.cpp": "b2c4c6284c35a97f4faedcfe2a93db69aee869f820788bf9d1cd909239de3bd0",
+    "tools/original-observer/native-harness/d2game_poison_javelin.cpp": "7a35eab4d6d8bc6969b85c448736cc368e7a246efc6d9d37feae84743f657113",
+    "tools/original-observer/molten_boulder_background.py": "6c96f30451eaa022be31b5905c1ebc85c4a991aa45572957610afcd3a44ab151",
+    "tools/original-observer/orchestrator.py": "3942de046e757fed7ff77e26f594e9d1bc11c9af037454f562ab3f5626cbc190",
+    "tools/original-observer/jobs/druid-volcano-hits-private-desktop.json": "4d4416f277bb550528c33ec8612156c3aa461bf1fb1ccacb14009d199be74489",
+    "tools/original-observer/native-harness/build-x86.ps1": "4ad45cc61d9f7326726d07e55251766c53d2f43cdc7fca5a25c1eb408ab79cd9",
+    "docs/volcano-flight-background-analysis-2026-11-21.md": "b5f02bf5bc3e03171b149e42e737e7ab423d104cb2d6947b767df3afc1c2db64"
+  }
+}

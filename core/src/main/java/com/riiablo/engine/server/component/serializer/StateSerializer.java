@@ -44,7 +44,7 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
   public int putData(FlatBufferBuilder builder, UnitStates component) {
     if (component.stateList == null || component.stateList.isEmpty()) {
       return StateP.createStateP(builder, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-          0, 0, 0, 0);
+          0, 0, 0, 0, 0, 0, 0);
     }
 
     int count = component.stateList.size();
@@ -62,6 +62,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
     int[] skillIds = new int[count];
     int[] periodicDelayFrames = new int[count];
     int[] periodicCountdownFrames = new int[count];
+    int[] presentationRevisions = new int[count];
+    int[] cycloneArmorCurrent = new int[count];
+    int[] cycloneArmorMaximum = new int[count];
+    boolean hasCycloneArmor = false;
     for (int i = 0; i < count; i++) {
       UnitState state = component.stateList.getStates().get(i);
       stateIds[i] = (short) Math.max(0, Math.min(0xFFFF, state.stateId));
@@ -81,6 +85,12 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
       skillIds[i] = state.skillId;
       periodicDelayFrames[i] = state.periodicDelayFrames;
       periodicCountdownFrames[i] = state.periodicCountdownFrames;
+      presentationRevisions[i] = state.presentationRevision;
+      if (state.stateId == StateId.CYCLONEARMOR) {
+        hasCycloneArmor = true;
+        cycloneArmorCurrent[i] = state.getStatContributionValue(Stat.bonearmor);
+        cycloneArmorMaximum[i] = state.getStatContributionValue(Stat.bonearmormax);
+      }
     }
 
     int stateIdOffset = StateP.createStateIdVector(builder, stateIds);
@@ -105,7 +115,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
         velocityModifierOffset, runtimeValueOffset, animationRateModifierOffset,
         skillModifierOffset, maxLifeModifierOffset, maxManaModifierOffset,
         maxStaminaModifierOffset, sourceEntityIdOffset, skillIdOffset,
-        periodicDelayFramesOffset, periodicCountdownFramesOffset);
+        periodicDelayFramesOffset, periodicCountdownFramesOffset,
+        StateP.createPresentationRevisionVector(builder, presentationRevisions),
+        hasCycloneArmor ? StateP.createCycloneArmorCurrentFixedVector(builder, cycloneArmorCurrent) : 0,
+        hasCycloneArmor ? StateP.createCycloneArmorMaximumFixedVector(builder, cycloneArmorMaximum) : 0);
   }
 
   @Override
@@ -156,6 +169,17 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
             ? data.periodicDelayFrames(i) : 0;
         state.periodicCountdownFrames = i < data.periodicCountdownFramesLength()
             ? data.periodicCountdownFrames(i) : -1;
+        state.presentationRevision = i < data.presentationRevisionLength()
+            ? data.presentationRevision(i) : 0;
+        if (state.stateId == StateId.CYCLONEARMOR
+            && i < data.cycloneArmorCurrentFixedLength()
+            && i < data.cycloneArmorMaximumFixedLength()) {
+          state.setStatContribution(Stat.bonearmor, 0, NativeStatResolver.Operation.ADD,
+              data.cycloneArmorCurrentFixed(i));
+          state.setStatContribution(Stat.bonearmormax, 0, NativeStatResolver.Operation.ADD,
+              data.cycloneArmorMaximumFixed(i));
+          state.runtimeValue = data.cycloneArmorCurrentFixed(i);
+        }
         // StateP predates generic native stat-list serialization. Rebuild
         // Holy Shield's data-driven block/defense payload from its replicated
         // skill level so remote clients run the same combat formulas.

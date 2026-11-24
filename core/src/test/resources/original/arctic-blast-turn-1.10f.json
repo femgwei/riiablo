@@ -1,0 +1,849 @@
+{
+  "schema": 1,
+  "run_id": "20261121-233623-a5ced4c9",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "identity": {
+    "client_player": 151801088,
+    "game": null,
+    "skill": 230,
+    "level": 1,
+    "x": 4523,
+    "y": 5642,
+    "target_x": 4531,
+    "target_y": 5642,
+    "hold_ms_requested": null,
+    "release_after_births": 15,
+    "turn_target": [
+      4523,
+      5650
+    ]
+  },
+  "turn_posted": {
+    "snapshot_index": 465,
+    "observed_births": 3,
+    "elapsed_ms": 609,
+    "phase": {
+      "mode": 18,
+      "sequence_cursor": 2048,
+      "source_cursor": 2304,
+      "remaining": 1280,
+      "action_frame": 1,
+      "seed_low": 2984564978,
+      "seed_high": 1147329946,
+      "client_allocation_counter": 217,
+      "client_frame": 0,
+      "target_x": 4531,
+      "target_y": 5642
+    },
+    "target": [
+      4523,
+      5650
+    ]
+  },
+  "first_observed_changed_path_target": {
+    "snapshot_index": 520,
+    "scan_before_perf_counter_ns": 818809200,
+    "scan_after_perf_counter_ns": 819183400,
+    "before": {
+      "mode": 18,
+      "sequence_cursor": 2048,
+      "source_cursor": 2304,
+      "remaining": 1280,
+      "action_frame": 1,
+      "seed_low": 2980098742,
+      "seed_high": 2384908,
+      "client_allocation_counter": 218,
+      "client_frame": 0,
+      "target_x": 4523,
+      "target_y": 5650
+    },
+    "after": {
+      "mode": 18,
+      "sequence_cursor": 2048,
+      "source_cursor": 2304,
+      "remaining": 1280,
+      "action_frame": 1,
+      "seed_low": 2980098742,
+      "seed_high": 2384908,
+      "client_allocation_counter": 218,
+      "client_frame": 0,
+      "target_x": 4523,
+      "target_y": 5650
+    },
+    "endpoint_markers_equal": true,
+    "units": [
+      {
+        "unit": 90209280,
+        "unit_id": 215,
+        "class_id": 460,
+        "native_age": 8,
+        "hash_table_rva": 1162240
+      },
+      {
+        "unit": 90209792,
+        "unit_id": 216,
+        "class_id": 460,
+        "native_age": 6,
+        "hash_table_rva": 1162240
+      },
+      {
+        "unit": 90193920,
+        "unit_id": 217,
+        "class_id": 460,
+        "native_age": 4,
+        "hash_table_rva": 1162240
+      },
+      {
+        "unit": 90194688,
+        "unit_id": 218,
+        "class_id": 459,
+        "native_age": 2,
+        "hash_table_rva": 1162240
+      }
+    ]
+  },
+  "release_boundary": {
+    "observed_births": 15,
+    "snapshot_index": 1017,
+    "elapsed_ms": 1530,
+    "sequence_cursor": 2304,
+    "source_cursor": 2304,
+    "remaining": 1024
+  },
+  "units": [
+    {
+      "unit_id": 215,
+      "first": {
+        "side": "client",
+        "snapshot_index": 322,
+        "elapsed_ms": 408,
+        "observed_perf_counter_ns": 538284800,
+        "hash_table_rva": 1162240,
+        "unit": 90209280,
+        "class_id": 460,
+        "unit_id": 215,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 36864,
+        "velocity_y": 0,
+        "path_direction": 56,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 1920661683,
+        "seed_high": 666
+      },
+      "velocity": [
+        36864,
+        0
+      ],
+      "current_path_target": [
+        4531,
+        5642
+      ],
+      "states": 408
+    },
+    {
+      "unit_id": 216,
+      "first": {
+        "side": "client",
+        "snapshot_index": 382,
+        "elapsed_ms": 489,
+        "observed_perf_counter_ns": 618572100,
+        "hash_table_rva": 1162240,
+        "unit": 90209792,
+        "class_id": 460,
+        "unit_id": 216,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 36864,
+        "velocity_y": 0,
+        "path_direction": 56,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 4209649833,
+        "seed_high": 666
+      },
+      "velocity": [
+        36864,
+        0
+      ],
+      "current_path_target": [
+        4531,
+        5642
+      ],
+      "states": 393
+    },
+    {
+      "unit_id": 217,
+      "first": {
+        "side": "client",
+        "snapshot_index": 439,
+        "elapsed_ms": 569,
+        "observed_perf_counter_ns": 698463500,
+        "hash_table_rva": 1162240,
+        "unit": 90193920,
+        "class_id": 460,
+        "unit_id": 217,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 36864,
+        "velocity_y": 0,
+        "path_direction": 56,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 1770393824,
+        "seed_high": 666
+      },
+      "velocity": [
+        36864,
+        0
+      ],
+      "current_path_target": [
+        4531,
+        5642
+      ],
+      "states": 382
+    },
+    {
+      "unit_id": 218,
+      "first": {
+        "side": "client",
+        "snapshot_index": 493,
+        "elapsed_ms": 649,
+        "observed_perf_counter_ns": 778417200,
+        "hash_table_rva": 1162240,
+        "unit": 90194688,
+        "class_id": 459,
+        "unit_id": 218,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 36864,
+        "velocity_y": 0,
+        "path_direction": 56,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 3549466678,
+        "seed_high": 666
+      },
+      "velocity": [
+        36864,
+        0
+      ],
+      "current_path_target": [
+        4531,
+        5642
+      ],
+      "states": 371
+    },
+    {
+      "unit_id": 219,
+      "first": {
+        "side": "client",
+        "snapshot_index": 546,
+        "elapsed_ms": 728,
+        "observed_perf_counter_ns": 857946500,
+        "hash_table_rva": 1162240,
+        "unit": 90189312,
+        "class_id": 459,
+        "unit_id": 219,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 824489448,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 364
+    },
+    {
+      "unit_id": 220,
+      "first": {
+        "side": "client",
+        "snapshot_index": 598,
+        "elapsed_ms": 810,
+        "observed_perf_counter_ns": 939993300,
+        "hash_table_rva": 1162240,
+        "unit": 90189824,
+        "class_id": 459,
+        "unit_id": 220,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 2436919474,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 359
+    },
+    {
+      "unit_id": 221,
+      "first": {
+        "side": "client",
+        "snapshot_index": 645,
+        "elapsed_ms": 889,
+        "observed_perf_counter_ns": 1018474400,
+        "hash_table_rva": 1162240,
+        "unit": 90185216,
+        "class_id": 459,
+        "unit_id": 221,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 4163250811,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 359
+    },
+    {
+      "unit_id": 222,
+      "first": {
+        "side": "client",
+        "snapshot_index": 694,
+        "elapsed_ms": 969,
+        "observed_perf_counter_ns": 1099026200,
+        "hash_table_rva": 1162240,
+        "unit": 94175232,
+        "class_id": 459,
+        "unit_id": 222,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 1929066827,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 356
+    },
+    {
+      "unit_id": 223,
+      "first": {
+        "side": "client",
+        "snapshot_index": 741,
+        "elapsed_ms": 1049,
+        "observed_perf_counter_ns": 1178632900,
+        "hash_table_rva": 1162240,
+        "unit": 94232832,
+        "class_id": 459,
+        "unit_id": 223,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 2433715751,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 354
+    },
+    {
+      "unit_id": 224,
+      "first": {
+        "side": "client",
+        "snapshot_index": 786,
+        "elapsed_ms": 1129,
+        "observed_perf_counter_ns": 1259755700,
+        "hash_table_rva": 1162240,
+        "unit": 94233344,
+        "class_id": 460,
+        "unit_id": 224,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 2836236560,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 356
+    },
+    {
+      "unit_id": 225,
+      "first": {
+        "side": "client",
+        "snapshot_index": 832,
+        "elapsed_ms": 1210,
+        "observed_perf_counter_ns": 1340228100,
+        "hash_table_rva": 1162240,
+        "unit": 94233856,
+        "class_id": 459,
+        "unit_id": 225,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 2472832572,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 358
+    },
+    {
+      "unit_id": 226,
+      "first": {
+        "side": "client",
+        "snapshot_index": 877,
+        "elapsed_ms": 1289,
+        "observed_perf_counter_ns": 1418704900,
+        "hash_table_rva": 1162240,
+        "unit": 94234368,
+        "class_id": 459,
+        "unit_id": 226,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 1261784830,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 360
+    },
+    {
+      "unit_id": 227,
+      "first": {
+        "side": "client",
+        "snapshot_index": 923,
+        "elapsed_ms": 1369,
+        "observed_perf_counter_ns": 1499025900,
+        "hash_table_rva": 1162240,
+        "unit": 94234880,
+        "class_id": 460,
+        "unit_id": 227,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 1583518242,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 363
+    },
+    {
+      "unit_id": 228,
+      "first": {
+        "side": "client",
+        "snapshot_index": 969,
+        "elapsed_ms": 1449,
+        "observed_perf_counter_ns": 1578597000,
+        "hash_table_rva": 1162240,
+        "unit": 94235392,
+        "class_id": 459,
+        "unit_id": 228,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 1303903394,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 371
+    },
+    {
+      "unit_id": 229,
+      "first": {
+        "side": "client",
+        "snapshot_index": 1017,
+        "elapsed_ms": 1530,
+        "observed_perf_counter_ns": 1659784900,
+        "hash_table_rva": 1162240,
+        "unit": 94235904,
+        "class_id": 459,
+        "unit_id": 229,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 3982134985,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 338
+    },
+    {
+      "unit_id": 230,
+      "first": {
+        "side": "client",
+        "snapshot_index": 1063,
+        "elapsed_ms": 1609,
+        "observed_perf_counter_ns": 1738562900,
+        "hash_table_rva": 1162240,
+        "unit": 94236160,
+        "class_id": 459,
+        "unit_id": 230,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 1625384840,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 297
+    },
+    {
+      "unit_id": 231,
+      "first": {
+        "side": "client",
+        "snapshot_index": 1109,
+        "elapsed_ms": 1690,
+        "observed_perf_counter_ns": 1819523800,
+        "hash_table_rva": 1162240,
+        "unit": 94232576,
+        "class_id": 459,
+        "unit_id": 231,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 501269771,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 258
+    },
+    {
+      "unit_id": 232,
+      "first": {
+        "side": "client",
+        "snapshot_index": 1155,
+        "elapsed_ms": 1769,
+        "observed_perf_counter_ns": 1899434900,
+        "hash_table_rva": 1162240,
+        "unit": 94232832,
+        "class_id": 460,
+        "unit_id": 232,
+        "x_fixed": 296452096,
+        "y_fixed": 369786880,
+        "velocity_x": 0,
+        "velocity_y": 36864,
+        "path_direction": 7,
+        "path_new_direction": 0,
+        "total_frames": 17,
+        "current_frame": 17,
+        "unit_44": 0,
+        "unit_48": 4096,
+        "unit_4c": 240,
+        "unit_tick": 0,
+        "missile_data_08": 15073297,
+        "owner_type": 0,
+        "owner_id": 1,
+        "seed_low": 2310556533,
+        "seed_high": 666
+      },
+      "velocity": [
+        0,
+        36864
+      ],
+      "current_path_target": [
+        4523,
+        5650
+      ],
+      "states": 218
+    }
+  ],
+  "old_direction_births": 4,
+  "new_direction_births": 14,
+  "post_release_births": 3,
+  "overlay_instances": 1,
+  "source_frame_held_at_turn": 9,
+  "all_published_streams_keep_their_velocity": true,
+  "observation_clock": {
+    "name": "perf_counter",
+    "resolution_seconds": 1e-07,
+    "implementation": "QueryPerformanceCounter()"
+  },
+  "hashes": {
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/orchestrator.json": "dbc31e91cb5bc7b401bc6c118bf27046c4f2d8c5d688d51f036aa40eefa82dc9",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/summary.json": "3662e47a15f54d382f1a50540e82226d04099885a089af76f5c8ecf2cb56adb6",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/provenance/arctic_blast_background.py": "f49b1fa2a8ba2246e8ba23ef107677b50e5dcfb8790e3490f1b219aa805c9ba6",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/provenance/arctic_blast_passive.py": "3602395127b1498394cc14edfe524077e8f9b894693ae5f4c582b358143f676b",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/provenance/observer.py": "7df3b7dbce28ea8c373548188d9e2da3c2d816e5d502316f97eaff832571c005",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/provenance/prepare_arctic_blast_fixture.py": "45af75e968b3055a17880f55efd0d35ca3bce61e22841cbb541c2e8ff0e5106b",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/provenance/scene_reader.py": "e2158994363c1ea95fed002d63af24de8d1017c1525f503220ea2d87f76ccf89",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/provenance/test-character.py": "ce966ead4086ff4cd16698ed5b5e148058ff5b19e39d466aabde99cdc4f54305",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/birth-15/summary.json": "8772831de85f50096576bfadba542f203c9548720a1dce049cbd672ab2721d24",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/birth-15/identity.json": "67d95dc67c66f1b00b5b84bbb01c264878a5edfbb9f93cd88d173dea90ac1237",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/birth-15/publication.json": "31705d3f8ccc80dd84133159ff4c690af762cbf3bee436a2e62e1cc6d0b40b0c",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/birth-15/missiles.jsonl": "d59b585aaeb848fafa7fb47e22405ce045def2d872b003af923d4044c1407547",
+    "tools/original-observer/broker/20261121-165133-4490d598/runs/20261121-233623-a5ced4c9/orchestrator/worker/birth-15/overlays.json": "955b20ca2c7821175f31f0e9b107be6eac3cb99e2a15d7bd3452efc51b059009"
+  },
+  "limitations": [
+    "Posted WM_MOUSEMOVE time is not the path-target-change or native skill consumption time.",
+    "Snapshots are non-atomic; equal endpoint markers exclude detected transitions only.",
+    "Free-flight point aiming in this sample; target-monster disappearance, all angles, DCC/GPU orientation remain unverified."
+  ]
+}

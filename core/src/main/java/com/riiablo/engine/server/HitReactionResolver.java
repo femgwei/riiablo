@@ -12,6 +12,11 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeAiState;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.attributes.Stat;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.combat.NativeHitRecovery;
 import com.riiablo.engine.server.event.MonsterSoftHitEvent;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
@@ -20,6 +25,52 @@ public final class HitReactionResolver {
   public enum Source { MELEE, MISSILE }
 
   private HitReactionResolver() {}
+
+  /** Audited ordinary physical monster melee path. Other callers retain their existing policy. */
+  public static void queueMonsterMeleeDamage(World world, Files files, int attacker, int victim,
+      CombatSystem.CombatResult combat, int gameSeed) {
+    Monster source = world.getMapper(Monster.class).get(attacker);
+    Monster target = world.getMapper(Monster.class).get(victim);
+    AttributesWrapper attributes = world.getMapper(AttributesWrapper.class).get(victim);
+    Casting casting = world.getMapper(Casting.class).get(victim);
+    boolean ordinaryAction = casting == null || casting.skillId == com.riiablo.skill.SkillCodes.attack
+        || casting.skillId == com.riiablo.skill.SkillCodes.left_hand_swing;
+    boolean physicalOnly = combat != null && combat.poisonDamagePerFrame == 0f;
+    if (combat != null) for (int type = 1; type < combat.elementalDamage.length; type++)
+      physicalOnly &= combat.elementalDamage[type] == 0;
+    if (source == null || source.monstats2 == null || target == null || target.monstats2 == null
+        || attributes == null || attributes.attrs == null || attributes.attrs.get(Stat.maxhp) == null
+        || !physicalOnly || !ordinaryAction || combat.blocked || combat.isAmazonPassiveDefense()) {
+      queue(world, files, victim, combat, Source.MELEE);
+      return;
+    }
+    if (!combat.hit) return;
+    CofReference reference = world.getMapper(CofReference.class).get(victim);
+    if (reference == null || reference.mode == Engine.Monster.MODE_DT
+        || reference.mode == Engine.Monster.MODE_DD) return;
+    UnitStates states = world.getMapper(UnitStates.class).get(victim);
+    if (states != null && states.snapshotOnly) return;
+    boolean frozen = states != null && states.stateList != null && states.stateList.hasState(StateId.FREEZE);
+    boolean stunned = states != null && states.stateList != null && states.stateList.hasState(StateId.STUNNED);
+    if (states != null && states.stateList != null && states.stateList.hasState(StateId.UNINTERRUPTABLE)) return;
+    int hitClass = source.monstats2.HitClass;
+    if (combat.critical || combat.monsterCritical || combat.deadlyStrike) hitClass |= 0x10;
+    boolean hasMode = target.monstats2.mMode != null
+        && target.monstats2.mMode.length > Engine.Monster.MODE_GH
+        && target.monstats2.mMode[Engine.Monster.MODE_GH];
+    boolean skip = !stunned && NativeHitRecovery.shouldSkip(
+        Math.max(0, (int) (combat.totalDamageHp() * 256f)), 0,
+        attributes.attrs.get(Stat.maxhp).encodedValues(), hitClass, frozen, hasMode,
+        NativeUnitRandom.monster(target, gameSeed, victim)::nextMask);
+    if (skip || !hasMode) {
+      softHit(world, victim);
+      return;
+    }
+    // Native hard GH can interrupt an ordinary monster attack; A1 is not an unconditional soft-hit gate.
+    world.getMapper(Casting.class).remove(victim);
+    world.getMapper(Sequence.class).remove(victim);
+    queue(world, files, victim, false, Source.MELEE);
+  }
 
   public static boolean blockMayInterrupt(Skills.Entry skill) {
     return skill == null || skill.interrupt;

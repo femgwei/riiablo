@@ -150,6 +150,8 @@ public class Missile extends PooledComponent {
   public int nativeFrame;
   /** Independent client pCltDoFunc clock; server simulation may advance nativeFrame first. */
   public int clientFrame;
+  /** Local-only Inferno visual elapsed seconds; never advances combat state. */
+  public double infernoPresentationTime;
   /** Whether the native client flight callback has emitted its initial child. */
   public boolean clientFlightInitialized;
   /** Presentation-local pSeed: client smoke must never consume the server damage stream. */
@@ -369,6 +371,7 @@ public class Missile extends PooledComponent {
     attached = false;
     nativeFrame = 0;
     clientFrame = 0;
+    infernoPresentationTime = 0;
     clientFlightInitialized = false;
     clientSeed = null;
     clientPathX = 0;

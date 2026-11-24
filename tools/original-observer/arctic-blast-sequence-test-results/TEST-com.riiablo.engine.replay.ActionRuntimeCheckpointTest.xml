@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.replay.ActionRuntimeCheckpointTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-21T11:26:11" hostname="DESKTOP-7GGAVHU" time="0.102">
+  <properties/>
+  <testcase name="restoresAbsentActionComponentsWithoutReconstructingNullSequence()" classname="com.riiablo.engine.replay.ActionRuntimeCheckpointTest" time="0.044"/>
+  <testcase name="rejectsNonFinitePortableActionValue()" classname="com.riiablo.engine.replay.ActionRuntimeCheckpointTest" time="0.01"/>
+  <testcase name="rejectsAliveNativeObjectInsteadOfDroppingActionPhase()" classname="com.riiablo.engine.replay.ActionRuntimeCheckpointTest" time="0.041"/>
+  <testcase name="capturesAndRestoresEveryPortableActionPhaseValue()" classname="com.riiablo.engine.replay.ActionRuntimeCheckpointTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

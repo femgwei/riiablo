@@ -58,6 +58,7 @@ union D2GSData {
   TradeResult,
   MissileImpactP,
   SoundP,
+  UnitOverlayP,
 }
 
 table D2GS {

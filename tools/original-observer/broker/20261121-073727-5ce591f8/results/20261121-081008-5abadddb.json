@@ -1,0 +1,15 @@
+{
+  "id": "20261121-081008-5abadddb",
+  "status": "completed",
+  "started": 1795219809.0070474,
+  "broker_pid": 2616,
+  "command": {
+    "op": "run_job",
+    "job": "enchant-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-073727-5ce591f8\\runs\\20261121-081008-5abadddb\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795219851.3950555
+}

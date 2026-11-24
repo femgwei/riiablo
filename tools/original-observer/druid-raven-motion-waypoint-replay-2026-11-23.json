@@ -1,0 +1,5571 @@
+{
+  "schema": 2,
+  "scope": "Raven AI stages plus native waypoint and room-grid evidence",
+  "cases": {
+    "combat": {
+      "run": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-104054-3b89cb9a\\batch-001-druid-raven-target-harness-private-desktop\\orchestrator",
+      "town_orbit": false,
+      "background_verified": true,
+      "owned_game_closed": true,
+      "native_cleanup": {
+        "status": "passed",
+        "detached": true,
+        "cleanup_confirmed": true,
+        "fixtures_removed": true,
+        "memory_writes": true,
+        "remote_execution": true,
+        "debugger_attached": true,
+        "samples": 423,
+        "first_frame": 456
+      },
+      "target_intervention": {
+        "target_id": 24,
+        "target_class": 0,
+        "target_hp_fixed": 2560000,
+        "town_orbit": false,
+        "target_created": true,
+        "target_original_hp_fixed": 2048,
+        "target_original_maxhp_fixed": 2048,
+        "natural_life": false,
+        "target_ai_think_deleted": true,
+        "target_pointer": 90206464,
+        "target_hp_regen_before": 1250,
+        "target_hp_regen_after": 0,
+        "room": 155210368,
+        "player_id": 1,
+        "first_frame": 456,
+        "max_frames": 2600,
+        "combat_entry_trace": true
+      },
+      "raven_stats": {
+        "frame": 476,
+        "unit_id": 25,
+        "ai_delay": 15,
+        "ai_parameters": [
+          10,
+          6,
+          5,
+          75,
+          35,
+          0,
+          0,
+          0
+        ],
+        "velocity": 10,
+        "run": 20,
+        "unit_size": 0,
+        "level": 98,
+        "tohit": 1057,
+        "mindamage": 0,
+        "maxdamage": 0,
+        "item_stupidity": -1
+      },
+      "decisions": [
+        {
+          "frame": 501,
+          "target": 24,
+          "target_distance": 3,
+          "in_combat": false,
+          "budget_before": -1,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 23
+        },
+        {
+          "frame": 508,
+          "target": 24,
+          "target_distance": 0,
+          "in_combat": true,
+          "budget_before": 12,
+          "budget_after": 11,
+          "attack_due_before": 6,
+          "attack_due_after": 558,
+          "attack": true,
+          "mode_after": 4,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 23
+        },
+        {
+          "frame": 548,
+          "target": 24,
+          "target_distance": 0,
+          "in_combat": true,
+          "budget_before": 11,
+          "budget_after": 11,
+          "attack_due_before": 558,
+          "attack_due_after": 558,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 60
+        },
+        {
+          "frame": 563,
+          "target": 24,
+          "target_distance": 6,
+          "in_combat": false,
+          "budget_before": 11,
+          "budget_after": 11,
+          "attack_due_before": 558,
+          "attack_due_after": 558,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 29
+        },
+        {
+          "frame": 571,
+          "target": 24,
+          "target_distance": 3,
+          "in_combat": false,
+          "budget_before": 11,
+          "budget_after": 11,
+          "attack_due_before": 558,
+          "attack_due_after": 558,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 7
+        },
+        {
+          "frame": 584,
+          "target": 24,
+          "target_distance": 3,
+          "in_combat": false,
+          "budget_before": 11,
+          "budget_after": 11,
+          "attack_due_before": 558,
+          "attack_due_after": 558,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 15
+        },
+        {
+          "frame": 593,
+          "target": 24,
+          "target_distance": 4,
+          "in_combat": false,
+          "budget_before": 11,
+          "budget_after": 11,
+          "attack_due_before": 558,
+          "attack_due_after": 558,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 41
+        },
+        {
+          "frame": 602,
+          "target": 24,
+          "target_distance": 0,
+          "in_combat": true,
+          "budget_before": 11,
+          "budget_after": 10,
+          "attack_due_before": 558,
+          "attack_due_after": 652,
+          "attack": true,
+          "mode_after": 4,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 42
+        },
+        {
+          "frame": 642,
+          "target": 24,
+          "target_distance": 0,
+          "in_combat": true,
+          "budget_before": 10,
+          "budget_after": 10,
+          "attack_due_before": 652,
+          "attack_due_after": 652,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 3
+        },
+        {
+          "frame": 657,
+          "target": 24,
+          "target_distance": 6,
+          "in_combat": false,
+          "budget_before": 10,
+          "budget_after": 10,
+          "attack_due_before": 652,
+          "attack_due_after": 652,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 35
+        },
+        {
+          "frame": 672,
+          "target": 24,
+          "target_distance": 0,
+          "in_combat": true,
+          "budget_before": 10,
+          "budget_after": 9,
+          "attack_due_before": 652,
+          "attack_due_after": 722,
+          "attack": true,
+          "mode_after": 4,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 35
+        },
+        {
+          "frame": 712,
+          "target": 24,
+          "target_distance": 0,
+          "in_combat": true,
+          "budget_before": 9,
+          "budget_after": 9,
+          "attack_due_before": 722,
+          "attack_due_after": 722,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 3
+        },
+        {
+          "frame": 727,
+          "target": 24,
+          "target_distance": 6,
+          "in_combat": false,
+          "budget_before": 9,
+          "budget_after": 9,
+          "attack_due_before": 722,
+          "attack_due_after": 722,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 35
+        },
+        {
+          "frame": 742,
+          "target": 24,
+          "target_distance": 0,
+          "in_combat": true,
+          "budget_before": 9,
+          "budget_after": 9,
+          "attack_due_before": 722,
+          "attack_due_after": 722,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 3
+        },
+        {
+          "frame": 757,
+          "target": 24,
+          "target_distance": 6,
+          "in_combat": false,
+          "budget_before": 9,
+          "budget_after": 9,
+          "attack_due_before": 722,
+          "attack_due_after": 722,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 34
+        },
+        {
+          "frame": 765,
+          "target": 24,
+          "target_distance": 3,
+          "in_combat": false,
+          "budget_before": 9,
+          "budget_after": 9,
+          "attack_due_before": 722,
+          "attack_due_after": 722,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 37
+        },
+        {
+          "frame": 772,
+          "target": 24,
+          "target_distance": 0,
+          "in_combat": true,
+          "budget_before": 9,
+          "budget_after": 8,
+          "attack_due_before": 722,
+          "attack_due_after": 822,
+          "attack": true,
+          "mode_after": 4,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 37
+        },
+        {
+          "frame": 812,
+          "target": 24,
+          "target_distance": 0,
+          "in_combat": true,
+          "budget_before": 8,
+          "budget_after": 8,
+          "attack_due_before": 822,
+          "attack_due_after": 822,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 3
+        },
+        {
+          "frame": 827,
+          "target": 24,
+          "target_distance": 6,
+          "in_combat": false,
+          "budget_before": 8,
+          "budget_after": 8,
+          "attack_due_before": 822,
+          "attack_due_after": 822,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 34
+        },
+        {
+          "frame": 835,
+          "target": 24,
+          "target_distance": 3,
+          "in_combat": false,
+          "budget_before": 8,
+          "budget_after": 8,
+          "attack_due_before": 822,
+          "attack_due_after": 822,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 37
+        },
+        {
+          "frame": 842,
+          "target": 24,
+          "target_distance": 0,
+          "in_combat": true,
+          "budget_before": 8,
+          "budget_after": 7,
+          "attack_due_before": 822,
+          "attack_due_after": 892,
+          "attack": true,
+          "mode_after": 4,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 1,
+          "path_target_id": 24,
+          "direction_after": 37
+        }
+      ],
+      "attack_frames": [
+        508,
+        602,
+        672,
+        772,
+        842
+      ],
+      "attack_durations": [
+        25,
+        25,
+        25,
+        25,
+        25
+      ],
+      "attack_intervals": [
+        94,
+        70,
+        100,
+        70
+      ],
+      "path_evidence": {
+        "room_grid": {
+          "source_room": 155210368,
+          "room_count": 9,
+          "rooms": [
+            {
+              "room_pointer": 155210368,
+              "grid_x": 4520,
+              "grid_y": 5640,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                5,
+                128,
+                256,
+                1024,
+                4224,
+                4352
+              ]
+            },
+            {
+              "room_pointer": 92116736,
+              "grid_x": 4480,
+              "grid_y": 5600,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                5
+              ]
+            },
+            {
+              "room_pointer": 155209984,
+              "grid_x": 4520,
+              "grid_y": 5600,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                1024
+              ]
+            },
+            {
+              "room_pointer": 92116864,
+              "grid_x": 4480,
+              "grid_y": 5640,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                4,
+                5
+              ]
+            },
+            {
+              "room_pointer": 155212672,
+              "grid_x": 4560,
+              "grid_y": 5600,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                16,
+                17,
+                37
+              ]
+            },
+            {
+              "room_pointer": 155216512,
+              "grid_x": 4480,
+              "grid_y": 5680,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                5
+              ]
+            },
+            {
+              "room_pointer": 155210624,
+              "grid_x": 4520,
+              "grid_y": 5680,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0
+              ]
+            },
+            {
+              "room_pointer": 155212800,
+              "grid_x": 4560,
+              "grid_y": 5640,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                16,
+                17,
+                37,
+                256,
+                272,
+                4352,
+                4368
+              ]
+            },
+            {
+              "room_pointer": 155212928,
+              "grid_x": 4560,
+              "grid_y": 5680,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                16,
+                17,
+                21,
+                23,
+                37,
+                256,
+                272,
+                1024,
+                4352,
+                4368
+              ]
+            }
+          ],
+          "sha256": "3bfe658a15f9193b9a52a2f4deecad208a60fe2831c6b6b97146f87b1ad3ac8e"
+        },
+        "path_point_rows": 181,
+        "path_point_total": 225,
+        "path_point_signatures": [
+          {
+            "frame": 501,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4524,
+                "y": 5644
+              }
+            ]
+          },
+          {
+            "frame": 502,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4524,
+                "y": 5644
+              }
+            ]
+          },
+          {
+            "frame": 503,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4524,
+                "y": 5644
+              }
+            ]
+          },
+          {
+            "frame": 504,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4524,
+                "y": 5644
+              }
+            ]
+          },
+          {
+            "frame": 505,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4524,
+                "y": 5644
+              }
+            ]
+          },
+          {
+            "frame": 506,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4524,
+                "y": 5644
+              }
+            ]
+          },
+          {
+            "frame": 507,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4524,
+                "y": 5644
+              }
+            ]
+          },
+          {
+            "frame": 548,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 549,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 550,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 551,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 552,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 553,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 554,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 555,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 556,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 557,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 558,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 559,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 560,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 561,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 562,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4531,
+                "y": 5647
+              }
+            ]
+          },
+          {
+            "frame": 563,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 564,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 565,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 566,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 567,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 568,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 569,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 570,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 571,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 572,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 573,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 574,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 575,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 576,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 577,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 578,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 579,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 580,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 581,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 582,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 583,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4528,
+                "y": 5645
+              },
+              {
+                "x": 4528,
+                "y": 5646
+              },
+              {
+                "x": 4525,
+                "y": 5649
+              }
+            ]
+          },
+          {
+            "frame": 584,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4525,
+                "y": 5649
+              },
+              {
+                "x": 4524,
+                "y": 5650
+              },
+              {
+                "x": 4522,
+                "y": 5650
+              }
+            ]
+          },
+          {
+            "frame": 585,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4525,
+                "y": 5649
+              },
+              {
+                "x": 4524,
+                "y": 5650
+              },
+              {
+                "x": 4522,
+                "y": 5650
+              }
+            ]
+          },
+          {
+            "frame": 586,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4525,
+                "y": 5649
+              },
+              {
+                "x": 4524,
+                "y": 5650
+              },
+              {
+                "x": 4522,
+                "y": 5650
+              }
+            ]
+          },
+          {
+            "frame": 587,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4525,
+                "y": 5649
+              },
+              {
+                "x": 4524,
+                "y": 5650
+              },
+              {
+                "x": 4522,
+                "y": 5650
+              }
+            ]
+          },
+          {
+            "frame": 588,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4525,
+                "y": 5649
+              },
+              {
+                "x": 4524,
+                "y": 5650
+              },
+              {
+                "x": 4522,
+                "y": 5650
+              }
+            ]
+          },
+          {
+            "frame": 589,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4525,
+                "y": 5649
+              },
+              {
+                "x": 4524,
+                "y": 5650
+              },
+              {
+                "x": 4522,
+                "y": 5650
+              }
+            ]
+          },
+          {
+            "frame": 590,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4525,
+                "y": 5649
+              },
+              {
+                "x": 4524,
+                "y": 5650
+              },
+              {
+                "x": 4522,
+                "y": 5650
+              }
+            ]
+          },
+          {
+            "frame": 591,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4525,
+                "y": 5649
+              },
+              {
+                "x": 4524,
+                "y": 5650
+              },
+              {
+                "x": 4522,
+                "y": 5650
+              }
+            ]
+          },
+          {
+            "frame": 592,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4525,
+                "y": 5649
+              },
+              {
+                "x": 4524,
+                "y": 5650
+              },
+              {
+                "x": 4522,
+                "y": 5650
+              }
+            ]
+          },
+          {
+            "frame": 593,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 594,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 595,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 596,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 597,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 598,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 599,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 600,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 601,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 642,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 643,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 644,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 645,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 646,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 647,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 648,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 649,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 650,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 651,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 652,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 653,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 654,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 655,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 656,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 657,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 658,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 659,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 660,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 661,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 662,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 663,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 664,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 665,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 666,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 667,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 668,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 669,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 670,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 671,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 712,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 713,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 714,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 715,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 716,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 717,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 718,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 719,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 720,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 721,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 722,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 723,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 724,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 725,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 726,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 727,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 728,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 729,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 730,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 731,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 732,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 733,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 734,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 735,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 736,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 737,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 738,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 739,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 740,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 741,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4523,
+                "y": 5645
+              }
+            ]
+          },
+          {
+            "frame": 742,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 743,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 744,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 745,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 746,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 747,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          },
+          {
+            "frame": 748,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4526,
+                "y": 5652
+              }
+            ]
+          }
+        ]
+      },
+      "distinct_positions": 105,
+      "path_types": {
+        "2": 25,
+        "13": 356,
+        "6": 22
+      },
+      "mode_transitions": [
+        {
+          "frame": 476,
+          "mode": 8
+        },
+        {
+          "frame": 490,
+          "mode": 1
+        },
+        {
+          "frame": 501,
+          "mode": 2
+        },
+        {
+          "frame": 508,
+          "mode": 4
+        },
+        {
+          "frame": 533,
+          "mode": 1
+        },
+        {
+          "frame": 548,
+          "mode": 2
+        },
+        {
+          "frame": 602,
+          "mode": 4
+        },
+        {
+          "frame": 627,
+          "mode": 1
+        },
+        {
+          "frame": 642,
+          "mode": 2
+        },
+        {
+          "frame": 672,
+          "mode": 4
+        },
+        {
+          "frame": 697,
+          "mode": 1
+        },
+        {
+          "frame": 712,
+          "mode": 2
+        },
+        {
+          "frame": 772,
+          "mode": 4
+        },
+        {
+          "frame": 797,
+          "mode": 1
+        },
+        {
+          "frame": 812,
+          "mode": 2
+        },
+        {
+          "frame": 842,
+          "mode": 4
+        },
+        {
+          "frame": 867,
+          "mode": 1
+        }
+      ],
+      "client_modes": [
+        1,
+        2,
+        4,
+        8
+      ],
+      "sha256": {
+        "orchestrator.json": "6c159b8ed65776592b2e6d2ea55552c003cc789caa78056aa37328b03cb62fdb",
+        "worker/summary.json": "15c5e28fc208a221c6d8ab362c2ffac467502406b6c613984f9570bd93e6ccfe",
+        "worker/native-target/identity.json": "34b2e4399081b881c6ec5d5c638b003820905058e2e65d106059f65e5c99ad44",
+        "worker/native-target/summary.json": "6252229462eda84cbd60238ef9ae7876506123379197e79995f23c36db14fd8a",
+        "worker/native-target/raven-stats.jsonl": "5b44f92d1123a4ad6f7e4636a4225e51d5702540e07432737ba1a686a8d85862",
+        "worker/native-target/raven-decisions.jsonl": "8647229c349152409c74d710b3b2894cb7d3377bbb30576ff85f82370975b4ac",
+        "worker/native-target/raven-motion.jsonl": "b1b0b1171c9428d0f2ee0b197448ef851a6f8d96a6d23c9d1d6cdce55ccdbd81",
+        "worker/native-target/room-grid.json": "3bfe658a15f9193b9a52a2f4deecad208a60fe2831c6b6b97146f87b1ad3ac8e",
+        "worker/capture/summary.json": "5d4ee35871be26357ef6b2e59d1b2054aac90a3da0a6e185d94089200c1e5d96",
+        "worker/capture/raven-samples.json": "16ea879e1605327d823a79e8bd570feba06984418611069b8d1a97d53be46aeb",
+        "worker/provenance/d2game_raven_target.cpp": "a22c96504c50456833786a22e4bd2a6c45c4edb117e9f4d964d47b1be8550450",
+        "worker/provenance/d2game_raven_target.exe": "1a92dff839d8206885d25eb33dddb860997a1f84c95ccd59a821d2d3c1f38f25"
+      }
+    },
+    "town": {
+      "run": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-104054-3b89cb9a\\batch-002-druid-raven-town-orbit-private-desktop\\orchestrator",
+      "town_orbit": true,
+      "background_verified": true,
+      "owned_game_closed": true,
+      "native_cleanup": {
+        "status": "passed",
+        "detached": true,
+        "cleanup_confirmed": true,
+        "fixtures_removed": true,
+        "memory_writes": true,
+        "remote_execution": true,
+        "debugger_attached": true,
+        "samples": 420,
+        "first_frame": 17
+      },
+      "target_intervention": {
+        "target_id": 0,
+        "target_class": 0,
+        "target_hp_fixed": 0,
+        "town_orbit": true,
+        "target_created": false,
+        "target_original_hp_fixed": 0,
+        "target_original_maxhp_fixed": 0,
+        "natural_life": false,
+        "target_ai_think_deleted": false,
+        "target_pointer": 0,
+        "target_hp_regen_before": 0,
+        "target_hp_regen_after": 0,
+        "room": 136268544,
+        "player_id": 1,
+        "first_frame": 17,
+        "max_frames": 2600,
+        "combat_entry_trace": true
+      },
+      "raven_stats": {
+        "frame": 34,
+        "unit_id": 8,
+        "ai_delay": 15,
+        "ai_parameters": [
+          10,
+          6,
+          5,
+          75,
+          35,
+          0,
+          0,
+          0
+        ],
+        "velocity": 10,
+        "run": 20,
+        "unit_size": 0,
+        "level": 98,
+        "tohit": 1057,
+        "mindamage": 0,
+        "maxdamage": 0,
+        "item_stupidity": -1
+      },
+      "decisions": [
+        {
+          "frame": 59,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": -1,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 7
+        },
+        {
+          "frame": 71,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 15
+        },
+        {
+          "frame": 83,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 23
+        },
+        {
+          "frame": 92,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 23
+        },
+        {
+          "frame": 104,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 32
+        },
+        {
+          "frame": 116,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 40
+        },
+        {
+          "frame": 125,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 40
+        },
+        {
+          "frame": 132,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 60
+        },
+        {
+          "frame": 137,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 47
+        },
+        {
+          "frame": 150,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 56
+        },
+        {
+          "frame": 159,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 56
+        },
+        {
+          "frame": 168,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 0
+        },
+        {
+          "frame": 181,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 15
+        },
+        {
+          "frame": 185,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 7
+        },
+        {
+          "frame": 194,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 7
+        },
+        {
+          "frame": 203,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 15
+        },
+        {
+          "frame": 216,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 32
+        },
+        {
+          "frame": 220,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 23
+        },
+        {
+          "frame": 229,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 23
+        },
+        {
+          "frame": 238,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 32
+        },
+        {
+          "frame": 251,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 47
+        },
+        {
+          "frame": 255,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 40
+        },
+        {
+          "frame": 264,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 40
+        },
+        {
+          "frame": 273,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 47
+        },
+        {
+          "frame": 286,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 0
+        },
+        {
+          "frame": 290,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 56
+        },
+        {
+          "frame": 299,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 56
+        },
+        {
+          "frame": 308,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 0
+        },
+        {
+          "frame": 321,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 15
+        },
+        {
+          "frame": 325,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 7
+        },
+        {
+          "frame": 334,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 7
+        },
+        {
+          "frame": 343,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 15
+        },
+        {
+          "frame": 356,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 32
+        },
+        {
+          "frame": 360,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 23
+        },
+        {
+          "frame": 369,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 23
+        },
+        {
+          "frame": 378,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 32
+        },
+        {
+          "frame": 391,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 47
+        },
+        {
+          "frame": 395,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 40
+        },
+        {
+          "frame": 404,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 40
+        },
+        {
+          "frame": 413,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 47
+        },
+        {
+          "frame": 426,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 13,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 0
+        },
+        {
+          "frame": 430,
+          "target": 0,
+          "target_distance": 2147483647,
+          "in_combat": false,
+          "budget_before": 12,
+          "budget_after": 12,
+          "attack_due_before": 6,
+          "attack_due_after": 6,
+          "attack": false,
+          "mode_after": 2,
+          "path_type_after": 6,
+          "circle_side_after": 0,
+          "path_target_type": 0,
+          "path_target_id": 1,
+          "direction_after": 56
+        }
+      ],
+      "attack_frames": [],
+      "attack_durations": [],
+      "attack_intervals": [],
+      "path_evidence": {
+        "room_grid": {
+          "source_room": 136268544,
+          "room_count": 9,
+          "rooms": [
+            {
+              "room_pointer": 136268544,
+              "grid_x": 4360,
+              "grid_y": 5600,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                5,
+                16,
+                17,
+                21,
+                128,
+                256,
+                1024,
+                1025,
+                4224,
+                4352
+              ]
+            },
+            {
+              "room_pointer": 136268672,
+              "grid_x": 4320,
+              "grid_y": 5560,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                5
+              ]
+            },
+            {
+              "room_pointer": 136268800,
+              "grid_x": 4320,
+              "grid_y": 5600,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                3,
+                5,
+                256,
+                1024,
+                4352
+              ]
+            },
+            {
+              "room_pointer": 136268928,
+              "grid_x": 4360,
+              "grid_y": 5560,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                5
+              ]
+            },
+            {
+              "room_pointer": 136269056,
+              "grid_x": 4400,
+              "grid_y": 5560,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                5
+              ]
+            },
+            {
+              "room_pointer": 136269184,
+              "grid_x": 4320,
+              "grid_y": 5640,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                5,
+                7,
+                256,
+                1024,
+                4352,
+                8448
+              ]
+            },
+            {
+              "room_pointer": 136269312,
+              "grid_x": 4400,
+              "grid_y": 5600,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                5,
+                256,
+                1024,
+                4352,
+                8448
+              ]
+            },
+            {
+              "room_pointer": 136269440,
+              "grid_x": 4360,
+              "grid_y": 5640,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                7,
+                16,
+                256,
+                1024,
+                8448
+              ]
+            },
+            {
+              "room_pointer": 136269568,
+              "grid_x": 4400,
+              "grid_y": 5640,
+              "width": 40,
+              "height": 40,
+              "unique_flags": [
+                0,
+                1,
+                3,
+                5,
+                16,
+                17,
+                19,
+                1024
+              ]
+            }
+          ],
+          "sha256": "ed1fcf7379c69222f4bb163a3f177486a50688666e0f10ac3a4dca0122785bb4"
+        },
+        "path_point_rows": 378,
+        "path_point_total": 767,
+        "path_point_signatures": [
+          {
+            "frame": 59,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 60,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 61,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 62,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 63,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 64,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 65,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 66,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 67,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 68,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 69,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 70,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4400,
+                "y": 5630
+              },
+              {
+                "x": 4400,
+                "y": 5632
+              },
+              {
+                "x": 4398,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 71,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 72,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 73,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 74,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 75,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 76,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 77,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 78,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 79,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 80,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 81,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 82,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5634
+              },
+              {
+                "x": 4396,
+                "y": 5636
+              },
+              {
+                "x": 4394,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 83,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5636
+              },
+              {
+                "x": 4390,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 84,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5636
+              },
+              {
+                "x": 4390,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 85,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5636
+              },
+              {
+                "x": 4390,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 86,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5636
+              },
+              {
+                "x": 4390,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 87,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5636
+              },
+              {
+                "x": 4390,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 88,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5636
+              },
+              {
+                "x": 4390,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 89,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5636
+              },
+              {
+                "x": 4390,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 90,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5636
+              },
+              {
+                "x": 4390,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 91,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5636
+              },
+              {
+                "x": 4390,
+                "y": 5636
+              }
+            ]
+          },
+          {
+            "frame": 92,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 93,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 94,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 95,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 96,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 97,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 98,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 99,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 100,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 101,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 102,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 103,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5636
+              },
+              {
+                "x": 4388,
+                "y": 5636
+              },
+              {
+                "x": 4386,
+                "y": 5634
+              }
+            ]
+          },
+          {
+            "frame": 104,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 105,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 106,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 107,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 108,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 109,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 110,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 111,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 112,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 113,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 114,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 115,
+            "path_type": 6,
+            "path_count": 3,
+            "path_index": 2,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5634
+              },
+              {
+                "x": 4384,
+                "y": 5632
+              },
+              {
+                "x": 4384,
+                "y": 5630
+              }
+            ]
+          },
+          {
+            "frame": 116,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5630
+              },
+              {
+                "x": 4384,
+                "y": 5626
+              }
+            ]
+          },
+          {
+            "frame": 117,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5630
+              },
+              {
+                "x": 4384,
+                "y": 5626
+              }
+            ]
+          },
+          {
+            "frame": 118,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5630
+              },
+              {
+                "x": 4384,
+                "y": 5626
+              }
+            ]
+          },
+          {
+            "frame": 119,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5630
+              },
+              {
+                "x": 4384,
+                "y": 5626
+              }
+            ]
+          },
+          {
+            "frame": 120,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5630
+              },
+              {
+                "x": 4384,
+                "y": 5626
+              }
+            ]
+          },
+          {
+            "frame": 121,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5630
+              },
+              {
+                "x": 4384,
+                "y": 5626
+              }
+            ]
+          },
+          {
+            "frame": 122,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5630
+              },
+              {
+                "x": 4384,
+                "y": 5626
+              }
+            ]
+          },
+          {
+            "frame": 123,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5630
+              },
+              {
+                "x": 4384,
+                "y": 5626
+              }
+            ]
+          },
+          {
+            "frame": 124,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5630
+              },
+              {
+                "x": 4384,
+                "y": 5626
+              }
+            ]
+          },
+          {
+            "frame": 125,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5626
+              },
+              {
+                "x": 4384,
+                "y": 5623
+              }
+            ]
+          },
+          {
+            "frame": 126,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5626
+              },
+              {
+                "x": 4384,
+                "y": 5623
+              }
+            ]
+          },
+          {
+            "frame": 127,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5626
+              },
+              {
+                "x": 4384,
+                "y": 5623
+              }
+            ]
+          },
+          {
+            "frame": 128,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5626
+              },
+              {
+                "x": 4384,
+                "y": 5623
+              }
+            ]
+          },
+          {
+            "frame": 129,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5626
+              },
+              {
+                "x": 4384,
+                "y": 5623
+              }
+            ]
+          },
+          {
+            "frame": 130,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5626
+              },
+              {
+                "x": 4384,
+                "y": 5623
+              }
+            ]
+          },
+          {
+            "frame": 131,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4384,
+                "y": 5626
+              },
+              {
+                "x": 4384,
+                "y": 5623
+              }
+            ]
+          },
+          {
+            "frame": 132,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 133,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 134,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 135,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 136,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 137,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 138,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 139,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 140,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 141,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 142,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 143,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 144,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 145,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 146,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 147,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 148,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 149,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4386,
+                "y": 5624
+              },
+              {
+                "x": 4390,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 150,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5620
+              },
+              {
+                "x": 4394,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 151,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5620
+              },
+              {
+                "x": 4394,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 152,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5620
+              },
+              {
+                "x": 4394,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 153,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5620
+              },
+              {
+                "x": 4394,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 154,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5620
+              },
+              {
+                "x": 4394,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 155,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5620
+              },
+              {
+                "x": 4394,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 156,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5620
+              },
+              {
+                "x": 4394,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 157,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5620
+              },
+              {
+                "x": 4394,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 158,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4390,
+                "y": 5620
+              },
+              {
+                "x": 4394,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 159,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5620
+              },
+              {
+                "x": 4398,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 160,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5620
+              },
+              {
+                "x": 4398,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 161,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5620
+              },
+              {
+                "x": 4398,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 162,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5620
+              },
+              {
+                "x": 4398,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 163,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5620
+              },
+              {
+                "x": 4398,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 164,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5620
+              },
+              {
+                "x": 4398,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 165,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5620
+              },
+              {
+                "x": 4398,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 166,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5620
+              },
+              {
+                "x": 4398,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 167,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4394,
+                "y": 5620
+              },
+              {
+                "x": 4398,
+                "y": 5620
+              }
+            ]
+          },
+          {
+            "frame": 168,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 169,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 170,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 171,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 172,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 173,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 174,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 175,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 176,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 177,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 178,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 179,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 180,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4398,
+                "y": 5620
+              },
+              {
+                "x": 4402,
+                "y": 5624
+              }
+            ]
+          },
+          {
+            "frame": 181,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4401,
+                "y": 5625
+              }
+            ]
+          },
+          {
+            "frame": 182,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4401,
+                "y": 5625
+              }
+            ]
+          },
+          {
+            "frame": 183,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4401,
+                "y": 5625
+              }
+            ]
+          },
+          {
+            "frame": 184,
+            "path_type": 13,
+            "path_count": 1,
+            "path_index": 0,
+            "points": [
+              {
+                "x": 4401,
+                "y": 5625
+              }
+            ]
+          },
+          {
+            "frame": 185,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4401,
+                "y": 5625
+              },
+              {
+                "x": 4401,
+                "y": 5629
+              }
+            ]
+          },
+          {
+            "frame": 186,
+            "path_type": 6,
+            "path_count": 2,
+            "path_index": 1,
+            "points": [
+              {
+                "x": 4401,
+                "y": 5625
+              },
+              {
+                "x": 4401,
+                "y": 5629
+              }
+            ]
+          }
+        ]
+      },
+      "distinct_positions": 218,
+      "path_types": {
+        "2": 25,
+        "6": 341,
+        "13": 37
+      },
+      "mode_transitions": [
+        {
+          "frame": 34,
+          "mode": 8
+        },
+        {
+          "frame": 48,
+          "mode": 1
+        },
+        {
+          "frame": 59,
+          "mode": 2
+        }
+      ],
+      "client_modes": [
+        1,
+        2,
+        8
+      ],
+      "sha256": {
+        "orchestrator.json": "44c6e9e989ac237f665676e3a3e08c1cd6a1b0807f93339439ce803ae40c58de",
+        "worker/summary.json": "d84ffe599136491788cfb601c351029fe221f77569e3a1737e1470a73cc11552",
+        "worker/native-target/identity.json": "b9c1a1dd8670b058ec105180d66461a3858121f8bba92775312a0ac847a3ade0",
+        "worker/native-target/summary.json": "073b8222bcc135dddf8d812c2ac3d4dcc8f52dff318fb9b1be7ba348f19f1917",
+        "worker/native-target/raven-stats.jsonl": "86fe7c1a24b31791a40a006af9961b0777b30185c87ec896439a6fa39716f953",
+        "worker/native-target/raven-decisions.jsonl": "6097f8030700a5f3f5eb79d13e54bd64adf76d0122edcc7e464a97d1fecaeca7",
+        "worker/native-target/raven-motion.jsonl": "fd2cbf2a10e4586c3c96c5cce21bbd850a9efb16c35a4c8fe4cf0b319ccc0e6b",
+        "worker/native-target/room-grid.json": "ed1fcf7379c69222f4bb163a3f177486a50688666e0f10ac3a4dca0122785bb4",
+        "worker/capture/summary.json": "e2ddd3c2dd72d120f8fe7d9068be2c466b31260354a2866b4acfd6c16e66a7ce",
+        "worker/capture/raven-samples.json": "da79b834d9e856ea6b84cac84af02d783af85ca78cb0378a748b5c95a75d8d0c",
+        "worker/provenance/d2game_raven_target.cpp": "a22c96504c50456833786a22e4bd2a6c45c4edb117e9f4d964d47b1be8550450",
+        "worker/provenance/d2game_raven_target.exe": "1a92dff839d8206885d25eb33dddb860997a1f84c95ccd59a821d2d3c1f38f25"
+      }
+    }
+  },
+  "limitations": [
+    "Selected Fn107 calls and stopped-thread path snapshots, not all movement helper calls.",
+    "A 50-tick attack deadline is not a fixed attack interval: pathing, chance and decision cadence add delay.",
+    "Town capture spawns no target and modifies no monster HP; the combat capture uses a durable experimental target.",
+    "Client polling establishes received modes, not exact facing/resource frame or rendered pixels.",
+    "PathPoints and room flags are now exported, but the two runtimes have not yet replayed the same room in one process; identical inputs are still required before claiming coordinate parity."
+  ]
+}

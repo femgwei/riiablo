@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "skill_id": 230,
+  "source_run_id": "20261121-181537-2a5ba484",
+  "comparison_status": "compared_client_stream_motion_clock_with_remaining_differences",
+  "comparisons": {
+    "before": {
+      "samples": 400,
+      "missing": 0,
+      "position_mismatches": 375,
+      "animation_mismatches": 0,
+      "velocity_mismatches": 400,
+      "max_position_error_cells": 1.3203000000003158
+    },
+    "client_after": {
+      "samples": 400,
+      "missing": 0,
+      "position_mismatches": 0,
+      "animation_mismatches": 0,
+      "velocity_mismatches": 0,
+      "max_position_error_cells": 0
+    },
+    "local_authority_vs_client_oracle": {
+      "samples": 400,
+      "missing": 0,
+      "position_mismatches": 0,
+      "animation_mismatches": 0,
+      "velocity_mismatches": 0,
+      "max_position_error_cells": 0
+    }
+  },
+  "client_contract": {
+    "lifetime": 17,
+    "visual_rows": [
+      "arcticblast1",
+      "arcticblast1"
+    ],
+    "damage_carrier_hidden": true,
+    "visual_networked": false
+  },
+  "source_sha256": {
+    "core\\src\\test\\resources\\original\\arctic-blast-1.10f.json": "2f4b73a31d416f70d614b7aab5aa38e04feb14a02790674e2c59376728e46470",
+    "tools\\original-observer\\arctic-blast-before-fix-1.10f.json": "35839f2dae5dee4a2685652dc48562934a30d437a0ef131f92df2318d83fb49f",
+    "tools\\original-observer\\arctic-blast-after-fix-1.10f.json": "1627ab645b6c987943fbdbe3c66d343f831ec169bf284259038f4e288ff2d05d"
+  },
+  "limitations": [
+    "One replayed stream is compared by native age; this does not reproduce the original held-input callback schedule",
+    "No original server damage, actual DCC direction selection, overlay submission or GPU pixels",
+    "Both local A/B resources are exercised in tests; original caster/allocator RNG is not reconstructed",
+    "Level one, one direction, empty equipment; interruption, other levels and obstacles remain unverified"
+  ]
+}

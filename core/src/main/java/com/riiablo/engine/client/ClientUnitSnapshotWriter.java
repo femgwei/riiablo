@@ -37,6 +37,15 @@ final class ClientUnitSnapshotWriter {
       target.skillId = source.skillId;
       target.periodicDelayFrames = source.periodicDelayFrames;
       target.periodicCountdownFrames = source.periodicCountdownFrames;
+      target.presentationRevision = source.presentationRevision;
+      if (source.id == com.riiablo.engine.server.state.StateId.CYCLONEARMOR
+          && source.cycloneArmorMaximumFixed > 0) {
+        target.setStatContribution(Stat.bonearmor, 0,
+            com.riiablo.attributes.NativeStatResolver.Operation.ADD, source.cycloneArmorCurrentFixed);
+        target.setStatContribution(Stat.bonearmormax, 0,
+            com.riiablo.attributes.NativeStatResolver.Operation.ADD, source.cycloneArmorMaximumFixed);
+        target.runtimeValue = source.cycloneArmorCurrentFixed;
+      }
     }
   }
 

@@ -1,0 +1,150 @@
+{
+  "counts": {
+    "tests": 52,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "file": "TEST-com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest.xml",
+      "name": "com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:14:18",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.093"
+    },
+    {
+      "file": "TEST-com.riiablo.engine.replay.UnitStateRuntimeCheckpointTest.xml",
+      "name": "com.riiablo.engine.replay.UnitStateRuntimeCheckpointTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:14:18",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.109"
+    },
+    {
+      "file": "TEST-com.riiablo.engine.server.DruidSummonIntegrationTest.xml",
+      "name": "com.riiablo.engine.server.DruidSummonIntegrationTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:14:24",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.172"
+    },
+    {
+      "file": "TEST-com.riiablo.engine.server.EnchantGoldenDamageTest.xml",
+      "name": "com.riiablo.engine.server.EnchantGoldenDamageTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:14:29",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.009"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.InfernoAudioSystemTest.xml",
+      "name": "com.riiablo.presentation.InfernoAudioSystemTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:14:34",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "1.989"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.MissileLoaderTest.xml",
+      "name": "com.riiablo.presentation.MissileLoaderTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:14:41",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.01"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.OriginalEnchantFixtureTest.xml",
+      "name": "com.riiablo.presentation.OriginalEnchantFixtureTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:14:41",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.047"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.OriginalInfernoFixtureTest.xml",
+      "name": "com.riiablo.presentation.OriginalInfernoFixtureTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:14:41",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.022"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.SorceressPresentationParityTest.xml",
+      "name": "com.riiablo.presentation.SorceressPresentationParityTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:14:46",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.935"
+    },
+    {
+      "file": "TEST-com.riiablo.presentation.StateOverlaySystemTest.xml",
+      "name": "com.riiablo.presentation.StateOverlaySystemTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-21T01:14:52",
+      "hostname": "DESKTOP-7GGAVHU",
+      "time": "0.051"
+    }
+  ],
+  "log": "sorceress-fix-final-validation.log",
+  "checkpoint_followup": {
+    "counts": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suites": [
+      {
+        "file": "TEST-com.riiablo.engine.replay.MissileRuntimeCheckpointTest.xml",
+        "name": "com.riiablo.engine.replay.MissileRuntimeCheckpointTest",
+        "tests": "11",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-11-21T01:19:38",
+        "hostname": "DESKTOP-7GGAVHU",
+        "time": "0.142"
+      }
+    ],
+    "log": "sorceress-missile-checkpoint-validation.log"
+  },
+  "combined_counts": {
+    "tests": 63,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "scope": "Focused suites in two non-overlapping final invocations; not the full repository test suite"
+}

@@ -1,0 +1,219 @@
+{
+  "schema": 1,
+  "run_id": "20261121-073752-f6bf3010",
+  "background_verified": true,
+  "scope": "One level-one positive-X original cast and one production flame lifecycle; full held-input cadence is not compared",
+  "production_fixes_applied": true,
+  "fixture_sha256": "041c58f70198e11e7813c199133c10bd130ebb99243e26cff9744911ae8f3cb6",
+  "replay_sha256": "dcafd25b78b4604e51f0f5952d07543668b76d2552d04515eaea719e9e5eb26d",
+  "original": {
+    "server_counts": {
+      "infernoflame1": 14
+    },
+    "client_counts": {
+      "infernoflame1": 6,
+      "infernoflame2": 12
+    },
+    "lifetime_frames": 10,
+    "velocity_subtiles_per_second": [
+      14.0625,
+      0.0
+    ],
+    "client_frame_delta": 384,
+    "server_birth_frames": [
+      466,
+      468,
+      470,
+      472,
+      474,
+      476,
+      478,
+      480,
+      482,
+      484,
+      486,
+      488,
+      490,
+      494
+    ],
+    "client_birth_frames": [
+      467,
+      469,
+      471,
+      473,
+      475,
+      477,
+      479,
+      481,
+      483,
+      485,
+      487,
+      489,
+      491,
+      493,
+      495,
+      497,
+      499,
+      501
+    ],
+    "release_game_frame": 495,
+    "last_client_birth_after_release": 6,
+    "last_client_observed_frame": 509
+  },
+  "production": {
+    "lifetime_frames": 10,
+    "velocity_subtiles_per_second": [
+      14.0625,
+      0
+    ],
+    "speed_shortfall_percent": 0.0,
+    "frame_delta": 384,
+    "native_precision": true,
+    "paired_dcc_samples": 116,
+    "frame_mismatches": 0,
+    "mismatch_details": [],
+    "positions_and_frames": [
+      {
+        "age": 0,
+        "native_normalized_position": [
+          4523.0,
+          5642.0
+        ],
+        "production_position": [
+          4523,
+          5642
+        ],
+        "native_frame": 0,
+        "production_frame": 0
+      },
+      {
+        "age": 1,
+        "native_normalized_position": [
+          4523.5625,
+          5642.0
+        ],
+        "production_position": [
+          4523.5625,
+          5642
+        ],
+        "native_frame": 1,
+        "production_frame": 1
+      },
+      {
+        "age": 2,
+        "native_normalized_position": [
+          4524.125,
+          5642.0
+        ],
+        "production_position": [
+          4524.125,
+          5642
+        ],
+        "native_frame": 3,
+        "production_frame": 3
+      },
+      {
+        "age": 3,
+        "native_normalized_position": [
+          4524.6875,
+          5642.0
+        ],
+        "production_position": [
+          4524.6875,
+          5642
+        ],
+        "native_frame": 4,
+        "production_frame": 4
+      },
+      {
+        "age": 4,
+        "native_normalized_position": [
+          4525.25,
+          5642.0
+        ],
+        "production_position": [
+          4525.25,
+          5642
+        ],
+        "native_frame": 6,
+        "production_frame": 6
+      },
+      {
+        "age": 5,
+        "native_normalized_position": [
+          4525.8125,
+          5642.0
+        ],
+        "production_position": [
+          4525.8125,
+          5642
+        ],
+        "native_frame": 7,
+        "production_frame": 7
+      },
+      {
+        "age": 6,
+        "native_normalized_position": [
+          4526.375,
+          5642.0
+        ],
+        "production_position": [
+          4526.375,
+          5642
+        ],
+        "native_frame": 9,
+        "production_frame": 9
+      },
+      {
+        "age": 7,
+        "native_normalized_position": [
+          4526.9375,
+          5642.0
+        ],
+        "production_position": [
+          4526.9375,
+          5642
+        ],
+        "native_frame": 10,
+        "production_frame": 10
+      },
+      {
+        "age": 8,
+        "native_normalized_position": [
+          4527.5,
+          5642.0
+        ],
+        "production_position": [
+          4527.5,
+          5642
+        ],
+        "native_frame": 12,
+        "production_frame": 12
+      },
+      {
+        "age": 9,
+        "native_normalized_position": [
+          4528.0625,
+          5642.0
+        ],
+        "production_position": [
+          4528.0625,
+          5642
+        ],
+        "native_frame": 13,
+        "production_frame": 13
+      }
+    ]
+  },
+  "findings": [
+    "Recorded original speed is 14.0625 world units/second; measured production speed is reported above",
+    "Recorded original frame delta is 384; all paired native-age frame mismatches are reported above",
+    "Original client skill callback owns an independent A/B stream; missile pCltDo is 1, not 24",
+    "Observed original client/server birth counts differ; production held-cast cadence still needs separate replay"
+  ],
+  "limitations": [
+    "One stream; no original client cadence replay or caster sequence/GPU comparison",
+    "No map collision, targets, damage values or held-input mana comparison",
+    "Riiablo cell coordinates correspond to native fixed-point cell centres minus 0.5"
+  ]
+}

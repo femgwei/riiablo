@@ -1,0 +1,241 @@
+Local static Capstone observation; not REA Evidence or a runtime call trace.
+D2Game.dll sha256=2bd92fb25e3e4b8269930712620ba9db00cdc1aa44569d87dc4aba76553272b6
+D2MOO 1.10f source comment maps SKILLS_SrvDo124 to absolute 0x6FCFF870, which is RVA 0xCF870 for this image base.
+SrvDo124: pUnit seed is advanced at RVA0xCF919; the saved cast Param1 is the low 16 bits observed at RVA0xCF933-0xCF938.
+SrvActive146 source is at RVA0xCFAB0; D2MOO documents SEED_InitLowSeed from Param1, then ITEMS_RollRandomNumber % 1000000 before five x/y attempts.
+SKILLS_SrvDo124_Armageddon_Hurricane RVA=0xcf870 length=0x140
+000CF870 sub esp, 0x10
+000CF873 push ebx
+000CF874 mov ebx, dword ptr [esp + 0x18]
+000CF878 push ebp
+000CF879 push esi
+000CF87A test ebx, ebx
+000CF87C push edi
+000CF87D mov esi, edx
+000CF87F mov dword ptr [esp + 0x10], ecx
+000CF883 jl 0x6fcffa9d
+000CF889 mov eax, dword ptr [0x6fd27060]
+000CF88E mov ecx, dword ptr [eax]
+000CF890 cmp ebx, dword ptr [ecx + 0xba0]
+000CF896 jge 0x6fcffa9d
+000CF89C mov ebp, dword ptr [ecx + 0xb98]
+000CF8A2 lea eax, [ebx + ebx*8]
+000CF8A5 shl eax, 4
+000CF8A8 sub eax, ebx
+000CF8AA shl eax, 2
+000CF8AD add ebp, eax
+000CF8AF mov dword ptr [esp + 0x14], eax
+000CF8B3 test ebp, ebp
+000CF8B5 je 0x6fcffa9d
+000CF8BB mov ax, word ptr [ebp + 0x80]
+000CF8C2 test ax, ax
+000CF8C5 jl 0x6fcffa9d
+000CF8CB movsx edx, ax
+000CF8CE cmp edx, dword ptr [ecx + 0xc4]
+000CF8D4 jge 0x6fcffa9d
+000CF8DA push esi
+000CF8DB call 0x6fd1bf7a
+000CF8E0 test eax, eax
+000CF8E2 mov dword ptr [esp + 0x1c], eax
+000CF8E6 je 0x6fcffa9d
+000CF8EC push 0x48b
+000CF8F1 push 0x6fd40648
+000CF8F6 push eax
+000CF8F7 call 0x6fd1b78e
+000CF8FC cmp eax, ebx
+000CF8FE jne 0x6fcffa9d
+000CF904 test esi, esi
+000CF906 je 0x6fcff916
+000CF908 mov eax, dword ptr [esi + 0xc4]
+000CF90E or al, 0x40
+000CF910 mov dword ptr [esi + 0xc4], eax
+000CF916 mov eax, dword ptr [esi + 0x20]
+000CF919 mov ecx, 0x6ac690c5
+000CF91E mul ecx
+000CF920 mov ecx, dword ptr [esi + 0x24]
+000CF923 xor edi, edi
+000CF925 add eax, ecx
+000CF927 adc edx, edi
+000CF929 mov dword ptr [esi + 0x20], eax
+000CF92C mov dword ptr [esi + 0x24], edx
+000CF92F mov edx, dword ptr [esp + 0x28]
+000CF933 and eax, 0xffff
+000CF938 push edx
+000CF939 mov dword ptr [esp + 0x1c], eax
+000CF93D mov eax, dword ptr [ebp + 0x60]
+000CF940 push ebx
+000CF941 push eax
+000CF942 push esi
+000CF943 call 0x6fd1be12
+000CF948 cmp eax, 1
+000CF94B jge 0x6fcff952
+000CF94D mov eax, 1
+000CF952 mov ecx, dword ptr [esp + 0x10]
+000CF956 movsx edx, word ptr [ebp + 0x80]
+000CF95D mov ecx, dword ptr [ecx + 0xa8]
+000CF963 push edx
+000CF964 add ecx, eax
+000CF966 push esi
+000CF967 mov dword ptr [esp + 0x2c], ecx
+000CF96B call 0x6fd1bd82
+000CF970 mov edi, eax
+000CF972 test edi, edi
+000CF974 jne 0x6fcff9db
+000CF976 test esi, esi
+000CF978 jne 0x6fcff984
+000CF97A or ecx, 0xffffffff
+000CF97D mov eax, 6
+000CF982 jmp 0x6fcff989
+000CF984 mov ecx, dword ptr [esi + 0xc]
+000CF987 mov eax, dword ptr [esi]
+000CF989 push ecx
+000CF98A mov ecx, dword ptr [esp + 0x14]
+000CF98E push eax
+000CF98F mov eax, dword ptr [esp + 0x2c]
+000CF993 mov edx, dword ptr [ecx + 0x1c]
+000CF996 push eax
+000CF997 push 2
+000CF999 push edx
+000CF99A call 0x6fd1bc02
+000CF99F mov edi, eax
+000CF9A1 test edi, edi
+000CF9A3 je 0x6fcffa9d
+000CF9A9 movsx eax, word ptr [ebp + 0x80]
+SKILLS_SrvActive146_PeriodicRandomMissile RVA=0xcfab0 length=0x1a0
+000CFAB0 sub esp, 0x78
+000CFAB3 push ebx
+000CFAB4 mov ebx, dword ptr [esp + 0x80]
+000CFABB push ebp
+000CFABC push esi
+000CFABD test ebx, ebx
+000CFABF push edi
+000CFAC0 mov esi, edx
+000CFAC2 mov dword ptr [esp + 0x10], ecx
+000CFAC6 jl 0x6fcffb7b
+000CFACC mov eax, dword ptr [0x6fd27060]
+000CFAD1 mov eax, dword ptr [eax]
+000CFAD3 cmp ebx, dword ptr [eax + 0xba0]
+000CFAD9 jge 0x6fcffb7b
+000CFADF mov ebp, dword ptr [eax + 0xb98]
+000CFAE5 lea edi, [ebx + ebx*8]
+000CFAE8 shl edi, 4
+000CFAEB sub edi, ebx
+000CFAED shl edi, 2
+000CFAF0 add ebp, edi
+000CFAF2 test ebp, ebp
+000CFAF4 je 0x6fcffb7b
+000CFAFA mov ecx, dword ptr [esp + 0x90]
+000CFB01 test ecx, ecx
+000CFB03 jle 0x6fcffb7b
+000CFB05 mov cx, word ptr [ebp + 0x80]
+000CFB0C test cx, cx
+000CFB0F jl 0x6fcffb7b
+000CFB11 mov edx, dword ptr [eax + 0xc4]
+000CFB17 movsx ecx, cx
+000CFB1A cmp ecx, edx
+000CFB1C jge 0x6fcffb7b
+000CFB1E push ecx
+000CFB1F push esi
+000CFB20 call 0x6fd1b6c8
+000CFB25 test eax, eax
+000CFB27 je 0x6fcffb7b
+000CFB29 mov edx, dword ptr [0x6fd27ba0]
+000CFB2F mov cl, byte ptr [ebp + 5]
+000CFB32 test byte ptr [edx], cl
+000CFB34 jne 0x6fcffb95
+000CFB36 push esi
+000CFB37 call 0x6fd1b6aa
+000CFB3C test eax, eax
+000CFB3E je 0x6fcffb95
+000CFB40 push eax
+000CFB41 call 0x6fd1bc5c
+000CFB46 test eax, eax
+000CFB48 je 0x6fcffb95
+000CFB4A movsx eax, word ptr [ebp + 0x80]
+000CFB51 push eax
+000CFB52 push esi
+000CFB53 call 0x6fd1bd82
+000CFB58 mov edi, eax
+000CFB5A test edi, edi
+000CFB5C je 0x6fcffb6b
+000CFB5E push edi
+000CFB5F push esi
+000CFB60 call 0x6fd1bca4
+000CFB65 push edi
+000CFB66 call 0x6fd1bc9e
+000CFB6B movsx ecx, word ptr [ebp + 0x80]
+000CFB72 push 0
+000CFB74 push ecx
+000CFB75 push esi
+000CFB76 call 0x6fd1b86c
+000CFB7B mov ecx, dword ptr [esp + 0x10]
+000CFB7F push ebx
+000CFB80 mov edx, esi
+000CFB82 push 5
+000CFB84 call 0x6fc34840
+000CFB89 pop edi
+000CFB8A pop esi
+000CFB8B pop ebp
+000CFB8C xor eax, eax
+000CFB8E pop ebx
+000CFB8F add esp, 0x78
+000CFB92 ret 8
+000CFB95 mov edx, dword ptr [esp + 0x90]
+000CFB9C mov eax, dword ptr [ebp + 0x64]
+000CFB9F push edx
+000CFBA0 push ebx
+000CFBA1 push eax
+000CFBA2 push esi
+000CFBA3 call 0x6fd1be12
+000CFBA8 test eax, eax
+000CFBAA mov dword ptr [esp + 0x14], eax
+000CFBAE jle 0x6fcffb7b
+000CFBB0 mov ecx, dword ptr [0x6fd27060]
+000CFBB6 mov eax, dword ptr [ecx]
+000CFBB8 cmp ebx, dword ptr [eax + 0xba0]
+000CFBBE jge 0x6fcffbcc
+000CFBC0 mov eax, dword ptr [eax + 0xb98]
+000CFBC6 add eax, edi
+000CFBC8 test eax, eax
+000CFBCA jne 0x6fcffbd0
+000CFBCC xor eax, eax
+000CFBCE jmp 0x6fcffbd6
+000CFBD0 mov eax, dword ptr [eax + 0x154]
+000CFBD6 mov edx, dword ptr [esp + 0x10]
+000CFBDA mov ecx, dword ptr [esp + 0x10]
+000CFBDE push ebx
+000CFBDF push 5
+000CFBE1 mov edi, dword ptr [edx + 0xa8]
+000CFBE7 mov edx, esi
+000CFBE9 add edi, eax
+000CFBEB call 0x6fc34840
+000CFBF0 mov edx, esi
+000CFBF2 mov eax, dword ptr [esp + 0x90]
+000CFBF9 mov ecx, dword ptr [esp + 0x10]
+000CFBFD push eax
+000CFBFE push ebx
+000CFBFF push edi
+000CFC00 push 5
+000CFC02 call 0x6fc351b0
+000CFC07 push esi
+000CFC08 call 0x6fd1b6aa
+000CFC0D test eax, eax
+000CFC0F je 0x6fcffb89
+000CFC15 push eax
+000CFC16 call 0x6fd1bc5c
+000CFC1B test eax, eax
+000CFC1D jne 0x6fcffb89
+000CFC23 mov ecx, 0x1c
+000CFC28 lea edi, [esp + 0x18]
+000CFC2C rep stosd dword ptr es:[edi], eax
+000CFC2E mov edi, dword ptr [esp + 0x90]
+000CFC35 lea edx, [esp + 0x18]
+000CFC39 push edi
+000CFC3A push ebx
+000CFC3B mov ecx, esi
+000CFC3D call 0x6fd14ec0
+000CFC42 lea edx, [esp + 0x18]
+000CFC46 mov ecx, esi
+000CFC48 push edi
+000CFC49 push ebx
+000CFC4A call 0x6fd14dd0

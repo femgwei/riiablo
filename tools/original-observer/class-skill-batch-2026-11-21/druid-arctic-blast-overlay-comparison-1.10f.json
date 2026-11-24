@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "skill_id": 230,
+  "source_run_id": "20261121-211726-7197b5ae",
+  "comparison_status": "compared_cast_overlay_clock_with_draw_and_audio_unknowns",
+  "active_native_states": 42,
+  "terminal_native_states": 2,
+  "clock_mismatches": 0,
+  "overlay_id": 196,
+  "native_type": 2,
+  "lifetime_ticks": 21,
+  "clock_cases": [
+    {
+      "asset_delay_updates": 0,
+      "requests": 1,
+      "first_loaded_age": 0,
+      "expires_at_native_age": 21,
+      "late_flash": false
+    },
+    {
+      "asset_delay_updates": 12,
+      "requests": 1,
+      "first_loaded_age": 11,
+      "expires_at_native_age": 21,
+      "late_flash": false
+    },
+    {
+      "asset_delay_updates": 1000,
+      "requests": 1,
+      "first_loaded_age": null,
+      "expires_at_native_age": 21,
+      "late_flash": false
+    }
+  ],
+  "evidence_sha256": {
+    "core\\src\\test\\resources\\original\\arctic-blast-overlay-1.10f.json": "9c1782a51d13c913461d287bc442912a2485255c67b23530abdccb1ae30573e7",
+    "tools\\original-observer\\arctic-blast-overlay-production-1.10f.json": "19ee623b56a4b4bfe9f910b799fc15afe67cffebafb3485deb74fd8ad17b55ee"
+  },
+  "limitations": [
+    "Overlay list polling is non-atomic; no actual DCC draw selection, GPU blending, screenshot or native audio playback was captured",
+    "CltSt15 sound dispatch is established by pinned static code; local once-per-action sound request is tested",
+    "One native level99 naked Druid, skill1, two hold lengths; no all-level/equipment/network/cancellation parity",
+    "The prior caster-loop callback-count and absolute input-phase differences are unchanged"
+  ]
+}

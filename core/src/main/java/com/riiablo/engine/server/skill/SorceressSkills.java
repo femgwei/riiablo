@@ -256,10 +256,12 @@ public final class SorceressSkills {
     int[] damage = getEnchantDamage(
         skill, level, baseSkillLevel, fireMasteryPercent);
     int attackRating = getEnchantAttackRatingPercent(skill, level);
+    int revision = states.nextPresentationRevision();
     states.removeState(StateId.ENCHANT);
     UnitState state = states.addStateLayer(
         StateId.ENCHANT, duration, level, sourceEntityId, skill.Id);
     if (state == null) return null;
+    state.presentationRevision = revision;
     state.setStatContribution(Stat.firemindam, 0,
         NativeStatResolver.Operation.ADD, damage[0]);
     state.setStatContribution(Stat.firemaxdam, 0,

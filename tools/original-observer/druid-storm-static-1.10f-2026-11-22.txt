@@ -1,0 +1,937 @@
+Local static Capstone observation; not REA Evidence or a runtime call trace.
+D2Client.dll sha256=94466b84c0593ab682f1d3d8dc65ef4f8170f33e430865d802bc752458b2b282
+Hurricane X=(7, 5, 0, -5, -7, -5, 0, 5)
+Hurricane Y=(0, 5, 7, 5, 0, -5, -7, -5)
+Skill90/Hurricane RVA=0x22c90 length=0xf4
+00022C90 push ebx
+00022C91 push ebp
+00022C92 push esi
+00022C93 push edi
+00022C94 mov edi, edx
+00022C96 mov esi, ecx
+00022C98 test edi, edi
+00022C9A jl 0x6fac2cc0
+00022C9C mov eax, dword ptr [0x6fb6d4ac]
+00022CA1 mov eax, dword ptr [eax]
+00022CA3 cmp edi, dword ptr [eax + 0xba0]
+00022CA9 jge 0x6fac2cc0
+00022CAB mov edx, dword ptr [eax + 0xb98]
+00022CB1 lea ecx, [edi + edi*8]
+00022CB4 shl ecx, 4
+00022CB7 sub ecx, edi
+00022CB9 lea ebx, [edx + ecx*4]
+00022CBC test ebx, ebx
+00022CBE jne 0x6fac2cc9
+00022CC0 pop edi
+00022CC1 pop esi
+00022CC2 pop ebp
+00022CC3 xor eax, eax
+00022CC5 pop ebx
+00022CC6 ret 4
+00022CC9 push esi
+00022CCA call 0x6fb6a968 ; D2Common.dll#10342
+00022CCF test eax, eax
+00022CD1 je 0x6fac2ce1
+00022CD3 push eax
+00022CD4 call 0x6fb6ac08 ; D2Common.dll#10082
+00022CD9 test eax, eax
+00022CDB jne 0x6fac2ce1
+00022CDD xor ebp, ebp
+00022CDF jmp 0x6fac2ce6
+00022CE1 mov ebp, 1
+00022CE6 mov ax, word ptr [ebx + 0x10e]
+00022CED test ax, ax
+00022CF0 jle 0x6fac2d0f
+00022CF2 movsx edx, ax
+00022CF5 mov ecx, esi
+00022CF7 call 0x6fb4f990
+00022CFC test ebp, ebp
+00022CFE je 0x6fac2d1c
+00022D00 test eax, eax
+00022D02 je 0x6fac2d0f
+00022D04 push 1
+00022D06 mov edx, esi
+00022D08 mov ecx, eax
+00022D0A call 0x6fb555c0
+00022D0F test ebp, ebp
+00022D11 je 0x6fac2d31
+00022D13 pop edi
+00022D14 pop esi
+00022D15 pop ebp
+00022D16 xor eax, eax
+00022D18 pop ebx
+00022D19 ret 4
+00022D1C test eax, eax
+00022D1E jne 0x6fac2d31
+00022D20 movsx ecx, word ptr [ebx + 0x10e]
+00022D27 push eax
+00022D28 push eax
+00022D29 push eax
+00022D2A mov edx, esi
+00022D2C call 0x6fb55820
+00022D31 mov ebp, dword ptr [esp + 0x14]
+00022D35 mov eax, dword ptr [ebx + 0x114]
+00022D3B push ebp
+00022D3C push edi
+00022D3D push eax
+00022D3E push esi
+00022D3F call 0x6fb6ac7a ; D2Common.dll#11276
+00022D44 test eax, eax
+00022D46 jle 0x6fac2d78
+00022D48 mov dword ptr [esp + 0x14], eax
+00022D4C push ebp
+00022D4D push edi
+00022D4E mov edx, ebx
+00022D50 mov ecx, esi
+00022D52 call 0x6fac2d90
+00022D57 mov edx, ebx
+00022D59 mov ecx, esi
+00022D5B push ebp
+00022D5C push edi
+00022D5D call 0x6fac2d90
+00022D62 mov edx, ebx
+00022D64 mov ecx, esi
+00022D66 push ebp
+00022D67 push edi
+00022D68 call 0x6fac2d90
+00022D6D mov eax, dword ptr [esp + 0x14]
+00022D71 dec eax
+00022D72 mov dword ptr [esp + 0x14], eax
+00022D76 jne 0x6fac2d4c
+00022D78 pop edi
+00022D79 pop esi
+00022D7A pop ebp
+00022D7B mov eax, 1
+00022D80 pop ebx
+00022D81 ret 4
+Hurricane debris constructor RVA=0x22d90 length=0x277
+00022D90 sub esp, 0x74
+00022D93 push ebx
+00022D94 push ebp
+00022D95 push esi
+00022D96 mov esi, ecx
+00022D98 push edi
+00022D99 mov dword ptr [esp + 0x14], edx
+00022D9D lea ebx, [esi + 0x20]
+00022DA0 mov ecx, ebx
+00022DA2 call 0x6faa88d0
+00022DA7 mov edi, eax
+00022DA9 mov eax, dword ptr [esi]
+00022DAB and edi, 7
+00022DAE cmp eax, 2
+00022DB1 je 0x6fac2dda
+00022DB3 cmp eax, 3
+00022DB6 jle 0x6fac2dbd
+00022DB8 cmp eax, 5
+00022DBB jle 0x6fac2dda
+00022DBD mov eax, dword ptr [esi + 0x2c]
+00022DC0 test eax, eax
+00022DC2 je 0x6fac2dd0
+00022DC4 push eax
+00022DC5 call 0x6fb6a926 ; D2Common.dll#10162
+00022DCA mov dword ptr [esp + 0x10], eax
+00022DCE jmp 0x6fac2de4
+00022DD0 mov dword ptr [esp + 0x10], 0
+00022DD8 jmp 0x6fac2de4
+00022DDA mov eax, dword ptr [esi + 0x2c]
+00022DDD mov ecx, dword ptr [eax + 0xc]
+00022DE0 mov dword ptr [esp + 0x10], ecx
+00022DE4 mov eax, dword ptr [esi]
+00022DE6 cmp eax, 2
+00022DE9 je 0x6fac2e08
+00022DEB cmp eax, 3
+00022DEE jle 0x6fac2df5
+00022DF0 cmp eax, 5
+00022DF3 jle 0x6fac2e08
+00022DF5 mov eax, dword ptr [esi + 0x2c]
+00022DF8 test eax, eax
+00022DFA je 0x6fac2e04
+00022DFC push eax
+00022DFD call 0x6fb6a920 ; D2Common.dll#10163
+00022E02 jmp 0x6fac2e0e
+00022E04 xor eax, eax
+00022E06 jmp 0x6fac2e0e
+00022E08 mov edx, dword ptr [esi + 0x2c]
+00022E0B mov eax, dword ptr [edx + 0x10]
+00022E0E mov ebp, dword ptr [edi*4 + 0x6fb6e9e0]
+00022E15 mov edi, dword ptr [edi*4 + 0x6fb6ea00]
+00022E1C mov ecx, dword ptr [esp + 0x10]
+00022E20 mov dword ptr [esp + 0x20], edi
+00022E24 add eax, edi
+00022E26 mov edi, dword ptr [esp + 0x14]
+00022E2A mov dword ptr [esp + 0x1c], eax
+00022E2E add ecx, ebp
+00022E30 movsx eax, word ptr [edi + 0xea]
+00022E37 test eax, eax
+00022E39 mov dword ptr [esp + 0x18], ecx
+00022E3D mov dword ptr [esp + 0x10], eax
+00022E41 jl 0x6fac2fff
+00022E47 cmp word ptr [edi + 0xec], 0
+00022E4F jl 0x6fac2ebb
+00022E51 cmp word ptr [edi + 0xee], 0
+00022E59 jl 0x6fac2ea0
+00022E5B mov eax, dword ptr [ebx]
+00022E5D mov edx, 0x6ac690c5
+00022E62 mul edx
+00022E64 mov ecx, dword ptr [ebx + 4]
+00022E67 xor edi, edi
+00022E69 add eax, ecx
+00022E6B mov ecx, 3
+00022E70 adc edx, edi
+00022E72 mov dword ptr [ebx], eax
+00022E74 mov dword ptr [ebx + 4], edx
+00022E77 xor edx, edx
+00022E79 div ecx
+00022E7B sub edx, edi
+00022E7D je 0x6fac2e8f
+00022E7F dec edx
+00022E80 jne 0x6fac2ebb
+00022E82 mov edx, dword ptr [esp + 0x14]
+00022E86 movsx eax, word ptr [edx + 0xee]
+00022E8D jmp 0x6fac2eb7
+00022E8F mov ecx, dword ptr [esp + 0x14]
+00022E93 movsx edx, word ptr [ecx + 0xec]
+00022E9A mov dword ptr [esp + 0x10], edx
+00022E9E jmp 0x6fac2ebb
+00022EA0 mov ecx, ebx
+00022EA2 call 0x6faa88d0
+00022EA7 and eax, 1
+00022EAA mov dword ptr [esp + 0x24], eax
+00022EAE jne 0x6fac2ebb
+00022EB0 movsx eax, word ptr [edi + 0xec]
+00022EB7 mov dword ptr [esp + 0x10], eax
+00022EBB mov ecx, 0x17
+00022EC0 xor eax, eax
+00022EC2 lea edi, [esp + 0x28]
+00022EC6 mov edx, dword ptr [esp + 0x18]
+00022ECA rep stosd dword ptr es:[edi], eax
+00022ECC mov ecx, dword ptr [esp + 0x10]
+00022ED0 mov eax, dword ptr [esp + 0x1c]
+00022ED4 mov edi, dword ptr [esp + 0x8c]
+00022EDB mov dword ptr [esp + 0x38], ecx
+00022EDF mov ecx, dword ptr [esp + 0x20]
+00022EE3 mov dword ptr [esp + 0x28], 3
+00022EEB mov dword ptr [esp + 0x44], ecx
+00022EEF lea ecx, [esp + 0x28]
+00022EF3 neg ebp
+00022EF5 mov dword ptr [esp + 0x2c], esi
+00022EF9 mov dword ptr [esp + 0x3c], edx
+00022EFD mov dword ptr [esp + 0x40], eax
+00022F01 mov dword ptr [esp + 0x58], edi
+00022F05 mov dword ptr [esp + 0x48], ebp
+00022F09 call 0x6fb3e070
+00022F0E mov ebp, eax
+00022F10 test ebp, ebp
+00022F12 mov dword ptr [esp + 0x20], ebp
+00022F16 je 0x6fac2fff
+00022F1C mov eax, dword ptr [esp + 0x14]
+00022F20 mov edx, dword ptr [esp + 0x88]
+00022F27 push edi
+00022F28 push edx
+00022F29 mov ecx, dword ptr [eax + 0x118]
+00022F2F push ecx
+00022F30 push esi
+00022F31 call 0x6fb6ac7a ; D2Common.dll#11276
+00022F36 mov edi, eax
+00022F38 test edi, edi
+00022F3A jg 0x6fac2f40
+00022F3C xor eax, eax
+00022F3E jmp 0x6fac2f74
+00022F40 lea edx, [edi - 1]
+00022F43 test edi, edx
+00022F45 je 0x6fac2f6a
+00022F47 mov eax, dword ptr [ebx]
+00022F49 mov ecx, 0x6ac690c5
+00022F4E mul ecx
+00022F50 mov ecx, dword ptr [ebx + 4]
+00022F53 xor ebp, ebp
+00022F55 add eax, ecx
+00022F57 adc edx, ebp
+00022F59 mov dword ptr [ebx], eax
+00022F5B mov dword ptr [ebx + 4], edx
+00022F5E xor edx, edx
+00022F60 div edi
+00022F62 mov ebp, dword ptr [esp + 0x20]
+00022F66 mov eax, edx
+00022F68 jmp 0x6fac2f74
+00022F6A mov ecx, ebx
+00022F6C call 0x6faa88d0
+00022F71 dec edi
+00022F72 and eax, edi
+00022F74 push eax
+00022F75 push 0
+00022F77 push 0
+00022F79 push ebp
+00022F7A call 0x6fb5fc80
+00022F7F mov eax, dword ptr [esi]
+00022F81 cmp eax, 2
+00022F84 je 0x6fac2fa3
+00022F86 cmp eax, 3
+00022F89 jle 0x6fac2f90
+00022F8B cmp eax, 5
+00022F8E jle 0x6fac2fa3
+00022F90 mov eax, dword ptr [esi + 0x2c]
+00022F93 test eax, eax
+00022F95 je 0x6fac2f9f
+00022F97 push eax
+00022F98 call 0x6fb6a926 ; D2Common.dll#10162
+00022F9D jmp 0x6fac2fa9
+00022F9F xor eax, eax
+00022FA1 jmp 0x6fac2fa9
+00022FA3 mov edx, dword ptr [esi + 0x2c]
+00022FA6 mov eax, dword ptr [edx + 0xc]
+00022FA9 push eax
+00022FAA push ebp
+00022FAB call 0x6fb6ab9c ; D2Common.dll#11140
+00022FB0 mov eax, dword ptr [esi]
+00022FB2 cmp eax, 2
+00022FB5 je 0x6fac2ff2
+00022FB7 cmp eax, 3
+00022FBA jle 0x6fac2fc1
+00022FBC cmp eax, 5
+00022FBF jle 0x6fac2ff2
+00022FC1 mov esi, dword ptr [esi + 0x2c]
+00022FC4 test esi, esi
+00022FC6 je 0x6fac2fdf
+00022FC8 push esi
+00022FC9 call 0x6fb6a920 ; D2Common.dll#10163
+00022FCE push eax
+00022FCF push ebp
+00022FD0 call 0x6fb6ab96 ; D2Common.dll#11142
+00022FD5 pop edi
+00022FD6 pop esi
+00022FD7 pop ebp
+00022FD8 pop ebx
+00022FD9 add esp, 0x74
+00022FDC ret 8
+00022FDF xor eax, eax
+00022FE1 push eax
+00022FE2 push ebp
+00022FE3 call 0x6fb6ab96 ; D2Common.dll#11142
+00022FE8 pop edi
+00022FE9 pop esi
+00022FEA pop ebp
+00022FEB pop ebx
+00022FEC add esp, 0x74
+00022FEF ret 8
+00022FF2 mov eax, dword ptr [esi + 0x2c]
+00022FF5 mov eax, dword ptr [eax + 0x10]
+00022FF8 push eax
+00022FF9 push ebp
+00022FFA call 0x6fb6ab96 ; D2Common.dll#11142
+00022FFF pop edi
+00023000 pop esi
+00023001 pop ebp
+00023002 pop ebx
+00023003 add esp, 0x74
+Skill92/Armageddon pair RVA=0x23010 length=0x1e5
+00023010 sub esp, 0x74
+00023013 push ebx
+00023014 push ebp
+00023015 push esi
+00023016 push edi
+00023017 mov esi, edx
+00023019 mov edi, ecx
+0002301B test esi, esi
+0002301D mov dword ptr [esp + 0x18], edi
+00023021 jl 0x6fac304b
+00023023 mov eax, dword ptr [0x6fb6d4ac]
+00023028 mov eax, dword ptr [eax]
+0002302A cmp esi, dword ptr [eax + 0xba0]
+00023030 jge 0x6fac304b
+00023032 mov edx, dword ptr [eax + 0xb98]
+00023038 lea ecx, [esi + esi*8]
+0002303B shl ecx, 4
+0002303E sub ecx, esi
+00023040 lea ebx, [edx + ecx*4]
+00023043 test ebx, ebx
+00023045 mov dword ptr [esp + 0x24], ebx
+00023049 jne 0x6fac3057
+0002304B pop edi
+0002304C pop esi
+0002304D pop ebp
+0002304E xor eax, eax
+00023050 pop ebx
+00023051 add esp, 0x74
+00023054 ret 4
+00023057 mov ebp, dword ptr [esp + 0x88]
+0002305E mov eax, dword ptr [ebx + 0x64]
+00023061 push ebp
+00023062 push esi
+00023063 push eax
+00023064 push edi
+00023065 call 0x6fb6ac7a ; D2Common.dll#11276
+0002306A test eax, eax
+0002306C jg 0x6fac307a
+0002306E pop edi
+0002306F pop esi
+00023070 pop ebp
+00023071 xor eax, eax
+00023073 pop ebx
+00023074 add esp, 0x74
+00023077 ret 4
+0002307A mov ecx, dword ptr [ebx + 0x114]
+00023080 push ebp
+00023081 push esi
+00023082 push ecx
+00023083 push edi
+00023084 call 0x6fb6ac7a ; D2Common.dll#11276
+00023089 test eax, eax
+0002308B mov dword ptr [esp + 0x14], eax
+0002308F jg 0x6fac309d
+00023091 pop edi
+00023092 pop esi
+00023093 pop ebp
+00023094 xor eax, eax
+00023096 pop ebx
+00023097 add esp, 0x74
+0002309A ret 4
+0002309D mov edx, dword ptr [ebx + 0x118]
+000230A3 push ebp
+000230A4 push esi
+000230A5 push edx
+000230A6 push edi
+000230A7 call 0x6fb6ac7a ; D2Common.dll#11276
+000230AC mov ebp, eax
+000230AE test ebp, ebp
+000230B0 jg 0x6fac30be
+000230B2 pop edi
+000230B3 pop esi
+000230B4 pop ebp
+000230B5 xor eax, eax
+000230B7 pop ebx
+000230B8 add esp, 0x74
+000230BB ret 4
+000230BE mov eax, dword ptr [esp + 0x88]
+000230C5 mov ecx, dword ptr [ebx + 0x11c]
+000230CB push eax
+000230CC push esi
+000230CD push ecx
+000230CE push edi
+000230CF call 0x6fb6ac7a ; D2Common.dll#11276
+000230D4 mov ebx, eax
+000230D6 test ebx, ebx
+000230D8 jg 0x6fac30e6
+000230DA pop edi
+000230DB pop esi
+000230DC pop ebp
+000230DD xor eax, eax
+000230DF pop ebx
+000230E0 add esp, 0x74
+000230E3 ret 4
+000230E6 mov ecx, dword ptr [esp + 0x14]
+000230EA mov eax, ebp
+000230EC imul eax, ecx
+000230EF mov dword ptr [esp + 0x10], eax
+000230F3 mov eax, ebx
+000230F5 imul eax, ecx
+000230F8 lea edx, [esp + 0x20]
+000230FC mov ecx, edi
+000230FE push edx
+000230FF lea edx, [esp + 0x20]
+00023103 mov dword ptr [esp + 0x18], eax
+00023107 call 0x6faba950
+0002310C test eax, eax
+0002310E jne 0x6fac311a
+00023110 pop edi
+00023111 pop esi
+00023112 pop ebp
+00023113 pop ebx
+00023114 add esp, 0x74
+00023117 ret 4
+0002311A mov edx, dword ptr [esp + 0x20]
+0002311E mov ecx, 0x17
+00023123 xor eax, eax
+00023125 lea edi, [esp + 0x28]
+00023129 rep stosd dword ptr es:[edi], eax
+0002312B mov eax, dword ptr [esp + 0x18]
+0002312F mov ecx, dword ptr [esp + 0x1c]
+00023133 mov edi, dword ptr [esp + 0x24]
+00023137 mov dword ptr [esp + 0x2c], eax
+0002313B mov eax, dword ptr [esp + 0x88]
+00023142 mov dword ptr [esp + 0x28], 1
+0002314A mov dword ptr [esp + 0x3c], ecx
+0002314E mov dword ptr [esp + 0x40], edx
+00023152 mov dword ptr [esp + 0x54], esi
+00023156 mov dword ptr [esp + 0x58], eax
+0002315A mov ax, word ptr [edi + 0xea]
+00023161 test ax, ax
+00023164 jl 0x6fac31a2
+00023166 movsx ecx, ax
+00023169 mov dword ptr [esp + 0x38], ecx
+0002316D lea ecx, [esp + 0x28]
+00023171 call 0x6fb3e070
+00023176 mov esi, eax
+00023178 test esi, esi
+0002317A je 0x6fac31a2
+0002317C mov edx, dword ptr [esp + 0x10]
+00023180 mov eax, dword ptr [esp + 0x14]
+00023184 push edx
+00023185 push 0
+00023187 push eax
+00023188 push esi
+00023189 call 0x6fb5fc80
+0002318E mov ecx, ebp
+00023190 mov edx, ebx
+00023192 neg ecx
+00023194 push 1
+00023196 push ecx
+00023197 neg edx
+00023199 push 0
+0002319B push edx
+0002319C push esi
+0002319D call 0x6fb5fcb0
+000231A2 mov ax, word ptr [edi + 0xec]
+000231A9 test ax, ax
+000231AC jl 0x6fac31e6
+000231AE movsx eax, ax
+000231B1 lea ecx, [esp + 0x28]
+000231B5 mov dword ptr [esp + 0x38], eax
+000231B9 call 0x6fb3e070
+000231BE mov esi, eax
+000231C0 test esi, esi
+000231C2 je 0x6fac31e6
+000231C4 mov ecx, dword ptr [esp + 0x10]
+000231C8 mov edx, dword ptr [esp + 0x14]
+000231CC push ecx
+000231CD push 0
+000231CF push edx
+000231D0 push esi
+000231D1 call 0x6fb5fc80
+000231D6 neg ebp
+000231D8 push 1
+000231DA push ebp
+000231DB neg ebx
+000231DD push 0
+000231DF push ebx
+000231E0 push esi
+000231E1 call 0x6fb5fcb0
+000231E6 pop edi
+000231E7 pop esi
+000231E8 pop ebp
+000231E9 mov eax, 1
+000231EE pop ebx
+000231EF add esp, 0x74
+000231F2 ret 4
+Missile60/Hurricane motion RVA=0x9d380 length=0xb3
+0009D380 push ecx
+0009D381 push esi
+0009D382 mov esi, ecx
+0009D384 push esi
+0009D385 call 0x6fb6b4d8 ; D2Common.dll#11125
+0009D38A and eax, 0x80000001
+0009D38F jns 0x6fb3d396
+0009D391 dec eax
+0009D392 or eax, 0xfffffffe
+0009D395 inc eax
+0009D396 jne 0x6fb3d428
+0009D39C mov ecx, dword ptr [esi]
+0009D39E mov eax, dword ptr [esi + 0x2c]
+0009D3A1 push ebx
+0009D3A2 push ebp
+0009D3A3 cmp ecx, 2
+0009D3A6 push edi
+0009D3A7 mov dword ptr [esp + 0x10], eax
+0009D3AB je 0x6fb3d3c9
+0009D3AD cmp ecx, 3
+0009D3B0 jle 0x6fb3d3b7
+0009D3B2 cmp ecx, 5
+0009D3B5 jle 0x6fb3d3c9
+0009D3B7 test eax, eax
+0009D3B9 je 0x6fb3d3c5
+0009D3BB push eax
+0009D3BC call 0x6fb6a926 ; D2Common.dll#10162
+0009D3C1 mov ebp, eax
+0009D3C3 jmp 0x6fb3d3cc
+0009D3C5 xor ebp, ebp
+0009D3C7 jmp 0x6fb3d3cc
+0009D3C9 mov ebp, dword ptr [eax + 0xc]
+0009D3CC mov eax, dword ptr [esi]
+0009D3CE cmp eax, 2
+0009D3D1 je 0x6fb3d3f2
+0009D3D3 cmp eax, 3
+0009D3D6 jle 0x6fb3d3dd
+0009D3D8 cmp eax, 5
+0009D3DB jle 0x6fb3d3f2
+0009D3DD mov eax, dword ptr [esi + 0x2c]
+0009D3E0 test eax, eax
+0009D3E2 je 0x6fb3d3ee
+0009D3E4 push eax
+0009D3E5 call 0x6fb6a920 ; D2Common.dll#10163
+0009D3EA mov edi, eax
+0009D3EC jmp 0x6fb3d3f8
+0009D3EE xor edi, edi
+0009D3F0 jmp 0x6fb3d3f8
+0009D3F2 mov eax, dword ptr [esi + 0x2c]
+0009D3F5 mov edi, dword ptr [eax + 0x10]
+0009D3F8 push esi
+0009D3F9 call 0x6fb6b4de ; D2Common.dll#11141
+0009D3FE mov ebx, ebp
+0009D400 push esi
+0009D401 sub ebx, eax
+0009D403 call 0x6fb6b4f0 ; D2Common.dll#11143
+0009D408 mov ecx, edi
+0009D40A sub edi, ebx
+0009D40C sub ecx, eax
+0009D40E push edi
+0009D40F mov edi, dword ptr [esp + 0x14]
+0009D413 add ebp, ecx
+0009D415 push ebp
+0009D416 push edi
+0009D417 call 0x6fb6aba2 ; D2Common.dll#10170
+0009D41C push 0
+0009D41E push esi
+0009D41F push edi
+0009D420 call 0x6fb6ad6a ; D2Common.dll#10142
+0009D425 pop edi
+0009D426 pop ebp
+0009D427 pop ebx
+0009D428 mov ecx, esi
+0009D42A pop esi
+0009D42B add esp, 4
+0009D42E jmp 0x6fb3d880
+Missile55/impact children RVA=0x99150 length=0xe0
+00099150 sub esp, 0x5c
+00099153 push ebx
+00099154 push esi
+00099155 mov esi, ecx
+00099157 test esi, esi
+00099159 je 0x6fb39220
+0009915F mov ecx, dword ptr [esi + 4]
+00099162 test ecx, ecx
+00099164 jl 0x6fb39220
+0009916A mov eax, dword ptr [0x6fb6d4ac]
+0009916F mov edx, dword ptr [eax]
+00099171 cmp ecx, dword ptr [edx + 0xb6c]
+00099177 jge 0x6fb39220
+0009917D lea eax, [ecx*8]
+00099184 mov edx, dword ptr [edx + 0xb64]
+0009918A sub eax, ecx
+0009918C lea eax, [eax + eax*2]
+0009918F lea ecx, [eax + eax*4]
+00099192 lea ebx, [edx + ecx*4]
+00099195 test ebx, ebx
+00099197 je 0x6fb39220
+0009919D mov ecx, esi
+0009919F call 0x6fb26ad0
+000991A4 mov edx, eax
+000991A6 test edx, edx
+000991A8 je 0x6fb39220
+000991AA push edi
+000991AB mov ecx, 0x17
+000991B0 xor eax, eax
+000991B2 lea edi, [esp + 0xc]
+000991B6 rep stosd dword ptr es:[edi], eax
+000991B8 push esi
+000991B9 mov dword ptr [esp + 0x14], edx
+000991BD mov dword ptr [esp + 0x18], esi
+000991C1 call 0x6fb6b4ba ; D2Common.dll#11127
+000991C6 push esi
+000991C7 mov dword ptr [esp + 0x3c], eax
+000991CB call 0x6fb6b4b4 ; D2Common.dll#11120
+000991D0 mov dword ptr [esp + 0x3c], eax
+000991D4 mov ax, word ptr [ebx + 0x2c]
+000991D8 test ax, ax
+000991DB pop edi
+000991DC jl 0x6fb391ee
+000991DE movsx eax, ax
+000991E1 lea ecx, [esp + 8]
+000991E5 mov dword ptr [esp + 0x18], eax
+000991E9 call 0x6fb3e070
+000991EE mov ax, word ptr [ebx + 0x2e]
+000991F2 test ax, ax
+000991F5 jl 0x6fb39207
+000991F7 movsx ecx, ax
+000991FA mov dword ptr [esp + 0x18], ecx
+000991FE lea ecx, [esp + 8]
+00099202 call 0x6fb3e070
+00099207 mov bx, word ptr [ebx + 0x30]
+0009920B test bx, bx
+0009920E jl 0x6fb39220
+00099210 movsx edx, bx
+00099213 lea ecx, [esp + 8]
+00099217 mov dword ptr [esp + 0x18], edx
+0009921B call 0x6fb3e070
+00099220 pop esi
+00099221 mov eax, 1
+00099226 pop ebx
+00099227 add esp, 0x5c
+0009922A ret
+0009922B nop
+0009922C nop
+0009922D nop
+0009922E nop
+0009922F nop
+Graphics offset initializer RVA=0xbfc80 length=0x30
+000BFC80 mov ecx, dword ptr [esp + 4]
+000BFC84 call 0x6fb5ba40
+000BFC89 test eax, eax
+000BFC8B je 0x6fb5fcab
+000BFC8D mov ecx, dword ptr [esp + 8]
+000BFC91 mov edx, dword ptr [esp + 0xc]
+000BFC95 shl ecx, 0xb
+000BFC98 mov dword ptr [eax + 4], ecx
+000BFC9B mov ecx, dword ptr [esp + 0x10]
+000BFC9F shl edx, 0xb
+000BFCA2 shl ecx, 0xb
+000BFCA5 mov dword ptr [eax + 8], edx
+000BFCA8 mov dword ptr [eax + 0xc], ecx
+000BFCAB ret 0x10
+000BFCAE nop
+000BFCAF nop
+Graphics linear initializer RVA=0xbfcb0 length=0x80
+000BFCB0 mov ecx, dword ptr [esp + 4]
+000BFCB4 call 0x6fb5ba40
+000BFCB9 test eax, eax
+000BFCBB je 0x6fb5fcfb
+000BFCBD mov ecx, dword ptr [esp + 0x14]
+000BFCC1 test ecx, ecx
+000BFCC3 je 0x6fb5fce6
+000BFCC5 mov ecx, dword ptr [esp + 8]
+000BFCC9 mov edx, dword ptr [esp + 0xc]
+000BFCCD shl ecx, 0xb
+000BFCD0 mov dword ptr [eax + 0x10], ecx
+000BFCD3 mov ecx, dword ptr [esp + 0x10]
+000BFCD7 shl edx, 0xb
+000BFCDA shl ecx, 0xb
+000BFCDD mov dword ptr [eax + 0x14], edx
+000BFCE0 mov dword ptr [eax + 0x18], ecx
+000BFCE3 ret 0x14
+000BFCE6 mov edx, dword ptr [esp + 8]
+000BFCEA mov ecx, dword ptr [esp + 0xc]
+000BFCEE mov dword ptr [eax + 0x10], edx
+000BFCF1 mov edx, dword ptr [esp + 0x10]
+000BFCF5 mov dword ptr [eax + 0x14], ecx
+000BFCF8 mov dword ptr [eax + 0x18], edx
+000BFCFB ret 0x14
+000BFCFE nop
+000BFCFF nop
+000BFD00 mov ecx, dword ptr [esp + 4]
+000BFD04 call 0x6fb5ba40
+000BFD09 test eax, eax
+000BFD0B je 0x6fb5fd4b
+000BFD0D mov ecx, dword ptr [esp + 0x14]
+000BFD11 test ecx, ecx
+000BFD13 je 0x6fb5fd36
+000BFD15 mov ecx, dword ptr [esp + 8]
+000BFD19 mov edx, dword ptr [esp + 0xc]
+000BFD1D shl ecx, 0xb
+000BFD20 mov dword ptr [eax + 0x1c], ecx
+000BFD23 mov ecx, dword ptr [esp + 0x10]
+000BFD27 shl edx, 0xb
+000BFD2A shl ecx, 0xb
+000BFD2D mov dword ptr [eax + 0x20], edx
+Graphics auxiliary getter RVA=0xbba40 length=0x10
+000BBA40 call 0x6fb28400
+000BBA45 test eax, eax
+000BBA47 je 0x6fb5ba4d
+000BBA49 mov eax, dword ptr [eax + 0x30]
+000BBA4C ret
+000BBA4D xor eax, eax
+000BBA4F ret
+Graphics update RVA=0xbfe00 length=0x250
+000BFE00 mov ecx, dword ptr [esp + 4]
+000BFE04 sub esp, 8
+000BFE07 push ebx
+000BFE08 push ebp
+000BFE09 push esi
+000BFE0A push edi
+000BFE0B call 0x6fb5ba40
+000BFE10 mov esi, eax
+000BFE12 test esi, esi
+000BFE14 je 0x6fb6006d
+000BFE1A mov eax, dword ptr [esi]
+000BFE1C test al, 1
+000BFE1E jne 0x6fb6006d
+000BFE24 mov ecx, dword ptr [esi + 0x10]
+000BFE27 mov ebp, dword ptr [esi + 4]
+000BFE2A mov edx, dword ptr [esi + 0x1c]
+000BFE2D lea ebx, [esi + 4]
+000BFE30 add ebp, ecx
+000BFE32 add edx, ecx
+000BFE34 mov ecx, dword ptr [esi + 0x14]
+000BFE37 mov dword ptr [ebx], ebp
+000BFE39 lea ebp, [esi + 8]
+000BFE3C mov dword ptr [esi + 0x10], edx
+000BFE3F mov edx, dword ptr [ebp]
+000BFE42 add edx, ecx
+000BFE44 mov dword ptr [ebp], edx
+000BFE47 mov edx, dword ptr [esi + 0x20]
+000BFE4A add edx, ecx
+000BFE4C mov ecx, dword ptr [esi + 0x18]
+000BFE4F mov dword ptr [esi + 0x14], edx
+000BFE52 mov edx, dword ptr [esi + 0xc]
+000BFE55 add edx, ecx
+000BFE57 mov dword ptr [esi + 0xc], edx
+000BFE5A mov edx, dword ptr [esi + 0x24]
+000BFE5D test al, 2
+000BFE5F lea edi, [edx + ecx]
+000BFE62 mov dword ptr [esi + 0x18], edi
+000BFE65 je 0x6fb5fe85
+000BFE67 mov ecx, dword ptr [esi + 0x48]
+000BFE6A test ecx, ecx
+000BFE6C je 0x6fb5fe74
+000BFE6E dec ecx
+000BFE6F mov dword ptr [esi + 0x48], ecx
+000BFE72 jmp 0x6fb5fe85
+000BFE74 or al, 1
+000BFE76 mov dword ptr [ebx], 0
+000BFE7C mov dword ptr [esi], eax
+000BFE7E mov dword ptr [ebp], 0
+000BFE85 mov ecx, dword ptr [esi]
+000BFE87 test cl, 4
+000BFE8A je 0x6fb5fece
+000BFE8C mov eax, dword ptr [esi + 0xc]
+000BFE8F mov ebp, dword ptr [esi + 0x30]
+000BFE92 sar eax, 0xb
+000BFE95 cmp eax, ebp
+000BFE97 jg 0x6fb60041
+000BFE9D mov edx, dword ptr [esi + 0x44]
+000BFEA0 mov eax, 0xae147ae1
+000BFEA5 imul edx, edi
+000BFEA8 imul edx
+000BFEAA sar edx, 5
+000BFEAD mov eax, edx
+000BFEAF mov dword ptr [esi + 0xc], ebp
+000BFEB2 shr eax, 0x1f
+000BFEB5 add edx, eax
+000BFEB7 mov eax, dword ptr [esi + 0x40]
+000BFEBA test eax, eax
+000BFEBC mov dword ptr [esi + 0x18], edx
+000BFEBF je 0x6fb6003c
+000BFEC5 dec eax
+000BFEC6 mov dword ptr [esi + 0x40], eax
+000BFEC9 jmp 0x6fb60041
+000BFECE test cl, 0x10
+000BFED1 je 0x6fb5ffcc
+000BFED7 mov ecx, dword ptr [esp + 0x1c]
+000BFEDB call 0x6fb26ad0
+000BFEE0 mov edi, eax
+000BFEE2 xor ecx, ecx
+000BFEE4 cmp edi, ecx
+000BFEE6 je 0x6fb60041
+000BFEEC mov eax, dword ptr [esp + 0x1c]
+000BFEF0 mov dword ptr [esp + 0x10], ecx
+000BFEF4 cmp eax, ecx
+000BFEF6 mov dword ptr [esp + 0x14], ecx
+000BFEFA mov edx, 8
+000BFEFF jne 0x6fb5ff08
+000BFF01 mov eax, 6
+000BFF06 jmp 0x6fb5ff0a
+000BFF08 mov eax, dword ptr [eax]
+000BFF0A dec eax
+000BFF0B je 0x6fb5ff42
+000BFF0D sub eax, 2
+000BFF10 jne 0x6fb5ff47
+000BFF12 cmp dword ptr [edi], 1
+000BFF15 je 0x6fb5ff2e
+000BFF17 push 0x1a9
+000BFF1C push 0x6fb97278
+000BFF21 push 0x6fb972b8
+000BFF26 call 0x6fb6a734 ; Fog.dll#10025
+000BFF2B add esp, 0xc
+000BFF2E mov eax, dword ptr [edi + 0x10]
+000BFF31 test eax, eax
+000BFF33 je 0x6fb6006d
+000BFF39 cmp eax, 0xc
+000BFF3C je 0x6fb6006d
+000BFF42 mov edx, 0xe
+000BFF47 lea ecx, [esp + 0x14]
+000BFF4B lea eax, [esp + 0x10]
+000BFF4F push ecx
+000BFF50 push eax
+000BFF51 mov ecx, edi
+000BFF53 call 0x6fb5c3c0
+000BFF58 mov ecx, dword ptr [esp + 0x10]
+000BFF5C mov eax, dword ptr [esp + 0x14]
+000BFF60 mov dword ptr [esi + 0x34], ecx
+000BFF63 mov ecx, dword ptr [esp + 0x1c]
+000BFF67 test ecx, ecx
+000BFF69 mov dword ptr [esi + 0x3c], eax
+000BFF6C je 0x6fb5ff79
+000BFF6E cmp dword ptr [ecx], 3
+000BFF71 jne 0x6fb5ff79
+000BFF73 add eax, 0xa
+000BFF76 mov dword ptr [esi + 0x3c], eax
+000BFF79 mov ecx, edi
+000BFF7B call 0x6fb5ba40
+000BFF80 test eax, eax
+000BFF82 je 0x6fb5ff89
+000BFF84 mov eax, dword ptr [eax + 0x34]
+000BFF87 jmp 0x6fb5ff8b
+000BFF89 xor eax, eax
+000BFF8B mov edx, dword ptr [esi + 0x34]
+000BFF8E mov ecx, edi
+000BFF90 add edx, eax
+000BFF92 mov dword ptr [esi + 0x34], edx
+000BFF95 call 0x6fb5ba40
+000BFF9A test eax, eax
+000BFF9C je 0x6fb5ffa3
+000BFF9E mov eax, dword ptr [eax + 0x3c]
+000BFFA1 jmp 0x6fb5ffa5
+000BFFA3 xor eax, eax
+000BFFA5 mov ecx, dword ptr [esi + 0x3c]
+000BFFA8 mov edx, dword ptr [esi + 0x34]
+000BFFAB add ecx, eax
+000BFFAD mov eax, dword ptr [esi + 0x38]
+000BFFB0 push ebp
+000BFFB1 push ebx
+000BFFB2 mov dword ptr [esi + 0x3c], ecx
+000BFFB5 mov dword ptr [ebx], edx
+000BFFB7 mov dword ptr [ebp], eax
+000BFFBA call 0x6fb6aad6 ; D2Common.dll#10108
+000BFFBF mov ecx, dword ptr [esi + 0x3c]
+000BFFC2 shl ecx, 0xb
+000BFFC5 neg ecx
+000BFFC7 mov dword ptr [esi + 0xc], ecx
+000BFFCA jmp 0x6fb60041
+000BFFCC mov edx, ecx
+000BFFCE and edx, 0x20
+000BFFD1 mov dword ptr [esp + 0x1c], edx
+000BFFD5 jne 0x6fb60001
+000BFFD7 mov eax, dword ptr [ebx]
+000BFFD9 mov edi, dword ptr [esi + 0x28]
+000BFFDC sar eax, 0xb
+000BFFDF cmp eax, edi
+000BFFE1 jg 0x6fb60001
+000BFFE3 mov ebp, dword ptr [ebp]
+000BFFE6 mov eax, dword ptr [esi + 0x2c]
+000BFFE9 sar ebp, 0xb
+000BFFEC cmp ebp, eax
+000BFFEE jg 0x6fb60001
+000BFFF0 mov ebp, dword ptr [esi + 0xc]
+000BFFF3 mov edx, dword ptr [esi + 0x30]
+000BFFF6 sar ebp, 0xb
+000BFFF9 cmp ebp, edx
+000BFFFB jle 0x6fb6002b
+000BFFFD mov edx, dword ptr [esp + 0x1c]
+000C0001 test edx, edx
+000C0003 je 0x6fb60041
+000C0005 mov edx, dword ptr [ebx]
+000C0007 mov edi, dword ptr [esi + 0x28]
+000C000A sar edx, 0xb
+000C000D cmp edx, edi
+000C000F jl 0x6fb60041
+000C0011 mov edx, dword ptr [esi + 8]
+000C0014 mov eax, dword ptr [esi + 0x2c]
+000C0017 sar edx, 0xb
+000C001A cmp edx, eax
+000C001C jl 0x6fb60041
+000C001E mov ebp, dword ptr [esi + 0xc]
+000C0021 mov edx, dword ptr [esi + 0x30]
+000C0024 sar ebp, 0xb
+000C0027 cmp ebp, edx
+000C0029 jl 0x6fb60041
+000C002B shl eax, 0xb
+000C002E shl edi, 0xb
+000C0031 shl edx, 0xb
+000C0034 mov dword ptr [ebx], edi
+000C0036 mov dword ptr [esi + 8], eax
+000C0039 mov dword ptr [esi + 0xc], edx
+000C003C or ecx, 1
+000C003F mov dword ptr [esi], ecx
+000C0041 test byte ptr [esi], 0x10
+000C0044 jne 0x6fb6006d
+000C0046 mov ecx, dword ptr [ebx]
+000C0048 mov edx, dword ptr [esi + 8]
+000C004B lea eax, [esi + 0x34]

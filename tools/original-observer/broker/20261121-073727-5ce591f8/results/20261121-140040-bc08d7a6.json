@@ -1,0 +1,15 @@
+{
+  "id": "20261121-140040-bc08d7a6",
+  "status": "completed",
+  "started": 1795240840.5656445,
+  "broker_pid": 2616,
+  "command": {
+    "op": "run_job",
+    "job": "druid-volcano-hits-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-073727-5ce591f8\\runs\\20261121-140040-bc08d7a6\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795240896.5790482
+}

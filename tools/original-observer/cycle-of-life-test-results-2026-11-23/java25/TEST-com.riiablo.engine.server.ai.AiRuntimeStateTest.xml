@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.ai.AiRuntimeStateTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:12:11" hostname="DESKTOP-7GGAVHU" time="0.469">
+  <properties/>
+  <testcase name="turretAndInfernoLocalFloatClocksRejectNonfiniteImages()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.012"/>
+  <testcase name="stateMachineOwnerCannotSilentlyDriftFromItsHost()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.003"/>
+  <testcase name="wrapperAbsenceNullAndSharedIdleAreDistinctAndNeverMutateTheSentinel()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.002"/>
+  <testcase name="unsupportedTypesAndForeignOwnerOrConfigurationCannotBeRestored()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.002"/>
+  <testcase name="malformedImagesAndNonfiniteValuesFailBeforeChangingTheHost()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.003"/>
+  <testcase name="nestedWrapperImagesRejectTruncationBadKindsAndInvalidStateNames()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.002"/>
+  <testcase name="independentAiTimersDistinguishSleepSentinelsFromFiniteNestClocks()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.005"/>
+  <testcase name="allSupportedSchemasPreserveEveryOwnedScalarAndDoNotTouchInjectedObjects()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.085"/>
+  <testcase name="everyExtendedSchemaRejectsEachTruncationAndNonfiniteLocalClocks()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.332"/>
+  <testcase name="explicitSchemaGuardsRequireAFieldDecisionForEverySupportedClass()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.005"/>
+  <testcase name="nullRngAndPositiveInfinitySentinelsAreNotTurnedIntoFreshStreams()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.001"/>
+  <testcase name="tentacleUninitializedLifetimeIsExplicitAndDoesNotRearmAnExistingClock()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.002"/>
+  <testcase name="allHostsArePreflightedAndLegacyV3DoesNotClaimAnAiImage()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.009"/>
+  <testcase name="fsmRestorePreservesRevertHistoryWithoutAnyEnterExitCallbacks()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.0"/>
+  <testcase name="bossAnchorIsHistoryRatherThanScratchAndKeepsTheTargetVectorIdentity()" classname="com.riiablo.engine.server.ai.AiRuntimeStateTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

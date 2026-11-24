@@ -193,6 +193,40 @@ class PresentationAssetLifecycleTest {
     manager.dispose(); assertFalse(assets.contains(SHRINE));
   }
 
+  @ParameterizedTest @ValueSource(booleans = {false, true})
+  void selectedPairReconciliationReleasesOldSizeAndRetainsOtherOwners(boolean loaded) {
+    Overlay.Entry back = new Overlay.Entry();
+    back.overlay = "back"; back.Filename = "Back"; back.PreDraw = true;
+    Overlay.Entry next = new Overlay.Entry();
+    next.overlay = "next"; next.Filename = "Next";
+    when(Riiablo.files.Overlay.get("back")).thenReturn(back);
+    when(Riiablo.files.Overlay.get("next")).thenReturn(next);
+    OverlayManager manager = new OverlayManager(); World world = world(manager);
+    int entity = world.create();
+    manager.reconcilePersistent(entity, 1, "shrine_mana_regen", "back");
+    manager.setPersistent(entity, 2, "shrine_mana_regen");
+    if (loaded) { assets.finishLoading(); world.process(); }
+    com.riiablo.presentation.component.Overlay root =
+        world.getMapper(com.riiablo.presentation.component.Overlay.class).get(entity);
+    com.riiablo.presentation.component.Overlay retained = root.layers.first();
+    Animation clock = retained.animation;
+    manager.reconcilePersistent(entity, 1, "next", "back");
+    assets.finishLoading(); world.process();
+    assertSame(retained, root.layers.first());
+    assertSame(clock, retained.animation);
+    assertEquals(1, assets.getReferenceCount(SHRINE), "other state's shared reference survives");
+    assertEquals(1, assets.getReferenceCount("data/global/overlays/Back.dcc"));
+    assertEquals(1, assets.getReferenceCount("data/global/overlays/Next.dcc"));
+    manager.reconcilePersistent(entity, 1);
+    world.process();
+    assertFalse(assets.contains("data/global/overlays/Back.dcc"));
+    assertFalse(assets.contains("data/global/overlays/Next.dcc"));
+    assertEquals(1, assets.getReferenceCount(SHRINE));
+    world.dispose();
+    assertEquals(0, assets.getLoadedAssets());
+    assertEquals(0, assets.getQueuedAssets());
+  }
+
   @Test void externalReplacementReleasesOldLedgerWithoutResettingNewComponent() {
     OverlayManager manager = new OverlayManager(); World world = world(manager);
     int entity = world.create(); manager.setShrineIcon(entity, "shrine_mana_regen");

@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "run_id": "20261121-095015-f801398c",
+  "class_code": "dru",
+  "launch_count": 1,
+  "same_process_verified": true,
+  "same_game_address": 90046588,
+  "background_verified": true,
+  "owned_game_closed": true,
+  "fixture": {
+    "name": "CXDruSurface",
+    "path": "G:\\BaiduNetdiskDownload\\Diablo II\\Save\\CXDruSurface.d2s",
+    "sha256": "b95369f587363c8671bb9f47fdc5526d0c0fde3574eba7ea162728297a7e9777",
+    "source_sha256": "21349fff66d97e0d8270ed15c2d1148e5c4c38e46e28621757987f18f5415374",
+    "class_id": 5,
+    "hard_points": {
+      "234": 1,
+      "244": 1
+    },
+    "other_hard_points": 0,
+    "equipment": "empty",
+    "map_seed": 127897359,
+    "hotkeys": {
+      "F1": 234,
+      "F2": 244
+    },
+    "limitations": [
+      "Both skills learned together: native synergy bonuses are active",
+      "Batch proves capture isolation, not parity with isolated zero-synergy fixtures"
+    ]
+  },
+  "captures": [
+    {
+      "skill_id": 234,
+      "file": "druid-fissure-batch-1.10f.json",
+      "sha256": "838e3284cd9c70d9f0af36322dcd5169f74cc6e13ecbe4888c3c4e71cd2f5678",
+      "runtime_status": "captured",
+      "comparison_status": "pending_matched_loadout_replay",
+      "server_samples": 1256,
+      "client_samples": 2404,
+      "paired_draws": 2376,
+      "dcc_selections": 2370,
+      "residual_at_boundary": 0
+    },
+    {
+      "skill_id": 244,
+      "file": "druid-volcano-batch-1.10f.json",
+      "sha256": "b41bb0ca595abec8795be58f5f55fc8c5e332172fa898ac06b99a0a95babfbf6",
+      "runtime_status": "captured",
+      "comparison_status": "pending_matched_loadout_replay",
+      "server_samples": 2007,
+      "client_samples": 3033,
+      "paired_draws": 2880,
+      "dcc_selections": 2875,
+      "residual_at_boundary": 0
+    }
+  ],
+  "source": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-073727-5ce591f8\\runs\\20261121-095015-f801398c\\orchestrator",
+  "provenance_sha256": {
+    "d2game_controller.cpp": "34538b4d4d85d5f2e80708eb8771a91eb3505d947ca38fb15f86a74b3600cfe2",
+    "d2game_druid_fissure.cpp": "a153d6820968acf40865ce94f34a405be4e852467bc8b6bb2e405484dc9ad282",
+    "d2game_druid_fissure.exe": "7cee84ecbe3e66f51d43966ab262f069e75c503b09ba505f57b5a00acf43cd43",
+    "d2game_druid_volcano.cpp": "a153d6820968acf40865ce94f34a405be4e852467bc8b6bb2e405484dc9ad282",
+    "d2game_druid_volcano.exe": "ac77c8123867559e26006a12b63e09d59cb5478d948ad8b54b495a826746771f",
+    "d2game_molten_boulder.cpp": "62d634081570301143cb92abee4c49210b9f9d495bb916f993d838a0e4a41fe9",
+    "d2game_molten_boulder.exe": "9fbc85ab05e440feb7b111113bd5cace005dffea40c1eedf813e845712e05969",
+    "d2game_poison_javelin.cpp": "7f0955bf2b3c91f501483d24520e5564ae5f6c62db58087dd911f2d645d2ffe2",
+    "molten_boulder_background.py": "6ef2efd321a7073153e7206ae12072340669d327c8236928bec168cbfdfc263e",
+    "prepare_druid_batch_fixture.py": "12bc4ff73154a1d32bcebaba1447b2f48f53d6c58c03571336ff63651536adca",
+    "prepare_molten_boulder_fixture.py": "bbdc83ced299ccc5166fa83ac3495b143e58cbdf2ff690cc340b33896e69952c",
+    "test-character.py": "ce966ead4086ff4cd16698ed5b5e148058ff5b19e39d466aabde99cdc4f54305"
+  },
+  "scope": "Two-skill infrastructure validation; not all 30 Druid skills or production parity"
+}

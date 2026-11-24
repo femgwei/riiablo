@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "run_id": "20261121-165203-4158d94f",
+  "source": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261121-165203-4158d94f\\orchestrator",
+  "class_code": "dru",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "launch_count": 1,
+  "same_process_verified": true,
+  "observation_mode": "unsuspended_client_memory_polling",
+  "fixture": {
+    "name": "CXDruWind",
+    "path": "G:\\BaiduNetdiskDownload\\Diablo II\\Save\\CXDruWind.d2s",
+    "sha256": "b5ea6103b7c4b94fdfeb568d72ffd069d1a8e3d1b90edbfcfea510f8b4f262ba",
+    "source_sha256": "21349fff66d97e0d8270ed15c2d1148e5c4c38e46e28621757987f18f5415374",
+    "class_id": 5,
+    "hard_points": {
+      "240": 1,
+      "245": 1
+    },
+    "other_hard_points": 0,
+    "equipment": "empty",
+    "map_seed": 127897359,
+    "hotkeys": {
+      "F1": 240,
+      "F2": 245
+    },
+    "limitations": [
+      "Both skills learned together: native synergy bonuses are active",
+      "Batch proves capture isolation, not parity with isolated zero-synergy fixtures"
+    ]
+  },
+  "captures": [
+    {
+      "skill_id": 240,
+      "file": "druid-twister-replay-input-1.10f.json",
+      "sha256": "2975fd6a3eafc0e7d3eb4ac35de567a134456e5463e609b5daf6b4f998d8b646",
+      "runtime_status": "captured_client_polling",
+      "comparison_status": "pending_matched_loadout_replay",
+      "observation_mode": "unsuspended_client_memory_polling",
+      "unique_client_units": 3,
+      "raw_samples": 378,
+      "unique_states": 147,
+      "dcc_selections": 0
+    },
+    {
+      "skill_id": 245,
+      "file": "druid-tornado-replay-input-1.10f.json",
+      "sha256": "9c0e263822bf745f931b55ea2afaa65842dc3b1453b2101fc1a00af09686e571",
+      "runtime_status": "captured_client_polling",
+      "comparison_status": "pending_matched_loadout_replay",
+      "observation_mode": "unsuspended_client_memory_polling",
+      "unique_client_units": 1,
+      "raw_samples": 189,
+      "unique_states": 74,
+      "dcc_selections": 0
+    }
+  ],
+  "scope": "Client memory polling capture; not original server or DCC/pixel parity",
+  "provenance_sha256": {
+    "d2game_controller.cpp": "34538b4d4d85d5f2e80708eb8771a91eb3505d947ca38fb15f86a74b3600cfe2",
+    "d2game_druid_tornado.cpp": "6da7ba2c3c998b1a5787e9e6b796626bd3f56112b31218387dd6f9048f6cd7a0",
+    "d2game_druid_tornado.exe": "a3405ac57d5514df788bc0ab07059721053aee1e65ae9055546785b24bc2be3c",
+    "d2game_druid_twister.cpp": "6da7ba2c3c998b1a5787e9e6b796626bd3f56112b31218387dd6f9048f6cd7a0",
+    "d2game_druid_twister.exe": "2097e05e135150d12b9386f4f5611c4a3bead6a1870aa2c95ea251ac6a09bd57",
+    "d2game_molten_boulder.cpp": "62d634081570301143cb92abee4c49210b9f9d495bb916f993d838a0e4a41fe9",
+    "d2game_molten_boulder.exe": "9fbc85ab05e440feb7b111113bd5cace005dffea40c1eedf813e845712e05969",
+    "d2game_poison_javelin.cpp": "8f7da1a119381f1dfb99286552a7d8cad1aa7443e1d3a96f94fcdca65e9e7c05",
+    "druid_wind_passive.py": "92f9a9ec33d2475575b94f3044a45dd5bdf7aaf983e6181cdf5b927e1a46f59e",
+    "molten_boulder_background.py": "5a994d8214d87d7f427904c64cac01959dff0155f8212cb687700999f41f6c5a",
+    "observer.py": "7df3b7dbce28ea8c373548188d9e2da3c2d816e5d502316f97eaff832571c005",
+    "prepare_druid_batch_fixture.py": "d942dc69b279ba36fda85facf3a6b82a5f622b3d7cf038254e87eb6b0b3f25bf",
+    "prepare_molten_boulder_fixture.py": "bbdc83ced299ccc5166fa83ac3495b143e58cbdf2ff690cc340b33896e69952c",
+    "scene_reader.py": "e2158994363c1ea95fed002d63af24de8d1017c1525f503220ea2d87f76ccf89",
+    "test-character.py": "ce966ead4086ff4cd16698ed5b5e148058ff5b19e39d466aabde99cdc4f54305"
+  }
+}

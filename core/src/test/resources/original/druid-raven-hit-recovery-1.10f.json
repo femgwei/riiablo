@@ -1,0 +1,344 @@
+{
+  "schema": 1,
+  "scope": "Raven physical monster hit recovery, native predicate/RNG and mode publication",
+  "function_rva": "0x91870",
+  "cases": [
+    {
+      "run": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-091909-3788bd50\\orchestrator",
+      "natural_life": true,
+      "background_verified": true,
+      "owned_game_closed": true,
+      "native_cleanup": {
+        "status": "passed",
+        "detached": true,
+        "cleanup_confirmed": true,
+        "fixtures_removed": true,
+        "memory_writes": true,
+        "remote_execution": true,
+        "debugger_attached": true,
+        "samples": 419,
+        "first_frame": 436
+      },
+      "target_intervention": {
+        "target_id": 20,
+        "target_class": 0,
+        "target_hp_fixed": 2304,
+        "target_original_hp_fixed": 2304,
+        "target_original_maxhp_fixed": 2304,
+        "natural_life": true,
+        "target_ai_think_deleted": true,
+        "target_pointer": 90007040,
+        "target_hp_regen_before": 1,
+        "target_hp_regen_after": 0,
+        "room": 172118272,
+        "player_id": 1,
+        "first_frame": 436,
+        "max_frames": 2600,
+        "combat_entry_trace": true
+      },
+      "recovery_cases": [
+        {
+          "frame": 510,
+          "attacker_id": 21,
+          "victim_id": 20,
+          "hit_class": 3,
+          "total_fixed": 546,
+          "poison_fixed": 0,
+          "maxhp_fixed": 2304,
+          "skip_hard_recovery": false,
+          "rng_masks": [
+            3
+          ],
+          "seed_before": {
+            "low": 2401638653,
+            "high": 139061005
+          },
+          "seed_after": {
+            "low": 3025629630,
+            "high": 1001705155
+          },
+          "target_mode_after": 3,
+          "target_ai_state_after": 0
+        },
+        {
+          "frame": 597,
+          "attacker_id": 21,
+          "victim_id": 20,
+          "hit_class": 3,
+          "total_fixed": 874,
+          "poison_fixed": 0,
+          "maxhp_fixed": 2304,
+          "skip_hard_recovery": false,
+          "rng_masks": [],
+          "seed_before": {
+            "low": 2659498386,
+            "high": 535147509
+          },
+          "seed_after": {
+            "low": 2659498386,
+            "high": 535147509
+          },
+          "target_mode_after": 3,
+          "target_ai_state_after": 4
+        }
+      ],
+      "server_mode_transitions": [
+        {
+          "frame": 436,
+          "mode": 1,
+          "ai_state": 0
+        },
+        {
+          "frame": 510,
+          "mode": 3,
+          "ai_state": 0
+        },
+        {
+          "frame": 518,
+          "mode": 1,
+          "ai_state": 3
+        },
+        {
+          "frame": 533,
+          "mode": 4,
+          "ai_state": 3
+        },
+        {
+          "frame": 552,
+          "mode": 1,
+          "ai_state": 4
+        },
+        {
+          "frame": 567,
+          "mode": 4,
+          "ai_state": 4
+        },
+        {
+          "frame": 586,
+          "mode": 1,
+          "ai_state": 4
+        },
+        {
+          "frame": 597,
+          "mode": 3,
+          "ai_state": 4
+        },
+        {
+          "frame": 601,
+          "mode": 4,
+          "ai_state": 3
+        },
+        {
+          "frame": 620,
+          "mode": 1,
+          "ai_state": 4
+        },
+        {
+          "frame": 635,
+          "mode": 4,
+          "ai_state": 4
+        },
+        {
+          "frame": 654,
+          "mode": 1,
+          "ai_state": 4
+        },
+        {
+          "frame": 669,
+          "mode": 4,
+          "ai_state": 4
+        },
+        {
+          "frame": 684,
+          "mode": 0,
+          "ai_state": 4
+        },
+        {
+          "frame": 708,
+          "mode": 12,
+          "ai_state": 4
+        }
+      ],
+      "client_modes": [
+        0,
+        1,
+        3,
+        4,
+        12
+      ],
+      "client_samples": 505,
+      "lethal_damage_entries": [
+        {
+          "frame": 684,
+          "result_flags": 7,
+          "total_fixed": 989,
+          "physical_fixed": 884
+        }
+      ],
+      "sha256": {
+        "orchestrator.json": "85a10fd840f5821297868a7407223bdbac2bc0e4a98aaa1bf3b7eef4c94b902c",
+        "worker/summary.json": "74cc2c7cb1a6a12512adeffffec91af18ec08d994e15e81cb6b2a76217b0e960",
+        "worker/native-target/identity.json": "4be6e1afe87eb52577e969d1eb155818d2288184ed132e0e0937e55e6a5a4328",
+        "worker/native-target/summary.json": "9d7057953cd864ff65827e2e2a1df260a3f4cb61071da87d1ff294182b7e6c59",
+        "worker/native-target/recovery.jsonl": "53e2876b4e939064746b0f0ef9305a686e48469e76e42be7d75ff8b37983de7f",
+        "worker/native-target/combat.jsonl": "884b4f20918abb1c7175cfa96daeb7131adacd9484fc577bc73c6c2780bfb6f8",
+        "worker/native-target/target-feedback.jsonl": "e9c86772ea98b580038c0b836c93261f1eddb5c822f3b8342572230fd1a52246",
+        "worker/capture/target-samples.json": "b8cf0dbb24e055a76c3ce45571146c29843ec5b12777aeb0777fdbad0ae5b396",
+        "worker/capture/summary.json": "49735e5eb16e691ba975746a4258ee73c6e31f61facdeade41bf0076843c005e",
+        "worker/provenance/d2game_raven_target.exe": "55840423a6cea58d1938701a63facf077232b0b4a025def0c29eb6e285a57168",
+        "worker/provenance/d2game_raven_target.cpp": "eb20b9d5bb6545317e1946bbb9b9ed1cc5f5179d4289755da965a547a35d611f"
+      }
+    },
+    {
+      "run": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-092139-931b3718\\orchestrator",
+      "natural_life": false,
+      "background_verified": true,
+      "owned_game_closed": true,
+      "native_cleanup": {
+        "status": "passed",
+        "detached": true,
+        "cleanup_confirmed": true,
+        "fixtures_removed": true,
+        "memory_writes": true,
+        "remote_execution": true,
+        "debugger_attached": true,
+        "samples": 424,
+        "first_frame": 466
+      },
+      "target_intervention": {
+        "target_id": 19,
+        "target_class": 0,
+        "target_hp_fixed": 2560000,
+        "target_original_hp_fixed": 2816,
+        "target_original_maxhp_fixed": 2816,
+        "natural_life": false,
+        "target_ai_think_deleted": true,
+        "target_pointer": 60986880,
+        "target_hp_regen_before": 1250,
+        "target_hp_regen_after": 0,
+        "room": 165302656,
+        "player_id": 1,
+        "first_frame": 466,
+        "max_frames": 2600,
+        "combat_entry_trace": true
+      },
+      "recovery_cases": [
+        {
+          "frame": 589,
+          "attacker_id": 20,
+          "victim_id": 19,
+          "hit_class": 3,
+          "total_fixed": 590,
+          "poison_fixed": 0,
+          "maxhp_fixed": 2560000,
+          "skip_hard_recovery": true,
+          "rng_masks": [],
+          "seed_before": {
+            "low": 2027991090,
+            "high": 1753212800
+          },
+          "seed_after": {
+            "low": 2027991090,
+            "high": 1753212800
+          },
+          "target_mode_after": 1,
+          "target_ai_state_after": 19
+        },
+        {
+          "frame": 676,
+          "attacker_id": 20,
+          "victim_id": 19,
+          "hit_class": 3,
+          "total_fixed": 803,
+          "poison_fixed": 0,
+          "maxhp_fixed": 2560000,
+          "skip_hard_recovery": true,
+          "rng_masks": [],
+          "seed_before": {
+            "low": 3408895482,
+            "high": 845859608
+          },
+          "seed_after": {
+            "low": 3408895482,
+            "high": 845859608
+          },
+          "target_mode_after": 1,
+          "target_ai_state_after": 19
+        },
+        {
+          "frame": 746,
+          "attacker_id": 20,
+          "victim_id": 19,
+          "hit_class": 19,
+          "total_fixed": 1788,
+          "poison_fixed": 0,
+          "maxhp_fixed": 2560000,
+          "skip_hard_recovery": true,
+          "rng_masks": [],
+          "seed_before": {
+            "low": 172489850,
+            "high": 1421824293
+          },
+          "seed_after": {
+            "low": 172489850,
+            "high": 1421824293
+          },
+          "target_mode_after": 1,
+          "target_ai_state_after": 19
+        },
+        {
+          "frame": 816,
+          "attacker_id": 20,
+          "victim_id": 19,
+          "hit_class": 3,
+          "total_fixed": 889,
+          "poison_fixed": 0,
+          "maxhp_fixed": 2560000,
+          "skip_hard_recovery": true,
+          "rng_masks": [],
+          "seed_before": {
+            "low": 2256878343,
+            "high": 71944200
+          },
+          "seed_after": {
+            "low": 2256878343,
+            "high": 71944200
+          },
+          "target_mode_after": 1,
+          "target_ai_state_after": 19
+        }
+      ],
+      "server_mode_transitions": [
+        {
+          "frame": 466,
+          "mode": 1,
+          "ai_state": 0
+        }
+      ],
+      "client_modes": [
+        1
+      ],
+      "client_samples": 504,
+      "lethal_damage_entries": [],
+      "sha256": {
+        "orchestrator.json": "14b3f0d430fa04aea1a233dd64c16b2180c7c2f275b70d0b5555b4632f67a2de",
+        "worker/summary.json": "89816d2be0b683f4782882b425c8adaf618438936c4f4e8fdb859daf73023d5c",
+        "worker/native-target/identity.json": "02a211756bb9e57b2d2b1f0b424dc1fdf9d461c28b195e937dca136dbcf29548",
+        "worker/native-target/summary.json": "74531825ead830fec25b66abef5988c67fc9d01d0e806fc55e27befdb8f813b6",
+        "worker/native-target/recovery.jsonl": "c4aba4cba2e4fc01f6da11447d0fb8586097ab349caaa967f1c3d3e166a261a0",
+        "worker/native-target/combat.jsonl": "8aa4fc3f3a815afdb2f3bd20cd0e9c43689aabf1d336e0d6696e6a56ef5d14e5",
+        "worker/native-target/target-feedback.jsonl": "5551a99c1898467a19b82eeadb1e1e6f5e94a480899b1b4879f617974cc937f7",
+        "worker/capture/target-samples.json": "4ea0f4a2d11c935c15da4ae36ad4be8a8a52f571e70ea95633da876110a461f3",
+        "worker/capture/summary.json": "112297854bac4aec8f616b82fbac760212a0d8587fb4f240401426cfae4eab29",
+        "worker/provenance/d2game_raven_target.exe": "55840423a6cea58d1938701a63facf077232b0b4a025def0c29eb6e285a57168",
+        "worker/provenance/d2game_raven_target.cpp": "eb20b9d5bb6545317e1946bbb9b9ed1cc5f5179d4289755da965a547a35d611f"
+      }
+    }
+  ],
+  "limitations": [
+    "Natural-life target retains its spawned HP/maxHP; the comparison target is set to 10000 HP.",
+    "Both targets have regen disabled and their initial AI think event deleted. Native Dim Vision can schedule new AI actions.",
+    "Selected native function calls and client polling are not a complete stack or aligned frame rendering.",
+    "These captures do not cover every hit class, status, player reaction or missile path."
+  ]
+}

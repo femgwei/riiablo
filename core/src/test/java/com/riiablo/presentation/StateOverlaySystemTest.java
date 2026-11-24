@@ -2,6 +2,7 @@ package com.riiablo.presentation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.World;
@@ -323,6 +324,8 @@ class StateOverlaySystemTest extends RiiabloTest {
       states.stateList.addState(StateId.DIMVISION, 100, 1, entity);
       states.stateList.addState(StateId.CONVERSION, 100, 1, entity);
       world.process();
+      assertNull(overlays.overlayFor(StateId.DIMVISION));
+      world.process(); // The recording manager has no active one-shot assets.
       assertEquals("cursedimvision", overlays.overlayFor(StateId.DIMVISION));
       assertEquals("conversionaura", overlays.overlayFor(StateId.CONVERSION));
     } finally {
@@ -371,6 +374,7 @@ class StateOverlaySystemTest extends RiiabloTest {
       for (int id : curses) {
         states.stateList.addState(id, 100, 1, entity);
         world.process();
+        if (id == StateId.DIMVISION) world.process();
         String nativeOverlay = Riiablo.files.States.get(id).overlays[0];
         assertFalse(nativeOverlay.isEmpty(), "native curse must declare an overlay: " + id);
         assertEquals(nativeOverlay, overlays.overlayFor(id));

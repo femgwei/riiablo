@@ -113,6 +113,8 @@ public final class AuthoritativeUnitLifecycleState {
     public final int animationRateModifier, skillModifier, maxLifeModifier;
     public final int maxManaModifier, maxStaminaModifier, sourceEntityId, skillId;
     public final int periodicDelayFrames, periodicCountdownFrames;
+    public final int presentationRevision;
+    public final int cycloneArmorCurrentFixed, cycloneArmorMaximumFixed;
     private State(StateP data, int i) {
       id = data.stateId(i);
       duration = i < data.durationLength() ? data.duration(i) : 0;
@@ -128,6 +130,11 @@ public final class AuthoritativeUnitLifecycleState {
       skillId = i < data.skillIdLength() ? data.skillId(i) : -1;
       periodicDelayFrames = i < data.periodicDelayFramesLength() ? data.periodicDelayFrames(i) : 0;
       periodicCountdownFrames = i < data.periodicCountdownFramesLength() ? data.periodicCountdownFrames(i) : -1;
+      presentationRevision = i < data.presentationRevisionLength() ? data.presentationRevision(i) : 0;
+      cycloneArmorCurrentFixed = i < data.cycloneArmorCurrentFixedLength()
+          ? data.cycloneArmorCurrentFixed(i) : 0;
+      cycloneArmorMaximumFixed = i < data.cycloneArmorMaximumFixedLength()
+          ? data.cycloneArmorMaximumFixed(i) : 0;
     }
   }
 }

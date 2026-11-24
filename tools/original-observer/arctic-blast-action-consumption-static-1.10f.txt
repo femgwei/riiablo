@@ -1,0 +1,225 @@
+Local static PE/Capstone inspection, not a runtime stack or REA Evidence.
+D2Client.dll sha256=94466b84c0593ab682f1d3d8dc65ef4f8170f33e430865d802bc752458b2b282
+Game-type eligibility bytes=000001010101000100
+Type0 selects local-owner eligibility; other type meanings were not inferred.
+CB4D8 imports D2Common ordinal11125; CB5BC imports ordinal10373.
+Player action marker consumption precedes sequence advance RVA=0xa8c9d
+000A8C9D mov ecx, dword ptr [esp + 0x10]
+000A8CA1 xor ebp, ebp
+000A8CA3 xor eax, eax
+000A8CA5 cmp ecx, ebp
+000A8CA7 mov al, byte ptr [esi + 0x4e]
+000A8CAA je 0x6fb48cd4
+000A8CAC mov edx, dword ptr [esi + 0xc4]
+000A8CB2 shr edx, 6
+000A8CB5 and edx, 1
+000A8CB8 mov dword ptr [esp + 0x10], edx
+000A8CBC jne 0x6fb48cd4
+000A8CBE cmp eax, 1
+000A8CC1 je 0x6fb48ccd
+000A8CC3 cmp eax, 2
+000A8CC6 je 0x6fb48ccd
+000A8CC8 cmp eax, 3
+000A8CCB jne 0x6fb48cd4
+000A8CCD mov ecx, esi
+000A8CCF call 0x6fabca30
+000A8CD4 mov eax, dword ptr [esi + 0x10]
+000A8CD7 lea eax, [eax + eax*2]
+000A8CDA mov eax, dword ptr [eax*4 + 0x6fb93cfc]
+000A8CE1 cmp eax, 3
+000A8CE4 ja 0x6fb48d22
+000A8CE6 jmp dword ptr [eax*4 + 0x6fb49074]
+000A8CED push esi
+000A8CEE call 0x6fb6b400
+000A8CF3 test eax, eax
+000A8CF5 jne 0x6fb48d22
+000A8CF7 push esi
+000A8CF8 call 0x6fb6b5bc
+000A8CFD jmp 0x6fb48d22
+000A8CFF push esi
+000A8D00 call 0x6fb6b400
+000A8D05 test eax, eax
+000A8D07 je 0x6fb48cf7
+000A8D09 mov ecx, dword ptr [esi + 0x48]
+000A8D0C sub ecx, 0x100
+000A8D12 mov dword ptr [esi + 0x44], ecx
+000A8D15 jmp 0x6fb48d1e
+000A8D17 mov dword ptr [esi + 0x44], 0x100
+000A8D1E mov word ptr [esi + 0x4c], bp
+Used-skill action dispatch enters client Do dispatcher RVA=0x1ca30
+0001CA30 push esi
+0001CA31 mov esi, ecx
+0001CA33 push edi
+0001CA34 push esi
+0001CA35 call 0x6fb6abde
+0001CA3A mov edi, eax
+0001CA3C test edi, edi
+0001CA3E jne 0x6fabca43
+0001CA40 pop edi
+0001CA41 pop esi
+0001CA42 ret 
+0001CA43 push ebx
+0001CA44 push 0x697
+0001CA49 push 0x6fb777bc
+0001CA4E push edi
+0001CA4F call 0x6fb6ab42
+0001CA54 mov ebx, eax
+0001CA56 push 1
+0001CA58 push edi
+0001CA59 push esi
+0001CA5A call 0x6fb6ac50
+0001CA5F mov edx, ebx
+0001CA61 mov ecx, esi
+0001CA63 push 0
+0001CA65 push eax
+0001CA66 call 0x6fabc6b0
+0001CA6B pop ebx
+0001CA6C pop edi
+0001CA6D pop esi
+0001CA6E ret 
+cltdofunc field F4 dispatch through D75A8 RVA=0x1c8cc
+0001C8CC mov esi, dword ptr [esp + 0x2c]
+0001C8D0 movsx eax, word ptr [ecx + 0xf4]
+0001C8D7 test esi, esi
+0001C8D9 je 0x6fabc8eb
+0001C8DB mov cx, word ptr [ecx + 0x16c]
+0001C8E2 cmp cx, 1
+0001C8E6 jle 0x6fabc8eb
+0001C8E8 movsx eax, cx
+0001C8EB test eax, eax
+0001C8ED jl 0x6fabc911
+0001C8EF cmp eax, dword ptr [0x6fb777b0]
+0001C8F5 jge 0x6fabc911
+0001C8F7 mov eax, dword ptr [eax*4 + 0x6fb775a8]
+0001C8FE test eax, eax
+0001C900 je 0x6fabc911
+0001C902 mov ecx, dword ptr [esp + 0x28]
+0001C906 push ecx
+0001C907 mov ecx, ebx
+0001C909 call eax
+0001C90B test eax, eax
+0001C90D je 0x6fabc92b
+0001C90F jmp 0x6fabc923
+Main update: primary/client-only missiles before players RVA=0x880f0
+000880F0 push ebx
+000880F1 push ebp
+000880F2 push esi
+000880F3 push edi
+000880F4 mov edi, 0x6fbbb000
+000880F9 mov ecx, dword ptr [edi]
+000880FB test ecx, ecx
+000880FD je 0x6fb28110
+000880FF mov esi, dword ptr [ecx + 0xe4]
+00088105 call 0x6fb4e6a0
+0008810A test esi, esi
+0008810C mov ecx, esi
+0008810E jne 0x6fb280ff
+00088110 add edi, 4
+00088113 cmp edi, 0x6fbbb200
+00088119 jl 0x6fb280f9
+0008811B mov ebp, 0x6fbbbc00
+00088120 mov ecx, dword ptr [ebp]
+00088123 test ecx, ecx
+00088125 je 0x6fb28164
+00088127 mov ebx, dword ptr [ecx + 0xe4]
+0008812D mov esi, dword ptr [ecx + 0xc]
+00088130 mov edi, dword ptr [ecx]
+00088132 call 0x6fb4e6a0
+00088137 mov edx, edi
+00088139 mov ecx, esi
+0008813B call 0x6fb26a60
+00088140 mov ecx, eax
+00088142 test ecx, ecx
+00088144 je 0x6fb2815e
+00088146 mov eax, dword ptr [ecx]
+00088148 cmp eax, 1
+0008814B jne 0x6fb28154
+0008814D call 0x6fb3f350
+00088152 jmp 0x6fb2815e
+00088154 cmp eax, 2
+00088157 jne 0x6fb2815e
+00088159 call 0x6fb48430
+0008815E test ebx, ebx
+00088160 mov ecx, ebx
+00088162 jne 0x6fb28127
+00088164 add ebp, 4
+00088167 cmp ebp, 0x6fbbbe00
+0008816D jl 0x6fb28120
+Main update: player table processed later RVA=0x881c3
+000881C3 mov edi, 0x6fbbaa00
+000881C8 mov ecx, dword ptr [edi]
+000881CA test ecx, ecx
+000881CC je 0x6fb281df
+000881CE mov esi, dword ptr [ecx + 0xe4]
+000881D4 call 0x6fb4e6a0
+000881D9 test esi, esi
+000881DB mov ecx, esi
+000881DD jne 0x6fb281ce
+000881DF add edi, 4
+000881E2 cmp edi, 0x6fbbac00
+000881E8 jl 0x6fb281c8
+Local-owner/game-type first-update eligibility RVA=0x9d8d3
+0009D8D3 mov eax, dword ptr [0x6fba7960]
+0009D8D8 mov dword ptr [esp + 0x14], 0
+0009D8E0 cmp eax, 8
+0009D8E3 ja 0x6fb3d90e
+0009D8E5 xor ecx, ecx
+0009D8E7 mov cl, byte ptr [eax + 0x6fb3dba4]
+0009D8ED jmp dword ptr [ecx*4 + 0x6fb3db9c]
+0009D8F4 mov ecx, esi
+0009D8F6 call 0x6fb26ad0
+0009D8FB mov ebx, eax
+0009D8FD call 0x6fb283d0
+0009D902 cmp ebx, eax
+0009D904 jne 0x6fb3d90e
+0009D906 mov dword ptr [esp + 0x14], 1
+Missile CltDo1 path movement and one lifetime decrement RVA=0x9d975
+0009D975 mov eax, dword ptr [esi + 0x2c]
+0009D978 push eax
+0009D979 mov dword ptr [esp + 0x14], eax
+0009D97D call 0x6fb6ade2
+0009D982 test eax, eax
+0009D984 je 0x6fb3d992
+0009D986 call 0x6faabfe0
+0009D98B push eax
+0009D98C push esi
+0009D98D call 0x6fb6b54a
+0009D992 push esi
+0009D993 call 0x6fb6b4c6
+0009D998 dec eax
+0009D999 push eax
+0009D99A push esi
+0009D99B call 0x6fb6aaa0
+0009D9A0 push esi
+0009D9A1 call 0x6fb6b4c6
+0009D9A6 test eax, eax
+After elapsed frame1, repeat from9D90E once RVA=0x9dae4
+0009DAE4 mov eax, dword ptr [esp + 0x14]
+0009DAE8 test eax, eax
+0009DAEA je 0x6fb3db92
+0009DAF0 push esi
+0009DAF1 call 0x6fb6b4d8
+0009DAF6 cmp eax, 1
+0009DAF9 jne 0x6fb3db92
+0009DAFF mov edx, dword ptr [esp + 0x10]
+0009DB03 push edx
+0009DB04 call 0x6fb6ade2
+0009DB09 test eax, eax
+0009DB0B je 0x6fb3db92
+0009DB11 mov dword ptr [esp + 0x14], 0
+0009DB19 jmp 0x6fb3d90e
+D2Common.dll sha256=b9d1a27c6a35992932c7c47438d02e5269f878e899f6e614d507902cecd1beab
+Ordinal11125 returns TotalFrames minus CurrentFrame RVA=0x7a160
+0007A160 mov eax, dword ptr [esp + 4]
+0007A164 test eax, eax
+0007A166 je 0x6fdba181
+0007A168 cmp dword ptr [eax], 3
+0007A16B jne 0x6fdba181
+0007A16D mov eax, dword ptr [eax + 0x14]
+0007A170 test eax, eax
+0007A172 je 0x6fdba181
+0007A174 movsx ecx, word ptr [eax + 0x10]
+0007A178 movsx eax, word ptr [eax + 0xe]
+0007A17C sub eax, ecx
+0007A17E ret 4
+0007A181 xor eax, eax

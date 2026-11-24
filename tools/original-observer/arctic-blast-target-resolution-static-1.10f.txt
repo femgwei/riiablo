@@ -1,0 +1,88 @@
+Local static Capstone/PE inspection; not a native runtime stack or REA Evidence.
+D2Client.dll sha256=94466b84c0593ab682f1d3d8dc65ef4f8170f33e430865d802bc752458b2b282
+CltDo24 calls current-target helper before allocation RVA=0x2a24a
+0002A24A lea eax, [esp + 0x1c]
+0002A24E lea edx, [esp + 0x18]
+0002A252 push eax
+0002A253 mov ecx, esi
+0002A255 call 0x6faba950
+0002A25A test eax, eax
+Current target unit coordinates or current path target RVA=0x1a950
+0001A950 sub esp, 0x40
+0001A953 push ebx
+0001A954 push ebp
+0001A955 push esi
+0001A956 push edi
+0001A957 mov ebp, edx
+0001A959 mov edi, ecx
+0001A95B call 0x6fb296a0
+0001A960 mov esi, eax
+0001A962 xor ebx, ebx
+0001A964 cmp esi, ebx
+0001A966 je 0x6faba9d3
+0001A968 mov eax, dword ptr [esi]
+0001A96A cmp eax, 2
+0001A96D je 0x6faba98c
+0001A96F cmp eax, 3
+0001A972 jle 0x6faba979
+0001A974 cmp eax, 5
+0001A977 jle 0x6faba98c
+0001A979 mov eax, dword ptr [esi + 0x2c]
+0001A97C cmp eax, ebx
+0001A97E je 0x6faba988
+0001A980 push eax
+0001A981 call 0x6fb6a926
+0001A986 jmp 0x6faba992
+0001A988 xor eax, eax
+0001A98A jmp 0x6faba992
+0001A98C mov eax, dword ptr [esi + 0x2c]
+0001A98F mov eax, dword ptr [eax + 0xc]
+0001A992 mov dword ptr [ebp], eax
+0001A995 mov eax, dword ptr [esi]
+0001A997 cmp eax, 2
+0001A99A je 0x6faba9c5
+0001A99C cmp eax, 3
+0001A99F jle 0x6faba9a6
+0001A9A1 cmp eax, 5
+0001A9A4 jle 0x6faba9c5
+0001A9A6 mov esi, dword ptr [esi + 0x2c]
+0001A9A9 cmp esi, ebx
+0001A9AB je 0x6faba9bb
+0001A9AD push esi
+0001A9AE call 0x6fb6a920
+0001A9B3 mov edx, dword ptr [esp + 0x54]
+0001A9B7 mov dword ptr [edx], eax
+0001A9B9 jmp 0x6faba9eb
+0001A9BB mov edx, dword ptr [esp + 0x54]
+0001A9BF xor eax, eax
+0001A9C1 mov dword ptr [edx], eax
+0001A9C3 jmp 0x6faba9eb
+0001A9C5 mov ecx, dword ptr [esi + 0x2c]
+0001A9C8 mov edx, dword ptr [esp + 0x54]
+0001A9CC mov eax, dword ptr [ecx + 0x10]
+0001A9CF mov dword ptr [edx], eax
+0001A9D1 jmp 0x6faba9eb
+0001A9D3 mov esi, dword ptr [edi + 0x2c]
+0001A9D6 push esi
+0001A9D7 call 0x6fb6abae
+0001A9DC mov dword ptr [ebp], eax
+0001A9DF push esi
+0001A9E0 call 0x6fb6aba8
+0001A9E5 mov ecx, dword ptr [esp + 0x54]
+0001A9E9 mov dword ptr [ecx], eax
+0001A9EB cmp dword ptr [ebp], ebx
+0001A9EE je 0x6faba9fc
+0001A9F0 mov edx, dword ptr [esp + 0x54]
+0001A9F4 cmp dword ptr [edx], ebx
+0001A9F6 jne 0x6fabab06
+D2Common.dll sha256=b9d1a27c6a35992932c7c47438d02e5269f878e899f6e614d507902cecd1beab
+PATH target X ordinal10175 reads path+10 RVA=0x69de0
+00069DE0 mov ecx, dword ptr [esp + 4]
+00069DE4 xor eax, eax
+00069DE6 mov ax, word ptr [ecx + 0x10]
+00069DEA ret 4
+PATH target Y ordinal10176 reads path+12 RVA=0x69df0
+00069DF0 mov ecx, dword ptr [esp + 4]
+00069DF4 xor eax, eax
+00069DF6 mov ax, word ptr [ecx + 0x12]
+00069DFA ret 4

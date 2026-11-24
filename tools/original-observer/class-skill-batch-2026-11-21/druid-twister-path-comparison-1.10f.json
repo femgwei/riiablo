@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "source_run_id": "20261121-165203-4158d94f",
+  "skill_id": 240,
+  "scope": "Original client polling motion oracle and shared native path initializer; no original server or GPU trace",
+  "checks": {
+    "client_visual": {
+      "samples": 147,
+      "missing": 0,
+      "position_mismatches": 0,
+      "velocity_mismatches": 0,
+      "combat_carrier_duplicate_draw_candidates": 0
+    },
+    "local_authority_vs_client_oracle": {
+      "samples": 147,
+      "missing": 0,
+      "position_mismatches": 0,
+      "velocity_mismatches": 0,
+      "combat_carrier_duplicate_draw_candidates": 0
+    }
+  },
+  "before_projection_comparison": {
+    "samples": 147,
+    "mismatches_over_0_002_cell": 144,
+    "maximum_distance_cells": 11.773836872064743,
+    "note": "Old JSON stores rounded host floats; not an exact raw-native precision claim"
+  },
+  "original_initializers": [
+    {
+      "seed_low": 4530,
+      "seed_high": 666
+    },
+    {
+      "seed_low": 4531,
+      "seed_high": 666
+    },
+    {
+      "seed_low": 4532,
+      "seed_high": 666
+    }
+  ],
+  "native_static_inferred_dcc_directions": [
+    2,
+    2,
+    0
+  ],
+  "production_stable_dcc_directions": [
+    2,
+    2,
+    3
+  ],
+  "direction_allocation_rng_matched": false,
+  "remaining_differences": [
+    "Sprite variants use the static native direction mapping and stay fixed; original global allocation RNG is not matched",
+    "No actual DCC submission/direction trace or GPU pixel comparison in this polling batch",
+    "One level-one cast/direction in a clear initial corridor; full wall/room removal and all-direction cases remain unverified",
+    "Local damage carriers share the audited native path; actual original server collision/damage is not captured",
+    "Restored carriers without a SkillDo visual retain snapshot fallback; old rolled path seeds retain legacy movement"
+  ],
+  "sha256": {
+    "original": "2975fd6a3eafc0e7d3eb4ac35de567a134456e5463e609b5daf6b4f998d8b646",
+    "production": "d6e921a1b0572a0589a167db347dd82cd17ceb0e669b3a01c46a24f6c2b9fc05",
+    "before": "562151e0d819c0d5725232885ab05e1dc5487fd63af279aa9c51753394b0575f"
+  }
+}

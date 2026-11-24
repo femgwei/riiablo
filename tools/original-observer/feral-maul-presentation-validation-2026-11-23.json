@@ -1,0 +1,1268 @@
+{
+  "schema": 1,
+  "date": "2026-11-23",
+  "skills": [
+    232,
+    233
+  ],
+  "scope": "Offline local PE/Capstone and effective MPQ table evidence; Riiablo headless integration and real AssetManager regression. Not live REA or original GPU evidence.",
+  "original_executed": false,
+  "foreground_used": false,
+  "global_input_used": false,
+  "java_home": "C:/Program Files/Java/jdk-17",
+  "final_validation": {
+    "tests": 52,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "stages": [
+      "focused",
+      "early-removal"
+    ],
+    "whole_broad_suite_passed": false
+  },
+  "broad_failure_explanation": "8 unrelated GroundItemGleam/Act1QuestIndicator/ZoneEntryDisplayer fixture cases fail at initialization without an injected ClientGameplayContext; preserved and excluded from focused scope. No claim that the full suite passes.",
+  "stages": {
+    "broad": [
+      {
+        "suite": "com.riiablo.engine.server.DruidFeralMaulTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/broad/TEST-com.riiablo.engine.server.DruidFeralMaulTest.xml",
+        "sha256": "9d5e63d981f63fd3f0148cd836783e29b7e119d5d78db957d701d0175b9a8e5b",
+        "cases": [
+          {
+            "name": "wrongShapeAndOutOfRangeNeverPrepareCombatRecord()",
+            "status": "passed"
+          },
+          {
+            "name": "maulRebuildsDamageAndStunFromStackCountWithoutCompounding()",
+            "status": "passed"
+          },
+          {
+            "name": "fireClawsConsumesSrvSt58RecordWithoutGenericSecondHit()",
+            "status": "passed"
+          },
+          {
+            "name": "multiplayerSnapshotCarriesFeralStateDurationLevelStacksAndVelocity()",
+            "status": "passed"
+          },
+          {
+            "name": "rabiesConsumesPreparedHitAndMarksTargetInfected()",
+            "status": "passed"
+          },
+          {
+            "name": "losingShapeRemovesOnlyItsDependentChargeState()",
+            "status": "passed"
+          },
+          {
+            "name": "shapeRestrictionsFollowRestrictAndStateColumns()",
+            "status": "passed"
+          },
+          {
+            "name": "srvSt56ResultIsConsumedOnceAndMissDoesNotBuildAStack()",
+            "status": "passed"
+          },
+          {
+            "name": "successfulHitsBuildRefreshAndCapNativeFeralStacks()",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "com.riiablo.engine.server.NativeDruidFeralMaulDataTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/broad/TEST-com.riiablo.engine.server.NativeDruidFeralMaulDataTest.xml",
+        "sha256": "e4ee27977f24a9db64aed85b79351ad6c50e2f6b2be0355c34b0eebd6d1532e6",
+        "cases": [
+          {
+            "name": "feralRageUsesNativeSrvFunctionsShapeGateAndStackFormulas()",
+            "status": "passed"
+          },
+          {
+            "name": "maulUsesNativeBearGateDamageAndStunFormulas()",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "com.riiablo.presentation.AuraOverlayResourceTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/broad/TEST-com.riiablo.presentation.AuraOverlayResourceTest.xml",
+        "sha256": "5c927069ae8485079a5195d0c8933b2276e30603b893341fe50e642945f80252",
+        "cases": [
+          {
+            "name": "barbarianStateLayersAndActivationFlashesUseNativeAnimationParameters()",
+            "status": "passed"
+          },
+          {
+            "name": "dimVisionWaitsForTheRealCastOverlayIncludingPendingAssets()",
+            "status": "passed"
+          },
+          {
+            "name": "realManagerInstallsNativeAuraRateBlendAndPreservesOtherOverlays()",
+            "status": "passed"
+          },
+          {
+            "name": "savedRightHandAuraIsRestoredWithoutSkillSelectionEvent()",
+            "status": "passed"
+          },
+          {
+            "name": "realAuraRowsUseSupportedDrawModesAndExistingDccs()",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "com.riiablo.presentation.FeralMaulPresentationTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/broad/TEST-com.riiablo.presentation.FeralMaulPresentationTest.xml",
+        "sha256": "fa889f0f83cf2e911f40da6f0bcdb5e4cd5d4e64a846dd90a735b1b81447aac5",
+        "cases": [
+          {
+            "name": "authoritativeStateSnapshotReconstructsChargePairForARemotePlayer()",
+            "status": "passed"
+          },
+          {
+            "name": "expiryAndStateDeletionRemoveBothHalvesButPreserveOtherEffects()",
+            "status": "passed"
+          },
+          {
+            "name": "zeroChargesAndInvalidModifierSkillNeverRenderEndpointLayers()",
+            "status": "passed"
+          },
+          {
+            "name": "levelOneUsesNativeIntegerRangeSelectionRatherThanFourEndpoints()",
+            "status": "passed"
+          },
+          {
+            "name": "fiveTiersUseNativeBlendClockAndRetirePreviousSizes()",
+            "status": "passed"
+          },
+          {
+            "name": "sameSelectedTierAndDurationRefreshKeepExistingAnimationObjectsAndAssets()",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "com.riiablo.presentation.PresentationAssetLifecycleTest",
+        "tests": 23,
+        "failures": 8,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/broad/TEST-com.riiablo.presentation.PresentationAssetLifecycleTest.xml",
+        "sha256": "898c927e88a40d092437a67513c9df36649def3d0d159f928d40a6e50c801e0f",
+        "cases": [
+          {
+            "name": "twoEntitiesShareAssetAndDeletingOneCannotResetReusedComponent()",
+            "status": "passed"
+          },
+          {
+            "name": "questMarkerQueuedSharedReferenceReturnsOnRepeatedDispose()",
+            "status": "failed",
+            "failure": "java.lang.NullPointerException: Cannot invoke \"com.riiablo.presentation.ClientGameplayContext.assets()\" because \"this.clientContext\" is null"
+          },
+          {
+            "name": "sameFrameReplacementAndDeferredRemovalKeepNewOwner()",
+            "status": "passed"
+          },
+          {
+            "name": "rejectedOverlaySubmissionRemovesComponentWithoutUnloadingUnownedAsset()",
+            "status": "passed"
+          },
+          {
+            "name": "overlayWorldExitBeforeProcessingAndRepeatedDisposeReleaseQueuedSharedRequest()",
+            "status": "passed"
+          },
+          {
+            "name": "zoneReplacementClearsOldDrawableAndQueuedReferenceAndFinalActor()",
+            "status": "failed",
+            "failure": "java.lang.NullPointerException: Cannot invoke \"com.riiablo.presentation.ClientGameplayContext.assets()\" because \"this.clientContext\" is null"
+          },
+          {
+            "name": "[1] entity",
+            "status": "passed"
+          },
+          {
+            "name": "[2] component",
+            "status": "passed"
+          },
+          {
+            "name": "[3] earlyEntity",
+            "status": "passed"
+          },
+          {
+            "name": "[4] earlyComponent",
+            "status": "passed"
+          },
+          {
+            "name": "renderSystemsReleaseOnlyTheirOriginalManager()",
+            "status": "failed",
+            "failure": "java.lang.NullPointerException: Cannot invoke \"com.riiablo.presentation.ClientGameplayContext.assets()\" because \"this.clientContext\" is null"
+          },
+          {
+            "name": "transientKeepsExistingHoldFramesThenReleases()",
+            "status": "passed"
+          },
+          {
+            "name": "overlaySameStateIsIdempotentAndWrongClearDoesNotRelease()",
+            "status": "passed"
+          },
+          {
+            "name": "neverStartedRenderSystemsDoNotAcquireAssets()",
+            "status": "failed",
+            "failure": "java.lang.NullPointerException: Cannot invoke \"com.riiablo.presentation.ClientGameplayContext.assets()\" because \"this.clientContext\" is null"
+          },
+          {
+            "name": "zoneNeverDisplayedStillRemovesActor()",
+            "status": "failed",
+            "failure": "java.lang.NullPointerException: Cannot invoke \"com.riiablo.presentation.ClientGameplayContext.assets()\" because \"this.clientContext\" is null"
+          },
+          {
+            "name": "overlayUsesOriginalManagerAndDisposalErrorStillReleasesOtherEntities()",
+            "status": "passed"
+          },
+          {
+            "name": "zoneExitProtectsSharedConsumerAndOriginalManager()",
+            "status": "failed",
+            "failure": "java.lang.NullPointerException: Cannot invoke \"com.riiablo.presentation.ClientGameplayContext.assets()\" because \"this.clientContext\" is null"
+          },
+          {
+            "name": "deletingEntityReleasesEveryLoadedAndQueuedLayer()",
+            "status": "passed"
+          },
+          {
+            "name": "gleamQueuedSharedReferenceReturnsOnRepeatedDispose()",
+            "status": "failed",
+            "failure": "java.lang.NullPointerException: Cannot invoke \"com.riiablo.presentation.ClientGameplayContext.assets()\" because \"this.clientContext\" is null"
+          },
+          {
+            "name": "externalReplacementReleasesOldLedgerWithoutResettingNewComponent()",
+            "status": "passed"
+          },
+          {
+            "name": "initiallyMissingHostBindsFirstAvailableManagerOnly()",
+            "status": "failed",
+            "failure": "java.lang.NullPointerException: Cannot invoke \"com.riiablo.presentation.ClientGameplayContext.assets()\" because \"this.clientContext\" is null"
+          },
+          {
+            "name": "cursesBuffsAndImpactsOwnIndependentLayersAndReferences()",
+            "status": "passed"
+          },
+          {
+            "name": "missingOverlayLeavesPreviousPresentationOwned()",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "com.riiablo.presentation.StateOverlaySystemTest",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/broad/TEST-com.riiablo.presentation.StateOverlaySystemTest.xml",
+        "sha256": "473ba2feaed5e1ca98968ba2bb96bdd91365b8ceeadd65df3c97ebae52015407",
+        "cases": [
+          {
+            "name": "enchantHandTransformFollowsStateAndEquipmentColorChanges()",
+            "status": "passed"
+          },
+          {
+            "name": "existingItemAndSpiritAuraSnapshotsDisplayOnFirstClientTick()",
+            "status": "passed"
+          },
+          {
+            "name": "allNativeCurseRowsRenderFromStatesWithoutAnyDamageEvent()",
+            "status": "passed"
+          },
+          {
+            "name": "nativeDimVisionAndConversionUseOverlayTxtKeys()",
+            "status": "passed"
+          },
+          {
+            "name": "auraTransitionPlaysNativeStateSoundOnceNotOnRefresh()",
+            "status": "passed"
+          },
+          {
+            "name": "bladeShieldOverlayRowDeclaresNativeDccTiming()",
+            "status": "passed"
+          },
+          {
+            "name": "barbarianStateOverlaysFollowAuthoritativeSnapshots()",
+            "status": "passed"
+          },
+          {
+            "name": "bladeShieldOverlayAndVenomHandTransformFollowStates()",
+            "status": "passed"
+          },
+          {
+            "name": "bladeShieldOverlayUsesStateLifetimeInsteadOfAClientTimer()",
+            "status": "passed"
+          },
+          {
+            "name": "slowMissilesUsesNativeInnerSightOverheadOverlay()",
+            "status": "passed"
+          },
+          {
+            "name": "coldAndFreezeStatesDoNotOverwriteBaseComponentTransforms()",
+            "status": "passed"
+          },
+          {
+            "name": "decoySummonOverlayPlaysOnceFromAuthoritativeSummonRow()",
+            "status": "passed"
+          },
+          {
+            "name": "enchantAndVenomShareWeaponBaseWithoutColorDrift()",
+            "status": "passed"
+          }
+        ]
+      }
+    ],
+    "focused": [
+      {
+        "suite": "com.riiablo.engine.server.DruidFeralMaulTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/focused/TEST-com.riiablo.engine.server.DruidFeralMaulTest.xml",
+        "sha256": "7edd24bf278ae283f8cf876edbe0479010f8dd4100863d0920cc94408534ac71",
+        "cases": [
+          {
+            "name": "wrongShapeAndOutOfRangeNeverPrepareCombatRecord()",
+            "status": "passed"
+          },
+          {
+            "name": "maulRebuildsDamageAndStunFromStackCountWithoutCompounding()",
+            "status": "passed"
+          },
+          {
+            "name": "fireClawsConsumesSrvSt58RecordWithoutGenericSecondHit()",
+            "status": "passed"
+          },
+          {
+            "name": "multiplayerSnapshotCarriesFeralStateDurationLevelStacksAndVelocity()",
+            "status": "passed"
+          },
+          {
+            "name": "rabiesConsumesPreparedHitAndMarksTargetInfected()",
+            "status": "passed"
+          },
+          {
+            "name": "losingShapeRemovesOnlyItsDependentChargeState()",
+            "status": "passed"
+          },
+          {
+            "name": "shapeRestrictionsFollowRestrictAndStateColumns()",
+            "status": "passed"
+          },
+          {
+            "name": "srvSt56ResultIsConsumedOnceAndMissDoesNotBuildAStack()",
+            "status": "passed"
+          },
+          {
+            "name": "successfulHitsBuildRefreshAndCapNativeFeralStacks()",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "com.riiablo.engine.server.NativeDruidFeralMaulDataTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/focused/TEST-com.riiablo.engine.server.NativeDruidFeralMaulDataTest.xml",
+        "sha256": "414bd44dd67f92f69ff1d651d5c0b46484f95a1d076a52f7ff750ebae38def60",
+        "cases": [
+          {
+            "name": "feralRageUsesNativeSrvFunctionsShapeGateAndStackFormulas()",
+            "status": "passed"
+          },
+          {
+            "name": "maulUsesNativeBearGateDamageAndStunFormulas()",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "com.riiablo.presentation.AuraOverlayResourceTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/focused/TEST-com.riiablo.presentation.AuraOverlayResourceTest.xml",
+        "sha256": "c4f2300f39a70e16cb7834d5b18810a14e5183f81cab1993669deb1ac0deb22a",
+        "cases": [
+          {
+            "name": "barbarianStateLayersAndActivationFlashesUseNativeAnimationParameters()",
+            "status": "passed"
+          },
+          {
+            "name": "dimVisionWaitsForTheRealCastOverlayIncludingPendingAssets()",
+            "status": "passed"
+          },
+          {
+            "name": "realManagerInstallsNativeAuraRateBlendAndPreservesOtherOverlays()",
+            "status": "passed"
+          },
+          {
+            "name": "savedRightHandAuraIsRestoredWithoutSkillSelectionEvent()",
+            "status": "passed"
+          },
+          {
+            "name": "realAuraRowsUseSupportedDrawModesAndExistingDccs()",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "com.riiablo.presentation.FeralMaulPresentationTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/focused/TEST-com.riiablo.presentation.FeralMaulPresentationTest.xml",
+        "sha256": "e1fa3cfc895afdcfc614e9ce0144a571d24f6eff41f2cdbab1f7b580081cb7c6",
+        "cases": [
+          {
+            "name": "authoritativeStateSnapshotReconstructsChargePairForARemotePlayer()",
+            "status": "passed"
+          },
+          {
+            "name": "expiryAndStateDeletionRemoveBothHalvesButPreserveOtherEffects()",
+            "status": "passed"
+          },
+          {
+            "name": "zeroChargesAndInvalidModifierSkillNeverRenderEndpointLayers()",
+            "status": "passed"
+          },
+          {
+            "name": "levelOneUsesNativeIntegerRangeSelectionRatherThanFourEndpoints()",
+            "status": "passed"
+          },
+          {
+            "name": "fiveTiersUseNativeBlendClockAndRetirePreviousSizes()",
+            "status": "passed"
+          },
+          {
+            "name": "sameSelectedTierAndDurationRefreshKeepExistingAnimationObjectsAndAssets()",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "com.riiablo.presentation.PresentationAssetLifecycleTest",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/focused/TEST-com.riiablo.presentation.PresentationAssetLifecycleTest.xml",
+        "sha256": "ce5367e12ca1185feb297ee7438fadec3babd453c27ad527121629cd2de44f36",
+        "cases": [
+          {
+            "name": "twoEntitiesShareAssetAndDeletingOneCannotResetReusedComponent()",
+            "status": "passed"
+          },
+          {
+            "name": "sameFrameReplacementAndDeferredRemovalKeepNewOwner()",
+            "status": "passed"
+          },
+          {
+            "name": "rejectedOverlaySubmissionRemovesComponentWithoutUnloadingUnownedAsset()",
+            "status": "passed"
+          },
+          {
+            "name": "overlayWorldExitBeforeProcessingAndRepeatedDisposeReleaseQueuedSharedRequest()",
+            "status": "passed"
+          },
+          {
+            "name": "transientKeepsExistingHoldFramesThenReleases()",
+            "status": "passed"
+          },
+          {
+            "name": "overlaySameStateIsIdempotentAndWrongClearDoesNotRelease()",
+            "status": "passed"
+          },
+          {
+            "name": "overlayUsesOriginalManagerAndDisposalErrorStillReleasesOtherEntities()",
+            "status": "passed"
+          },
+          {
+            "name": "[1] false",
+            "status": "passed"
+          },
+          {
+            "name": "[2] true",
+            "status": "passed"
+          },
+          {
+            "name": "deletingEntityReleasesEveryLoadedAndQueuedLayer()",
+            "status": "passed"
+          },
+          {
+            "name": "externalReplacementReleasesOldLedgerWithoutResettingNewComponent()",
+            "status": "passed"
+          },
+          {
+            "name": "cursesBuffsAndImpactsOwnIndependentLayersAndReferences()",
+            "status": "passed"
+          },
+          {
+            "name": "missingOverlayLeavesPreviousPresentationOwned()",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "com.riiablo.presentation.StateOverlaySystemTest",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/focused/TEST-com.riiablo.presentation.StateOverlaySystemTest.xml",
+        "sha256": "0a63147fcf71fb6e16049a72aaeab9fb1f163d60f1d77b0643c6bcb7b5bd2a6a",
+        "cases": [
+          {
+            "name": "enchantHandTransformFollowsStateAndEquipmentColorChanges()",
+            "status": "passed"
+          },
+          {
+            "name": "existingItemAndSpiritAuraSnapshotsDisplayOnFirstClientTick()",
+            "status": "passed"
+          },
+          {
+            "name": "allNativeCurseRowsRenderFromStatesWithoutAnyDamageEvent()",
+            "status": "passed"
+          },
+          {
+            "name": "nativeDimVisionAndConversionUseOverlayTxtKeys()",
+            "status": "passed"
+          },
+          {
+            "name": "auraTransitionPlaysNativeStateSoundOnceNotOnRefresh()",
+            "status": "passed"
+          },
+          {
+            "name": "bladeShieldOverlayRowDeclaresNativeDccTiming()",
+            "status": "passed"
+          },
+          {
+            "name": "barbarianStateOverlaysFollowAuthoritativeSnapshots()",
+            "status": "passed"
+          },
+          {
+            "name": "bladeShieldOverlayAndVenomHandTransformFollowStates()",
+            "status": "passed"
+          },
+          {
+            "name": "bladeShieldOverlayUsesStateLifetimeInsteadOfAClientTimer()",
+            "status": "passed"
+          },
+          {
+            "name": "slowMissilesUsesNativeInnerSightOverheadOverlay()",
+            "status": "passed"
+          },
+          {
+            "name": "coldAndFreezeStatesDoNotOverwriteBaseComponentTransforms()",
+            "status": "passed"
+          },
+          {
+            "name": "decoySummonOverlayPlaysOnceFromAuthoritativeSummonRow()",
+            "status": "passed"
+          },
+          {
+            "name": "enchantAndVenomShareWeaponBaseWithoutColorDrift()",
+            "status": "passed"
+          }
+        ]
+      }
+    ],
+    "early-removal": [
+      {
+        "suite": "com.riiablo.presentation.PresentationAssetLifecycleTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xml": "tools/original-observer/feral-maul-test-results-2026-11-23/early-removal/TEST-com.riiablo.presentation.PresentationAssetLifecycleTest.xml",
+        "sha256": "6681d1de8da17ea374d756f77974d2ecf342c173bcccec2f5df1d262a2a8eaba",
+        "cases": [
+          {
+            "name": "[1] entity",
+            "status": "passed"
+          },
+          {
+            "name": "[2] component",
+            "status": "passed"
+          },
+          {
+            "name": "[3] earlyEntity",
+            "status": "passed"
+          },
+          {
+            "name": "[4] earlyComponent",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/presentation/NativeFeralMaulPresentation.java": "ff56ea0ba0955e94c981abed6441d2c0104c03ac7d7a74150dcb554a30b1450a",
+    "core/src/main/java/com/riiablo/presentation/StateOverlaySystem.java": "2f103d9892de17975e0d3203920ad8829d76e10eac7ba80c982e38c5d8ba6a73",
+    "core/src/main/java/com/riiablo/presentation/OverlayManager.java": "5397024be8a47fec22feafd0c862a395386c911e8b32e03393192245e87fa7dc",
+    "core/src/main/java/com/riiablo/presentation/component/Overlay.java": "4a8381bb365c541e35b053a33431fa67b4b826d822cfdece43052ee9881f1c66",
+    "core/src/main/java/com/riiablo/presentation/AuraRenderPolicy.java": "1b55838fb4ba0babc698a75383fcb9b71ca0aa4a69fa8ae474157e9489cf69c1",
+    "core/src/main/java/com/riiablo/map/RenderSystem.java": "fa00ea223012be29f5f011ef9c95cac01dbc2597bee3d4fa748383940504725d",
+    "core/src/main/java/com/riiablo/engine/server/skill/DruidSkills.java": "ccdb826fc4099ef1493d80680b457da76eefd96f68ce030f0c0939b1e08e4550",
+    "core/src/test/java/com/riiablo/presentation/FeralMaulPresentationTest.java": "5166c33d6529817f357ba8ea6164c3b922aad88863ee9cf2b9d7085535de4eb0",
+    "core/src/test/java/com/riiablo/presentation/PresentationAssetLifecycleTest.java": "6e55999ad1c625022713289a215e0d8d4ac9dc95823d402b4937ece7f41d29d1",
+    "core/src/test/java/com/riiablo/engine/server/NativeDruidFeralMaulDataTest.java": "eb883a87908f96f4435cec6b382891522a7044bd8ff510a32d395b6e00dfd275",
+    "core/src/test/java/com/riiablo/engine/server/DruidFeralMaulTest.java": "2951e8aa981f88174f00fdea89c51de8c27d20781aff7561441500bcaac6f1b2",
+    "docs/druid-feral-maul-presentation-analysis-2026-11-23.md": "34cddfaef71683f4ee44dfedf034cdae49d07aa9779ebbd536026ad07edb8145",
+    "tools/original-observer/analyze_feral_maul_static.py": "41910bcff4f2589c425525fae33c0a41f34f535ffae61824da76f006c2382874",
+    "tools/original-observer/feral-maul-static-1.10f-2026-11-23.json": "5e49b6fea391f3b595d831c56901e31cfcdb599bc3178c41abacefb870910c4b",
+    "tools/original-observer/class-skill-batch-2026-11-21/dru-manifest.json": "ef9ed720ef8bd49496f25342452dce12eea75dda925c3865e447443f187e7fea"
+  },
+  "logs": [
+    "tools/original-observer/feral-maul-presentation-final-validation-2026-11-23.log",
+    "tools/original-observer/feral-maul-presentation-focused-validation-2026-11-23.log",
+    "tools/original-observer/feral-maul-presentation-early-removal-validation-2026-11-23.log"
+  ],
+  "asset_inventory": {
+    "path": "tools/original-observer/class-skill-batch-2026-11-21/class-skill-inventory.json",
+    "sha256": "11b24a3fc8d01529146304b770a44fbf3c2b38f016a39fe0163bf4573bef7b2f",
+    "overlay_rows": {
+      "maul2back": {
+        "overlay": "maul2back",
+        "Filename": "expansion\\Maul_B_Back",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "1",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "feralrage2back": {
+        "overlay": "feralrage2back",
+        "Filename": "expansion\\feral_rage_B_Back",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "1",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "maul5back": {
+        "overlay": "maul5back",
+        "Filename": "expansion\\Maul_E_Back",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "1",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "maul4": {
+        "overlay": "maul4",
+        "Filename": "expansion\\Maul_D_Front",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "0",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "maul3": {
+        "overlay": "maul3",
+        "Filename": "expansion\\Maul_C_Front",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "0",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "maul5": {
+        "overlay": "maul5",
+        "Filename": "expansion\\Maul_E_Front",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "0",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "maul2": {
+        "overlay": "maul2",
+        "Filename": "expansion\\Maul_B_Front",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "0",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "maul1": {
+        "overlay": "maul1",
+        "Filename": "expansion\\Maul_A_Front",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "0",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "maul3back": {
+        "overlay": "maul3back",
+        "Filename": "expansion\\Maul_C_Back",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "1",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "feralrage3back": {
+        "overlay": "feralrage3back",
+        "Filename": "expansion\\feral_rage_C_Back",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "1",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "feralrage1": {
+        "overlay": "feralrage1",
+        "Filename": "expansion\\feral_rage_A_Front",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "0",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "feralrage2": {
+        "overlay": "feralrage2",
+        "Filename": "expansion\\feral_rage_B_Front",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "0",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "feralrage3": {
+        "overlay": "feralrage3",
+        "Filename": "expansion\\feral_rage_C_Front",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "0",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "feralrage4": {
+        "overlay": "feralrage4",
+        "Filename": "expansion\\feral_rage_D_Front",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "0",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "feralrage5": {
+        "overlay": "feralrage5",
+        "Filename": "expansion\\feral_rage_E_Front",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "0",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "maul4back": {
+        "overlay": "maul4back",
+        "Filename": "expansion\\Maul_D_Back",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "1",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "feralrage4back": {
+        "overlay": "feralrage4back",
+        "Filename": "expansion\\feral_rage_D_Back",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "1",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "feralrage1back": {
+        "overlay": "feralrage1back",
+        "Filename": "expansion\\feral_rage_A_Back",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "1",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "maul1back": {
+        "overlay": "maul1back",
+        "Filename": "expansion\\Maul_A_Back",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "1",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      },
+      "feralrage5back": {
+        "overlay": "feralrage5back",
+        "Filename": "expansion\\feral_rage_E_Back",
+        "version": "100",
+        "Frames": "16",
+        "Character": "Druid",
+        "PreDraw": "1",
+        "1ofN": "1",
+        "Dir": "0",
+        "Open": "0",
+        "Beta": "0",
+        "Xoffset": "0",
+        "Yoffset": "0",
+        "Height1": "0",
+        "Height2": "0",
+        "Height3": "0",
+        "Height4": "0",
+        "AnimRate": "16",
+        "LoopWaitTime": "0",
+        "Trans": "3",
+        "InitRadius": "0",
+        "Radius": "0",
+        "Red": "0",
+        "Green": "0",
+        "Blue": "0",
+        "NumDirections": "1",
+        "LocalBlood": "0"
+      }
+    },
+    "collected_resource_headers": {
+      "data/global/overlays/expansion\\Maul_A_Back.dcc": {
+        "sha256": "9cb8bb5dbf09e61c8214dcd70491361b5bf1f95576cc4d1450d0f55f8f76c9a5",
+        "directions": 1,
+        "frames": 16,
+        "status": "header_collected"
+      },
+      "data/global/overlays/expansion\\Maul_A_Front.dcc": {
+        "sha256": "7d6b41c9cc119e02d68582e137babad59f1fb09e0e4b07409fdc20a44382e07a",
+        "directions": 1,
+        "frames": 16,
+        "status": "header_collected"
+      },
+      "data/global/overlays/expansion\\Maul_E_Back.dcc": {
+        "sha256": "01e0ba74a577a677e90c3d71d4591fa5a044a6335c2d128826b47596ec534185",
+        "directions": 1,
+        "frames": 16,
+        "status": "header_collected"
+      },
+      "data/global/overlays/expansion\\Maul_E_Front.dcc": {
+        "sha256": "ce588ed5aef68cb7970f17d76c1b4305a5756f5d79358d443a566df06eeb935e",
+        "directions": 1,
+        "frames": 16,
+        "status": "header_collected"
+      },
+      "data/global/overlays/expansion\\feral_rage_A_Back.dcc": {
+        "sha256": "ab109e57fb15ee65c5ee36da719c3e03f16284baac27930f08b25f61489b359a",
+        "directions": 1,
+        "frames": 16,
+        "status": "header_collected"
+      },
+      "data/global/overlays/expansion\\feral_rage_A_Front.dcc": {
+        "sha256": "7175368b681705aab4e593918a9409582b54af683dce281bd95b05901a372709",
+        "directions": 1,
+        "frames": 16,
+        "status": "header_collected"
+      },
+      "data/global/overlays/expansion\\feral_rage_E_Back.dcc": {
+        "sha256": "3ced6b6dd1b2bfa1d7158cca3c5ed23ea8f45a97c8cbd0555babee51b62a058a",
+        "directions": 1,
+        "frames": 16,
+        "status": "header_collected"
+      },
+      "data/global/overlays/expansion\\feral_rage_E_Front.dcc": {
+        "sha256": "c2b0b07fdd59c8de7b355759e8494361d97b13c14e9ce69ecba8da6cb9b82bfa",
+        "directions": 1,
+        "frames": 16,
+        "status": "header_collected"
+      }
+    }
+  },
+  "remaining": [
+    "No new original runtime overlay creation/removal trace",
+    "No GPU output, full orbit or player occlusion validation",
+    "Unrelated broad-suite fixture initialization failures remain"
+  ],
+  "approval_note": "First supplementary early-removal launch timed out in automatic approval before execution. One permitted retry succeeded."
+}

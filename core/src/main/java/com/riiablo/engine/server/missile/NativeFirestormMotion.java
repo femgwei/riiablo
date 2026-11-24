@@ -29,8 +29,8 @@ public final class NativeFirestormMotion {
   /**
    * Rebuild the bounded path from immutable cast inputs. This makes seeking,
    * checkpoints and trail callbacks independent of the damage RNG and float drift.
-   * For Firestorm only, chargedBoltSeedLow/High retain the initializer seed;
-   * other charged bolts keep their existing incremental path implementation.
+   * Firestorm and audited Druid wind flights retain the initializer seed in
+   * chargedBoltSeedLow/High; other charged bolts keep their incremental path.
    */
   public static Sample sample(Missile m, int age) {
     int x = NativePoisonMissileMotion.precision(m.start.x);

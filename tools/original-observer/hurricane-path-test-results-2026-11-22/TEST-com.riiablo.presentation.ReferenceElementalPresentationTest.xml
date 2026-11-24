@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.presentation.ReferenceElementalPresentationTest" tests="26" skipped="0" failures="0" errors="0" timestamp="2026-11-21T18:09:32" hostname="DESKTOP-7GGAVHU" time="2.107">
+  <properties/>
+  <testcase name="coldDccPublishesAtItsCurrentAgeAndSurvivesItsParent()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="1.418"/>
+  <testcase name="growthAndLoopsRespectTheReferenceMetadataAndExcludedSkillsStayUntouched()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.002"/>
+  <testcase name="hurricaneUsesStateNotTargetMissileAndHasBoundedOrbitingDebris()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.096"/>
+  <testcase name="meteorRockAndTailShareOneFixedFallAndKeepServerImpactTiming()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.004"/>
+  <testcase name="volcanoHasTwoResidentLayersAndRocksLandWithExplosionAndLava()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.016"/>
+  <testcase name="ordinarySpritesStillResolveTheirAngleAfterTwoStableTicks()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.004"/>
+  <testcase name="boulderImpactCreatesEighteenFireCellsAndVariableFlightFragments()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.006"/>
+  <testcase name="blazeDistanceGateOwnersAndLateSnapshotsDoNotDuplicateCells()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.003"/>
+  <testcase name="volcanoOwnerRemovalSkipsLandingChildren()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.003"/>
+  <testcase name="blazeUsesRealSizeVariantsWithTheSameGroundAnchorAndLoop()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.15"/>
+  <testcase name="boulderReplicaClockRunsAtNativeRateWithSixtyHzPresentation()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.004"/>
+  <testcase name="blazeDownsamplesOneTrailWithoutMovingOrRetimingAuthority()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.005"/>
+  <testcase name="armageddonDamageChildrenCannotCreateAnotherFallingPair()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.003"/>
+  <testcase name="volcanoLeavingTheHostSceneOnItsFinalStepDoesNotLand()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.183"/>
+  <testcase name="armageddonLayersUseTheReceivedLandingPointAndCompleteTheNativeFall()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.006"/>
+  <testcase name="referenceSpritesExistInTheReal110fMpqs()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.159"/>
+  <testcase name="boulderTrailUsesObservedCrossingsAndThreeNativeFireRows()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.005"/>
+  <testcase name="replacementAndLegacySystemsDoNotAdvanceTheSameEffectTwice()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.007"/>
+  <testcase name="armageddonCannotCreateImpactChildrenAfterItsOwnerIsRemoved()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.002"/>
+  <testcase name="lateVolcanoSnapshotResumesItsOutroAndCannotRestartTheEffect()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.002"/>
+  <testcase name="firestormUsesObservedPathMovementWithoutReferenceLaneOffsets()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.005"/>
+  <testcase name="fissureCreatesCrackAndSmokeAtTheSamePointWithRandomCrackDirections()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.002"/>
+  <testcase name="pixelOffsetsRoundTripWithoutReversingTheFall()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.0"/>
+  <testcase name="blizzardAlternatesFallingDccsAcrossAnEllipseWithoutDuplicateHits()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.006"/>
+  <testcase name="hurricaneTangentDirectionSurvivesTheLateGenericDirectionPassOnEveryTick()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.003"/>
+  <testcase name="secondBlizzardVariantFallsFromNativeHeightAndLoopsUntilLanding()" classname="com.riiablo.presentation.ReferenceElementalPresentationTest" time="0.001"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+BLAZE_RESOURCE blaze com.riiablo.codec.util.BBox@2152ab30[xMin=-33,xMax=32,yMin=-156,yMax=10,width=66,height=167]
+BLAZE_RESOURCE firemedium com.riiablo.codec.util.BBox@7d32e714[xMin=-33,xMax=32,yMin=-125,yMax=10,width=66,height=136]
+BLAZE_RESOURCE firesmall com.riiablo.codec.util.BBox@34d45ec0[xMin=-33,xMax=32,yMin=-77,yMax=11,width=66,height=89]
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

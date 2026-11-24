@@ -1,0 +1,169 @@
+Local static Capstone output; not REA Evidence, an observed runtime stack or audio capture.
+D2Client.dll sha256=94466b84c0593ab682f1d3d8dc65ef4f8170f33e430865d802bc752458b2b282
+Client start table RVA0xD7488, slot15 -> RVA0x2A050.
+When INFERNO is absent: skill+10C progress overlay -> create type2 (ONCE); skill+10E -> sound dispatcher.
+The private-desktop overlay list polling independently observes one type2 instance per cast.
+CltSt15 RVA=0x2a050
+0002A050 push esi
+0002A051 push edi
+0002A052 test edx, edx
+0002A054 mov edi, ecx
+0002A056 jl 0x6faca07c
+0002A058 mov eax, dword ptr [0x6fb6d4ac]
+0002A05D mov eax, dword ptr [eax]
+0002A05F cmp edx, dword ptr [eax + 0xba0]
+0002A065 jge 0x6faca07c
+0002A067 lea ecx, [edx + edx*8]
+0002A06A shl ecx, 4
+0002A06D sub ecx, edx
+0002A06F mov edx, dword ptr [eax + 0xb98]
+0002A075 lea esi, [edx + ecx*4]
+0002A078 test esi, esi
+0002A07A jne 0x6faca083
+0002A07C pop edi
+0002A07D xor eax, eax
+0002A07F pop esi
+0002A080 ret 4
+0002A083 push 0xc
+0002A085 push edi
+0002A086 call 0x6fb6ab12
+0002A08B test eax, eax
+0002A08D jne 0x6faca0dc
+0002A08F mov ax, word ptr [esi + 0x10c]
+0002A096 test ax, ax
+0002A099 jle 0x6faca0c0
+0002A09B movsx edx, ax
+0002A09E mov eax, dword ptr [0x6fb6d4ac]
+0002A0A3 mov ecx, dword ptr [eax]
+0002A0A5 cmp edx, dword ptr [ecx + 0xbc0]
+0002A0AB jge 0x6faca0c0
+0002A0AD push 0
+0002A0AF push 0
+0002A0B1 push 0
+0002A0B3 push 0
+0002A0B5 push 0
+0002A0B7 push 2
+0002A0B9 mov ecx, edi
+0002A0BB call 0x6fb5ba70
+0002A0C0 mov si, word ptr [esi + 0x10e]
+0002A0C7 test si, si
+0002A0CA jle 0x6faca0dc
+0002A0CC push 0
+0002A0CE push 0
+0002A0D0 movsx ecx, si
+0002A0D3 push 0
+0002A0D5 xor edx, edx
+0002A0D7 call 0x6fb55820
+0002A0DC push 0xc
+0002A0DE push edi
+0002A0DF call 0x6fb6ac80
+0002A0E4 mov esi, eax
+0002A0E6 test esi, esi
+0002A0E8 jne 0x6faca145
+0002A0EA test edi, edi
+0002A0EC jne 0x6faca0f8
+0002A0EE or ecx, 0xffffffff
+0002A0F1 mov eax, 6
+0002A0F6 jmp 0x6faca0fd
+0002A0F8 mov ecx, dword ptr [edi + 0xc]
+0002A0FB mov eax, dword ptr [edi]
+0002A0FD push ecx
+0002A0FE push eax
+0002A0FF push 0x15
+0002A101 push 2
+0002A103 push 0
+0002A105 call 0x6fb6aac4
+0002A10A mov esi, eax
+0002A10C test esi, esi
+0002A10E jne 0x6faca115
+0002A110 pop edi
+0002A111 pop esi
+0002A112 ret 4
+0002A115 push 1
+0002A117 push esi
+0002A118 push edi
+0002A119 call 0x6fb6aab8
+0002A11E push 0x6fb2fb80
+0002A123 push esi
+0002A124 call 0x6fb6acce
+0002A129 push 0xc
+0002A12B push esi
+0002A12C call 0x6fb6aabe
+0002A131 push 1
+0002A133 push 0xc
+0002A135 push edi
+0002A136 call 0x6fb6aa7c
+0002A13B mov eax, 1
+0002A140 pop edi
+0002A141 pop esi
+0002A142 ret 4
+0002A145 push 8
+0002A147 push edi
+0002A148 call 0x6fb6ad4c
+0002A14D mov dword ptr [edi + 0x48], 0x500
+0002A154 push 7
+0002A156 push esi
+0002A157 call 0x6fb6ad46
+0002A15C mov eax, 1
+0002A161 pop edi
+0002A162 pop esi
+0002A163 ret 4
+0002A166 nop 
+0002A167 nop 
+0002A168 nop 
+0002A169 nop 
+0002A16A nop 
+0002A16B nop 
+0002A16C nop 
+0002A16D nop 
+0002A16E nop 
+0002A16F nop 
+0002A170 push esi
+0002A171 push edi
+0002A172 test ecx, ecx
+0002A174 mov edi, edx
+0002A176 je 0x6faca1c7
+0002A178 cmp dword ptr [ecx], 3
+0002A17B jne 0x6faca1c7
+0002A17D test edi, edi
+Shared native overlay clock setup excerpt RVA=0xbbe10
+000BBE10 mov dword ptr [esi + 0x18], edx
+000BBE13 mov eax, dword ptr [ebp + 0x6c]
+000BBE16 mov ecx, dword ptr [esp + 0x38]
+000BBE1A shl eax, 4
+000BBE1D test ecx, ecx
+000BBE1F mov dword ptr [esi + 0x14], eax
+000BBE22 je 0x6fb5be6d
+000BBE24 shl ecx, 4
+000BBE27 test ecx, ecx
+000BBE29 jg 0x6fb5be2f
+000BBE2B xor edx, edx
+000BBE2D jmp 0x6fb5be6a
+000BBE2F mov edi, dword ptr [ebx + 0x24]
+000BBE32 mov eax, dword ptr [ebx + 0x20]
+000BBE35 lea edx, [ecx - 1]
+000BBE38 xor ebp, ebp
+000BBE3A test ecx, edx
+000BBE3C mov edx, 0x6ac690c5
+000BBE41 je 0x6fb5be55
+000BBE43 mul edx
+000BBE45 add eax, edi
+000BBE47 adc edx, ebp
+000BBE49 mov dword ptr [ebx + 0x20], eax
+000BBE4C mov dword ptr [ebx + 0x24], edx
+000BBE4F xor edx, edx
+000BBE51 div ecx
+000BBE53 jmp 0x6fb5be66
+000BBE55 mul edx
+000BBE57 add eax, edi
+000BBE59 adc edx, ebp
+000BBE5B mov dword ptr [ebx + 0x20], eax
+000BBE5E mov dword ptr [ebx + 0x24], edx
+000BBE61 lea edx, [ecx - 1]
+000BBE64 and edx, eax
+000BBE66 mov ebp, dword ptr [esp + 0x10]
+000BBE6A add dword ptr [esi + 0x14], edx
+000BBE6D mov eax, dword ptr [ebp + 0x78]
+000BBE70 mov dword ptr [esi + 0x28], eax
+000BBE73 pop edi
+000BBE74 pop esi

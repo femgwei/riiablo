@@ -14,6 +14,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.SoundEvent;
@@ -68,6 +69,10 @@ public class AnimStepper extends IntervalIteratingSystem {
     }
     Sequence sequence = mSequence.get(entityId);
     Casting casting = mCasting.get(entityId);
+    if (sequence != null && sequence.nativeArcticBlast) {
+      processArcticBlast(entityId, sequence, animData, casting, states);
+      return;
+    }
     if (sequence != null && sequence.nativeLeap) {
       processPlayerLeap(entityId, sequence, animData);
       return;
@@ -273,6 +278,50 @@ public class AnimStepper extends IntervalIteratingSystem {
       return;
     }
     dispatchKeyframes(entityId, animData, false);
+  }
+
+  private void processArcticBlast(int entityId, Sequence sequence, AnimData anim,
+      Casting casting, UnitStates states) {
+    if (!sequence.started || casting == null) return;
+    boolean held = sequence.nativeArcticInputLease > 0;
+    if (held) sequence.nativeArcticInputLease--;
+    if (sequence.nativeArcticFirstTick) {
+      sequence.nativeArcticFirstTick = false;
+      anim.frame = 0;
+      if (mCofReference.has(entityId)) mCofReference.get(entityId).sequenceFrame = 0;
+      return;
+    }
+    int delta = states != null && states.stateList != null
+        ? scaleStateAnimationSpeed(256, states.stateList.getTotalAnimationRateModifier()) : 256;
+    int previous = sequence.nativeArcticCursor;
+    int next = previous + delta;
+    sequence.nativeArcticCursor = Math.min(NativeArcticBlastSequence.LENGTH, next);
+    sequence.nativeArcticRemaining -= delta;
+    anim.frame = NativeArcticBlastSequence.sourceFrame(sequence.nativeArcticCursor) << 8;
+    if (sequence.nativeArcticRemaining <= 0) {
+      events.dispatch(AnimDataFinishedEvent.obtain(entityId));
+      return;
+    }
+    if (previous < NativeArcticBlastSequence.ACTION && next >= NativeArcticBlastSequence.ACTION) {
+      com.riiablo.engine.server.state.UnitState channel = states != null && states.stateList != null
+          ? states.stateList.getState(StateId.INFERNO) : null;
+      // First Do019 arms the server callback; the initial SrvSt11 already paid its cost.
+      if (held && channel != null && channel.runtimeValue != 0) {
+        ServerSkillSystem server = world.getSystem(ServerSkillSystem.class);
+        if (server != null && !server.refreshArcticBlastSequence(entityId,
+            files().skills.get(casting.skillId), casting.targetId, casting.targetVec))
+          sequence.nativeArcticInputLease = 0;
+      }
+      events.dispatch(AnimDataKeyframeEvent.obtain(entityId, Engine.KEYFRAME_ATK));
+      // CltDo24 rewinds the logical point, retaining source frame nine.
+      if (states != null && states.stateList != null && states.stateList.hasState(StateId.INFERNO)) {
+        sequence.nativeArcticCursor = NativeArcticBlastSequence.LOOP
+            + (sequence.nativeArcticCursor & 255);
+        sequence.nativeArcticRemaining = NativeArcticBlastSequence.LOOP_REMAINING;
+      }
+    }
+    anim.lastKeyframeIndex = anim.frame >>> 8;
+    if (mCofReference.has(entityId)) mCofReference.get(entityId).sequenceFrame = anim.frame >>> 8;
   }
 
   private void dispatchSequenceSound(int entityId) {

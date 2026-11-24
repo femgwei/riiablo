@@ -1,0 +1,15 @@
+{
+  "id": "20261120-114630-68996c25",
+  "status": "completed",
+  "started": 1795146390.7696722,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "firestorm-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261120-114630-68996c25\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795146434.7954414
+}

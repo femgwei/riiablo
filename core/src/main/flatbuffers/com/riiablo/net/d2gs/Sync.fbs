@@ -234,6 +234,12 @@ table StateP {
   // authoritative server remains the sole emitter of their missiles.
   periodicDelayFrames:[int32];
   periodicCountdownFrames:[int32];
+  // Repeated activation of an already-active state (e.g. Enchant).
+  presentationRevision:[int32];
+  // Exact state-owned Cyclone Armor pools in 8.8 units. The legacy int16
+  // runtimeValue clips at 32767 and cannot represent its visual thresholds.
+  cycloneArmorCurrentFixed:[int32];
+  cycloneArmorMaximumFixed:[int32];
 }
 
 // Compact authoritative combat state. Attribute modifiers remain server-side;
@@ -308,4 +314,10 @@ table SoundP {
   x:float32;
   y:float32;
   positionPresent:bool;
+}
+
+// A skill-selected one-shot target effect; no missile or damage is implied.
+table UnitOverlayP {
+  entityId:int32;
+  overlay:string;
 }

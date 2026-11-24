@@ -3,11 +3,13 @@ package com.riiablo.engine.server;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
@@ -18,6 +20,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
@@ -34,6 +37,8 @@ import com.riiablo.save.CharData;
 import java.util.ArrayList;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /** Headless contract for native SrvDo124 Armageddon/Hurricane states. */
 class DruidStormAuraIntegrationTest extends RiiabloTest {
@@ -171,6 +176,100 @@ class DruidStormAuraIntegrationTest extends RiiabloTest {
               + " skillEMax=" + skill.EMax + " missile=" + skill.srvmissilea
               + " missileEType=" + strike.missile.EType + " missileEMin=" + strike.missile.EMin
               + " missileEMax=" + strike.missile.Emax);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void armageddonPulseUsesRandomCellAttemptsInsteadOfNearestTargetPosition() {
+    StormRecordingFactory factory = new StormRecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int druid = createDruid(world, 6);
+      world.getMapper(Position.class).get(druid).position.set(100, 100);
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.ARMAGEDDON);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          druid, SkillId.ARMAGEDDON, Engine.INVALID_ENTITY, new Vector2(100, 100),
+          skill.srvdofunc, skill.cltdofunc));
+      UnitState state = world.getMapper(UnitStates.class).get(druid)
+          .stateList.getState(StateId.ARMAGEDDON);
+      assertNotNull(state);
+      int paramBeforePulse = state.runtimeValue;
+      state.periodicCountdownFrames = 1;
+      world.setDelta(1f / 25f);
+      world.process();
+      assertEquals(1, factory.created.size());
+      Missile strike = factory.created.get(0);
+      assertEquals(SkillId.ARMAGEDDON, strike.skillId);
+      assertTrue(Math.abs(strike.start.x - 100) <= 8);
+      assertTrue(Math.abs(strike.start.y - 100) <= 8);
+      assertNotEquals(paramBeforePulse, state.runtimeValue,
+          "SrvActive146 must publish the next Param1 seed after its reset draw");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void hurricanePulseAppliesAreaDamageWithoutCreatingPerTargetMissiles() {
+    StormRecordingFactory factory = new StormRecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int druid = createDruid(world, 6);
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(3, 0);
+      Attributes targetAttrs = attributes();
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
+      float before = targetAttrs.get(Stat.hitpoints, com.riiablo.attributes.StatRef.obtain()).asFixed();
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.HURRICANE);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          druid, SkillId.HURRICANE, Engine.INVALID_ENTITY, new Vector2(0, 0),
+          skill.srvdofunc, skill.cltdofunc));
+      UnitState state = world.getMapper(UnitStates.class).get(druid)
+          .stateList.getState(StateId.HURRICANE);
+      state.periodicCountdownFrames = 1;
+      world.setDelta(1f / 25f);
+      world.process();
+      float after = targetAttrs.get(Stat.hitpoints, com.riiablo.attributes.StatRef.obtain()).asFixed();
+      assertTrue(after < before, "SrvActive145 area packet must damage the hostile target");
+      assertEquals(0, factory.created.size(), "area pulse must not require one missile per target");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void armageddonSkipsThePulseWhenAllFiveRandomCellsAreOutsideLoadedRooms() {
+    StormRecordingFactory factory = new StormRecordingFactory();
+    com.riiablo.map.Map map = mock(com.riiablo.map.Map.class);
+    Array<com.riiablo.map.Map.Zone> zones = new Array<com.riiablo.map.Map.Zone>();
+    zones.add(mock(com.riiablo.map.Map.Zone.class));
+    when(map.getZones()).thenReturn(zones);
+    when(map.getZone(org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt()))
+        .thenReturn(null);
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(), factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      int druid = createDruid(world, 6);
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.ARMAGEDDON);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          druid, SkillId.ARMAGEDDON, Engine.INVALID_ENTITY, new Vector2(0, 0),
+          skill.srvdofunc, skill.cltdofunc));
+      UnitState state = world.getMapper(UnitStates.class).get(druid)
+          .stateList.getState(StateId.ARMAGEDDON);
+      state.periodicCountdownFrames = 1;
+      world.setDelta(1f / 25f);
+      world.process();
+      assertEquals(0, factory.created.size(), "all five invalid cells must skip the pulse");
     } finally {
       world.dispose();
     }

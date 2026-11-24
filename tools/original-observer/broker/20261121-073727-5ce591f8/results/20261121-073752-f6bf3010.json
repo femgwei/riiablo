@@ -1,0 +1,15 @@
+{
+  "id": "20261121-073752-f6bf3010",
+  "status": "completed",
+  "started": 1795217872.322998,
+  "broker_pid": 2616,
+  "command": {
+    "op": "run_job",
+    "job": "inferno-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-073727-5ce591f8\\runs\\20261121-073752-f6bf3010\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795217920.3209786
+}

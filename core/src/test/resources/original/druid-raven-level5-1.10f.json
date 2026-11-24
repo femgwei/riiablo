@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "run_id": "20261122-192036-8e069428",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "fixture": {
+    "name": "CXDruRaven",
+    "path": "G:\\BaiduNetdiskDownload\\Diablo II\\Save\\CXDruRaven.d2s",
+    "sha256": "c1c1e7ea29d40add9a817944ba9185d7ac1ede0e3ef937ee14abd486d12be6ff",
+    "source_sha256": "21349fff66d97e0d8270ed15c2d1148e5c4c38e46e28621757987f18f5415374",
+    "class_id": 5,
+    "hard_points": {
+      "221": 5
+    },
+    "other_hard_points": 0,
+    "equipment": "empty",
+    "map_seed": 127897359,
+    "hotkeys": {
+      "F1": 221,
+      "F2": 221
+    },
+    "limitations": [
+      "Only Raven learned; summon activity/AI requires runtime observation"
+    ]
+  },
+  "capture": {
+    "status": "passed",
+    "skill": 221,
+    "baseline_units": 4,
+    "new_units_count": 5,
+    "new_class_ids": [
+      419
+    ],
+    "new_units": [
+      {
+        "pointer": 172760576,
+        "type": 1,
+        "class_id": 419,
+        "unit_id": 17,
+        "mode": 12,
+        "animation_raw": 0,
+        "animation_frame": 256,
+        "animation_rate": 0,
+        "x_fixed": 296910848,
+        "y_fixed": 370704384,
+        "table_rva": 1157888,
+        "owner_type": 0,
+        "owner_id": 0,
+        "direction": 24,
+        "new_direction": 24,
+        "elapsed_ms": 15979,
+        "local_new": true
+      },
+      {
+        "pointer": 91856128,
+        "type": 1,
+        "class_id": 419,
+        "unit_id": 18,
+        "mode": 12,
+        "animation_raw": 0,
+        "animation_frame": 256,
+        "animation_rate": 0,
+        "x_fixed": 296910848,
+        "y_fixed": 370704384,
+        "table_rva": 1157888,
+        "owner_type": 0,
+        "owner_id": 0,
+        "direction": 34,
+        "new_direction": 34,
+        "elapsed_ms": 15979,
+        "local_new": true
+      },
+      {
+        "pointer": 91841536,
+        "type": 1,
+        "class_id": 419,
+        "unit_id": 19,
+        "mode": 12,
+        "animation_raw": 0,
+        "animation_frame": 256,
+        "animation_rate": 0,
+        "x_fixed": 296910848,
+        "y_fixed": 370704384,
+        "table_rva": 1157888,
+        "owner_type": 0,
+        "owner_id": 0,
+        "direction": 60,
+        "new_direction": 60,
+        "elapsed_ms": 15979,
+        "local_new": true
+      },
+      {
+        "pointer": 91842304,
+        "type": 1,
+        "class_id": 419,
+        "unit_id": 20,
+        "mode": 12,
+        "animation_raw": 0,
+        "animation_frame": 256,
+        "animation_rate": 0,
+        "x_fixed": 296910848,
+        "y_fixed": 370704384,
+        "table_rva": 1157888,
+        "owner_type": 0,
+        "owner_id": 0,
+        "direction": 34,
+        "new_direction": 34,
+        "elapsed_ms": 15979,
+        "local_new": true
+      },
+      {
+        "pointer": 91843072,
+        "type": 1,
+        "class_id": 419,
+        "unit_id": 21,
+        "mode": 2,
+        "animation_raw": 1248,
+        "animation_frame": 3072,
+        "animation_rate": 156,
+        "x_fixed": 296756928,
+        "y_fixed": 369501888,
+        "table_rva": 1157888,
+        "owner_type": 0,
+        "owner_id": 0,
+        "direction": 0,
+        "new_direction": 0,
+        "elapsed_ms": 15979,
+        "local_new": true
+      }
+    ],
+    "casts": 5,
+    "raven_sample_count": 2550,
+    "raven_mode_values": [
+      1,
+      2,
+      12
+    ],
+    "final_units": 9,
+    "cleanup_confirmed": true,
+    "scope": "Private HWND cast and read-only unit snapshots; no runtime stacks or pixels"
+  },
+  "limitations": [
+    "Skill level 5, five casts spaced 0.9s, one owner and one Blood Moor entry.",
+    "This validates five accepted Raven creations; no level 8/20 or AI depletion yet."
+  ],
+  "evidence_valid_for_level_parity": false,
+  "invalidation_reason": "The old fixture preparer wrote the input report but did not replace the existing game save; the requested skill level was not established. Retained as raw capture only."
+}

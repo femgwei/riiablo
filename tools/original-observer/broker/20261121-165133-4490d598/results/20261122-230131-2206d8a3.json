@@ -1,0 +1,15 @@
+{
+  "id": "20261122-230131-2206d8a3",
+  "status": "completed",
+  "started": 1795359691.212843,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "druid-raven-target-harness-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261122-230131-2206d8a3\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795359766.1942763
+}

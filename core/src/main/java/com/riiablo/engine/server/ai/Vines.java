@@ -8,6 +8,7 @@ import com.artemis.utils.IntBag;
 
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.Animation;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
@@ -29,14 +30,16 @@ import com.riiablo.logger.Logger;
  */
 public class Vines extends AI {
   private static final Logger log = LogManager.getLogger(Vines.class);
-  private float nextThink;
-  private String state = "IDLE";
+  protected float nextThink;
+  /** Native AiControl.dwAiParam[1] equivalent: frames until another Vine Attack. */
+  protected float skillCooldown;
+  protected String state = "IDLE";
 
   protected com.artemis.ComponentMapper<Position> mPosition;
   protected com.artemis.ComponentMapper<Sequence> mSequence;
   protected com.artemis.ComponentMapper<AttributesWrapper> mAttributesWrapper;
   // World-owned live query, retained on the factory-created AI rather than serialized.
-  private EntitySubscription corpseEntities;
+  protected EntitySubscription corpseEntities;
 
   @Override
   public void initialize() {
@@ -50,14 +53,17 @@ public class Vines extends AI {
   @Override void writeRuntime(java.io.DataOutputStream out) throws java.io.IOException {
     super.writeRuntime(out);
     AiRuntimeState.writeTimer(out, nextThink);
+    AiRuntimeState.writeTimer(out, skillCooldown);
     com.riiablo.engine.replay.CheckpointIO.writeString(out, state);
   }
   @Override void readRuntime(java.io.DataInputStream in, boolean apply) throws java.io.IOException {
     super.readRuntime(in, apply);
     float savedNextThink = AiRuntimeState.readTimer(in);
+    float savedSkillCooldown = AiRuntimeState.readTimer(in);
     String savedState = com.riiablo.engine.replay.CheckpointIO.readString(in);
     if (apply) {
       nextThink = savedNextThink;
+      skillCooldown = savedSkillCooldown;
       state = savedState;
     }
   }
@@ -78,6 +84,7 @@ public class Vines extends AI {
     }
 
     nextThink -= delta;
+    skillCooldown = Math.max(0f, skillCooldown - Math.max(0f, delta));
     if (nextThink > 0f) return;
     nextThink = Math.max(0.15f, SLEEP);
 
@@ -95,27 +102,42 @@ public class Vines extends AI {
 
     Skills.Entry projectileSkill = skillForSlot(skillSlot);
     boolean corpseCycler = projectileSkill != null && projectileSkill.srvstfunc == 63;
+    float ownerLeash = params.length > 4 && params[4] > 0 ? params[4] : 8f;
     if (corpseCycler && !ownerNeedsResource(projectileSkill)) {
-      state = followSummonOwner(8f) ? "FOLLOW" : "IDLE";
+      state = followSummonOwner(ownerLeash) ? "FOLLOW" : "IDLE";
       if (state.equals("IDLE")) stopMovement();
       return;
     }
     float[] outDistance = { Float.MAX_VALUE };
+    int targetSight = params.length > 1 && params[1] > 0 ? params[1] : 24;
     int targetId = corpseCycler
-        ? findNearbyCorpse(outDistance, 10f)
-        : findSummonTarget(Engine.INVALID_ENTITY, outDistance, 24f);
+        ? findNearbyCorpse(outDistance, targetSight)
+        : findSummonTarget(Engine.INVALID_ENTITY, outDistance, targetSight);
+    if (targetId >= 0 && mPosition.has(targetId)
+        && nativeAiDistance(mPosition.get(entityId).position, mPosition.get(targetId).position) >= targetSight) {
+      targetId = Engine.INVALID_ENTITY;
+    }
     if (targetId == Engine.INVALID_ENTITY || !mPosition.has(targetId)) {
-      state = followSummonOwner(8f) ? "FOLLOW" : "IDLE";
+      state = followSummonOwner(ownerLeash) ? "FOLLOW" : "IDLE";
       if (state.equals("IDLE")) stopMovement();
       return;
     }
 
-    float range = projectileSkill != null && projectileSkill.aurarangecalc != null
-        ? Math.max(1f, SkillFormula.evaluate(projectileSkill.aurarangecalc,
-            projectileSkill, resolveMonsterSkillLevel(skillSlot))) : 10f;
-    if (outDistance[0] > range) {
+    if (targetIsPoisonedOrImmune(targetId)) {
+      state = "ESCAPE";
+      runAwayFrom(targetId, params.length > 3 && params[3] > 0 ? params[3] : 10);
+      return;
+    }
+    if (!isInNativeMeleeRange(targetId)) {
       state = "APPROACH";
       walkTo(mPosition.get(targetId).position, targetId);
+      return;
+    }
+
+    // Fn110 stores the last skill frame and compares it with aip1 (100 for
+    // Plague Poppy). The old port could cast every aidel tick instead.
+    if (skillCooldown > 0f) {
+      state = "WAIT_SKILL";
       return;
     }
 
@@ -123,10 +145,29 @@ public class Vines extends AI {
     state = "CAST";
     if (!useMonsterSkill(skillSlot, targetId, mPosition.get(targetId).position)) {
       state = "WAIT_CAST";
+    } else {
+      skillCooldown = Math.max(0f, (params.length > 0 ? params[0] : 0)
+          * Animation.FRAME_DURATION);
     }
   }
 
-  private boolean ownerNeedsResource(Skills.Entry skill) {
+  private boolean targetIsPoisonedOrImmune(int targetId) {
+    if (!mUnitStates.has(targetId) || mUnitStates.get(targetId).stateList == null) return false;
+    if (mUnitStates.get(targetId).stateList.hasState(com.riiablo.engine.server.state.StateId.POISON)) return true;
+    return mAttributesWrapper.has(targetId)
+        && mAttributesWrapper.get(targetId).attrs.getValue(Stat.poisonresist, 0f) >= 100f;
+  }
+
+  private void runAwayFrom(int targetId, int distance) {
+    Vector2 source = mPosition.get(entityId).position;
+    Vector2 target = mPosition.get(targetId).position;
+    Vector2 away = new Vector2(source).sub(target);
+    if (away.isZero(0.0001f)) away.set(1f, 0f);
+    away.nor().scl(Math.max(1, distance)).add(source);
+    runTo(away, 0, Engine.INVALID_ENTITY);
+  }
+
+  protected boolean ownerNeedsResource(Skills.Entry skill) {
     if (!mSummonedPet.has(entityId) || skill == null) return false;
     SummonedPet pet = mSummonedPet.get(entityId);
     if (pet == null || !mAttributesWrapper.has(pet.ownerId)) return false;
@@ -140,7 +181,7 @@ public class Vines extends AI {
     return maximum > 0f && current < maximum;
   }
 
-  private Skills.Entry skillForSlot(int skillSlot) {
+  protected Skills.Entry skillForSlot(int skillSlot) {
     if (monster == null || monster.monstats == null || skillSlot < 0 || skillSlot >= 8) return null;
     String[] names = {
         monster.monstats.Skill1, monster.monstats.Skill2,

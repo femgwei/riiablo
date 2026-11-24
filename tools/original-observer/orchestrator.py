@@ -151,13 +151,39 @@ def validate_job(job, home):
                        {"background_probe": "poison-javelin", "entry_only": True, "character": "CXSorc"},
                        {"background_probe": "plague-javelin", "entry_only": True, "character": "CXSorc"},
                        {"background_probe": "firestorm", "entry_only": True, "character": "CXSorc"},
+                       {"background_probe": "druid-elemental-batch", "entry_only": True, "character": "CXDruBatch"},
+                       {"background_probe": "druid-elemental-batch", "entry_only": True, "character": "CXDruBatch", "firestorm_callbacks": True},
+                       {"background_probe": "druid-surface-batch", "entry_only": True, "character": "CXDruSurface"},
+                       {"background_probe": "druid-wind-batch", "entry_only": True, "character": "CXDruWind"},
+                       {"background_probe": "druid-wind-batch", "entry_only": True, "character": "CXDruWind", "wind_passive": True},
+                       {"background_probe": "druid-surface-batch", "entry_only": True, "character": "CXDruSurface", "volcano_hits": True},
+                       {"background_probe": "inferno", "entry_only": True, "character": "CXInferno"},
+                       {"background_probe": "arctic-blast", "entry_only": True, "character": "CXArctic"},
+                       {"background_probe": "druid-storm", "entry_only": True, "character": "CXDruState"},
+                       {"background_probe": "druid-wolf", "entry_only": True, "character": "CXDruWolf"},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven"},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_level": 5},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_level": 5, "raven_casts": 5},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_level": 5, "raven_casts": 5, "raven_cast_spacing": 0.9},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_level": 8, "raven_casts": 5, "raven_cast_spacing": 0.9},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_level": 20, "raven_casts": 5, "raven_cast_spacing": 0.9},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_advance": True},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_harness": True},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_harness": True, "raven_profile": "natural-life"},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_harness": True, "raven_profile": "town-orbit"},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_harness": True, "raven_seconds": 40},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_harness": True, "raven_seconds": 60, "raven_profile": "attack-natural-long"},
+                       {"background_probe": "druid-raven", "entry_only": True, "character": "CXDruRaven", "raven_harness": True, "raven_level": 5, "raven_seconds": 60, "raven_profile": "attack-natural-long"},
+                       {"background_probe": "arctic-blast", "entry_only": True, "character": "CXArctic", "birth_release": True},
+                       {"background_probe": "arctic-blast", "entry_only": True, "character": "CXArctic", "birth_release": True, "turn_probe": True},
+                       {"background_probe": "enchant", "entry_only": True, "character": "CXEnchant"},
                        {"background_probe": "molten-boulder", "entry_only": True, "character": "CXMolten"},
                        {"background_probe": "molten-boulder", "entry_only": True, "character": "CXMolten", "expiry_probe": True},
                        {"background_probe": "molten-boulder", "entry_only": True, "character": "CXMolten", "direction_batch": True},
                        {"background_probe": "poison-javelin", "entry_only": True, "character": "CXSorc", "direction_batch": True}):
             raise ValueError("background_probe accepts only the fixed registered private-desktop experiments")
     character = job.get("character", "CXSorc")
-    if character not in ("CXSorc", "CXMolten", "CXPortal", "CXBarb", "CXBarbWW", "aaa", "MapWalk", "Census", "CensusB", "CensusSorc"):
+    if character not in ("CXSorc", "CXArctic", "CXDruBatch", "CXDruSurface", "CXDruWind", "CXDruState", "CXDruRaven", "CXDruWolf", "CXEnchant", "CXInferno", "CXMolten", "CXPortal", "CXBarb", "CXBarbWW", "aaa", "MapWalk", "Census", "CensusB", "CensusSorc"):
         raise ValueError("Only the pinned CXSorc/CXBarb/CXBarbWW/aaa/MapWalk/Census/CensusB/CensusSorc fixtures are currently supported")
     lifecycle = job.get("lifecycle")
     if lifecycle not in (None, "restart"):
@@ -268,9 +294,36 @@ def run(args):
     if job.get("background_probe") == "firestorm":
         from poison_javelin_background import run_private
         return run_private(home, args.output, firestorm=True)
+    if job.get("background_probe") == "arctic-blast":
+        from arctic_blast_background import run_private
+        return run_private(home, args.output,birth_release=job.get('birth_release',False),turn_probe=job.get('turn_probe',False))
+    if job.get("background_probe") == "druid-storm":
+        from druid_storm_background import run_private
+        return run_private(home, args.output)
+    if job.get("background_probe") == "druid-wolf":
+        from druid_wolf_background import run_private
+        return run_private(home, args.output)
+    if job.get("background_probe") == "druid-raven":
+        from druid_raven_background import run_private
+        return run_private(home, args.output, job.get("raven_level", 1), job.get("raven_casts", 1), job.get("raven_cast_spacing", .18), job.get("raven_seconds", 16), job.get("raven_advance", False), job.get("raven_harness", False), job.get("raven_profile", "attack-natural"))
+    if job.get("background_probe") == "inferno":
+        from inferno_background import run_private
+        return run_private(home, args.output)
+    if job.get("background_probe") == "enchant":
+        from enchant_background import run_private
+        return run_private(home, args.output)
     if job.get("background_probe") == "molten-boulder":
         from molten_boulder_background import run_private
         return run_private(home, args.output, job.get("expiry_probe", False), job.get("direction_batch", False))
+    if job.get("background_probe") == "druid-elemental-batch":
+        from molten_boulder_background import run_private
+        return run_private(home, args.output, class_batch=True, firestorm_callbacks=job.get("firestorm_callbacks", False))
+    if job.get("background_probe") == "druid-wind-batch":
+        from molten_boulder_background import run_private
+        return run_private(home, args.output, wind_batch=True, wind_passive=job.get("wind_passive", False))
+    if job.get("background_probe") == "druid-surface-batch":
+        from molten_boulder_background import run_private
+        return run_private(home, args.output, surface_batch=True, volcano_hits=job.get("volcano_hits", False))
     if job.get("background_probe") == "bone-spear":
         from bone_spear_background import run_private
         return run_private(home, args.output)

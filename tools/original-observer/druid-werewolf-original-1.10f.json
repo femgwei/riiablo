@@ -1,0 +1,187 @@
+{
+  "schema": 2,
+  "scope": "Original 1.10f Werewolf client morph, movement and restore polling",
+  "run": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261123-115609-184da731\\orchestrator",
+  "background_verified": true,
+  "owned_game_closed": true,
+  "selected_skill": [
+    223,
+    1
+  ],
+  "sample_count": 255,
+  "events": [
+    "restore"
+  ],
+  "target": {
+    "pointer": 154278400,
+    "level_id": 2,
+    "type": 1,
+    "class_id": 5,
+    "unit_id": 14,
+    "mode": 1,
+    "animation": 720,
+    "position": {
+      "x": 4587,
+      "y": 5664
+    }
+  },
+  "mode_transitions": [
+    {
+      "elapsed_ms": 0,
+      "mode": 10,
+      "animation_raw": 0,
+      "events": []
+    },
+    {
+      "elapsed_ms": 373,
+      "mode": 13,
+      "animation_raw": 307,
+      "events": []
+    },
+    {
+      "elapsed_ms": 876,
+      "mode": 1,
+      "animation_raw": 0,
+      "events": []
+    }
+  ],
+  "mode_values": [
+    1,
+    10,
+    13
+  ],
+  "morph_sample_count": 12,
+  "morph_first_ms": 0,
+  "morph_last_ms": 341,
+  "direction_values": [
+    56,
+    57,
+    58
+  ],
+  "new_direction_values": [
+    58
+  ],
+  "overlay_ids": [
+    198
+  ],
+  "overlays": [
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 320,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 640,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 960,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 960,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 1280,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 1600,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 1920,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 2240,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 2240,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 2560,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 2880,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 3200,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 3200,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    },
+    {
+      "pointer": 154279680,
+      "overlay_id": 198,
+      "cursor": 3520,
+      "total_cursor": 3328,
+      "frame_delta": 320
+    }
+  ],
+  "animation_raw_values": [
+    0,
+    208,
+    416,
+    624,
+    832,
+    1040,
+    1248,
+    1456,
+    1664,
+    1872
+  ],
+  "animation_rate_values": [
+    208
+  ],
+  "sha256": {
+    "orchestrator.json": "43f6f87b7d0291784d6ce8628ab279d78e25f242204465d43229443df776ddc3",
+    "worker/capture/summary.json": "f1fbd4b4bd93290469bc9dccb54b62f06dee6d1b54e8204138191f32a5b561c2",
+    "worker/capture/player-animation.jsonl": "d9f6116e90fdce96809f873063ea42de42d1432902a6d87d68d4fc7d9ef56e67"
+  }
+}

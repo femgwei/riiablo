@@ -1,0 +1,15 @@
+{
+  "id": "20261121-095015-f801398c",
+  "status": "completed",
+  "started": 1795225816.0007508,
+  "broker_pid": 2616,
+  "command": {
+    "op": "run_job",
+    "job": "druid-surface-batch-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-073727-5ce591f8\\runs\\20261121-095015-f801398c\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795225871.4459462
+}

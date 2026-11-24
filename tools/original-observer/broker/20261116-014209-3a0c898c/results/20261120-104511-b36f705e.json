@@ -1,0 +1,15 @@
+{
+  "id": "20261120-104511-b36f705e",
+  "status": "completed",
+  "started": 1795142712.110035,
+  "broker_pid": 24896,
+  "command": {
+    "op": "run_job",
+    "job": "plague-javelin-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261116-014209-3a0c898c\\runs\\20261120-104511-b36f705e\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795142769.225048
+}

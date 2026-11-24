@@ -53,6 +53,19 @@ class DruidWindCollisionTest extends RiiabloTest {
     }
   }
 
+  @Test void nativeWaypointFlightStillResolvesContactDamageAndStun() {
+    try (Fixture f = new Fixture("Twister", "twister", 10.2f)) {
+      Missile m=f.missile;m.chargedBoltPath=true;m.chargedBoltMainDirection=0;
+      m.chargedBoltTargetX=18;m.chargedBoltTargetY=10;m.chargedBoltSeedLow=18;m.chargedBoltSeedHigh=666;
+      assertTrue(com.riiablo.engine.server.missile.NativeDruidWindMotion.handles(m));
+      f.world.process();
+      assertTrue(f.life()<1000f);
+      assertEquals(10,f.world.getMapper(UnitStates.class).get(f.target).stateList
+          .getState(StateId.STUNNED).duration);
+      assertTrue(m.damageSnapshot);
+    }
+  }
+
   private static final class Fixture implements AutoCloseable {
     final World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new MissileCollisionSystem()).build());

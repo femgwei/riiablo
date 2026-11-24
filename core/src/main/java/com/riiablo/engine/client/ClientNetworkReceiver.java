@@ -263,6 +263,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
         (Runnable) () -> events.dispatch(event));
   }
 
+  void receiveUnitOverlay(com.riiablo.net.packet.d2gs.UnitOverlayP packet) {
+    if (packet.overlay() == null || packet.overlay().isEmpty()) return;
+    int local = syncIds.get(packet.entityId());
+    if (local == Engine.INVALID_ENTITY) return;
+    publishEvent("network.unit_overlay",
+        com.riiablo.engine.server.event.UnitOverlayEvent.obtain(local, packet.overlay()));
+  }
+
   /** Defers ECS deletion until the structural commit barrier when running under fixed ticks. */
   void deleteEntity(int entityId) {
     if (simulationTickCoordinator == null) {
@@ -384,6 +392,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
               sound.entityId(), sound.sound(), sound.global());
         if (sound.positionPresent()) event.withPosition(sound.x(), sound.y());
         publishEvent("network.sound", event);
+        break;
+      case D2GSData.UnitOverlayP:
+        receiveUnitOverlay((com.riiablo.net.packet.d2gs.UnitOverlayP)
+            packet.data(new com.riiablo.net.packet.d2gs.UnitOverlayP()));
         break;
       case D2GSData.SnapshotBaseline:
         SnapshotBaseline(packet);

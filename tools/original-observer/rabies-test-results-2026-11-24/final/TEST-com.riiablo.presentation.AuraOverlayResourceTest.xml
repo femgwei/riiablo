@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.presentation.AuraOverlayResourceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T00:59:55" hostname="DESKTOP-7GGAVHU" time="0.151">
+  <properties/>
+  <testcase name="barbarianStateLayersAndActivationFlashesUseNativeAnimationParameters()" classname="com.riiablo.presentation.AuraOverlayResourceTest" time="0.007"/>
+  <testcase name="dimVisionWaitsForTheRealCastOverlayIncludingPendingAssets()" classname="com.riiablo.presentation.AuraOverlayResourceTest" time="0.007"/>
+  <testcase name="realManagerInstallsNativeAuraRateBlendAndPreservesOtherOverlays()" classname="com.riiablo.presentation.AuraOverlayResourceTest" time="0.003"/>
+  <testcase name="savedRightHandAuraIsRestoredWithoutSkillSelectionEvent()" classname="com.riiablo.presentation.AuraOverlayResourceTest" time="0.129"/>
+  <testcase name="realAuraRowsUseSupportedDrawModesAndExistingDccs()" classname="com.riiablo.presentation.AuraOverlayResourceTest" time="0.003"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+AURA_DRAW resistfire aura_resistfire trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW resistcold aura_resistcold trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW resistlight aura_resistlight trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW resistall aura_resistall_front trans=3 rate=16 offsets=0,0 height2=0 predraw=false
+AURA_DRAW resistall aura_resistall_back trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW shout shout trans=3 rate=8 offsets=0,0 height2=0 predraw=false
+AURA_DRAW conviction convictionfront trans=3 rate=16 offsets=0,0 height2=0 predraw=false
+AURA_DRAW conviction convictionback trans=3 rate=6 offsets=0,0 height2=0 predraw=true
+AURA_DRAW convicted convictionfront trans=3 rate=16 offsets=0,0 height2=0 predraw=false
+AURA_DRAW convicted convictionback trans=3 rate=6 offsets=0,0 height2=0 predraw=true
+AURA_DRAW battleorders battleorders trans=3 rate=8 offsets=0,0 height2=0 predraw=false
+AURA_DRAW might aura_might_front trans=3 rate=16 offsets=4,0 height2=0 predraw=false
+AURA_DRAW might aura_might_back trans=3 rate=16 offsets=4,0 height2=0 predraw=true
+AURA_DRAW prayer aura_prayer_front trans=3 rate=8 offsets=0,0 height2=0 predraw=false
+AURA_DRAW prayer aura_prayer_back trans=3 rate=8 offsets=0,0 height2=0 predraw=true
+AURA_DRAW holyfire aura_holyfire_front trans=3 rate=16 offsets=0,0 height2=0 predraw=false
+AURA_DRAW holyfire aura_holyfire_back trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW thorns aura_thorns_front trans=3 rate=16 offsets=0,0 height2=0 predraw=false
+AURA_DRAW thorns aura_thorns_back trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW defiance aura_defiance_front trans=3 rate=8 offsets=0,0 height2=0 predraw=false
+AURA_DRAW defiance aura_defiance_back trans=3 rate=8 offsets=0,0 height2=0 predraw=true
+AURA_DRAW blessedaim blessedaimfront trans=3 rate=8 offsets=0,0 height2=0 predraw=false
+AURA_DRAW blessedaim blessedaimback trans=3 rate=8 offsets=0,0 height2=0 predraw=true
+AURA_DRAW stamina staminafront trans=3 rate=8 offsets=0,0 height2=0 predraw=false
+AURA_DRAW stamina staminaback trans=3 rate=8 offsets=0,0 height2=0 predraw=true
+AURA_DRAW concentration concentrationfront trans=3 rate=3 offsets=0,0 height2=0 predraw=false
+AURA_DRAW concentration concentrationback trans=3 rate=3 offsets=0,0 height2=0 predraw=true
+AURA_DRAW holywind holyfreeze trans=3 rate=8 offsets=0,0 height2=0 predraw=true
+AURA_DRAW holywindcold null trans=3 rate=16 offsets=0,0 height2=0 predraw=false
+AURA_DRAW cleansing cleansingfront trans=3 rate=8 offsets=0,0 height2=0 predraw=false
+AURA_DRAW cleansing cleansingback trans=3 rate=8 offsets=0,0 height2=0 predraw=true
+AURA_DRAW holyshock holyshockfront trans=3 rate=16 offsets=0,0 height2=0 predraw=false
+AURA_DRAW holyshock holyshockback trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW sanctuary sanctuaryfront trans=3 rate=16 offsets=0,-1 height2=0 predraw=true
+AURA_DRAW sanctuary sanctuaryback trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW meditation meditationfront trans=3 rate=16 offsets=0,0 height2=0 predraw=false
+AURA_DRAW meditation meditationback trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW fanaticism fanaticismfront trans=3 rate=6 offsets=0,-1 height2=0 predraw=false
+AURA_DRAW fanaticism fanaticismback trans=3 rate=6 offsets=0,0 height2=0 predraw=true
+AURA_DRAW redemption redemptionfront trans=3 rate=16 offsets=0,0 height2=0 predraw=false
+AURA_DRAW redemption redemptionback trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW battlecommand battlecommand trans=3 rate=8 offsets=0,0 height2=0 predraw=false
+AURA_DRAW barbs spirit_of_barbs trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW wolverine heart_of_wolverine trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+AURA_DRAW oaksage oak_sage trans=3 rate=6 offsets=0,0 height2=0 predraw=true
+AURA_DRAW quickness quickness trans=3 rate=16 offsets=0,0 height2=0 predraw=true
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>
