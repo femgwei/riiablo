@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "date": "2026-11-26",
+  "java": "JDK 17",
+  "mode": "headless; original capture reused; no foreground or global input",
+  "core": {
+    "status": "passed",
+    "tests": 74,
+    "suites": [
+      {
+        "name": "com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest",
+        "timestamp": "2026-11-26T03:45:26",
+        "tests": "19",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.NecromancerGolemReviveIntegrationTest",
+        "timestamp": "2026-11-26T03:45:36",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.NecromancerSummonIntegrationTest",
+        "timestamp": "2026-11-26T03:45:41",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.PathfinderTest",
+        "timestamp": "2026-11-26T03:45:41",
+        "tests": "16",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.skill.SkillFormulaTest",
+        "timestamp": "2026-11-26T03:45:45",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.SummonInitializationIntegrationTest",
+        "timestamp": "2026-11-26T03:45:45",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.NecromancerExplosionPresentationTest",
+        "timestamp": "2026-11-26T03:45:50",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.ReviveLocalMovementTest",
+        "timestamp": "2026-11-26T03:45:56",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.StateOverlaySystemTest",
+        "timestamp": "2026-11-26T03:46:01",
+        "tests": "15",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; .\\gradlew.bat :core:test --tests com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest --tests com.riiablo.engine.server.NecromancerGolemReviveIntegrationTest --tests com.riiablo.engine.server.NecromancerSummonIntegrationTest --tests com.riiablo.engine.server.PathfinderTest --tests com.riiablo.engine.server.skill.SkillFormulaTest --tests com.riiablo.engine.server.SummonInitializationIntegrationTest --tests com.riiablo.presentation.NecromancerExplosionPresentationTest --tests com.riiablo.presentation.ReviveLocalMovementTest --tests com.riiablo.presentation.StateOverlaySystemTest --no-daemon",
+    "log": "tools/original-observer/necromancer-revive-validation-2026-11-26.log"
+  },
+  "original_runtime_status": "observed_minimized_d2gfx_partial",
+  "limitations": [
+    "Local path and terrain are controlled stubs; physical integration is real",
+    "Animation layer palette binding is tested without GPU rendering",
+    "Original monster movement, attacks, palette output and cleanup are not runtime-compared"
+  ],
+  "d2gs": {
+    "status": "passed",
+    "tests": 7,
+    "suites": [
+      {
+        "name": "com.riiablo.server.d2gs.D2GSSimulationAssemblyTest",
+        "timestamp": "2026-11-26T03:47:17",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.server.d2gs.ServerEntityLifecycleTest",
+        "timestamp": "2026-11-26T03:47:20",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; .\\gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest --no-daemon",
+    "log": "tools/original-observer/necromancer-revive-d2gs-validation-2026-11-26.log"
+  },
+  "total_tests": 81,
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java": "7f5fcd0af7295ddbd5e561a49fb5a6327e341d8a17cc7b4d844da3fdbc06cb5a",
+    "core/src/main/java/com/riiablo/engine/server/Pathfinder.java": "75d7e586cc516e6b557eec15ea429acda90b0a63c7ae0a46476af259a04c5fa8",
+    "core/src/main/java/com/riiablo/engine/server/skill/SkillFormula.java": "12df38ae763d9189dc1e916d52517ebaedce99e6646a8c3c5fe124db7e6f8297",
+    "core/src/main/java/com/riiablo/presentation/ClientEntityFactory.java": "0af0d53d094f3eaf6ac731bf03c7e3d5990dcace35816bff1e121e13ef770462",
+    "core/src/main/java/com/riiablo/presentation/StateOverlaySystem.java": "cef2a60b5d448ceefe290a073cb6f92f7b9b7cbc93daff60687539891621149a",
+    "core/src/main/java/com/riiablo/presentation/SkillCastHandler.java": "a840bcbb3771445a1e5b18e8a8918b50047a79268fcbec49e905ebd941769b82"
+  },
+  "cleanup": {
+    "broker_status": "ready",
+    "active": null,
+    "child_pid": null,
+    "cleanup_blocked": false,
+    "original_processes_observed": 0
+  }
+}

@@ -1,0 +1,250 @@
+{
+  "schema": 1,
+  "run": "20261125-111613-09129d9a",
+  "original_trace_sha256": "42884ea00b84b92206026410a5cdf2ede29f209d88e5309479106214c28e4f91",
+  "window_state": "minimized",
+  "scope": "sampled cloud frame and relative displacement; no GPU equality",
+  "age_evidence": "inferred by unwrapping sampled 10..18 subloop frames, not directly read game ticks",
+  "missile": "poisonexplosioncloud",
+  "raw_path_direction": 47,
+  "samples": [
+    {
+      "inferred_age": 2,
+      "frame": 2,
+      "screen_x": 418,
+      "screen_y": 263,
+      "raw_line": 2992
+    },
+    {
+      "inferred_age": 4,
+      "frame": 4,
+      "screen_x": 420,
+      "screen_y": 263,
+      "raw_line": 3196
+    },
+    {
+      "inferred_age": 6,
+      "frame": 6,
+      "screen_x": 422,
+      "screen_y": 263,
+      "raw_line": 3400
+    },
+    {
+      "inferred_age": 8,
+      "frame": 8,
+      "screen_x": 424,
+      "screen_y": 263,
+      "raw_line": 3604
+    },
+    {
+      "inferred_age": 10,
+      "frame": 10,
+      "screen_x": 426,
+      "screen_y": 263,
+      "raw_line": 3814
+    },
+    {
+      "inferred_age": 11,
+      "frame": 11,
+      "screen_x": 427,
+      "screen_y": 263,
+      "raw_line": 4024
+    },
+    {
+      "inferred_age": 12,
+      "frame": 12,
+      "screen_x": 428,
+      "screen_y": 263,
+      "raw_line": 4232
+    },
+    {
+      "inferred_age": 13,
+      "frame": 13,
+      "screen_x": 429,
+      "screen_y": 263,
+      "raw_line": 4440
+    },
+    {
+      "inferred_age": 15,
+      "frame": 15,
+      "screen_x": 431,
+      "screen_y": 263,
+      "raw_line": 4652
+    },
+    {
+      "inferred_age": 17,
+      "frame": 17,
+      "screen_x": 434,
+      "screen_y": 263,
+      "raw_line": 4862
+    },
+    {
+      "inferred_age": 18,
+      "frame": 18,
+      "screen_x": 435,
+      "screen_y": 263,
+      "raw_line": 5068
+    },
+    {
+      "inferred_age": 20,
+      "frame": 11,
+      "screen_x": 437,
+      "screen_y": 263,
+      "raw_line": 5280
+    },
+    {
+      "inferred_age": 22,
+      "frame": 13,
+      "screen_x": 439,
+      "screen_y": 263,
+      "raw_line": 5490
+    },
+    {
+      "inferred_age": 23,
+      "frame": 14,
+      "screen_x": 440,
+      "screen_y": 263,
+      "raw_line": 5702
+    },
+    {
+      "inferred_age": 24,
+      "frame": 15,
+      "screen_x": 441,
+      "screen_y": 263,
+      "raw_line": 5914
+    },
+    {
+      "inferred_age": 26,
+      "frame": 17,
+      "screen_x": 443,
+      "screen_y": 263,
+      "raw_line": 6126
+    },
+    {
+      "inferred_age": 28,
+      "frame": 10,
+      "screen_x": 445,
+      "screen_y": 263,
+      "raw_line": 6340
+    },
+    {
+      "inferred_age": 29,
+      "frame": 11,
+      "screen_x": 446,
+      "screen_y": 263,
+      "raw_line": 6556
+    },
+    {
+      "inferred_age": 31,
+      "frame": 13,
+      "screen_x": 448,
+      "screen_y": 263,
+      "raw_line": 6768
+    },
+    {
+      "inferred_age": 33,
+      "frame": 15,
+      "screen_x": 450,
+      "screen_y": 263,
+      "raw_line": 6982
+    },
+    {
+      "inferred_age": 35,
+      "frame": 17,
+      "screen_x": 453,
+      "screen_y": 263,
+      "raw_line": 7190
+    },
+    {
+      "inferred_age": 37,
+      "frame": 10,
+      "screen_x": 455,
+      "screen_y": 263,
+      "raw_line": 7404
+    },
+    {
+      "inferred_age": 39,
+      "frame": 12,
+      "screen_x": 457,
+      "screen_y": 263,
+      "raw_line": 7612
+    },
+    {
+      "inferred_age": 41,
+      "frame": 14,
+      "screen_x": 459,
+      "screen_y": 263,
+      "raw_line": 7822
+    },
+    {
+      "inferred_age": 43,
+      "frame": 16,
+      "screen_x": 461,
+      "screen_y": 263,
+      "raw_line": 8028
+    },
+    {
+      "inferred_age": 45,
+      "frame": 18,
+      "screen_x": 463,
+      "screen_y": 263,
+      "raw_line": 8210
+    },
+    {
+      "inferred_age": 47,
+      "frame": 11,
+      "screen_x": 465,
+      "screen_y": 263,
+      "raw_line": 8418
+    },
+    {
+      "inferred_age": 48,
+      "frame": 12,
+      "screen_x": 466,
+      "screen_y": 263,
+      "raw_line": 8626
+    },
+    {
+      "inferred_age": 50,
+      "frame": 14,
+      "screen_x": 469,
+      "screen_y": 263,
+      "raw_line": 8840
+    },
+    {
+      "inferred_age": 52,
+      "frame": 16,
+      "screen_x": 471,
+      "screen_y": 263,
+      "raw_line": 9056
+    },
+    {
+      "inferred_age": 54,
+      "frame": 18,
+      "screen_x": 473,
+      "screen_y": 263,
+      "raw_line": 9276
+    },
+    {
+      "inferred_age": 55,
+      "frame": 19,
+      "screen_x": 474,
+      "screen_y": 263,
+      "raw_line": 9492
+    },
+    {
+      "inferred_age": 57,
+      "frame": 21,
+      "screen_x": 476,
+      "screen_y": 263,
+      "raw_line": 9708
+    },
+    {
+      "inferred_age": 59,
+      "frame": 23,
+      "screen_x": 478,
+      "screen_y": 263,
+      "raw_line": 9930
+    }
+  ]
+}

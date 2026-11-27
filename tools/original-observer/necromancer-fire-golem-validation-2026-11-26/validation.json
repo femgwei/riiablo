@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "date": "2026-11-26",
+  "java": "JDK 17",
+  "d2_home": "G:/BaiduNetdiskDownload/Diablo II 1.10F",
+  "mode": "headless Riiablo and hidden/minimized original; no foreground/global input",
+  "core": {
+    "status": "passed",
+    "tests": 27,
+    "suites": [
+      {
+        "name": "com.riiablo.engine.server.NecromancerGolemBirthPresentationTest",
+        "timestamp": "2026-11-26T06:10:01",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.NecromancerGolemReviveIntegrationTest",
+        "timestamp": "2026-11-26T06:10:05",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.NecromancerGolemSideEffectTest",
+        "timestamp": "2026-11-26T06:10:08",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.ServerEntityFactorySummonQuotaTest",
+        "timestamp": "2026-11-26T06:10:11",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.AuraOverlayResourceTest",
+        "timestamp": "2026-11-26T06:09:53",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'; .\\gradlew.bat :core:test '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' --tests com.riiablo.engine.server.NecromancerGolemBirthPresentationTest --tests com.riiablo.engine.server.NecromancerGolemReviveIntegrationTest --tests com.riiablo.engine.server.NecromancerGolemSideEffectTest --tests com.riiablo.engine.server.ServerEntityFactorySummonQuotaTest --tests com.riiablo.presentation.AuraOverlayResourceTest --no-daemon",
+    "log": "tools/original-observer/necromancer-fire-golem-validation-2026-11-26.log"
+  },
+  "python": {
+    "status": "passed",
+    "tests": 17,
+    "command": "python -m unittest test_animation_compare",
+    "cwd": "tools/original-observer",
+    "log": "tools/original-observer/necromancer-fire-golem-observer-validation-2026-11-26.log"
+  },
+  "original": {
+    "run_id": "20261126-140334-894a85a2",
+    "runtime_status": "observed_minimized_d2gfx_partial",
+    "native_collector": "passed",
+    "outer_task": "failed: Original exited",
+    "body_draws": 106,
+    "aura_draws": 106,
+    "aura_ids": [
+      15,
+      16
+    ],
+    "aura_frames": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+    ],
+    "caster_sc_observed": true,
+    "cleanup_confirmed": true
+  },
+  "riiablo_birth_ticks": {
+    "clay": 32,
+    "blood": 26,
+    "fire": 25
+  },
+  "fire_aura": {
+    "granted_level_at_skill_20": 27,
+    "periodic_frames": 50,
+    "table_frames": 12,
+    "dcc_frames": 19,
+    "rate_hz": 25,
+    "layers": 2,
+    "removal_verified": true
+  },
+  "iron_golem_capture_gap": "No reviewed ground metal-item deployment/target fixture; no original Iron Golem run claimed",
+  "limitations": [
+    "Entity/path allocation and loaded assets use controlled headless fixtures",
+    "No actual GPU draw, lighting or shadow parity",
+    "Original sample has no attack/hit/death/removal evidence",
+    "Software-breakpoint wall times are not native velocity measurements"
+  ],
+  "d2gs": {
+    "status": "passed",
+    "tests": 7,
+    "suites": [
+      {
+        "name": "com.riiablo.server.d2gs.D2GSSimulationAssemblyTest",
+        "timestamp": "2026-11-26T06:12:07",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.server.d2gs.ServerEntityLifecycleTest",
+        "timestamp": "2026-11-26T06:12:13",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'; .\\gradlew.bat :server:d2gs:test '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest --no-daemon",
+    "log": "tools/original-observer/necromancer-fire-golem-d2gs-validation-2026-11-26.log"
+  },
+  "total_tests": 51,
+  "cleanup": {
+    "active": null,
+    "child_pid": null,
+    "cleanup_blocked": false,
+    "broker_status": "ready",
+    "original_processes_observed": 0,
+    "process_check": "Win32_Process: Game.exe, Diablo II.exe, D2Loader.exe, and executables under explicit 1.10F directory"
+  },
+  "source_sha256": {
+    "core/src/test/java/com/riiablo/engine/server/NecromancerGolemBirthPresentationTest.java": "4199de23b2b57a1e21b63a48869715b8c8fc9946c39890633ba8bb1351853afc",
+    "core/src/test/java/com/riiablo/presentation/AuraOverlayResourceTest.java": "49cd7e01c8ed34e28a5461f5cfb831642680269ee4ca47fb8fa9ee0fe7f84582",
+    "core/src/test/resources/original/necromancer-fire-golem-draw-1.10f.json": "a464975d6e4948b7370fad259e3cf09d1ce0a14918179f86c2da3e8c3e7fe098",
+    "tools/original-observer/normalize_d2gfx_necromancer_golem_trace.py": "e59b81ac539076a47eb5009d9f82a1003e2efe2dc8ad1b85cbfb024a6345696d",
+    "tools/original-observer/animation_compare.py": "fe121ce22d67fbf6e64a5c4c83707ddafda2ff6e0331b4efaa4756991c0c36fd",
+    "tools/original-observer/test_animation_compare.py": "1c6a85071fb02ad94d73b9a46e492a7314405ac3aa138c1411e3588001786c82",
+    "tools/original-observer/orchestrator.py": "9770f8df65a4755c2974348e7fe76836723191ca3f298d2e1ce447704c346498",
+    "tools/original-observer/jobs/necromancer-fire-golem-d2gfx.json": "8ea8cc3afe724a3aaafef8fbd745eedf75d4e0946376f295a38154ba38a566d2"
+  }
+}

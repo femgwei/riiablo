@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.SequenceHandlerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-26T05:42:34" hostname="DESKTOP-7GGAVHU" time="0.512">
+  <properties/>
+  <testcase name="repeatedModeRestartsAnimationBeforeItCanSkipTheKeyframe()" classname="com.riiablo.engine.server.SequenceHandlerTest" time="0.002"/>
+  <testcase name="monsterAttackCompletionNotifiesAiOnEntryIntoNeutral()" classname="com.riiablo.engine.server.SequenceHandlerTest" time="0.47"/>
+  <testcase name="monsterMonSeqJabFinishesWithoutEnteringPlayerFollowupMode()" classname="com.riiablo.engine.server.SequenceHandlerTest" time="0.032"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

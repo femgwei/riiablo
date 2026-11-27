@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "skill_id": 75,
+  "source_trace": "tools/original-observer/broker/20261121-165133-4490d598/runs/20261126-133613-51cb099a/orchestrator/process-session/001-clay-golem-d2gfx-minimized/d2gfx-call-trace.jsonl",
+  "source_sha256": "897e6784ff2982ad2abaceb8d6203c3367260b5a79df7b5044461e5304495524",
+  "runtime_status": "observed_minimized_d2gfx_partial",
+  "phases": [
+    {
+      "class_id": 289,
+      "mode": "S1",
+      "draws": 47,
+      "frames": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "first_elapsed_ms": 1343,
+      "last_elapsed_ms": 2312,
+      "first_screen": [
+        368,
+        256
+      ],
+      "last_screen": [
+        368,
+        256
+      ]
+    },
+    {
+      "class_id": 289,
+      "mode": "WL",
+      "draws": 28,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "first_elapsed_ms": 2359,
+      "last_elapsed_ms": 3187,
+      "first_screen": [
+        366,
+        256
+      ],
+      "last_screen": [
+        526,
+        240
+      ]
+    },
+    {
+      "class_id": 289,
+      "mode": "NU",
+      "draws": 37,
+      "frames": [
+        0,
+        1,
+        2
+      ],
+      "first_elapsed_ms": 3218,
+      "last_elapsed_ms": 4000,
+      "first_screen": [
+        526,
+        240
+      ],
+      "last_screen": [
+        526,
+        240
+      ]
+    }
+  ],
+  "limitations": [
+    "breakpoint samples are not a complete frame stream",
+    "unit_index is the monster class, not a unique unit GUID",
+    "wall time includes debugger stalls and is not a native tick duration",
+    "only one birth/follow/idle segment sampled; attacks and removal unobserved",
+    "GPU blend, shadow and pixel equality are not established",
+    "outer task failed when original exited; native helper cleanup passed"
+  ]
+}

@@ -19,6 +19,7 @@ public class AnimationStepper extends IntervalIteratingSystem {
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<com.riiablo.presentation.component.ReferenceElementalEffect> mReferenceElementalEffect;
+  protected ComponentMapper<com.riiablo.presentation.component.CorpseFragment> mCorpseFragment;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.CofReference> mCofReference;
@@ -51,6 +52,10 @@ public class AnimationStepper extends IntervalIteratingSystem {
       phase = "standalone";
       if (mMissile.has(entityId)) {
         Missile missile = mMissile.get(entityId);
+        if (mCorpseFragment.has(entityId)) {
+          NativeCorpseFragmentPresentation.initialize(missile, wrapper.animation);
+          return;
+        }
         if (NativeDruidWindPresentation.handles(missile)) {
           NativeDruidWindPresentation.initialize(missile, wrapper.animation);
           return;

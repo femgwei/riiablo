@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.SummonedPetSystemTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-11-26T05:42:38" hostname="DESKTOP-7GGAVHU" time="0.072">
+  <properties/>
+  <testcase name="timedPetExpiresInNativeFrames()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.002"/>
+  <testcase name="wolvesReserveSeparateLandingFootprintsDuringWarpAndRegroup()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.025"/>
+  <testcase name="nonWarpPetIsRemovedAcrossZoneBoundary()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.002"/>
+  <testcase name="nonAdjacentRoomWithoutPathUsesOwnerTrailFallback()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.001"/>
+  <testcase name="clayAndBloodGolemCorpsesOutlivePetListRemovalAndCannotBeConsumed()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.002"/>
+  <testcase name="petIsRemovedWhenOwnerDies()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.002"/>
+  <testcase name="druidWolfFollowsOwnerAcrossZoneBoundaryWithSkillSourceMetadata()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.001"/>
+  <testcase name="nativeNecromancerPetTypesShareGolemQuotaAndFollowOwner()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.0"/>
+  <testcase name="druidVineFollowsOwnerAcrossZoneBoundaryWithSkillSourceMetadata()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.002"/>
+  <testcase name="distantMobilePetRegroupsInsideSameZone()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.002"/>
+  <testcase name="necromancerReviveAndGolemFollowOwnerAcrossZoneBoundary()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.002"/>
+  <testcase name="necromancerPetsAreRemovedTogetherWhenOwnerLeaves()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.002"/>
+  <testcase name="landingSearchExpandsBeyondInitialEightSubtiles()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.003"/>
+  <testcase name="nativeDruidPetListsShareWolfAndSpiritFamilies()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.0"/>
+  <testcase name="crossZoneWarpClearsOldMovementCombatAndAiIntent()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.002"/>
+  <testcase name="petIsRemovedWhenOwnerNoLongerExists()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.005"/>
+  <testcase name="ownerDistanceUsesNativeIntegerApproximationAndPetFootprint()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.001"/>
+  <testcase name="stationaryBoneWallDoesNotRegroupInsideSameZone()" classname="com.riiablo.engine.server.SummonedPetSystemTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -38,7 +38,8 @@ final class ClientUnitSnapshotWriter {
       target.periodicDelayFrames = source.periodicDelayFrames;
       target.periodicCountdownFrames = source.periodicCountdownFrames;
       target.presentationRevision = source.presentationRevision;
-      if (source.id == com.riiablo.engine.server.state.StateId.CYCLONEARMOR
+      if ((source.id == com.riiablo.engine.server.state.StateId.CYCLONEARMOR
+          || source.id == com.riiablo.engine.server.state.StateId.BONEARMOR)
           && source.cycloneArmorMaximumFixed > 0) {
         target.setStatContribution(Stat.bonearmor, 0,
             com.riiablo.attributes.NativeStatResolver.Operation.ADD, source.cycloneArmorCurrentFixed);

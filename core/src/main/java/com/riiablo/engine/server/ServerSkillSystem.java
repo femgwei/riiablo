@@ -5984,12 +5984,24 @@ public class ServerSkillSystem extends PassiveSystem {
       cloud.poisonPiercePercent = pierce;
       cloud.poisonAttackerPlayer = mPlayer.has(source);
       cloud.persistent = true;
+        // D2Game passes the eight even ring offsets as absolute target
+        // coordinates with flags 0x17. The path uses that target only for
+        // its initial direction; it does not clamp the cloud there.
+        cloud.poisonCloudTarget.set(origin).add(x[i], y[i]);
+        cloud.poisonCloudTraveling = true;
       cloud.remainingFrames = Math.max(1, cloudRow.Range);
       cloud.tickInterval = 1;
       cloud.pierceEnabled = true;
       cloud.pierceRemaining = -1;
       if (mVelocity.has(missileId)) {
-        mVelocity.get(missileId).velocity.set(direction).setLength(velocity);
+          // MISSMODE_CreatePoisonCloudHitSubmissiles passes Param[0] << 7;
+          // MISSILES_CreateMissileFromParams applies the native 75% factor
+          // and fp16 direction quantization. Keep this identical to the
+          // existing poison-cloud child path used by SrvHit02.
+          int nativeVelocity = (Math.max(0, velocity) << 7) * 75 / 100;
+          com.riiablo.engine.server.missile.NativePoisonMissileMotion.velocity(
+              origin, cloud.poisonCloudTarget, nativeVelocity,
+              mVelocity.get(missileId).velocity);
       }
       created++;
     }
@@ -6091,6 +6103,14 @@ public class ServerSkillSystem extends PassiveSystem {
       log.warn("[NECRO_SUMMON] phase=rollback source={} corpse={} reason=create_failed", source, corpseId);
       return;
     }
+    // SrvDo031 passes Skills.Summode to the native summon allocator.  The
+    // factory establishes the pet's visual token, but the birth mode must be
+    // owned by a sequence so NecroPet cannot start following/attacking while
+    // the S1 emergence animation is still playing.
+    int summonMode = hasText(skill.summode) ? files().MonMode.index(skill.summode)
+        : Engine.Monster.MODE_NU;
+    if (summonMode >= 0 && summonMode != Engine.Monster.MODE_NU && summonMode < 16)
+      mSequence.create(petId).sequence((byte) summonMode, Engine.Monster.MODE_NU);
     applySummonSkillStats(source, petId, skill, level, true);
     applySummonResistance(source, petId);
     // Native SrvDo031 removes the consumed corpse unit from the room.
@@ -6168,6 +6188,12 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, skill.skill);
       return;
     }
+    // SrvDo056/SrvDo057 pass the Golem row's Summode (S1). Hold the pet in
+    // its emergence sequence before NecroPet receives ordinary AI control.
+    int summonMode = hasText(skill.summode) ? files().MonMode.index(skill.summode)
+        : Engine.Monster.MODE_NU;
+    if (summonMode >= 0 && summonMode != Engine.Monster.MODE_NU && summonMode < 16)
+      mSequence.create(petId).sequence((byte) summonMode, Engine.Monster.MODE_NU);
     applySummonSkillStats(event.entityId, petId, skill, level, true);
     applySummonResistance(event.entityId, petId);
     applySummonGrantedSkills(event.entityId, petId, skill, level);
@@ -6283,6 +6309,18 @@ public class ServerSkillSystem extends PassiveSystem {
         revive.needsSync = true;
       }
     }
+    // CltDoFunc is empty for Revive, but the retail client still creates the
+    // 25-frame Revive.dcc burst at the corpse.  Publish it as an authoritative
+    // presentation-only missile so local and network clients share one clock
+    // and never create a duplicate client-only effect.
+    Missiles.Entry reviveVisual = files().Missiles.get("revivemedium");
+    if (reviveVisual != null && mPosition.has(corpseId)) {
+      int visual = factory.createMissile(reviveVisual, Vector2.X,
+          new Vector2(mPosition.get(corpseId).position), event.entityId, level);
+      if (visual >= 0 && mMissile.has(visual)) {
+        mMissile.get(visual).presentationOnly = true;
+      }
+    }
     scaleReviveToOwnerLevel(event.entityId, corpseId);
     applySummonSkillStats(event.entityId, corpseId, skill, level, false);
     enforcePetMaximum(event.entityId, corpseId, petType, petMax);
@@ -6388,6 +6426,12 @@ public class ServerSkillSystem extends PassiveSystem {
           short stat = Stat.index(name);
           return stat < 0 ? 0 : statInt(owner, stat)
               + (states == null ? 0 : states.getTotalStatContribution(stat));
+        }, name -> {
+          Skills.Entry referenced = files().skills.get(name);
+          if (referenced == null || !mPlayer.has(source) || mPlayer.get(source).data == null) return 0;
+          int ownedLevel = mPlayer.get(source).data.getSkill(referenced.Id);
+          return ownedLevel <= 0 ? 0 : Math.max(0, ownedLevel
+              + (states == null ? 0 : states.getTotalSkillModifier()));
         });
   }
 
@@ -6471,8 +6515,7 @@ public class ServerSkillSystem extends PassiveSystem {
       }
     }
     float maxHp = Math.max(1f, statFixed(attrs, Stat.maxhp));
-    int hpPercent = SkillFormula.evaluate(skill.calc1, skill, level,
-        name -> getBaseSkillLevel(source, name));
+    int hpPercent = evaluateSummonFormula(source, skill.calc1, skill, level);
     float adjustedHp = Math.max(1f, maxHp * (100f + hpPercent) / 100f);
     attrs.base().put(Stat.maxhp, adjustedHp);
     attrs.base().put(Stat.hitpoints, adjustedHp);

@@ -33,6 +33,7 @@ import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.skill.CorpseConsumption;
+import com.riiablo.engine.server.missile.NativePoisonMissileMotion;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.item.Item;
@@ -246,11 +247,18 @@ class NecromancerExplosionIntegrationTest extends RiiabloTest {
         assertTrue(cloud.authoritative);
         assertTrue(cloud.fixedPoisonRate);
         assertTrue(cloud.persistent);
+        assertTrue(cloud.poisonCloudTraveling);
+        Vector2 origin = new Vector2();
+        assertEquals(2f, Math.max(Math.abs(cloud.poisonCloudTarget.x),
+            Math.abs(cloud.poisonCloudTarget.y)), 0.001f);
         assertEquals(200, cloud.poisonMinRateFixed);
         assertEquals(520, cloud.poisonMaxRateFixed);
         assertEquals(60, cloud.poisonDurationFrames);
         assertEquals(10, cloud.poisonPiercePercent);
-        assertEquals(2f, world.getMapper(Velocity.class).get(missiles.get(i)).velocity.len(), 0.001f);
+        Vector2 expectedVelocity = NativePoisonMissileMotion.velocity(
+            origin, cloud.poisonCloudTarget, 2 * 128 * 75 / 100, new Vector2());
+        assertEquals(expectedVelocity.len(),
+            world.getMapper(Velocity.class).get(missiles.get(i)).velocity.len(), 0.001f);
       }
 
       world.setDelta(1f / 25f);

@@ -27,6 +27,7 @@ public class MissileLoader extends IteratingSystem {
   protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<com.riiablo.presentation.component.DruidWindFlight> mDruidWindFlight;
+  protected ComponentMapper<com.riiablo.presentation.component.CorpseFragment> mCorpseFragment;
 
   @Wire(name = "clientContext")
   protected ClientGameplayContext clientContext ;
@@ -156,6 +157,7 @@ public class MissileLoader extends IteratingSystem {
     int nativeFrameDelta = nativeFrameDelta(clientContext, missile, visualRow);
     animation.setFrameDelta(Math.max(1, nativeFrameDelta));
     initializePlayback(missile, entry, animation, initialFrame);
+    if (mCorpseFragment.has(entityId)) NativeCorpseFragmentPresentation.initialize(missile, animation);
     
     // Set direction based on Angle component if available
     int poisonDirection = NativePoisonJavelinPresentation.direction(missile,
@@ -301,7 +303,8 @@ public class MissileLoader extends IteratingSystem {
       return;
     }
     if (entry != null && ("poisonjavcloud".equalsIgnoreCase(entry.Missile)
-        || "plaguejavcloud".equalsIgnoreCase(entry.Missile))) {
+        || "plaguejavcloud".equalsIgnoreCase(entry.Missile)
+        || "poisonexplosioncloud".equalsIgnoreCase(entry.Missile))) {
       NativePoisonJavelinPresentation.initializeCloud(missile, animation);
       return;
     }

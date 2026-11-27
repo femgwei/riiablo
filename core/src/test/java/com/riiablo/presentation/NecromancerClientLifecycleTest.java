@@ -63,6 +63,26 @@ class NecromancerClientLifecycleTest extends RiiabloTest {
     }
   }
 
+  @Test void weakenUsesTheSameAuthoritativeCurseControllerAndCleansChildren() {
+    try (Fixture f = new Fixture()) {
+      Skills.Entry skill = Riiablo.files.skills.get("Weaken");
+      int caster = f.world.create();
+      f.world.getMapper(Position.class).create(caster);
+      f.casts.cltdofunc(SkillDoEvent.obtain(caster, skill.Id, -1,
+          new Vector2(20, 30), skill.srvdofunc, skill.cltdofunc));
+      Missile center = f.world.getMapper(Missile.class).get(caster + 1);
+      assertEquals("cursecenter", center.missile.Missile);
+      assertEquals(Riiablo.files.Missiles.get(skill.cltmissilea).Id, center.clientPathY);
+      for (int tick = 0; tick < center.nativeLifetimeFrames; tick++) f.step();
+      assertTrue(f.created.size() > 0);
+      for (int id : f.created) {
+        Missile child = f.world.getMapper(Missile.class).get(id);
+        assertEquals(skill.cltmissilea, child.missile.Missile);
+        assertTrue(child.presentationOnly);
+      }
+    }
+  }
+
   private static final class Fixture implements AutoCloseable {
     final EntityFactory factory = mock(EntityFactory.class);
     final SkillCastHandler casts = new SkillCastHandler();

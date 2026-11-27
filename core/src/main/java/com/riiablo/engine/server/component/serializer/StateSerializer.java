@@ -86,7 +86,7 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
       periodicDelayFrames[i] = state.periodicDelayFrames;
       periodicCountdownFrames[i] = state.periodicCountdownFrames;
       presentationRevisions[i] = state.presentationRevision;
-      if (state.stateId == StateId.CYCLONEARMOR) {
+      if (state.stateId == StateId.CYCLONEARMOR || state.stateId == StateId.BONEARMOR) {
         hasCycloneArmor = true;
         cycloneArmorCurrent[i] = state.getStatContributionValue(Stat.bonearmor);
         cycloneArmorMaximum[i] = state.getStatContributionValue(Stat.bonearmormax);
@@ -171,7 +171,7 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
             ? data.periodicCountdownFrames(i) : -1;
         state.presentationRevision = i < data.presentationRevisionLength()
             ? data.presentationRevision(i) : 0;
-        if (state.stateId == StateId.CYCLONEARMOR
+        if ((state.stateId == StateId.CYCLONEARMOR || state.stateId == StateId.BONEARMOR)
             && i < data.cycloneArmorCurrentFixedLength()
             && i < data.cycloneArmorMaximumFixedLength()) {
           state.setStatContribution(Stat.bonearmor, 0, NativeStatResolver.Operation.ADD,

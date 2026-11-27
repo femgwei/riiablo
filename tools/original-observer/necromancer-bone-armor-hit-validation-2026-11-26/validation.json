@@ -1,0 +1,311 @@
+{
+  "schema": 1,
+  "date": "2026-11-26",
+  "java": "JDK 17",
+  "d2_home": "G:/BaiduNetdiskDownload/Diablo II 1.10F",
+  "runtime_status": "observed_private_desktop_minimized_early_hit_and_depletion_partial",
+  "core": {
+    "status": "passed",
+    "tests": 52,
+    "suites": [
+      {
+        "name": "com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest",
+        "timestamp": "2026-11-26T10:03:25",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.NecromancerBoneArmorIntegrationTest",
+        "timestamp": "2026-11-26T10:03:30",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.AuraOverlayResourceTest",
+        "timestamp": "2026-11-26T10:03:33",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.BoneArmorPresentationTest",
+        "timestamp": "2026-11-26T10:03:40",
+        "tests": "11",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.CycloneArmorPresentationTest",
+        "timestamp": "2026-11-26T10:03:45",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.StateOverlaySystemTest",
+        "timestamp": "2026-11-26T10:03:48",
+        "tests": "15",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'; .\\gradlew.bat :core:test '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' --tests com.riiablo.presentation.BoneArmorPresentationTest --tests com.riiablo.presentation.CycloneArmorPresentationTest --tests com.riiablo.presentation.AuraOverlayResourceTest --tests com.riiablo.presentation.StateOverlaySystemTest --tests com.riiablo.engine.server.NecromancerBoneArmorIntegrationTest --tests com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest --no-daemon",
+    "log": "tools/original-observer/necromancer-bone-armor-hit-final-validation-2026-11-26.log"
+  },
+  "d2gs": {
+    "status": "passed",
+    "tests": 7,
+    "suites": [
+      {
+        "name": "com.riiablo.server.d2gs.D2GSSimulationAssemblyTest",
+        "timestamp": "2026-11-26T10:05:07",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.server.d2gs.ServerEntityLifecycleTest",
+        "timestamp": "2026-11-26T10:05:10",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'; .\\gradlew.bat :server:d2gs:test '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest --no-daemon",
+    "log": "tools/original-observer/necromancer-bone-armor-hit-d2gs-validation-2026-11-26.log"
+  },
+  "python": {
+    "status": "passed",
+    "tests": 28,
+    "command": "python -m unittest test_animation_compare test_bone_armor_draw_normalizer test_bone_armor_feedback",
+    "cwd": "tools/original-observer",
+    "log": "tools/original-observer/necromancer-bone-armor-hit-observer-validation-2026-11-26.log"
+  },
+  "original": {
+    "cases": [
+      {
+        "run_id": "20261126-175436-35c79794",
+        "outer_status": "passed",
+        "private_desktop_checks": 133,
+        "input_desktop_before": "Default",
+        "input_desktop_after": "Default",
+        "foreground_before": 27860342,
+        "foreground_after": 27860342,
+        "owned_game_closed": true,
+        "attacker": {
+          "player_id": 1,
+          "attacker_id": 15,
+          "attacker_class": 19,
+          "server_frame": 526,
+          "player_position": [
+            4522,
+            5642
+          ],
+          "attacker_position": [
+            4524,
+            5644
+          ],
+          "min_physical": 80,
+          "max_physical": 80,
+          "attack_rating": 100000,
+          "shield_values_changed": false,
+          "synthetic_damage_call": false,
+          "native_ai_after_detach": true,
+          "lifetime": "owned private game closes after capture"
+        },
+        "attacker_stats": [
+          {
+            "stat": 12,
+            "before": 1,
+            "set_base": 99,
+            "after_aggregate": 99
+          },
+          {
+            "stat": 19,
+            "before": 8,
+            "set_base": 100000,
+            "after_aggregate": 100008
+          },
+          {
+            "stat": 21,
+            "before": 1,
+            "set_base": 80,
+            "after_aggregate": 81
+          },
+          {
+            "stat": 22,
+            "before": 2,
+            "set_base": 80,
+            "after_aggregate": 82
+          }
+        ],
+        "collector": {
+          "status": "passed",
+          "events": 5734,
+          "candidate_count": 82,
+          "detached": true,
+          "cleanup_confirmed": true,
+          "scope": "one-shot D2Gfx entries; temporary software breakpoint code/context writes; no synthetic game calls; not final backend output"
+        }
+      },
+      {
+        "run_id": "20261126-175702-b9aec434",
+        "outer_status": "failed",
+        "private_desktop_checks": 136,
+        "input_desktop_before": "Default",
+        "input_desktop_after": "Default",
+        "foreground_before": 27860342,
+        "foreground_after": 43780228,
+        "owned_game_closed": true,
+        "attacker": {
+          "player_id": 1,
+          "attacker_id": 23,
+          "attacker_class": 19,
+          "server_frame": 528,
+          "player_position": [
+            4522,
+            5642
+          ],
+          "attacker_position": [
+            4524,
+            5644
+          ],
+          "min_physical": 80,
+          "max_physical": 80,
+          "attack_rating": 100000,
+          "shield_values_changed": false,
+          "synthetic_damage_call": false,
+          "native_ai_after_detach": true,
+          "lifetime": "owned private game closes after capture"
+        },
+        "attacker_stats": [
+          {
+            "stat": 12,
+            "before": 1,
+            "set_base": 99,
+            "after_aggregate": 99
+          },
+          {
+            "stat": 19,
+            "before": 8,
+            "set_base": 100000,
+            "after_aggregate": 100008
+          },
+          {
+            "stat": 21,
+            "before": 1,
+            "set_base": 80,
+            "after_aggregate": 81
+          },
+          {
+            "stat": 22,
+            "before": 2,
+            "set_base": 80,
+            "after_aggregate": 82
+          }
+        ],
+        "collector": {
+          "status": "passed",
+          "events": 5754,
+          "candidate_count": 82,
+          "detached": true,
+          "cleanup_confirmed": true,
+          "scope": "one-shot D2Gfx entries; temporary software breakpoint code/context writes; no synthetic game calls; not final backend output"
+        }
+      }
+    ],
+    "feedback_samples": 555,
+    "state_overlay_stages": 8,
+    "early_hit": {
+      "elapsed_ms": 1656,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        144,
+        143
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    "depleted": {
+      "elapsed_ms": 3516,
+      "state_bit": false,
+      "current_fixed": 0,
+      "maximum_fixed": 0,
+      "native_count": 0,
+      "overlay_ids": [],
+      "hp_fixed": 2047488,
+      "stat_list_count": 0
+    },
+    "disappeared_draw_batches_with_body": 16,
+    "evidence": "tools/original-observer/necromancer-bone-armor-hit-evidence-2026-11-26.json"
+  },
+  "initial_failed_capture": {
+    "run_id": "20261126-175311-e41c94c3",
+    "collector_executed": false,
+    "error": "Preparer incorrectly expected aggregate AR100008 to equal base100000; corrected with before/base/aggregate logging",
+    "native_preparer_detached": true,
+    "native_preparer_cleanup_confirmed": true
+  },
+  "cleanup": {
+    "broker_status": "ready",
+    "active": null,
+    "child_pid": null,
+    "cleanup_blocked": false,
+    "all_three_owned_games_closed": true,
+    "no_input_desktop_switch": true,
+    "original_processes_observed": 0
+  },
+  "capture_provenance": {
+    "note": "Frozen source/executable used by the two valid captures; final helper adds unresolved-debugger cleanup retry after capture",
+    "cpp_sha256": "ce954a72f02d7870e8234ae42a3b94a451a026072301c03c5a0589468e1c44da",
+    "exe_sha256": "dcff71b0ec54222728719f6917882ab9bd38932a83878683b4bc5c0410930be0"
+  },
+  "final_helper_build": {
+    "status": "passed",
+    "runtime_repeated": false,
+    "log": "tools/original-observer/necromancer-bone-armor-attacker-build-final-2026-11-26.log",
+    "command": "cmd /c call \"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\Build\\vcvars32.bat\" && cl /nologo /utf-8 /std:c++17 /EHsc /W4 /DUNICODE /D_UNICODE tools\\original-observer\\native-harness\\d2game_bone_armor_attacker.cpp /Fotools\\original-observer\\native-harness\\build\\d2game_bone_armor_attacker.obj /Fetools\\original-observer\\native-harness\\build\\d2game_bone_armor_attacker.exe"
+  },
+  "limitations": [
+    "Separate runs; no cross-run or D2Gfx-to-poller clock alignment",
+    "Client stat and overlay polling is read-only but non-atomic",
+    "High-AR same-level 80-base-damage test attacker; natural room enemies remain active",
+    "No per-hit attribution or exact original damage-formula equivalence is claimed",
+    "Second run native collector passed but outer failed after original exit; retained as partial evidence",
+    "Sprite collector cap is not disappearance evidence; require a closed live-body render batch",
+    "No original single-pair stage, recast or GPU/pixel parity in these samples"
+  ],
+  "total_focused_tests": 87,
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/presentation/NativeBoneArmorPresentation.java": "0146d7e993b48d2867e11a98e957ab02836b2162cbd70715ce362a7afd6d2719",
+    "core/src/main/java/com/riiablo/presentation/OverlayManager.java": "9e6f6a715d58665b340d2069b79abedf599b67ca473e49ca1d534296c15ada92",
+    "core/src/test/java/com/riiablo/presentation/BoneArmorPresentationTest.java": "1ccc8502685e12ad60f497d40b22d719781c1d7d9cbe8bc9d9a5d4119fd4a5d5",
+    "core/src/test/resources/original/necromancer-bone-armor-hit-1.10f.json": "faef57f0d671295c9eb304bfcedf37a524bd71af4e31d1d0a687993f9b22a2f0",
+    "tools/original-observer/native-harness/d2game_bone_armor_attacker.cpp": "70f83ecfc8473bb37248079d6aaaebc3f9cbc68c8a9c675e4629a85a7b96d44a",
+    "tools/original-observer/bone_armor_background.py": "ed7b166ee15fcef840454417d9d4cdd5035b3d1a14ca35fb2e89a20a01c923d4",
+    "tools/original-observer/bone_prison_background.py": "6cb041e30d9c1a4a61ae7988d81a817eb83bf31bb092c28cdeddee011dd907f7",
+    "tools/original-observer/bone_armor_feedback.py": "143f2cc7169e2cbddc6c7e21548a2d0f5a8c7629acb5a0cbf6b99c1754d6b9a4",
+    "tools/original-observer/normalize_d2gfx_bone_armor_trace.py": "6154667d597d2766eaeb5ccdbdf6b7db7100065548d2178d28fd2c6fa0cc40ff",
+    "tools/original-observer/export_bone_armor_hit_evidence.py": "fd37f418f095fce12ad5cdfb5ca3d52f9a305588990fe88471c6e5c4170b9713",
+    "tools/original-observer/live-observer.py": "ee12604c30f91a40046872c8f0b2581abd04e6f81fef0abec6e6dd360c5e1921",
+    "tools/original-observer/process-session.py": "e430c3adb402bfaf549a03aeff56c0dccb886a8b46325525ebf56df5f7619826",
+    "tools/original-observer/collector_specs.py": "8a63f9cdc9dd3fa0b9b15504cb80e7884a6153e76907b232801c41fd6834334a",
+    "tools/original-observer/orchestrator.py": "9bcf399075113b5d050017de49e6aab852d2be3ac12bdb2415ea674219c00495",
+    "tools/original-observer/test_bone_armor_feedback.py": "853d6fd5d12fd7e503579ae6e0ea555313eb8219f1884b48f454fbdf554d2da2",
+    "tools/original-observer/test_bone_armor_draw_normalizer.py": "5c533ce03800e26cd9234acb025829055d9183f8c1fe8261a864329b9481a5d8"
+  },
+  "git_diff_check": "passed"
+}

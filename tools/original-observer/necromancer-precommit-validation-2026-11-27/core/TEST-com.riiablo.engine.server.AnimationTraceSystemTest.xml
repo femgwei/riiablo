@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.AnimationTraceSystemTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-27T07:47:11" hostname="DESKTOP-7GGAVHU" time="0.098">
+  <properties/>
+  <testcase name="tracksDynamicSummonGroupWithEntityIdentity()" classname="com.riiablo.engine.server.AnimationTraceSystemTest" time="0.09"/>
+  <testcase name="writesCanonicalPlayerFrameFromAuthoritativeComponents()" classname="com.riiablo.engine.server.AnimationTraceSystemTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

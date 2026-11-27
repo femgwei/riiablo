@@ -53,6 +53,13 @@ public class SkillCastHandler extends PassiveSystem {
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<com.riiablo.presentation.component.CorpseFragment> mCorpseFragment;
+  protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
+
+  // Presentation-local randomness. Retail caster seed agreement is not known;
+  // this stream must never consume the server's damage/AI seed.
+  private final com.d2moo.common.drlg.D2Seed corpseFragmentSeed =
+      new com.d2moo.common.drlg.D2Seed(0xCE115, 666);
 
   protected OverlayManager overlays;
 
@@ -928,7 +935,40 @@ public class SkillCastHandler extends PassiveSystem {
     // Explosion at target corpse location
     Vector2 target = event.targetId >= 0 && mPosition.has(event.targetId)
         ? mPosition.get(event.targetId).position : event.targetVec;
-    if (target != null) createPresentationMissile(missile, Vector2.Zero, target);
+    if (target == null) return;
+    boolean corpseExplosion = event.srvdofunc == 55 || skill.srvdofunc == 55;
+    if (corpseExplosion && "corpseexplosion".equalsIgnoreCase(missile.Missile)) {
+      String bloodName = missile.SubMissile != null && missile.SubMissile.length > 1
+          ? missile.SubMissile[1] : null;
+      Missiles.Entry blood = hasText(bloodName) ? clientContext.files().Missiles.get(bloodName) : null;
+      NativeCorpseFragmentPresentation.scatter(missile, blood, target, corpseFragmentSeed,
+          (row, at, facing) -> {
+            int id = createPresentationMissile(row, facing, at);
+            if (id >= 0 && mMissile.has(id)) {
+              mCorpseFragment.create(id);
+              NativeCorpseFragmentPresentation.velocity(row, facing, mVelocity.create(id).velocity);
+              mMissile.get(id).nativeLifetimeFrames = NativeCorpseFragmentPresentation.RESIDUE_BUDGET_FRAMES;
+            }
+          });
+    } else {
+      int id = createPresentationMissile(missile, Vector2.Zero, target);
+      // The observed poison corpse burst shares CltDo11's terminal residue
+      // behavior, but CltDo33 creates a single centered burst (no gore fan).
+      if (id >= 0 && mMissile.has(id)
+          && "poisoncorpseexplosion".equalsIgnoreCase(missile.Missile)) {
+        mCorpseFragment.create(id);
+        mMissile.get(id).nativeLifetimeFrames = NativeCorpseFragmentPresentation.RESIDUE_BUDGET_FRAMES;
+      }
+    }
+    // Retail CltDo32 (D2Client 6FAC884E..78) creates cltmissileb at
+    // the corpse as well as the gore family in cltmissilea. The original
+    // D2Gfx trace confirms missile 42 / ExpArrowExplode frames 1..14 here.
+    // CltDo33's cltmissileb is the poison cloud family; the authoritative
+    // server already creates those eight carriers, so do not duplicate it.
+    if (corpseExplosion && hasText(skill.cltmissileb)) {
+      Missiles.Entry flame = clientContext.files().Missiles.get(skill.cltmissileb);
+      if (flame != null) createPresentationMissile(flame, Vector2.Zero, target);
+    }
   }
 
   private void cltDoCurseArea(SkillDoEvent event, Skills.Entry skill) {
@@ -1028,6 +1068,9 @@ public class SkillCastHandler extends PassiveSystem {
   /** Skills.txt/CltMissile path used by Fire/Cold/Ice/Freezing Arrow. */
   private void cltDoGenericMissile(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
     if (skill == null || position == null) return;
+    // SrvDo058 emits the burst only after successful revival, at the corpse.
+    // cltmissilea is a size variant, not a projectile from the caster.
+    if (skill.Id == SkillId.REVIVE) return;
     // SrvDo018 only installs the armor state/event handlers. Chilling Armor's
     // missile A is a retaliation parameter (D2MOO EventFunc01), not a cast
     // projectile. StateUpdater emits the owned return bolt on hitbymissile.

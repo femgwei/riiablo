@@ -1,0 +1,178 @@
+[
+  {
+    "name": "com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest",
+    "timestamp": "2026-11-27T07:47:11",
+    "tests": "9",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.AnimationTraceSystemTest",
+    "timestamp": "2026-11-27T07:47:11",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.NativeBoneSpiritMotionTest",
+    "timestamp": "2026-11-27T07:47:17",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.NativePoisonNovaMotionTest",
+    "timestamp": "2026-11-27T07:47:20",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.NecromancerCurseIntegrationTest",
+    "timestamp": "2026-11-27T07:47:23",
+    "tests": "19",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.NecromancerExplosionIntegrationTest",
+    "timestamp": "2026-11-27T07:47:26",
+    "tests": "13",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.NecromancerGolemBirthPresentationTest",
+    "timestamp": "2026-11-27T07:47:29",
+    "tests": "6",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.NecromancerGolemReviveIntegrationTest",
+    "timestamp": "2026-11-27T07:47:36",
+    "tests": "6",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.NecromancerSkeletonMovementTest",
+    "timestamp": "2026-11-27T07:47:40",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.NecromancerSummonIntegrationTest",
+    "timestamp": "2026-11-27T07:47:43",
+    "tests": "6",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.PathfinderTest",
+    "timestamp": "2026-11-27T07:47:43",
+    "tests": "16",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.engine.server.skill.SkillFormulaTest",
+    "timestamp": "2026-11-27T07:47:43",
+    "tests": "4",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.presentation.AuraOverlayResourceTest",
+    "timestamp": "2026-11-27T07:47:46",
+    "tests": "6",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.presentation.AuthoritativeAreaSkillPresentationTest",
+    "timestamp": "2026-11-27T07:47:50",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.presentation.BoneArmorPresentationTest",
+    "timestamp": "2026-11-27T07:47:54",
+    "tests": "11",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.presentation.CycloneArmorPresentationTest",
+    "timestamp": "2026-11-27T07:47:57",
+    "tests": "7",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.presentation.NativeCorpseFragmentPresentationTest",
+    "timestamp": "2026-11-27T07:48:00",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.presentation.NecromancerClientLifecycleTest",
+    "timestamp": "2026-11-27T07:48:04",
+    "tests": "3",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.presentation.NecromancerExplosionPresentationTest",
+    "timestamp": "2026-11-27T07:48:07",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.presentation.NecromancerPoisonExplosionOriginalTest",
+    "timestamp": "2026-11-27T07:48:10",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.presentation.ReviveLocalMovementTest",
+    "timestamp": "2026-11-27T07:48:15",
+    "tests": "1",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.riiablo.presentation.StateOverlaySystemTest",
+    "timestamp": "2026-11-27T07:48:20",
+    "tests": "15",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  }
+]

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.presentation.PresentationAssetLifecycleTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-26T08:56:31" hostname="DESKTOP-7GGAVHU" time="4.321">
+  <properties/>
+  <testcase name="twoEntitiesShareAssetAndDeletingOneCannotResetReusedComponent()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="3.823"/>
+  <testcase name="sameFrameReplacementAndDeferredRemovalKeepNewOwner()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.025"/>
+  <testcase name="rejectedOverlaySubmissionRemovesComponentWithoutUnloadingUnownedAsset()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.134"/>
+  <testcase name="overlayWorldExitBeforeProcessingAndRepeatedDisposeReleaseQueuedSharedRequest()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.015"/>
+  <testcase name="[1] entity" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.061"/>
+  <testcase name="[2] component" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.01"/>
+  <testcase name="[3] earlyEntity" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.01"/>
+  <testcase name="[4] earlyComponent" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.011"/>
+  <testcase name="transientKeepsExistingHoldFramesThenReleases()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.008"/>
+  <testcase name="overlaySameStateIsIdempotentAndWrongClearDoesNotRelease()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.007"/>
+  <testcase name="overlayUsesOriginalManagerAndDisposalErrorStillReleasesOtherEntities()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.023"/>
+  <testcase name="[1] false" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.024"/>
+  <testcase name="[2] true" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.018"/>
+  <testcase name="deletingEntityReleasesEveryLoadedAndQueuedLayer()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.014"/>
+  <testcase name="externalReplacementReleasesOldLedgerWithoutResettingNewComponent()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.007"/>
+  <testcase name="cursesBuffsAndImpactsOwnIndependentLayersAndReferences()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.019"/>
+  <testcase name="missingOverlayLeavesPreviousPresentationOwned()" classname="com.riiablo.presentation.PresentationAssetLifecycleTest" time="0.022"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

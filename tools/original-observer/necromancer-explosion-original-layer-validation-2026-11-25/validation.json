@@ -1,0 +1,36 @@
+{
+  "status": "headless_fix_passed_original_comparison_partial",
+  "tests": [
+    {
+      "name": "com.riiablo.presentation.NecromancerExplosionPresentationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.engine.server.NecromancerExplosionIntegrationTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.engine.server.NativeNecromancerExplosionDataTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/presentation/SkillCastHandler.java": "e51fdb19e6a154ffbd25e0b0f1138d36bbffd8950b9d2b0df40ebcf6b744c988",
+    "core/src/test/java/com/riiablo/presentation/NecromancerExplosionPresentationTest.java": "d9801a70b717fe12496dd2c4061f2b0dfcbc34bbbc99255e7cbef07e52e48158",
+    "tools/original-observer/process-session.py": "a1a6096bf9c473997d5234af81cba6229886574b4cf9f90d79e821b9b2ff5e7c",
+    "tools/original-observer/normalize_d2gfx_necromancer_explosion_trace.py": "0d14807a883cfe4d2d11f7d0c96780fd8be3bed8ef4ed06cecfdba7cff11bddc",
+    "tools/original-observer/class-skill-batch-2026-11-21/class-skill-inventory.json": "11b24a3fc8d01529146304b770a44fbf3c2b38f016a39fe0163bf4573bef7b2f"
+  },
+  "original_corpse_status": "partial_cast_and_effect_observed",
+  "original_poison_status": "skill_trigger_unproven",
+  "scope": "headless client/server regression plus sampled original D2Gfx; not complete GPU parity"
+}

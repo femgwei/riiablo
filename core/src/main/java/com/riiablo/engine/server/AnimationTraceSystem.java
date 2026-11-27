@@ -3,6 +3,7 @@ package com.riiablo.engine.server;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
+import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.animation.AnimationTraceWriter;
@@ -27,6 +28,7 @@ public final class AnimationTraceSystem extends IteratingSystem implements AutoC
   /** Canonical SQ tail retained for three frames after native WW cleanup. */
   private int whirlwindTailFrames;
   private int focusEntity = Engine.INVALID_ENTITY;
+  private final IntSet focusEntities = new IntSet();
 
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Casting> mCasting;
@@ -42,6 +44,17 @@ public final class AnimationTraceSystem extends IteratingSystem implements AutoC
   /** Restrict output to one skill caster; the default records all animated units. */
   public AnimationTraceSystem focus(int entityId) {
     focusEntity = entityId;
+    focusEntities.clear();
+    return this;
+  }
+
+  /** Restrict output to a dynamic group such as newly raised skeletons. */
+  public AnimationTraceSystem focusEntities(int... entityIds) {
+    focusEntity = Engine.INVALID_ENTITY;
+    focusEntities.clear();
+    if (entityIds != null) for (int entityId : entityIds) {
+      if (entityId >= 0) focusEntities.add(entityId);
+    }
     return this;
   }
 
@@ -53,6 +66,8 @@ public final class AnimationTraceSystem extends IteratingSystem implements AutoC
 
   @Override protected void process(int entityId) {
     if (focusEntity != Engine.INVALID_ENTITY && focusEntity != entityId) return;
+    if (focusEntity == Engine.INVALID_ENTITY && focusEntities.size > 0
+        && !focusEntities.contains(entityId)) return;
     AnimData anim = mAnimData.get(entityId);
     CofReference cof = mCofReference.get(entityId);
     Class type = mClass.get(entityId);
@@ -93,7 +108,7 @@ public final class AnimationTraceSystem extends IteratingSystem implements AutoC
       if (keyframe > Engine.KEYFRAME_NIL) keyframes.add(Engine.getKeyframe(keyframe));
     }
     try {
-      writer.frame(tick++, gameFrame, modeId, mode, cof.effectiveToken(),
+      writer.frame(tick++, gameFrame, entityId, modeId, mode, cof.effectiveToken(),
           Engine.getWClass(cof.effectiveWClass()), anim.frame, anim.numFrames >>> 8,
           anim.speed, keyframes,
           Math.round(mPosition.get(entityId).position.x * 65536f),

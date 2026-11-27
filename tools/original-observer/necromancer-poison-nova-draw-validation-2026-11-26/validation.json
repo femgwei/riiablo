@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "status": "partial_original_draw_and_native_motion_validated",
+  "tests": [
+    {
+      "name": "com.riiablo.engine.server.NativePoisonNovaMotionTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.NecromancerPoisonNovaIntegrationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/engine/server/ServerEntityFactory.java": "2ff1e41d34057b5e5cf7cf4e533dc444189ee125f93a68e50889fd049a387308",
+    "core/src/main/java/com/riiablo/engine/server/MissileCollisionSystem.java": "e50c833124d31ba541b4599f0459f53e8fe841d05e113f396b50be8e169aad79",
+    "core/src/main/java/com/riiablo/engine/server/missile/NativePoisonNovaMotion.java": "04aa261198b64d50ffff9faa985ee1e87ecc39a4d054ba7f2e355b112a07037a",
+    "core/src/test/java/com/riiablo/engine/server/NativePoisonNovaMotionTest.java": "beac60c6f7b4c01d8d58481664b503df639e2406443644a5393eabf8d622f984",
+    "tools/original-observer/normalize_d2gfx_necromancer_poison_nova_trace.py": "67ec9077f4dde51789cf693b65b7a0fbbbb6defe7cc86a0eafc96fc175efa8f4"
+  },
+  "original": {
+    "run": "20261125-132906-dbd6b713",
+    "draw_trace": "tools/original-observer/necromancer-poison-nova-original-draw-2026-11-26.json",
+    "draw_count": 719,
+    "window_state": "minimized",
+    "collector_status": "passed",
+    "outer_job_status": "failed_after_original_exit_batch_return_1",
+    "debugger_cleanup_confirmed": true
+  },
+  "replay": {
+    "ring_offsets": 64,
+    "sampled_distinct_path_directions": 52,
+    "frame_sequence": [
+      0,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      22,
+      24,
+      26,
+      28,
+      29
+    ],
+    "native_velocity": 14.0625,
+    "native_lifetime_frames": 30
+  },
+  "unknown": [
+    "caster COF body animation",
+    "controlled target hit timing",
+    "final native cleanup",
+    "GPU blend/palette equality"
+  ]
+}

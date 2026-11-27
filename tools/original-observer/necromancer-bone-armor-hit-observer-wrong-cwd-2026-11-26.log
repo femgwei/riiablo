@@ -1,0 +1,35 @@
+EEE
+======================================================================
+ERROR: test_animation_compare (unittest.loader._FailedTest)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_animation_compare
+Traceback (most recent call last):
+  File "F:\3rd_src\emsdk\python\3.9.2-nuget_64bit\lib\unittest\loader.py", line 154, in loadTestsFromName
+    module = __import__(module_name)
+ModuleNotFoundError: No module named 'test_animation_compare'
+
+
+======================================================================
+ERROR: test_bone_armor_draw_normalizer (unittest.loader._FailedTest)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_bone_armor_draw_normalizer
+Traceback (most recent call last):
+  File "F:\3rd_src\emsdk\python\3.9.2-nuget_64bit\lib\unittest\loader.py", line 154, in loadTestsFromName
+    module = __import__(module_name)
+ModuleNotFoundError: No module named 'test_bone_armor_draw_normalizer'
+
+
+======================================================================
+ERROR: test_bone_armor_feedback (unittest.loader._FailedTest)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_bone_armor_feedback
+Traceback (most recent call last):
+  File "F:\3rd_src\emsdk\python\3.9.2-nuget_64bit\lib\unittest\loader.py", line 154, in loadTestsFromName
+    module = __import__(module_name)
+ModuleNotFoundError: No module named 'test_bone_armor_feedback'
+
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+FAILED (errors=3)

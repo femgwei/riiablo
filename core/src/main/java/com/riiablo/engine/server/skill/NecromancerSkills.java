@@ -801,10 +801,16 @@ public final class NecromancerSkills {
     absorb = Math.min(absorb, maximum);
     if (absorb <= 0) return null;
 
+    UnitState previous = states.getState(StateId.BONEARMOR);
+    // SrvDo018 reuses an equal-level list; restoring a lost visual group is
+    // handled separately by setfunc6's count-increase branch.
+    int revision = previous != null && previous.level == level
+        ? previous.presentationRevision : states.nextPresentationRevision();
     states.removeState(StateId.BONEARMOR);
     UnitState state = states.addStateLayer(
         StateId.BONEARMOR, duration, level, sourceEntityId, skill.Id);
     if (state == null) return null;
+    state.presentationRevision = revision;
     state.setStatContribution(
         Stat.bonearmor, 0, NativeStatResolver.Operation.ADD, absorb);
     state.setStatContribution(

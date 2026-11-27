@@ -1,0 +1,13 @@
+{
+  "id": "20261126-162052-1d4e02a1",
+  "status": "failed",
+  "started": 1795681252.2496133,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "necromancer-loader-cleanup"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261126-162052-1d4e02a1\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 376, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 343, in execute\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261126-162052-1d4e02a1\\orchestrator\n",
+  "finished": 1795681253.0084877
+}

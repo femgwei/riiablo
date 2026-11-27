@@ -1,0 +1,15 @@
+{
+  "id": "20261126-084711-c125e2a8",
+  "status": "completed",
+  "started": 1795654031.4126976,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "necromancer-bone-spirit-d2gfx"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261126-084711-c125e2a8\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795654087.5214603
+}

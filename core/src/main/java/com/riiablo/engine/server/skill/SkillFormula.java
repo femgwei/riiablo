@@ -66,6 +66,15 @@ public final class SkillFormula {
       ToIntFunction<String> skillLevelResolver,
       Function<String, Skills.Entry> skillResolver, int userLevel,
       ToIntFunction<String> statResolver) {
+    return evaluate(expression, skill, skillLevel, skillLevelResolver, skillResolver,
+        userLevel, statResolver, skillLevelResolver);
+  }
+
+  /** Separates native .blvl (learned points) from .lvl (including bonuses). */
+  public static int evaluate(String expression, Skills.Entry skill, int skillLevel,
+      ToIntFunction<String> skillLevelResolver,
+      Function<String, Skills.Entry> skillResolver, int userLevel,
+      ToIntFunction<String> statResolver, ToIntFunction<String> effectiveSkillLevelResolver) {
     if (expression == null || expression.trim().isEmpty()) return 0;
     String normalized = expression.trim();
     // Excel exports occasionally quote an entire formula (for example
@@ -79,7 +88,8 @@ public final class SkillFormula {
     Parser parser = new Parser(normalized, skill, Math.max(1, skillLevel), Math.max(0, userLevel),
         skillLevelResolver == null ? name -> 0 : skillLevelResolver,
         skillResolver == null ? name -> null : skillResolver,
-        statResolver == null ? name -> 0 : statResolver);
+        statResolver == null ? name -> 0 : statResolver,
+        effectiveSkillLevelResolver == null ? name -> 0 : effectiveSkillLevelResolver);
     return parser.parse();
   }
 
@@ -91,11 +101,13 @@ public final class SkillFormula {
     private final ToIntFunction<String> skillLevelResolver;
     private final Function<String, Skills.Entry> skillResolver;
     private final ToIntFunction<String> statResolver;
+    private final ToIntFunction<String> effectiveSkillLevelResolver;
     private int index;
 
     Parser(String expression, Skills.Entry skill, int level, int userLevel,
         ToIntFunction<String> skillLevelResolver,
-        Function<String, Skills.Entry> skillResolver, ToIntFunction<String> statResolver) {
+        Function<String, Skills.Entry> skillResolver, ToIntFunction<String> statResolver,
+        ToIntFunction<String> effectiveSkillLevelResolver) {
       text = expression.trim();
       this.skill = skill;
       this.level = level;
@@ -103,6 +115,7 @@ public final class SkillFormula {
       this.skillLevelResolver = skillLevelResolver;
       this.skillResolver = skillResolver;
       this.statResolver = statResolver;
+      this.effectiveSkillLevelResolver = effectiveSkillLevelResolver;
     }
 
     int parse() {
@@ -302,13 +315,21 @@ public final class SkillFormula {
       skipWhitespace();
       consume(')');
       if (name == null || name.isEmpty()) return 0;
-      int referencedLevel = Math.max(0, skillLevelResolver.applyAsInt(name));
-      if (referencedLevel <= 0 || special == null || special.isEmpty()
+      if (special == null || special.isEmpty()
           || "blvl".equalsIgnoreCase(special)) {
-        return referencedLevel;
+        return Math.max(0, skillLevelResolver.applyAsInt(name));
       }
+      int referencedLevel = Math.max(0, effectiveSkillLevelResolver.applyAsInt(name));
+      if ("lvl".equalsIgnoreCase(special)) return referencedLevel;
       Skills.Entry referencedSkill = skillResolver.apply(name);
-      if (referencedSkill == null || special.length() != 4) return 0;
+      if (referencedSkill == null) return 0;
+      if (special.regionMatches(true, 0, "par", 0, 3)
+          && special.length() == 4) {
+        int index = special.charAt(3) - '0';
+        return index >= 1 && index <= 8 ? param(referencedSkill, index) : 0;
+      }
+      if (referencedLevel <= 0) return 0;
+      if (special.length() != 4) return 0;
       if (special.regionMatches(true, 0, "ln", 0, 2)
           || special.regionMatches(true, 0, "dm", 0, 2)) {
         int first = special.charAt(2) - '0';

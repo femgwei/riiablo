@@ -64,4 +64,35 @@ class AnimationTraceSystemTest {
     assertTrue(lines.get(1).contains("\"animation_frame_count\":16"));
     assertTrue(lines.get(1).contains("\"keyframes\":[\"ATK\"]"));
   }
+
+  @Test
+  void tracksDynamicSummonGroupWithEntityIdentity() throws Exception {
+    Path tracePath = Files.createTempFile("riiablo-summon-animation-trace", ".jsonl");
+    AnimationTraceWriter writer = new AnimationTraceWriter(tracePath,
+        java.util.Collections.singletonMap("family", "necromancer-skeleton"));
+    AnimationTraceSystem trace = new AnimationTraceSystem(writer).gameFrame(220);
+    World world = new World(new WorldConfigurationBuilder().with(trace).build());
+    int[] ids = new int[3];
+    try {
+      for (int i = 0; i < ids.length; i++) {
+        com.artemis.Entity entity = world.createEntity();
+        ids[i] = entity.getId();
+        int id = ids[i];
+        entity.edit().create(Class.class).type = Class.Type.MON;
+        entity.edit().create(CofReference.class).set("SK", Engine.Monster.MODE_WL);
+        entity.edit().create(AnimData.class).speed = 128;
+        entity.edit().create(Position.class).position.set(id, 2);
+      }
+      trace.focusEntities(ids[0], ids[2]);
+      world.process();
+    } finally {
+      trace.close();
+      world.dispose();
+    }
+    List<String> lines = Files.readAllLines(tracePath);
+    assertEquals(3, lines.size());
+    assertTrue(lines.stream().anyMatch(line -> line.contains("\"entity_id\":" + ids[0])));
+    assertTrue(lines.stream().anyMatch(line -> line.contains("\"entity_id\":" + ids[2])));
+    assertTrue(lines.stream().noneMatch(line -> line.contains("\"entity_id\":" + ids[1])));
+  }
 }

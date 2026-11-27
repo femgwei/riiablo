@@ -28,4 +28,23 @@ class SkillFormulaTest {
     assertEquals(0, SkillFormula.durationSeconds(0));
     assertEquals(1, SkillFormula.durationSeconds(1));
   }
+
+  @Test
+  void linkedSkillLevelAndParamReferencesUseNativeTokens() {
+    com.riiablo.codec.excel.Skills.Entry revive = new com.riiablo.codec.excel.Skills.Entry();
+    com.riiablo.codec.excel.Skills.Entry mastery = new com.riiablo.codec.excel.Skills.Entry();
+    mastery.Param = new int[] {8, 2, 5, 10, 0, 0, 0, 0};
+    assertEquals(5, SkillFormula.evaluate("skill('Skeleton Mastery'.lvl)", revive, 20,
+        name -> "Skeleton Mastery".equals(name) ? 5 : 0,
+        name -> "Skeleton Mastery".equals(name) ? mastery : null, 20, name -> 0));
+    assertEquals(10, SkillFormula.evaluate("skill('Skeleton Mastery'.par4)", revive, 20,
+        name -> "Skeleton Mastery".equals(name) ? 5 : 0,
+        name -> "Skeleton Mastery".equals(name) ? mastery : null, 20, name -> 0));
+    assertEquals(10, SkillFormula.evaluate("skill('Skeleton Mastery'.par4)", revive, 20,
+        name -> 0, name -> mastery));
+    assertEquals(7, SkillFormula.evaluate("skill('Skeleton Mastery'.lvl)", revive, 20,
+        name -> 5, name -> mastery, 20, name -> 0, name -> 7));
+    assertEquals(5, SkillFormula.evaluate("skill('Skeleton Mastery'.blvl)", revive, 20,
+        name -> 5, name -> mastery, 20, name -> 0, name -> 7));
+  }
 }

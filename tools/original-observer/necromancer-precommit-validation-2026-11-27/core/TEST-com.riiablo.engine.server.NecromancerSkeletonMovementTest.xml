@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.NecromancerSkeletonMovementTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-27T07:47:40" hostname="DESKTOP-7GGAVHU" time="0.045">
+  <properties/>
+  <testcase name="skeletonGaitTracksVelocityForLocalMovement()" classname="com.riiablo.engine.server.NecromancerSkeletonMovementTest" time="0.018"/>
+  <testcase name="inspectNativeSkeletonMovementData()" classname="com.riiablo.engine.server.NecromancerSkeletonMovementTest" time="0.026"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+RETAIL_SK_WL com.riiablo.codec.D2$Entry@7978e022[cof=SKWLHTH,framesPerDir=8,speed=128]
+RETAIL_SK_A1 com.riiablo.codec.D2$Entry@2f894ad9[cof=SKA1HTH,framesPerDir=16,speed=208]
+E_SK_A1 com.riiablo.codec.D2$Entry@5afbd567[cof=SKA1HTH,framesPerDir=16,speed=208]
+SKELETON_DATA necroskeleton base=necroskeleton code=SK velocity=13 run=15 AI=NecroPet baseCode=SK baseVelocity=13
+SKELETON_ANIM SKWLHTH=com.riiablo.codec.D2$Entry@6993c8df[cof=SKWLHTH,framesPerDir=8,speed=128]
+SKELETON_ANIM SKRNHTH=null
+SKELETON_ANIM SKNUHTH=com.riiablo.codec.D2$Entry@57545c3f[cof=SKNUHTH,framesPerDir=8,speed=128]
+SKELETON_ANIM SKWL1HS=com.riiablo.codec.D2$Entry@326e0b8e[cof=SKWL1HS,framesPerDir=8,speed=128]
+SKELETON_ANIM SKRN1HS=null
+SKELETON_ANIM SKNU1HS=com.riiablo.codec.D2$Entry@36baa049[cof=SKNU1HS,framesPerDir=8,speed=128]
+SKELETON_ANIM SKWLSTF=null
+SKELETON_ANIM SKRNSTF=null
+SKELETON_ANIM SKNUSTF=null
+SKELETON_ANIM SKWLHTH=com.riiablo.codec.D2$Entry@6993c8df[cof=SKWLHTH,framesPerDir=8,speed=128]
+SKELETON_ANIM SKRNHTH=null
+SKELETON_ANIM SKNUHTH=com.riiablo.codec.D2$Entry@57545c3f[cof=SKNUHTH,framesPerDir=8,speed=128]
+SKELETON_ANIM SKWL1HS=com.riiablo.codec.D2$Entry@326e0b8e[cof=SKWL1HS,framesPerDir=8,speed=128]
+SKELETON_ANIM SKRN1HS=null
+SKELETON_ANIM SKNU1HS=com.riiablo.codec.D2$Entry@36baa049[cof=SKNU1HS,framesPerDir=8,speed=128]
+SKELETON_ANIM SKWLSTF=null
+SKELETON_ANIM SKRNSTF=null
+SKELETON_ANIM SKNUSTF=null
+SKELETON_DATA necromage base=necromage code=SK velocity=12 run=14 AI=NecroPet baseCode=SK baseVelocity=12
+SKELETON_ANIM SKWLHTH=com.riiablo.codec.D2$Entry@6993c8df[cof=SKWLHTH,framesPerDir=8,speed=128]
+SKELETON_ANIM SKRNHTH=null
+SKELETON_ANIM SKNUHTH=com.riiablo.codec.D2$Entry@57545c3f[cof=SKNUHTH,framesPerDir=8,speed=128]
+SKELETON_ANIM SKWL1HS=com.riiablo.codec.D2$Entry@326e0b8e[cof=SKWL1HS,framesPerDir=8,speed=128]
+SKELETON_ANIM SKRN1HS=null
+SKELETON_ANIM SKNU1HS=com.riiablo.codec.D2$Entry@36baa049[cof=SKNU1HS,framesPerDir=8,speed=128]
+SKELETON_ANIM SKWLSTF=null
+SKELETON_ANIM SKRNSTF=null
+SKELETON_ANIM SKNUSTF=null
+SKELETON_ANIM SKWLHTH=com.riiablo.codec.D2$Entry@6993c8df[cof=SKWLHTH,framesPerDir=8,speed=128]
+SKELETON_ANIM SKRNHTH=null
+SKELETON_ANIM SKNUHTH=com.riiablo.codec.D2$Entry@57545c3f[cof=SKNUHTH,framesPerDir=8,speed=128]
+SKELETON_ANIM SKWL1HS=com.riiablo.codec.D2$Entry@326e0b8e[cof=SKWL1HS,framesPerDir=8,speed=128]
+SKELETON_ANIM SKRN1HS=null
+SKELETON_ANIM SKNU1HS=com.riiablo.codec.D2$Entry@36baa049[cof=SKNU1HS,framesPerDir=8,speed=128]
+SKELETON_ANIM SKWLSTF=null
+SKELETON_ANIM SKRNSTF=null
+SKELETON_ANIM SKNUSTF=null
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

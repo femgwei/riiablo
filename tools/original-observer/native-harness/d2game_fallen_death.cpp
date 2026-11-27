@@ -91,12 +91,13 @@ int wmain(int argc, wchar_t** argv) {
   SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
   if (argc != 4 && argc != 5) return 2;
   std::wstring profile=argc==5?argv[4]:L"same-room-native-death";
-  if(profile!=L"same-room-native-death"&&profile!=L"distance-14"&&profile!=L"distance-15"
+  if(profile!=L"same-room-native-death"&&profile!=L"same-room-native-death-preserve-corpse"&&profile!=L"distance-14"&&profile!=L"distance-15"
       &&profile!=L"ring-4"&&profile!=L"ring-5"&&profile!=L"adjacent-room"&&profile!=L"recovery"&&profile!=L"recovery-reengage"&&profile!=L"attack-direct"&&profile!=L"attack-repeat"&&profile!=L"attack-natural"&&profile!=L"attack-natural-long")return 2;
-  U observationFrames=profile==L"attack-natural-long"?1600:(profile==L"attack-repeat"||profile==L"attack-natural")?1040:(profile==L"recovery"||profile==L"recovery-reengage")?600:120;
+  U observationFrames=profile==L"same-room-native-death-preserve-corpse"?2:profile==L"attack-natural-long"?1600:(profile==L"attack-repeat"||profile==L"attack-natural")?1040:(profile==L"recovery"||profile==L"recovery-reengage")?600:120;
   int requestedDistance=profile==L"distance-14"?14:profile==L"distance-15"?15:0;
   U deathCount=profile==L"ring-4"?4:profile==L"ring-5"?5:1;
-  CastController d; bool success=false, created=false, removed=false, death=false, ring=false;
+  const bool preserveCorpse = profile==L"same-room-native-death-preserve-corpse";
+  CastController d; bool success=false, created=false, removed=false, corpsePreserved=false, death=false, ring=false;
   U observer=0, corpse=0, first=0, samples=0;
   auto output=std::filesystem::absolute(argv[3]);
   try {
@@ -158,9 +159,10 @@ int wmain(int argc, wchar_t** argv) {
     U game=original.Ecx, returnTo=d.get(original.Esp),player=0;
     U act=d.get(game+0xBC),seed=d.get(act+0xC); validateGame(d,game,seed,player);
     char name[16]{};d.read(d.get(player+0x14),name,16);
-    bool sorcFixture=std::memcmp(name,"CXSorc",7)==0 && d.get(player+4)==1;
+    bool sorcFixture=(std::memcmp(name,"CXSorc",7)==0 && d.get(player+4)==1)
+        || (std::memcmp(name,"CXNecro",7)==0 && d.get(player+4)==2);
     bool ravenFixture=std::memcmp(name,"CXDruRaven",10)==0 && d.get(player+4)==5;
-    require(sorcFixture || ravenFixture,"Require CXSorc or CXDruRaven fixture");
+    require(sorcFixture || ravenFixture,"Require CXSorc, CXNecro or CXDruRaven fixture");
     require(d.get(player+0x10)!=0 && d.get(player+0x10)!=17,"Require living player");
     require(returnTo>=gm.base && returnTo<gm.base+gm.size,"Update caller outside D2Game");
     U room=d.get(d.get(player+0x2C)+0x1C);
@@ -498,20 +500,24 @@ int wmain(int argc, wchar_t** argv) {
     auto alive=monsterUnits();
     for(auto item:owned)if(alive.count(item.first)){
       require(alive.at(item.first)==item.second,"Owned unit lifetime changed");
-      d.call(original,returnTo,remove,game,item.first,{});
+      if(!(preserveCorpse && item.first==corpse))
+        d.call(original,returnTo,remove,game,item.first,{});
     }
+    corpsePreserved = preserveCorpse && alive.count(corpse) && d.get(corpse+0x10)==0;
+    if(preserveCorpse) require(corpsePreserved,"Preserved corpse was removed or left death mode");
     std::set<U> remaining;
     for(U bin=0;bin<128;++bin)for(U unit=d.get(game+0x1320+bin*4);unit;unit=d.get(unit+0xE4)){
       require(remaining.insert(unit).second && remaining.size()<8192,"Invalid monster hash after cleanup");
-      require(!owned.count(unit),
+       require((preserveCorpse && unit==corpse) || !owned.count(unit),
           "Owned fixture remains in monster hash");
     }
     removed=true;success=true;
   }catch(const std::exception& e){std::cerr<<e.what()<<'\n';}
   bool cleaned=d.cleanup();
   auto save=[&](){if(!created)return;std::ofstream s(output / "summary.json");
-    s<<"{\"status\":\""<<(success&&cleaned?"passed":"failed")<<"\",\"detached\":"<<(d.detached?"true":"false")
-     <<",\"cleanup_confirmed\":"<<(cleaned?"true":"false")<<",\"fixtures_removed\":"<<(removed?"true":"false")
+      s<<"{\"status\":\""<<(success&&cleaned?"passed":"failed")<<"\",\"detached\":"<<(d.detached?"true":"false")
+       <<",\"cleanup_confirmed\":"<<(cleaned?"true":"false")<<",\"fixtures_removed\":"<<(removed&&!preserveCorpse?"true":"false")
+       <<",\"corpse_preserved\":"<<(corpsePreserved?"true":"false")
      <<",\"native_death_observed\":"<<(death?"true":"false")<<",\"room_ring_verified\":"<<(ring?"true":"false")
      <<",\"samples\":"<<samples<<",\"first_frame\":"<<first<<",\"ai_parity\":\"untested\",\"restart_required\":"<<(removed?"false":"true")<<"}";};
   save();while(d.attached&&!cleaned){Sleep(1000);cleaned=d.cleanup();}save();

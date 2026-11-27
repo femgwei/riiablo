@@ -18,6 +18,16 @@ import com.riiablo.map.pfa.GraphPath;
 import com.riiablo.map.pfa.Point2;
 
 class PathfinderTest {
+  @Test void rangedReviveFollowsOwnerWithoutStoppingAtItsHostileMissileRange() {
+    SummonedPet revive = new SummonedPet().set(42, "revive", 95, 5, false, 4500);
+    assertTrue(Pathfinder.isSummonOwnerTarget(revive, 42));
+    assertFalse(Pathfinder.isSummonOwnerTarget(revive, 43));
+    revive.passive = true;
+    assertFalse(Pathfinder.isSummonOwnerTarget(revive, 42));
+    revive.passive = false;
+    revive.boneWall = true;
+    assertFalse(Pathfinder.isSummonOwnerTarget(revive, 42));
+  }
   @Test void playerRecoversOnFirstBlockedTickWithoutWaitingForHeldInput() {
     Pathfind path = new Pathfind();
     assertFalse(Pathfinder.shouldRepathPlayerAfterDynamicBlock(path));
@@ -141,8 +151,8 @@ class PathfinderTest {
     SummonedPet valkyrie = new SummonedPet();
     valkyrie.ownerId = 42;
     valkyrie.petType = "Valkyrie";
-    assertTrue(Pathfinder.isValkyrieOwnerTarget(valkyrie, 42));
-    assertFalse(Pathfinder.isValkyrieOwnerTarget(valkyrie, 43));
+    assertTrue(Pathfinder.isSummonOwnerTarget(valkyrie, 42));
+    assertFalse(Pathfinder.isSummonOwnerTarget(valkyrie, 43));
   }
 
   @Test

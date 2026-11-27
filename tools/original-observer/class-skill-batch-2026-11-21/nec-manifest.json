@@ -78,11 +78,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "partial_original_birth_phase_early_hit_and_depletion_verified",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-bone-armor-hit-cleanup-analysis-2026-11-26.md",
+      "prior_individual_evidence": "docs/necromancer-bone-armor-presentation-analysis-2026-11-24.md",
+      "execution_readiness": "birth_phase_early_damage_and_depletion_sampled_recast_single_pair_gpu_pending",
       "resource_paths": [
         "data/global/overlays/BoneShieldBack.dcc",
         "data/global/overlays/BoneShieldEmerge.dcc",
@@ -96,7 +96,13 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_runtime_status": "observed_private_desktop_minimized_early_hit_and_depletion_partial",
+      "individual_runtime_evidence": "tools/original-observer/necromancer-bone-armor-hit-evidence-2026-11-26.json",
+      "individual_progress": "Retains prior birth/47 triple-phase batch evidence. Added natural-combat private-desktop cases: 56 armor draws with16 live-body empty batches after disappearance; second native collector passed with87 armor draws and555 client feedback samples, but outer failed after original exit. Actual fixed pool53760->19632, native count3->2, then state/list/overlays cleared. Fixed early-hit removal to match newest front/back or mode4 continuation while preserving null timers. Per-hit attribution, stable one-pair, recast and GPU remain unverified.",
+      "validation_evidence": "tools/original-observer/necromancer-bone-armor-hit-validation-2026-11-26/validation.json",
+      "individual_capture_attempt_history": "docs/necromancer-bone-armor-animation-chain-analysis-2026-11-26.md",
+      "individual_birth_evidence": "tools/original-observer/necromancer-bone-armor-original-draw-2026-11-26.json"
     },
     {
       "skill_id": 69,
@@ -131,13 +137,13 @@
         "activity",
         "despawn"
       ],
-      "runtime_status": "not_run_in_class_batch",
-      "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "runtime_status": "original_hidden_d2gfx_observed_with_cleanup_warning",
+      "observation_mode": "hidden_minimized_d2gfx_callchain",
+      "comparison_status": "original_summon_transition_observed_birth_sequence_fixed",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-skeleton-original-d2gfx-capture-2026-11-25.md",
+      "prior_individual_evidence": "core/src/test/java/com/riiablo/engine/server/NecromancerSummonIntegrationTest.java",
+      "execution_readiness": "birth_activity_trace_observed_despawn_pending",
       "resource_paths": [
         "data/global/missiles/BloodLarge01.dcc",
         "data/global/missiles/BloodLarge02.dcc",
@@ -163,11 +169,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "necromancer_target_state_and_overlay_regression_passed",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-dim-vision-presentation-analysis-2026-11-25.md",
+      "prior_individual_evidence": "core/src/test/java/com/riiablo/engine/server/NecromancerCurseIntegrationTest.java",
+      "execution_readiness": "riiablo_state_overlay_ai_validated_original_runtime_pending",
       "resource_paths": [
         "data/global/missiles/CurseArea.dcc",
         "data/global/missiles/CurseCast.dcc",
@@ -252,11 +258,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "partial_original_flame_and_fragment_reconstruction_validated_light_and_direction_gaps_open",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-corpse-explosion-presentation-analysis-2026-11-25.md",
+      "prior_individual_evidence": "core/src/test/java/com/riiablo/presentation/NecromancerExplosionPresentationTest.java",
+      "execution_readiness": "relative_blood_motion_cold_dcc_terminal_clock_and_bounded_cleanup_validated_not_full_parity",
       "resource_paths": [
         "data/global/missiles/BloodLarge01.dcc",
         "data/global/missiles/BloodLarge02.dcc",
@@ -270,7 +276,11 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_runtime_status": "partial_cast_and_effect_observed_session_exit_warning",
+      "individual_runtime_evidence": "tools/original-observer/necromancer-corpse-explosion-original-normalized-2026-11-25.json",
+      "individual_progress": "Two scatter gore and three ordinary-branch blood visuals; sampled relative blood displacement within one projected pixel; 19 focused tests passed. 128-tick residue budget is reconstruction policy; original final removal remains unobserved.",
+      "fragment_validation_evidence": "tools/original-observer/necromancer-corpse-fragment-validation-2026-11-25/validation.json"
     },
     {
       "skill_id": 75,
@@ -283,11 +293,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "partial_original_birth_walk_idle_draws_and_headless_birth_replay_validated",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-clay-golem-original-draw-analysis-2026-11-26.md",
+      "prior_individual_evidence": "docs/necromancer-golem-birth-presentation-analysis-2026-11-25.md",
+      "execution_readiness": "birth_draw_sequence_sampled_attack_removal_gpu_and_motion_timing_pending",
       "resource_paths": [],
       "required_observations": [
         "caster_mode_sequence",
@@ -296,7 +306,11 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_runtime_status": "observed_minimized_d2gfx_partial",
+      "individual_runtime_evidence": "tools/original-observer/necromancer-clay-golem-original-draw-2026-11-26.json",
+      "individual_progress": "112 minimized G1 draws: stationary S1 frames 4..13, moving WL 0..7, stationary NU 0..2. Native helper passed and cleaned up; outer task failed with Original exited. Headless real skill/animation pipeline preserves birth tail and defers NecroPet follow until NU. Existing birth fix retained; no additional production animation defect confirmed.",
+      "validation_evidence": "tools/original-observer/necromancer-clay-golem-validation-2026-11-26/validation.json"
     },
     {
       "skill_id": 76,
@@ -419,13 +433,13 @@
         "activity",
         "despawn"
       ],
-      "runtime_status": "not_run_in_class_batch",
-      "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "runtime_status": "original_hidden_d2gfx_observed_with_cleanup_warning",
+      "observation_mode": "hidden_minimized_d2gfx_callchain",
+      "comparison_status": "original_mage_summon_transition_observed_shared_birth_sequence",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-skeleton-mage-original-d2gfx-capture-2026-11-25.md",
+      "prior_individual_evidence": "core/src/test/java/com/riiablo/engine/server/NecromancerSummonIntegrationTest.java",
+      "execution_readiness": "birth_activity_trace_observed_despawn_pending",
       "resource_paths": [
         "data/global/missiles/BloodLarge01.dcc",
         "data/global/missiles/BloodLarge02.dcc",
@@ -514,11 +528,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "partial_original_cloud_motion_frame_replay_and_burst_residue_fixed_light_and_gpu_gaps_open",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-poison-explosion-original-draw-analysis-2026-11-25.md",
+      "prior_individual_evidence": "core/src/test/java/com/riiablo/presentation/NecromancerExplosionPresentationTest.java",
+      "execution_readiness": "original_poison_draw_captured_sampled_cloud_motion_and_animation_replayed",
       "resource_paths": [
         "data/global/missiles/CorpseExplodeGutsPoison.dcc",
         "data/global/missiles/PoisonSmokePuff.dcc",
@@ -531,7 +545,11 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_runtime_status": "partial_cast_and_effect_observed_session_exit_warning",
+      "individual_runtime_evidence": "tools/original-observer/necromancer-poison-explosion-original-draw-2026-11-25.json",
+      "individual_progress": "37 focused tests passed; 34 original cloud samples replayed. Minimized original trace retained after debugger-handle repair; outer exit warning remains. Residue budget is reconstruction policy, not observed native cleanup.",
+      "validation_evidence": "tools/original-observer/necromancer-poison-explosion-draw-validation-2026-11-25/validation.json"
     },
     {
       "skill_id": 84,
@@ -575,11 +593,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "partial_original_birth_idle_walk_draws_and_headless_birth_replay_validated",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-blood-golem-original-draw-analysis-2026-11-26.md",
+      "prior_individual_evidence": "docs/necromancer-golem-birth-presentation-analysis-2026-11-25.md",
+      "execution_readiness": "original_birth_tail_idle_walk_sampled_attack_death_gpu_and_motion_timing_pending",
       "resource_paths": [],
       "required_observations": [
         "caster_mode_sequence",
@@ -588,7 +606,11 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_runtime_status": "observed_minimized_d2gfx_partial",
+      "individual_runtime_evidence": "tools/original-observer/necromancer-blood-golem-original-draw-2026-11-26.json",
+      "individual_progress": "131 minimized G2/class-290 draws: S1 frames 5..15, NU 0, WL 0..7, NU 0..3. Native collector passed; outer failed on original exit with post-exit read WinError 299. Existing birth sequence validated with explicit 1.10F resources: Blood 26 ticks, Clay 32. Fixed observer SC=10 classification previously hardcoded SQ=18. Attack, hit/leech visual, death/removal and GPU parity remain open.",
+      "validation_evidence": "tools/original-observer/necromancer-blood-golem-validation-2026-11-26/validation.json"
     },
     {
       "skill_id": 86,
@@ -713,11 +735,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "golem_birth_sequence_and_effects_regression_passed",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-golem-birth-presentation-analysis-2026-11-25.md",
+      "prior_individual_evidence": "core/src/test/java/com/riiablo/engine/server/NecromancerGolemReviveIntegrationTest.java",
+      "execution_readiness": "riiablo_birth_and_effects_validated_original_runtime_pending",
       "resource_paths": [
         "data/global/overlays/AuraThornsBack.dcc",
         "data/global/overlays/AuraThornsFront.dcc"
@@ -729,7 +751,8 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_capture_gap": "Original Iron Golem capture needs a reviewed identified metal ground-item deployment/target fixture; ordinary ground-target capture cannot prove SrvDo057. See docs/necromancer-fire-golem-original-draw-analysis-2026-11-26.md."
     },
     {
       "skill_id": 91,
@@ -773,11 +796,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "partial_original_d2gfx_ring_and_motion_replay_validated_cast_hit_cleanup_and_gpu_gaps_open",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-poison-nova-original-draw-analysis-2026-11-26.md",
+      "prior_individual_evidence": "core/src/test/java/com/riiablo/engine/server/NecromancerPoisonNovaIntegrationTest.java",
+      "execution_readiness": "original_minimized_d2gfx_ring_and_native_motion_replayed_partial",
       "resource_paths": [
         "data/global/missiles/poisonNova.dcc"
       ],
@@ -788,7 +811,11 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_runtime_status": "partial_minimized_d2gfx_draw_observed_outer_batch_exit_warning",
+      "individual_runtime_evidence": "tools/original-observer/necromancer-poison-nova-original-draw-2026-11-26.json",
+      "individual_progress": "719 minimized class-118 draws normalized; all distinct native ring directions covered; Poison Nova now uses native 75% fp16 motion and integer cell origin. Cast-body COF, hit timing, final cleanup and GPU blend remain unobserved.",
+      "validation_evidence": "tools/original-observer/necromancer-poison-nova-draw-validation-2026-11-26/validation.json"
     },
     {
       "skill_id": 93,
@@ -801,11 +828,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "partial_original_d2gfx_motion_and_frame_replay_validated_hit_cleanup_and_gpu_gaps_open",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-bone-spirit-original-draw-analysis-2026-11-26.md",
+      "prior_individual_evidence": "core/src/test/java/com/riiablo/engine/server/NativeBoneSpiritMotionTest.java",
+      "execution_readiness": "original_minimized_d2gfx_motion_and_frame_replayed_partial",
       "resource_paths": [
         "data/global/missiles/BoneSpirit.dcc"
       ],
@@ -816,7 +843,11 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_runtime_status": "minimized_d2gfx_draw_observed_clean_collector_no_impact_sample",
+      "individual_runtime_evidence": "tools/original-observer/necromancer-bone-spirit-original-draw-2026-11-26.json",
+      "individual_progress": "80 class-193 draws observed in a minimized run; direction 56 and all 8 BoneSpirit frames replayed. Native 75% fp16 motion and integer cell origin are now implemented. Impact class 327, cast-body COF, final cleanup and GPU blend remain unobserved.",
+      "validation_evidence": "tools/original-observer/necromancer-bone-spirit-draw-validation-2026-11-26/validation.json"
     },
     {
       "skill_id": 94,
@@ -829,11 +860,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "partial_original_birth_walk_idle_and_two_holyfire_layers_validated",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-fire-golem-original-draw-analysis-2026-11-26.md",
+      "prior_individual_evidence": "docs/necromancer-golem-birth-presentation-analysis-2026-11-25.md",
+      "execution_readiness": "body_birth_and_aura_frames_sampled_attack_death_gpu_and_exact_motion_pending",
       "resource_paths": [],
       "required_observations": [
         "caster_mode_sequence",
@@ -842,7 +873,11 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_runtime_status": "observed_minimized_d2gfx_partial",
+      "individual_runtime_evidence": "tools/original-observer/necromancer-fire-golem-original-draw-2026-11-26.json",
+      "individual_progress": "106 minimized G3/class-292 body draws; birth includes frame 15, then NU/WL. Holy Fire overlays 15/16 sampled 53 draws each across all 19 actual DCC frames (table says 12). Explicit 1.10F headless birth, granted Holy Fire and persistent dual-layer lifetime verified. Native collector cleaned up; outer task failed on original exit. Exact motion, attack/hit/death and GPU parity remain open.",
+      "validation_evidence": "tools/original-observer/necromancer-fire-golem-validation-2026-11-26/validation.json"
     },
     {
       "skill_id": 95,
@@ -855,11 +890,11 @@
       ],
       "runtime_status": "not_run_in_class_batch",
       "observation_mode": null,
-      "comparison_status": "not_compared_in_class_batch",
+      "comparison_status": "partial_original_burst_and_local_revive_movement_palette_mastery_fixes",
       "batch_evidence": null,
-      "comparison_evidence": null,
-      "prior_individual_evidence": null,
-      "execution_readiness": "needs_fixture_and_family_collector",
+      "comparison_evidence": "docs/necromancer-revive-original-draw-analysis-2026-11-26.md",
+      "prior_individual_evidence": "core/src/test/java/com/riiablo/engine/server/NecromancerGolemReviveIntegrationTest.java",
+      "execution_readiness": "headless_regression_original_monster_activity_palette_and_cleanup_pending",
       "resource_paths": [
         "data/global/missiles/Revive.dcc"
       ],
@@ -870,7 +905,11 @@
         "resource_direction_frame_clock",
         "expiry_or_interrupt"
       ],
-      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass"
+      "completion_rule": "Each applicable case needs runtime evidence and a matched Riiablo replay; static headers are not a pass",
+      "individual_runtime_status": "observed_minimized_d2gfx_partial",
+      "individual_runtime_evidence": "tools/original-observer/necromancer-revive-original-draw-2026-11-26.json",
+      "individual_progress": "Original minimized capture contains 16 revivemedium draws at the corpse; native collector passed but outer task failed with Original exited. Local body reattachment, owner-follow classification, PL2 gray shift 73 and effective Skeleton Mastery damage/life formulas fixed. Original monster motion/attack, GPU tint, effect variants and despawn remain open.",
+      "validation_evidence": "tools/original-observer/necromancer-revive-validation-2026-11-26/validation.json"
     }
   ]
 }

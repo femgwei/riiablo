@@ -1638,6 +1638,8 @@ public class ServerEntityFactory extends EntityFactory {
     missilePosition.position.set(position);
     if (NativeFrozenOrbMotion.handles(missile) || NativeBoneSpearMotion.handles(missile)
         || NativePoisonJavelinMotion.usesCellOrigin(missile)
+        || com.riiablo.engine.server.missile.NativePoisonNovaMotion.handles(missile)
+        || com.riiablo.engine.server.missile.NativeBoneSpiritMotion.handles(missile)
         || NativeFirestormMotion.maker(missile)
         || NativeFirestormMotion.fire(missile)
         || com.riiablo.engine.server.missile.NativeInfernoMotion.handles(missile)
@@ -1682,6 +1684,12 @@ public class ServerEntityFactory extends EntityFactory {
       com.riiablo.engine.server.missile.NativeInfernoMotion.velocity(missile, damageLevel, angle, missileVelocity);
     } else if (NativePoisonJavelinMotion.handles(missile)) {
       NativePoisonJavelinMotion.initialVelocity(missile, damageLevel, slowPercent, angle, missileVelocity);
+    } else if (com.riiablo.engine.server.missile.NativePoisonNovaMotion.handles(missile)) {
+      com.riiablo.engine.server.missile.NativePoisonNovaMotion.initialVelocity(
+          missile, damageLevel, slowPercent, angle, missileVelocity);
+    } else if (com.riiablo.engine.server.missile.NativeBoneSpiritMotion.handles(missile)) {
+      com.riiablo.engine.server.missile.NativeBoneSpiritMotion.initialVelocity(
+          missile, damageLevel, slowPercent, angle, missileVelocity);
     } else {
       missileVelocity.set(angle).setLength(velocity);
     }
@@ -1692,7 +1700,9 @@ public class ServerEntityFactory extends EntityFactory {
     }
     mAngle.create(id).set(angle);
     if ((NativeFrozenOrbMotion.handles(missile) || NativeBoneSpearMotion.handles(missile)
-        || NativePoisonJavelinMotion.handles(missile))
+        || NativePoisonJavelinMotion.handles(missile)
+        || com.riiablo.engine.server.missile.NativePoisonNovaMotion.handles(missile)
+        || com.riiablo.engine.server.missile.NativeBoneSpiritMotion.handles(missile))
         && !missileVelocity.isZero()) {
       mAngle.get(id).set(new Vector2(missileVelocity).nor());
     }

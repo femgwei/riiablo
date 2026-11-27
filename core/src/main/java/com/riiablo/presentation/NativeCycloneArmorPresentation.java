@@ -7,12 +7,13 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import java.util.ArrayList;
 
-/** D2Client 1.10f setfunc8 (RVA AC560): three paired armor effects. */
+/** D2Client 1.10f setfunc8 (RVA AC560): three paired Cyclone Armor effects. */
 public final class NativeCycloneArmorPresentation {
   private NativeCycloneArmorPresentation() {}
 
   public static int count(UnitState state) {
-    if (state == null || state.expired || state.stateId != StateId.CYCLONEARMOR) return 0;
+    if (state == null || state.expired
+        || (state.stateId != StateId.CYCLONEARMOR && state.stateId != StateId.BONEARMOR)) return 0;
     int current = state.getStatContributionValue(Stat.bonearmor);
     int maximum = state.getStatContributionValue(Stat.bonearmormax);
     if (current <= 0 || maximum <= 0) return 0;

@@ -45,6 +45,17 @@ class CycloneArmorPresentationTest extends RiiabloTest {
     }
   }
 
+  @Test void boneArmorUsesTheSamePairedOverlayLifecycle() {
+    UnitState state = new UnitState(StateId.BONEARMOR);
+    state.setStatContribution(Stat.bonearmor, 0, NativeStatResolver.Operation.ADD, 6000);
+    state.setStatContribution(Stat.bonearmormax, 0, NativeStatResolver.Operation.ADD, 9000);
+    assertEquals(3, NativeCycloneArmorPresentation.count(state));
+    state.setStatContribution(Stat.bonearmor, 0, NativeStatResolver.Operation.ADD, 1000);
+    assertEquals(1, NativeCycloneArmorPresentation.count(state));
+    state.expired = true;
+    assertEquals(0, NativeCycloneArmorPresentation.count(state));
+  }
+
   @Test void damageDropsHigherPairsWithoutRestartingSurvivingAnimations() {
     try (Fixture f = new Fixture()) {
       f.tick();

@@ -32,11 +32,14 @@ public class Overlay extends PooledComponent {
   public boolean nativeClockStarted;
   /** State id that owns a persistent overlay, or -1 for cast visuals. */
   public int stateId = -1;
+  /** Independent Bone Armor chain; equal resources in different chains must coexist. */
+  public int boneArmorGroup;
 
   public boolean usesNativeRendering() {
     return nativeAura || entry != null
         && (persistent && com.riiablo.presentation.NativeFeralMaulPresentation.handles(stateId)
             || persistent && stateId == com.riiablo.engine.server.state.StateId.CYCLONEARMOR
+            || boneArmorGroup > 0
             || persistent && stateId == com.riiablo.engine.server.state.StateId.FENRIS_RAGE
             || persistent && stateId == com.riiablo.engine.server.state.StateId.RABIES
             || com.riiablo.presentation.AuraRenderPolicy.isBarbarianOverlay(entry.overlay)
@@ -58,6 +61,7 @@ public class Overlay extends PooledComponent {
     this.nativeFrame = 0;
     this.nativeClockTime = 0; this.nativeClockStarted = false;
     this.stateId = -1;
+    this.boneArmorGroup = 0;
     return this;
   }
 
@@ -80,5 +84,6 @@ public class Overlay extends PooledComponent {
     nativeFrame = 0;
     nativeClockTime = 0; nativeClockStarted = false;
     stateId = -1;
+    boneArmorGroup = 0;
   }
 }

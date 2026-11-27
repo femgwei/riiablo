@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.NecromancerGolemBirthPresentationTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-26T06:10:01" hostname="DESKTOP-7GGAVHU" time="0.496">
+  <properties/>
+  <testcase name="[1] G1, clay" classname="com.riiablo.engine.server.NecromancerGolemBirthPresentationTest" time="0.062"/>
+  <testcase name="[2] G2, blood" classname="com.riiablo.engine.server.NecromancerGolemBirthPresentationTest" time="0.023"/>
+  <testcase name="[3] G3, fire" classname="com.riiablo.engine.server.NecromancerGolemBirthPresentationTest" time="0.032"/>
+  <testcase name="[1] 75, G1, clay" classname="com.riiablo.engine.server.NecromancerGolemBirthPresentationTest" time="0.307"/>
+  <testcase name="[2] 85, G2, blood" classname="com.riiablo.engine.server.NecromancerGolemBirthPresentationTest" time="0.022"/>
+  <testcase name="[3] 94, G3, fire" classname="com.riiablo.engine.server.NecromancerGolemBirthPresentationTest" time="0.027"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+GOLEM_RESOURCE token=G1 mode=S1 frames=16 speed=128 dccFrames=16 directions=1
+GOLEM_RESOURCE token=G1 mode=WL frames=8 speed=128 dccFrames=8 directions=8
+GOLEM_RESOURCE token=G1 mode=NU frames=4 speed=40 dccFrames=4 directions=8
+GOLEM_RESOURCE token=G2 mode=S1 frames=16 speed=160 dccFrames=16 directions=1
+GOLEM_RESOURCE token=G2 mode=WL frames=8 speed=184 dccFrames=8 directions=8
+GOLEM_RESOURCE token=G2 mode=NU frames=4 speed=56 dccFrames=4 directions=8
+GOLEM_RESOURCE token=G3 mode=S1 frames=16 speed=168 dccFrames=16 directions=1
+GOLEM_RESOURCE token=G3 mode=WL frames=8 speed=192 dccFrames=8 directions=8
+GOLEM_RESOURCE token=G3 mode=NU frames=8 speed=112 dccFrames=8 directions=8
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=75 target=-1 srvDoFunc=56 cltDoFunc=0
+GOLEM_BIRTH skill=75 ticks=32 presentedFrames=[0, 0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 14, 15]
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=85 target=-1 srvDoFunc=56 cltDoFunc=0
+GOLEM_BIRTH skill=85 ticks=26 presentedFrames=[0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 8, 8, 9, 9, 10, 11, 11, 12, 13, 13, 14, 15, 15]
+[ServerSkillSystem] [SKILL_DO] phase=receive entity=0 skill=94 target=-1 srvDoFunc=56 cltDoFunc=0
+GOLEM_BIRTH skill=94 ticks=25 presentedFrames=[0, 0, 1, 1, 2, 3, 3, 4, 5, 5, 6, 7, 7, 8, 9, 9, 10, 11, 11, 12, 13, 13, 14, 15, 15]
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

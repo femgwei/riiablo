@@ -22,6 +22,7 @@ import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.ai.NecroPet;
@@ -31,6 +32,8 @@ import com.riiablo.item.Location;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /** Native SrvDo056/057/058 summon integration. */
 class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
@@ -52,6 +55,10 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           owner, clay.Id, Engine.INVALID_ENTITY, new Vector2(12, 10), 56, 0));
       assertEquals(owner, world.getMapper(SummonedPet.class).get(factory.lastEntity).ownerId);
+      Sequence clayBirth = world.getMapper(Sequence.class).get(factory.lastEntity);
+      assertNotNull(clayBirth, "Clay Golem must hold its S1 emergence sequence");
+      assertEquals(Engine.Monster.MODE_S1, clayBirth.mode1);
+      assertEquals(Engine.Monster.MODE_NU, clayBirth.mode2);
 
       Skills.Entry fire = Riiablo.files.skills.get(SkillId.FIRE_GOLEM);
       world.getMapper(Player.class).get(owner).data.setSkillLevel(SkillId.FIRE_GOLEM, 5);
@@ -91,12 +98,19 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
     }
   }
 
-  @Test
-  void reviveConvertsCorpseInPlaceAndMarksNoRewardOwnedState() {
+  @ParameterizedTest
+  @CsvSource({"0,0", "0,2", "5,0", "5,2"})
+  void reviveConvertsCorpseInPlaceAndMarksNoRewardOwnedState(int masteryLevel, int skillBonus) {
     RecordingFactory factory = new RecordingFactory();
     World world = world(factory);
     try {
       int owner = owner(world, SkillId.REVIVE);
+      world.getMapper(Player.class).get(owner).data.setSkillLevel(69, masteryLevel);
+      if (skillBonus > 0) {
+        world.getMapper(UnitStates.class).create(owner).init(owner).stateList
+            .addState(com.riiablo.engine.server.state.StateId.BATTLECOMMAND, 100, 1, owner)
+            .skillModifier = skillBonus;
+      }
       Skills.Entry revive = Riiablo.files.skills.get(SkillId.REVIVE);
       com.riiablo.codec.excel.MonStats.Entry row = firstReviveableMonster();
       int corpse = world.create();
@@ -105,6 +119,10 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
       monster.monstats2 = Riiablo.files.monstats2.get(row.MonStatsEx);
       world.getMapper(Position.class).create(corpse).position.set(12, 10);
       world.getMapper(AttributesWrapper.class).create(corpse).attrs = attributes(3, 0, 40);
+      Attributes base = world.getMapper(AttributesWrapper.class).get(corpse).attrs;
+      base.base().put(Stat.mindamage, 10);
+      base.base().put(Stat.maxdamage, 10);
+      base.reset();
       world.getMapper(UnitStates.class).create(corpse).init(corpse);
       world.getMapper(NativeUnitFlags.class).create(corpse).reset();
       world.getMapper(Corpse.class).create(corpse).reset(Corpse.DEFAULT_DURATION, true);
@@ -121,6 +139,25 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
           .hasState(com.riiablo.engine.server.state.StateId.REVIVE));
       assertTrue(world.getMapper(Monster.class).get(corpse).monstats == row,
           "Revive must preserve the corpse's original MonStats and skill slots");
+      assertTrue(factory.reviveVisualRequested,
+          "Revive must publish the native Revive.dcc presentation burst");
+      assertTrue(world.getMapper(com.riiablo.engine.server.component.Missile.class)
+          .get(factory.lastVisual).presentationOnly);
+      assertEquals(new Vector2(12, 10), world.getMapper(Position.class).get(factory.lastVisual).position);
+      Attributes revived = world.getMapper(AttributesWrapper.class).get(corpse).attrs;
+      int effectiveMastery = masteryLevel > 0 ? masteryLevel + skillBonus : 0;
+      assertEquals(50, revived.getValue(Stat.velocitypercent, 0),
+          "Revive must apply the native 50% movement bonus");
+      assertEquals(effectiveMastery * 10, revived.getValue(Stat.damagepercent, 0),
+          "Skeleton Mastery must use effective level for Revive damage");
+      assertEquals(40f * (300 + effectiveMastery * 5) / 100f,
+          revived.get(Stat.maxhp).asFixed(), 1f / 256f);
+      com.riiablo.engine.server.combat.CombatSystem.CombatResult hit =
+          new com.riiablo.engine.server.combat.CombatSystem(bound -> 0).calculateAttack(
+              revived, attributes(1, 100, 100), false, false, false, 10, 10, 1000);
+      assertTrue(hit.hit);
+      assertEquals(10f * (100 + effectiveMastery * 10) / 100f,
+          hit.physicalDamageHp(), 1f / 256f, "bonus must reach physical melee settlement");
     } finally {
       world.dispose();
     }
@@ -171,6 +208,8 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
   private static final class RecordingFactory extends EntityFactory {
     int lastEntity = Engine.INVALID_ENTITY;
     boolean playerReviveRequested;
+    boolean reviveVisualRequested;
+    int lastVisual;
 
     @Override public int createSummonedPet(int ownerId,
         com.riiablo.codec.excel.MonStats.Entry summon, String petType, int skillId,
@@ -203,6 +242,19 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
     @Override public boolean reviveMonster(int monsterId, int ownerId) {
       playerReviveRequested = true;
       return resurrectMonster(monsterId, ownerId);
+    }
+
+    @Override public int createMissile(com.riiablo.codec.excel.Missiles.Entry missile,
+        Vector2 angle, Vector2 position, int ownerId, int skillLevel) {
+      if (missile != null && "revivemedium".equalsIgnoreCase(missile.Missile)) {
+        reviveVisualRequested = true;
+        lastVisual = world.create();
+        world.getMapper(com.riiablo.engine.server.component.Missile.class).create(lastVisual)
+            .set(missile, angle, missile.Range).setOwner(ownerId);
+        world.getMapper(Position.class).create(lastVisual).position.set(position);
+        return lastVisual;
+      }
+      return Engine.INVALID_ENTITY;
     }
 
     @Override public int createPlayer(CharData data, Vector2 position) { return Engine.INVALID_ENTITY; }

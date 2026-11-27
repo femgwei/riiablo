@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "status": "partial_original_draw_reconstruction_validated",
+  "test_count": 37,
+  "tests": [
+    {
+      "name": "com.riiablo.presentation.NecromancerPoisonExplosionOriginalTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.engine.server.NecromancerExplosionIntegrationTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.NecromancerExplosionPresentationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.engine.server.NativeNecromancerExplosionDataTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.NativeCorpseFragmentPresentationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.PoisonJavelinOriginalSpriteTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.PlagueJavelinPresentationLifecycleTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "source_sha256": {
+    "tools/original-observer/native-harness/d2game_controller.cpp": "0689375600842b34b6de6eab97221b8be7e5c02b753f012ff04404f6b8beae4e",
+    "tools/original-observer/native-harness/d2gfx_export_trace.cpp": "610464d8cc272bf54992d8303bf9f03ff2ca9e04a284a180997926080eb6c5f4",
+    "tools/original-observer/native-harness/debug_event_handle_probe.cpp": "1d4e775932d7d6a38aa689b993de8f6d7d60fcd424bc9b39dc6a5c6cb78ea4a1",
+    "core/src/main/java/com/riiablo/engine/server/ServerSkillSystem.java": "7f6d37c8c5613446b96d55c1c252b37c2dbfbb8673adff63fb295bb6d82cf39c",
+    "core/src/main/java/com/riiablo/engine/server/MissileCollisionSystem.java": "aaea7019ddf884735dc4e7d4bca4a5cc80ee57d1f51eafbce646e54f1312ae1b",
+    "core/src/main/java/com/riiablo/presentation/SkillCastHandler.java": "091528728789e8abc70af87cee876e3a4444e1a1bfb37d44a3c0bae317e11f62",
+    "core/src/main/java/com/riiablo/presentation/NativePoisonJavelinPresentation.java": "76ef34fe6de9d11ed83d5ff684c19f293b2fafb8b385c61218d02714e2df3294",
+    "core/src/main/java/com/riiablo/presentation/MissileLoader.java": "47d6815dfb98d5b5e4d6b05c2ff2261b005f22638bc8263f8164f9831b23bf30",
+    "core/src/test/java/com/riiablo/presentation/NecromancerPoisonExplosionOriginalTest.java": "6e09a5ae9da00cb408b56083dcd65a2a9d7dd5cd4ef5b0265bdbedcb3f10ac9c",
+    "core/src/test/java/com/riiablo/engine/server/NecromancerExplosionIntegrationTest.java": "2a6f32198c74b5ee68b422d918c2fc956b3c7054c7c4fbaca447465e6e45e4eb",
+    "core/src/test/resources/original/necromancer-poison-explosion-draw-1.10f.json": "dedce16840bfd101245719f21c235154496b89e14a4dec271023b15f562b0cc1"
+  },
+  "native_handle_probe": [
+    {
+      "stage": "create_thread",
+      "early_close": true,
+      "debug_thread_handle": 288,
+      "file_handle": 288,
+      "reused": true
+    },
+    {
+      "stage": "after_exit_continue",
+      "write_ok": false,
+      "error": 6
+    },
+    {
+      "stage": "create_thread",
+      "early_close": false,
+      "debug_thread_handle": 268,
+      "file_handle": 272,
+      "reused": false
+    },
+    {
+      "stage": "after_exit_continue",
+      "write_ok": true,
+      "error": 0
+    }
+  ],
+  "original": {
+    "run": "20261125-111613-09129d9a",
+    "draw_sha256": "42884ea00b84b92206026410a5cdf2ede29f209d88e5309479106214c28e4f91",
+    "status": "partial_cast_and_effect_observed",
+    "outer_job_status": "failed_after_original_exit_winerror_299",
+    "debugger_cleanup_confirmed": true,
+    "window_samples": 143,
+    "window_state": "minimized",
+    "unique_entities_not_proven": true,
+    "final_cleanup_unobserved": true
+  },
+  "replay": {
+    "sample_count": 34,
+    "ages": "inferred by subloop unwrapping, not sampled game ticks",
+    "relative_position_tolerance_pixels": 1,
+    "frame_sequence_matched": true
+  },
+  "unknown": [
+    "final original residue removal",
+    "green-light rendering",
+    "all DCC facing/palette/occlusion",
+    "exact random smoke births and GPU image equality"
+  ]
+}

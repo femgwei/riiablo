@@ -1,0 +1,126 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. See https://docs.gradle.org/7.3/userguide/gradle_daemon.html#sec:disabling_the_daemon.
+Daemon will be stopped at the end of the build 
+> Task :core:createFlatBuffers UP-TO-DATE
+> Task :core:createVersionSource
+> Task :core:generateSources
+
+> Task :verifyModuleBoundaries
+Module boundaries verified: strict project DAG and zero host/presentation/global RNG access in extracted modules.
+
+> Task :D2MOO_JAVA:compileJava UP-TO-DATE
+> Task :shared:compileJava UP-TO-DATE
+> Task :game-data:compileJava UP-TO-DATE
+> Task :server-domain:compileJava UP-TO-DATE
+> Task :quests:compileJava UP-TO-DATE
+> Task :server-systems:compileJava UP-TO-DATE
+> Task :table:core:compileJava UP-TO-DATE
+> Task :table:annotations:compileJava UP-TO-DATE
+
+> Task :core:compileJava
+ע: F:\3rd_src\riiablo\core\src\main\java\com\riiablo\map\RenderSystem.javaʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processResources UP-TO-DATE
+> Task :core:classes
+> Task :core:compileTestJava
+ע: ĳЩ�����ļ�ʹ�û򸲸����ѹ�ʱ�� API��
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:deprecation ���±��롣
+ע: ĳЩ�����ļ�ʹ����δ�����򲻰�ȫ�Ĳ�����
+ע: �й���ϸ��Ϣ, ��ʹ�� -Xlint:unchecked ���±��롣
+
+> Task :core:processTestResources UP-TO-DATE
+> Task :core:testClasses
+> Task :D2MOO_JAVA:processResources NO-SOURCE
+> Task :D2MOO_JAVA:classes UP-TO-DATE
+> Task :D2MOO_JAVA:jar UP-TO-DATE
+> Task :game-data:processResources NO-SOURCE
+> Task :game-data:classes UP-TO-DATE
+> Task :game-data:jar UP-TO-DATE
+> Task :quests:processResources NO-SOURCE
+> Task :quests:classes UP-TO-DATE
+> Task :quests:jar UP-TO-DATE
+> Task :server-domain:processResources NO-SOURCE
+> Task :server-domain:classes UP-TO-DATE
+> Task :server-domain:jar UP-TO-DATE
+> Task :server-systems:processResources NO-SOURCE
+> Task :server-systems:classes UP-TO-DATE
+> Task :server-systems:jar UP-TO-DATE
+> Task :shared:processResources NO-SOURCE
+> Task :shared:classes UP-TO-DATE
+> Task :shared:jar UP-TO-DATE
+> Task :table:annotations:processResources NO-SOURCE
+> Task :table:annotations:classes UP-TO-DATE
+> Task :table:annotations:jar UP-TO-DATE
+> Task :table:core:processResources NO-SOURCE
+> Task :table:core:classes UP-TO-DATE
+> Task :table:core:jar UP-TO-DATE
+
+> Task :core:test
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+PresentationAssetLifecycleTest > questMarkerQueuedSharedReferenceReturnsOnRepeatedDispose() FAILED
+    java.lang.NullPointerException: Cannot invoke "com.riiablo.presentation.ClientGameplayContext.assets()" because "this.clientContext" is null
+        at com.riiablo.presentation.Act1QuestIndicatorSystem.initialize(Act1QuestIndicatorSystem.java:67)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest$MarkerHarness.initialize(PresentationAssetLifecycleTest.java:394)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.questMarkerQueuedSharedReferenceReturnsOnRepeatedDispose(PresentationAssetLifecycleTest.java:128)
+
+PresentationAssetLifecycleTest > zoneReplacementClearsOldDrawableAndQueuedReferenceAndFinalActor() FAILED
+    java.lang.NullPointerException: Cannot invoke "com.riiablo.presentation.ClientGameplayContext.assets()" because "this.clientContext" is null
+        at com.riiablo.presentation.ZoneEntryDisplayer.initialize(ZoneEntryDisplayer.java:51)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest$ZoneHarness.initialize(PresentationAssetLifecycleTest.java:403)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.zone(PresentationAssetLifecycleTest.java:388)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.zoneReplacementClearsOldDrawableAndQueuedReferenceAndFinalActor(PresentationAssetLifecycleTest.java:350)
+
+PresentationAssetLifecycleTest > renderSystemsReleaseOnlyTheirOriginalManager() FAILED
+    java.lang.NullPointerException: Cannot invoke "com.riiablo.presentation.ClientGameplayContext.assets()" because "this.clientContext" is null
+        at com.riiablo.presentation.GroundItemGleamSystem.initialize(GroundItemGleamSystem.java:54)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.renderSystemsReleaseOnlyTheirOriginalManager(PresentationAssetLifecycleTest.java:136)
+
+PresentationAssetLifecycleTest > neverStartedRenderSystemsDoNotAcquireAssets() FAILED
+    java.lang.NullPointerException: Cannot invoke "com.riiablo.presentation.ClientGameplayContext.assets()" because "this.clientContext" is null
+        at com.riiablo.presentation.GroundItemGleamSystem.initialize(GroundItemGleamSystem.java:54)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.neverStartedRenderSystemsDoNotAcquireAssets(PresentationAssetLifecycleTest.java:148)
+
+PresentationAssetLifecycleTest > zoneNeverDisplayedStillRemovesActor() FAILED
+    java.lang.NullPointerException: Cannot invoke "com.riiablo.presentation.ClientGameplayContext.assets()" because "this.clientContext" is null
+        at com.riiablo.presentation.ZoneEntryDisplayer.initialize(ZoneEntryDisplayer.java:51)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest$ZoneHarness.initialize(PresentationAssetLifecycleTest.java:403)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.zone(PresentationAssetLifecycleTest.java:388)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.zoneNeverDisplayedStillRemovesActor(PresentationAssetLifecycleTest.java:374)
+
+PresentationAssetLifecycleTest > zoneExitProtectsSharedConsumerAndOriginalManager() FAILED
+    java.lang.NullPointerException: Cannot invoke "com.riiablo.presentation.ClientGameplayContext.assets()" because "this.clientContext" is null
+        at com.riiablo.presentation.ZoneEntryDisplayer.initialize(ZoneEntryDisplayer.java:51)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest$ZoneHarness.initialize(PresentationAssetLifecycleTest.java:403)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.zone(PresentationAssetLifecycleTest.java:388)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.zoneExitProtectsSharedConsumerAndOriginalManager(PresentationAssetLifecycleTest.java:365)
+
+PresentationAssetLifecycleTest > gleamQueuedSharedReferenceReturnsOnRepeatedDispose() FAILED
+    java.lang.NullPointerException: Cannot invoke "com.riiablo.presentation.ClientGameplayContext.assets()" because "this.clientContext" is null
+        at com.riiablo.presentation.GroundItemGleamSystem.initialize(GroundItemGleamSystem.java:54)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.gleamQueuedSharedReferenceReturnsOnRepeatedDispose(PresentationAssetLifecycleTest.java:118)
+
+PresentationAssetLifecycleTest > initiallyMissingHostBindsFirstAvailableManagerOnly() FAILED
+    java.lang.NullPointerException: Cannot invoke "com.riiablo.presentation.ClientGameplayContext.assets()" because "this.clientContext" is null
+        at com.riiablo.presentation.GroundItemGleamSystem.initialize(GroundItemGleamSystem.java:54)
+        at com.riiablo.presentation.PresentationAssetLifecycleTest.initiallyMissingHostBindsFirstAvailableManagerOnly(PresentationAssetLifecycleTest.java:340)
+
+73 tests completed, 8 failed
+
+> Task :core:test FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':core:test'.
+> There were failing tests. See the report at: file:///F:/3rd_src/riiablo/core/build/reports/tests/test/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 1m 44s
+24 actionable tasks: 5 executed, 19 up-to-date

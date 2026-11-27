@@ -12,6 +12,8 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
@@ -240,6 +242,42 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
       assertEquals(100 * (100 - expected) / 100, cursed.physicalDamage,
           "negative damageresist must amplify physical damage");
     } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void dimVisionUsesNecromancerTargetCentreAndPublishesTargetState() {
+    NoopFactory factory = new NoopFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    MonStats.Entry row = null;
+    boolean originalSwitchAi = false;
+    try {
+      Skills.Entry skill = Riiablo.files.skills.get(SkillId.DIM_VISION);
+      int owner = player(world, "necromancer", 0, 0);
+      world.getMapper(Player.class).get(owner).data.setSkillLevel(skill.Id, 1);
+      int range = SkillFormula.evaluate(skill.aurarangecalc, skill, 1);
+      int selected = monster(world, 20, 20, 0);
+      int nearby = monster(world, 20 + Math.max(1, range - 1), 20, 0);
+      int outside = monster(world, 20 + range + 1, 20, 0);
+      row = world.getMapper(Monster.class).get(selected).monstats;
+      originalSwitchAi = row.switchai;
+      row.switchai = true;
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, skill.Id, selected, new Vector2(20, 20), skill.srvdofunc, 0));
+
+      assertTrue(states(world, selected).hasState(StateId.DIMVISION));
+      assertTrue(states(world, nearby).hasState(StateId.DIMVISION));
+      assertFalse(world.getMapper(UnitStates.class).has(outside),
+          "Dim Vision must use the selected target centre and leave an outside unit untouched");
+      assertTrue(states(world, selected).getState(StateId.DIMVISION).needsSync,
+          "Necromancer Dim Vision must publish the authoritative target state");
+    } finally {
+      if (row != null) row.switchai = originalSwitchAi;
       world.dispose();
     }
   }

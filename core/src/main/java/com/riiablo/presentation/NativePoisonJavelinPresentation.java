@@ -28,13 +28,15 @@ public final class NativePoisonJavelinPresentation {
     String name = missile.missile.Missile;
     return "poisonjav".equalsIgnoreCase(name) || "poisonjavcloud".equalsIgnoreCase(name)
         || "poisonpuff".equalsIgnoreCase(name) || "plaguejavelin".equalsIgnoreCase(name)
-        || "plaguejavcloud".equalsIgnoreCase(name);
+        || "plaguejavcloud".equalsIgnoreCase(name)
+        || "poisonexplosioncloud".equalsIgnoreCase(name);
   }
 
   static int direction(Missile missile, com.badlogic.gdx.math.Vector2 facing, int directions) {
     if (stationaryCloud(missile) && directions == 8) return 4;
     if (missile != null && missile.missile != null && directions == 8
-        && "plaguejavcloud".equalsIgnoreCase(missile.missile.Missile)) {
+        && ("plaguejavcloud".equalsIgnoreCase(missile.missile.Missile)
+            || "poisonexplosioncloud".equalsIgnoreCase(missile.missile.Missile))) {
       // PoisonSparks cells use the native path order, not the COF direction order.
       return CLOUD_DIRECTIONS[((nativeDirection(facing) + 4) & 63) >> 3];
     }

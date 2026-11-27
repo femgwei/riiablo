@@ -99,7 +99,7 @@ def validate_collector(name, scenario):
                     raise ValueError("unsupported Bash scenario field: " + key)
             return ROOT / "native-harness" / "build" / "d2game_barbarian_target.exe"
     if name == "native_runtime_trace" and isinstance(scenario, dict):
-        allowed = {"scope", "seconds", "input", "skill", "level", "class", "render_state"}
+        allowed = {"scope", "seconds", "input", "skill", "level", "class", "render_state", "prepare_corpse", "target_corpse", "prepare_bone_armor_attacker"}
         if not set(scenario).issubset(allowed):
             raise ValueError("unsupported runtime trace scenario field")
         if scenario.get("scope", expected["scope"]) != expected["scope"]:
@@ -109,6 +109,11 @@ def validate_collector(name, scenario):
             raise ValueError("runtime trace seconds must be an integer in 1..30")
         if scenario.get("input") not in (None, "bash", "whirlwind", "encounter", "client_callchain", "d2gfx_callchain"):
             raise ValueError("runtime trace input must be bash, whirlwind, encounter, client_callchain or d2gfx_callchain")
+        if "prepare_bone_armor_attacker" in scenario and (
+                scenario.get("input") != "d2gfx_callchain" or scenario["prepare_bone_armor_attacker"] is not True
+                or scenario.get("class") != 2 or scenario.get("skill") != 68
+                or scenario.get("level") != 20 or scenario.get("prepare_corpse") or scenario.get("target_corpse")):
+            raise ValueError("Bone Armor attacker requires the fixed class2/skill68/level20 D2Gfx fixture")
         if scenario.get("input") == "client_callchain":
             return ROOT / "native-harness" / "build" / "d2client_animation_trace.exe"
         if scenario.get("input") == "d2gfx_callchain":

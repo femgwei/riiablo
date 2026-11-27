@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "skill": "Bone Spirit",
+  "skill_id": 93,
+  "missile": "bonespirit",
+  "missile_id": 193,
+  "source_trace": "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261126-084711-c125e2a8\\orchestrator\\process-session\\001-bone-spirit-d2gfx-minimized\\d2gfx-call-trace.jsonl",
+  "runtime_status": "observed_minimized_d2gfx_partial",
+  "observed": {
+    "draws": 80,
+    "window_states": [
+      "minimized"
+    ],
+    "first_elapsed_ms": 859,
+    "last_elapsed_ms": 7234,
+    "directions": [
+      56
+    ],
+    "frames": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "frame_draw_counts": {
+      "0": 14,
+      "1": 7,
+      "2": 13,
+      "3": 8,
+      "4": 12,
+      "5": 7,
+      "6": 13,
+      "7": 6
+    },
+    "max_frames": [
+      8
+    ],
+    "first_sample": {
+      "tick": 349,
+      "elapsed_ms": 859,
+      "window_state": "minimized",
+      "screen_x": 347,
+      "screen_y": 215,
+      "frame": 3,
+      "direction": 56,
+      "max_frames": 8
+    },
+    "last_sample": {
+      "tick": 5095,
+      "elapsed_ms": 7234,
+      "window_state": "minimized",
+      "screen_x": 1364,
+      "screen_y": 724,
+      "frame": 4,
+      "direction": 56,
+      "max_frames": 8
+    },
+    "screen_delta_first_to_last": [
+      1017,
+      509
+    ],
+    "screen_distance_first_to_last": 1137.264
+  },
+  "static_native_contract": {
+    "p_srv_do_func": 7,
+    "p_clt_do_func": 7,
+    "p_srv_hit_func": 10,
+    "p_clt_hit_func": 13,
+    "velocity_table": 12,
+    "native_velocity_scale_percent": 75,
+    "native_fp16_velocity_world_units_per_second": 14.0625,
+    "range_frames": 128,
+    "dcc_directions": 8,
+    "dcc_frames": 8,
+    "always_explode": true
+  },
+  "comparison": {
+    "single_direction_sampled": true,
+    "eight_frame_cycle_observed": true,
+    "hit_explosion_observed": false,
+    "cleanup_observed": false,
+    "cast_body_animation_observed": false
+  },
+  "limitations": [
+    "D2Gfx software breakpoints sample draw calls and do not prove every frame",
+    "the controlled run did not produce a class-327 BoneSpiritExplode draw",
+    "homing retargeting was not observable from the single sampled direction",
+    "GPU blend output and caster COF are not established by this trace"
+  ]
+}

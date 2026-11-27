@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "date": "2026-11-26",
+  "java": "JDK 17",
+  "mode": "headless Riiablo tests; original hidden/minimized capture; no foreground/global input",
+  "core": {
+    "status": "passed",
+    "tests": 32,
+    "suites": [
+      {
+        "name": "com.riiablo.engine.server.ClayGolemBirthPresentationTest",
+        "timestamp": "2026-11-26T05:42:26",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.NecromancerGolemReviveIntegrationTest",
+        "timestamp": "2026-11-26T05:42:33",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.SequenceHandlerTest",
+        "timestamp": "2026-11-26T05:42:34",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.ServerEntityFactorySummonQuotaTest",
+        "timestamp": "2026-11-26T05:42:38",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.SummonedPetSystemTest",
+        "timestamp": "2026-11-26T05:42:38",
+        "tests": "18",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; .\\gradlew.bat :core:test --tests com.riiablo.engine.server.ClayGolemBirthPresentationTest --tests com.riiablo.engine.server.NecromancerGolemReviveIntegrationTest --tests com.riiablo.engine.server.SequenceHandlerTest --tests com.riiablo.engine.server.ServerEntityFactorySummonQuotaTest --tests com.riiablo.engine.server.SummonedPetSystemTest --no-daemon",
+    "log": "tools/original-observer/necromancer-clay-golem-validation-2026-11-26.log"
+  },
+  "original": {
+    "run_id": "20261126-133613-51cb099a",
+    "runtime_status": "observed_minimized_d2gfx_partial",
+    "native_collector": "passed",
+    "outer_task": "failed: Original exited",
+    "draws": 112,
+    "mode_order": [
+      "S1",
+      "WL",
+      "NU"
+    ],
+    "cleanup_confirmed": true
+  },
+  "riiablo_birth": {
+    "ticks": 32,
+    "presented_frame_range": [
+      0,
+      15
+    ],
+    "ai_requests_during_birth": 0
+  },
+  "limitations": [
+    "Resource publication uses a preloaded COF; no GPU or asynchronous asset latency comparison",
+    "Entity allocation and path requests use controlled fixtures; no full-map movement parity",
+    "Original birth frames 0..3 and 14..15 not sampled",
+    "Attacks, impacts, removal and final GPU output unobserved",
+    "G1 unit_index=289 is the class, not a unique GUID; birth/walk/idle attribution uses the one-cast fixture"
+  ],
+  "d2gs": {
+    "status": "passed",
+    "tests": 7,
+    "suites": [
+      {
+        "name": "com.riiablo.server.d2gs.D2GSSimulationAssemblyTest",
+        "timestamp": "2026-11-26T05:44:11",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.server.d2gs.ServerEntityLifecycleTest",
+        "timestamp": "2026-11-26T05:44:15",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; .\\gradlew.bat :server:d2gs:test --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest --no-daemon",
+    "log": "tools/original-observer/necromancer-clay-golem-d2gs-validation-2026-11-26.log"
+  },
+  "total_tests": 39,
+  "cleanup": {
+    "broker_status": "ready",
+    "active": null,
+    "child_pid": null,
+    "cleanup_blocked": false,
+    "original_processes_observed": 0
+  },
+  "source_sha256": {
+    "core/src/test/java/com/riiablo/engine/server/ClayGolemBirthPresentationTest.java": "2e6824f1c7653e5016d8a1192efb1765df8fa045bde29f396abedaa6deaf7e3c",
+    "core/src/test/resources/original/necromancer-clay-golem-draw-1.10f.json": "ab395dca8b399f43c18a638d265191fc5d5553644047c76ace28ed9043deec86",
+    "tools/original-observer/normalize_d2gfx_necromancer_clay_golem_trace.py": "d3ac5c3fd8e4c5a80dc3da9e9842826a34de9c74cc913aedec0f7c418a09ec5f",
+    "tools/original-observer/jobs/necromancer-clay-golem-d2gfx.json": "d98b60ae8daedd3bc4c6ac17625bab74e4b0e7be43ce619e49345e12fabfaae6"
+  }
+}

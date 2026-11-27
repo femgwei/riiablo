@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "runtime_status": "observed_private_desktop_minimized_early_hit_and_depletion_partial",
+  "full": {
+    "elapsed_ms": 1484,
+    "state_bit": true,
+    "current_fixed": 53760,
+    "maximum_fixed": 53760,
+    "native_count": 3,
+    "overlay_ids": [
+      140,
+      144,
+      143
+    ],
+    "hp_fixed": 2047488,
+    "stat_list_count": 1
+  },
+  "early_hit": {
+    "elapsed_ms": 1656,
+    "state_bit": true,
+    "current_fixed": 19632,
+    "maximum_fixed": 53760,
+    "native_count": 2,
+    "overlay_ids": [
+      144,
+      143
+    ],
+    "hp_fixed": 2047488,
+    "stat_list_count": 1
+  },
+  "stable_two_pairs": {
+    "elapsed_ms": 2703,
+    "state_bit": true,
+    "current_fixed": 19632,
+    "maximum_fixed": 53760,
+    "native_count": 2,
+    "overlay_ids": [
+      142,
+      141,
+      142,
+      141
+    ],
+    "hp_fixed": 2047488,
+    "stat_list_count": 1
+  },
+  "depleted": {
+    "elapsed_ms": 3516,
+    "state_bit": false,
+    "current_fixed": 0,
+    "maximum_fixed": 0,
+    "native_count": 0,
+    "overlay_ids": [],
+    "hp_fixed": 2047488,
+    "stat_list_count": 0
+  },
+  "state_and_overlay_stages": [
+    {
+      "elapsed_ms": 16,
+      "state_bit": false,
+      "current_fixed": 0,
+      "maximum_fixed": 0,
+      "native_count": 0,
+      "overlay_ids": [],
+      "hp_fixed": 2048000,
+      "stat_list_count": 0
+    },
+    {
+      "elapsed_ms": 1484,
+      "state_bit": true,
+      "current_fixed": 53760,
+      "maximum_fixed": 53760,
+      "native_count": 3,
+      "overlay_ids": [
+        140,
+        144,
+        143
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 1656,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        144,
+        143
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 1828,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        140,
+        144
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 2172,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        140,
+        140
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 2359,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        142,
+        141,
+        140
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 2703,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        142,
+        141,
+        142,
+        141
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 3516,
+      "state_bit": false,
+      "current_fixed": 0,
+      "maximum_fixed": 0,
+      "native_count": 0,
+      "overlay_ids": [],
+      "hp_fixed": 2047488,
+      "stat_list_count": 0
+    }
+  ],
+  "limitations": [
+    "Separate runs; no cross-run or D2Gfx-to-poller clock alignment",
+    "Client stat and overlay polling is read-only but non-atomic",
+    "High-AR same-level 80-base-damage test attacker; natural room enemies remain active",
+    "No per-hit attribution or exact original damage-formula equivalence is claimed",
+    "Second run native collector passed but outer failed after original exit; retained as partial evidence",
+    "Sprite collector cap is not disappearance evidence; require a closed live-body render batch",
+    "No original single-pair stage, recast or GPU/pixel parity in these samples"
+  ],
+  "source_evidence": "tools/original-observer/necromancer-bone-armor-hit-evidence-2026-11-26.json",
+  "source_sha256": "63b2606cab10b3338034c147bfa7d7426189c9de62620d2a2b72de2762f83510"
+}

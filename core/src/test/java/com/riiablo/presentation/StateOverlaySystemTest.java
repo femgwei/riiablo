@@ -22,6 +22,81 @@ import org.junit.jupiter.api.Test;
 /** Client presentation recovered entirely from authoritative StateP data. */
 class StateOverlaySystemTest extends RiiabloTest {
   @Test
+  void reviveAppliesPl2GrayToLoadedLayersAndRestoresBaseColor() throws Exception {
+    com.riiablo.Colors previousColors = Riiablo.colors;
+    com.riiablo.Colormaps previousMaps = Riiablo.colormaps;
+    Riiablo.colors = new com.riiablo.Colors();
+    Riiablo.colormaps = org.mockito.Mockito.mock(com.riiablo.Colormaps.class);
+    byte[] hue = com.riiablo.codec.PL2.loadFromFile(Riiablo.mpqs.resolve(
+        "data/global/palette/ACT1/Pal.pl2")).getHueVariation(73);
+    byte[][] rows = new byte[com.riiablo.codec.Index.INDEXES][256];
+    System.arraycopy(hue, 0, rows[1], 0, 256);
+    com.riiablo.codec.Index gray = com.riiablo.codec.Index.fromColormaps("revive-gray", rows);
+    org.mockito.Mockito.when(Riiablo.colormaps.getStateTransform(73)).thenReturn(gray);
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), new RecordingOverlayManager(), new StateOverlaySystem())
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int id = world.create();
+      UnitStates states = world.getMapper(UnitStates.class).create(id).init(id);
+      states.snapshotOnly = true;
+      states.stateList.addState(StateId.REVIVE, 4500, 5, 7);
+      CofTransforms base = world.getMapper(CofTransforms.class).create(id);
+      com.riiablo.codec.Animation animation = world.getMapper(
+          com.riiablo.presentation.component.AnimationWrapper.class).create(id).animation;
+      COF cof = COF.loadFromFile(Riiablo.mpqs.resolve("data/global/monsters/SK/COF/SKNUHTH.cof"));
+      animation.setCOF(cof);
+      com.riiablo.codec.DC6 sheet = org.mockito.Mockito.mock(com.riiablo.codec.DC6.class);
+      org.mockito.Mockito.when(sheet.getNumDirections()).thenReturn(cof.getNumDirections());
+      org.mockito.Mockito.when(sheet.getNumFramesPerDir()).thenReturn(cof.getNumFramesPerDir());
+      org.mockito.Mockito.when(sheet.getRegions()).thenReturn(
+          new com.badlogic.gdx.graphics.g2d.TextureRegion[cof.getNumDirections()][cof.getNumFramesPerDir()]);
+      java.lang.reflect.Field transform = com.riiablo.codec.Animation.Layer.class.getDeclaredField("transform");
+      java.lang.reflect.Field color = com.riiablo.codec.Animation.Layer.class.getDeclaredField("transformColor");
+      transform.setAccessible(true); color.setAccessible(true);
+      for (int i = 0; i < cof.getNumLayers(); i++) animation.setLayer(cof.getLayer(i).component, sheet);
+      world.process();
+      for (int i = 0; i < cof.getNumLayers(); i++) {
+        int component = cof.getLayer(i).component;
+        org.junit.jupiter.api.Assertions.assertSame(gray, transform.get(animation.getLayer(component)));
+        assertEquals(1, color.getInt(animation.getLayer(component)));
+        assertEquals(CofTransforms.TRANSFORM_NULL, base.transform[component]);
+      }
+      states.stateList.removeState(StateId.REVIVE);
+      world.process();
+      for (int i = 0; i < cof.getNumLayers(); i++)
+        assertNull(transform.get(animation.getLayer(cof.getLayer(i).component)));
+    } finally {
+      world.dispose(); Riiablo.colors = previousColors; Riiablo.colormaps = previousMaps;
+    }
+  }
+
+  @Test
+  void reviveUsesNativeGrayShiftAndRestoresElementalPolicy() {
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    StateOverlaySystem system = new StateOverlaySystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, system)
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int entity = world.create();
+      UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
+      assertEquals(-1, system.stateColorShift(states));
+      states.stateList.addState(StateId.REVIVE, 4500, 5, 7);
+      assertEquals(73, Riiablo.files.States.get(StateId.REVIVE).colorShift);
+      assertEquals(73, system.stateColorShift(states));
+      states.stateList.addState(StateId.COLD, 100, 1, 7);
+      int expected = Riiablo.files.States.get(StateId.COLD).colorPriority
+          > Riiablo.files.States.get(StateId.REVIVE).colorPriority ? 107 : 73;
+      assertEquals(expected, system.stateColorShift(states));
+      states.stateList.removeState(StateId.COLD);
+      assertEquals(73, system.stateColorShift(states));
+      states.stateList.removeState(StateId.REVIVE);
+      assertEquals(-1, system.stateColorShift(states));
+    } finally { world.dispose(); }
+  }
+
+  @Test
   void decoySummonOverlayPlaysOnceFromAuthoritativeSummonRow() {
     RecordingOverlayManager overlays = new RecordingOverlayManager();
     World world = new World(new WorldConfigurationBuilder()

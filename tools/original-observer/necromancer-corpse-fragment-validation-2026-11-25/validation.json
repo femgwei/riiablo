@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "status": "partial_original_fragment_reconstruction_validated",
+  "original_run": "20261125-090136-9b8aee9a",
+  "new_original_runtime": false,
+  "tests": [
+    {
+      "name": "com.riiablo.presentation.NativeCorpseFragmentPresentationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.presentation.NecromancerExplosionPresentationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.engine.server.NecromancerExplosionIntegrationTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.riiablo.engine.server.NativeNecromancerExplosionDataTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/presentation/NativeCorpseFragmentPresentation.java": "ab1cfd2ac15a34c8886350c5cb406b061f7d1ba6382f6ec3e25f6e52068c7409",
+    "core/src/main/java/com/riiablo/presentation/component/CorpseFragment.java": "04b0bb98de7a77cb434b885a90c5eef4bc3310f52d016925c5f31e36d46d7aa3",
+    "core/src/main/java/com/riiablo/presentation/SkillCastHandler.java": "18b7b879512152cf5e4e81ecac75f140001b5c0700ad8d18818edd0ab264274e",
+    "core/src/main/java/com/riiablo/presentation/MissileImpactPresentationSystem.java": "5a18499e9ea243126e494f21c8dcf021c8c1d98ba3257a244f36cb7017e62c8d",
+    "core/src/main/java/com/riiablo/presentation/MissileLoader.java": "0df3270e14212a7ae5eca46a835ba3a15aeae7076f4301fb1cee3545e7878436",
+    "core/src/main/java/com/riiablo/presentation/AnimationStepper.java": "f269c49840658d5ccc9cd2c7e434f7cab887cdc9f9ddd714480fd547dc66965c",
+    "core/src/test/java/com/riiablo/presentation/NativeCorpseFragmentPresentationTest.java": "4a5c3e9ac023daa45743757e1e17664bdd3ce155730775f120548933a819ff6f",
+    "core/src/test/java/com/riiablo/presentation/NecromancerExplosionPresentationTest.java": "c16bb8d6afb6aab6fbef6d196506f76f95e3ae46ed8a8f9a5526654163dae1ef"
+  },
+  "normalized_original_sha256": "b34701369878a93028630968eb3071b8f1dbeff72003c807921c6bcc68378eb0",
+  "blood_motion_comparison": {
+    "original_frames": [
+      1,
+      8
+    ],
+    "original_screen_positions": [
+      [
+        244,
+        255
+      ],
+      [
+        273,
+        255
+      ]
+    ],
+    "original_raw_lines": [
+      3325,
+      4165
+    ],
+    "observed_relative_x": 29,
+    "production_replay_relative_x": 29.6953125,
+    "tolerance_pixels": 1,
+    "scope": "relative fp16 path displacement, not GPU output or debugger wall time"
+  },
+  "counts": {
+    "gore": 2,
+    "blood": 3,
+    "evidence": "static ordinary blood branch; not unique entity counts from draw sampling"
+  },
+  "cleanup": {
+    "policy": "local allocation budget",
+    "age_frames": 128,
+    "retail_removal_verified": false
+  },
+  "unknown": [
+    "Original caster RNG agreement and all sprite-facing variants",
+    "Other blood-setting branches",
+    "Original final residue removal",
+    "GPU light, palette and occlusion",
+    "Poison Explosion runtime animation still unproven"
+  ]
+}

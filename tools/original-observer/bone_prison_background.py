@@ -50,12 +50,12 @@ def input_desktop_name(win):
         win.close_desktop(handle)
 
 
-def run_private(home, output):
+def run_private(home, output, *, worker_script=None, desktop_prefix="riiablo_prison_", probe="prison", worker_arguments=()):
     output.mkdir(parents=True, exist_ok=False)
     win = Win32()
     private = None
     child = None
-    report = dict(status="starting", background_probe="prison", batches=[],
+    report = dict(status="starting", background_probe=probe, batches=[],
                   switched_desktop=False, scope="private desktop original runtime; no pixel comparison")
     try:
         if existing_loader_pids():
@@ -65,7 +65,7 @@ def run_private(home, output):
         report["input_desktop_before"] = input_desktop_name(win)
         report["screen_before"] = [win.system_metric(0), win.system_metric(1)]
         report["foreground_before"] = win.foreground()
-        name = "riiablo_prison_" + uuid.uuid4().hex[:12]
+        name = desktop_prefix + uuid.uuid4().hex[:12]
         private = win.checked(win.create_desktop(name, None, None, 0, 0x01FF, None))
         report["private_desktop"] = name
         startup = STARTUPINFO()
@@ -78,8 +78,8 @@ def run_private(home, output):
         # the complete Win32 structure so the child really inherits this
         # desktop before Python imports any UI library.
         command = C.create_unicode_buffer(subprocess.list2cmdline([
-            sys.executable, str(Path(__file__).resolve()), "--worker",
-            "--home", str(home), "--output", str(worker_out)]))
+            sys.executable, str(worker_script or Path(__file__).resolve()), "--worker",
+            "--home", str(home), "--output", str(worker_out), *worker_arguments]))
         info = PROCESS_INFORMATION()
         win.checked(win.create_process(sys.executable, command, None, None, False,
                     subprocess.CREATE_NO_WINDOW, None, str(ROOT), C.byref(startup), C.byref(info)))

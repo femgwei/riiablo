@@ -1,0 +1,250 @@
+{
+  "schema": 1,
+  "skill": "Revive",
+  "skill_id": 95,
+  "runtime_status": "observed_minimized_d2gfx_partial",
+  "source_trace": "tools/original-observer/broker/20261121-165133-4490d598/runs/20261126-090911-e258bbca/orchestrator/process-session/001-revive-d2gfx-minimized/d2gfx-call-trace.jsonl",
+  "collector": {
+    "status": "passed",
+    "events": 5373,
+    "candidate_count": 82,
+    "detached": true,
+    "cleanup_confirmed": true,
+    "scope": "one-shot D2Gfx entries; temporary software breakpoint code/context writes; no synthetic game calls; not final backend output"
+  },
+  "outer_process": {
+    "status": "failed",
+    "error": "Original exited",
+    "target_alive_after": false
+  },
+  "observed": {
+    "draws": 16,
+    "missile_ids": [
+      269
+    ],
+    "window_states": [
+      "minimized"
+    ],
+    "screen_positions": [
+      [
+        256,
+        264
+      ]
+    ],
+    "frames_in_order": [
+      1,
+      2,
+      3,
+      5,
+      7,
+      8,
+      10,
+      12,
+      13,
+      14,
+      16,
+      18,
+      19,
+      21,
+      23,
+      24
+    ],
+    "first_elapsed_ms": 1109,
+    "last_elapsed_ms": 2063
+  },
+  "samples": [
+    {
+      "tick": 1819,
+      "elapsed_ms": 1109,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 1,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 1919,
+      "elapsed_ms": 1172,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 2,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 2019,
+      "elapsed_ms": 1219,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 3,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 2117,
+      "elapsed_ms": 1266,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 5,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 2212,
+      "elapsed_ms": 1344,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 7,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 2310,
+      "elapsed_ms": 1406,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 8,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 2413,
+      "elapsed_ms": 1469,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 10,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 2515,
+      "elapsed_ms": 1547,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 12,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 2617,
+      "elapsed_ms": 1594,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 13,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 2721,
+      "elapsed_ms": 1641,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 14,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 2822,
+      "elapsed_ms": 1703,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 16,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 2925,
+      "elapsed_ms": 1797,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 18,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 3028,
+      "elapsed_ms": 1859,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 19,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 3128,
+      "elapsed_ms": 1922,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 21,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 3230,
+      "elapsed_ms": 2000,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 23,
+      "direction": 20,
+      "max_frames": 25
+    },
+    {
+      "tick": 3332,
+      "elapsed_ms": 2063,
+      "window_state": "minimized",
+      "screen_x": 256,
+      "screen_y": 264,
+      "unit_index": 269,
+      "frame": 24,
+      "direction": 20,
+      "max_frames": 25
+    }
+  ],
+  "static_contract": {
+    "revive_state": 96,
+    "state_colorshift": 73,
+    "state_color_priority": 85,
+    "damage_percent_per_effective_mastery_level": 10,
+    "life_percent_per_effective_mastery_level": 5,
+    "revive_life_percent": 200,
+    "effect_resource": "data/global/missiles/Revive.dcc",
+    "effect_frames": 25,
+    "effect_directions": 1
+  },
+  "limitations": [
+    "outer process failed with Original exited; only the native collector passed",
+    "sampled calls do not prove every animation frame or final GPU output",
+    "revived monster movement, attack and palette were not compared at runtime",
+    "small/large corpse variants and lifetime cleanup remain unobserved"
+  ]
+}

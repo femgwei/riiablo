@@ -1,0 +1,13 @@
+{
+  "id": "20261125-132906-dbd6b713",
+  "status": "failed",
+  "started": 1795584547.213024,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "necromancer-poison-nova-d2gfx"
+  },
+  "error": "batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261125-132906-dbd6b713\\orchestrator",
+  "traceback": "Traceback (most recent call last):\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 376, in serve_once\n    result[\"result\"] = self.execute(command, directory)\n  File \"F:\\3rd_src\\riiablo\\tools\\original-observer\\resident_broker.py\", line 343, in execute\n    raise RuntimeError(\"batch returned \" + str(code) + \"; inspect \" + str(output))\nRuntimeError: batch returned 1; inspect F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261125-132906-dbd6b713\\orchestrator\n",
+  "finished": 1795584602.8018246
+}

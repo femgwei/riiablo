@@ -1,0 +1,7 @@
+**********************************************************************
+** Visual Studio 2019 Developer Command Prompt v16.11.15
+** Copyright (c) 2021 Microsoft Corporation
+**********************************************************************
+[vcvarsall.bat] Environment initialized for: 'x86'
+d2game_bone_armor_attacker.cpp
+F:\3rd_src\riiablo\tools\original-observer\native-harness\d2game_fallen_death.cpp(74): warning C4505: "distancePoint": 已删除具有内部链接的未引用函数

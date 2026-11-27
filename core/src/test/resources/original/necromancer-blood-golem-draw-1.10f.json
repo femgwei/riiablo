@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "skill_id": 85,
+  "source_trace": "tools/original-observer/broker/20261121-165133-4490d598/runs/20261126-134950-874b1584/orchestrator/process-session/001-blood-golem-d2gfx-minimized/d2gfx-call-trace.jsonl",
+  "source_sha256": "28fc55e9a673dd3bff1d21d9a1c530e26a8c320dd4afc0ee816f8fed2cb24276",
+  "runtime_status": "observed_minimized_d2gfx_partial",
+  "phases": [
+    {
+      "class_id": 290,
+      "mode": "S1",
+      "draws": 29,
+      "frames": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "first_elapsed_ms": 1500,
+      "last_elapsed_ms": 2360,
+      "first_screen": [
+        368,
+        256
+      ],
+      "last_screen": [
+        368,
+        256
+      ]
+    },
+    {
+      "class_id": 290,
+      "mode": "NU",
+      "draws": 4,
+      "frames": [
+        0
+      ],
+      "first_elapsed_ms": 2407,
+      "last_elapsed_ms": 2485,
+      "first_screen": [
+        366,
+        256
+      ],
+      "last_screen": [
+        368,
+        256
+      ]
+    },
+    {
+      "class_id": 290,
+      "mode": "WL",
+      "draws": 46,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "first_elapsed_ms": 2563,
+      "last_elapsed_ms": 3516,
+      "first_screen": [
+        356,
+        254
+      ],
+      "last_screen": [
+        134,
+        232
+      ]
+    },
+    {
+      "class_id": 290,
+      "mode": "NU",
+      "draws": 52,
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "first_elapsed_ms": 3563,
+      "last_elapsed_ms": 4719,
+      "first_screen": [
+        126,
+        232
+      ],
+      "last_screen": [
+        128,
+        232
+      ]
+    }
+  ],
+  "limitations": [
+    "breakpoint samples are not a complete frame stream",
+    "unit_index is the monster class, not a unique unit GUID",
+    "wall time includes debugger stalls and is not a native tick duration",
+    "only one birth/follow/idle segment sampled; attacks and removal unobserved",
+    "GPU blend, shadow and pixel equality are not established",
+    "outer task failed when original exited; native helper cleanup passed"
+  ]
+}

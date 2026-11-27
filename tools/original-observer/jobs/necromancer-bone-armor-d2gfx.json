@@ -1,0 +1,21 @@
+{
+  "character": "CXNecro",
+  "fixture": "necromancer-skeleton",
+  "lifecycle": "restart",
+  "entry_visibility": "hidden",
+  "batches": [
+    {
+      "name": "bone-armor-d2gfx-minimized",
+      "collector": "native_runtime_trace",
+      "scenario": {
+        "scope": "update-target-damage",
+        "seconds": 15,
+        "input": "d2gfx_callchain",
+        "render_state": "minimized",
+        "class": 2,
+        "skill": 68,
+        "level": 20
+      }
+    }
+  ]
+}

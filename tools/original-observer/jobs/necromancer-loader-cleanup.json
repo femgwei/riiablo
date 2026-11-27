@@ -1,0 +1,6 @@
+{
+  "cleanup_only": true,
+  "character": "CXNecro",
+  "lifecycle": "restart",
+  "entry_only": true
+}

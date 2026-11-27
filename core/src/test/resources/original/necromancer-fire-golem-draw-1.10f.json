@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "skill_id": 94,
+  "source_trace": "tools/original-observer/broker/20261121-165133-4490d598/runs/20261126-140334-894a85a2/orchestrator/process-session/001-fire-golem-d2gfx-minimized/d2gfx-call-trace.jsonl",
+  "source_sha256": "98db7cf491f3cc9b74dd3a38bf89c912d36d74989fc9fa59ede9b89858da347b",
+  "runtime_status": "observed_minimized_d2gfx_partial",
+  "phases": [
+    {
+      "class_id": 292,
+      "mode": "S1",
+      "draws": 29,
+      "frames": [
+        4,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "first_elapsed_ms": 1437,
+      "last_elapsed_ms": 2219,
+      "first_screen": [
+        368,
+        256
+      ],
+      "last_screen": [
+        368,
+        256
+      ]
+    },
+    {
+      "class_id": 292,
+      "mode": "NU",
+      "draws": 6,
+      "frames": [
+        0,
+        1
+      ],
+      "first_elapsed_ms": 2250,
+      "last_elapsed_ms": 2375,
+      "first_screen": [
+        366,
+        256
+      ],
+      "last_screen": [
+        368,
+        256
+      ]
+    },
+    {
+      "class_id": 292,
+      "mode": "WL",
+      "draws": 36,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "first_elapsed_ms": 2453,
+      "last_elapsed_ms": 3781,
+      "first_screen": [
+        366,
+        256
+      ],
+      "last_screen": [
+        224,
+        168
+      ]
+    },
+    {
+      "class_id": 292,
+      "mode": "NU",
+      "draws": 24,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "first_elapsed_ms": 3844,
+      "last_elapsed_ms": 4390,
+      "first_screen": [
+        222,
+        168
+      ],
+      "last_screen": [
+        224,
+        168
+      ]
+    },
+    {
+      "class_id": 292,
+      "mode": "WL",
+      "draws": 11,
+      "frames": [
+        0,
+        1,
+        2
+      ],
+      "first_elapsed_ms": 4437,
+      "last_elapsed_ms": 4672,
+      "first_screen": [
+        222,
+        168
+      ],
+      "last_screen": [
+        253,
+        183
+      ]
+    }
+  ],
+  "aura_observed": [
+    {
+      "overlay_id": 15,
+      "draws": 53,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "window_states": [
+        "minimized"
+      ]
+    },
+    {
+      "overlay_id": 16,
+      "draws": 53,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "window_states": [
+        "minimized"
+      ]
+    }
+  ],
+  "limitations": [
+    "breakpoint samples are not a complete frame stream",
+    "unit_index is the monster class, not a unique unit GUID",
+    "wall time includes debugger stalls and is not a native tick duration",
+    "only one birth/follow/idle segment sampled; attacks and removal unobserved",
+    "GPU blend, shadow and pixel equality are not established",
+    "outer-task and native-collector status are recorded separately"
+  ]
+}

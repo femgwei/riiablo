@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.pet.PetType;
@@ -202,6 +203,10 @@ class NecromancerSummonIntegrationTest extends RiiabloTest {
       assertEquals(owner, world.getMapper(SummonedPet.class).get(factory.lastEntity).ownerId);
       assertEquals(PetType.canonical(skill.pettype), factory.lastPetType);
       assertTrue(world.getMapper(SummonedPet.class).get(factory.lastEntity).petType.length() > 0);
+      Sequence birth = world.getMapper(Sequence.class).get(factory.lastEntity);
+      assertNotNull(birth, "Raise Skeleton must hold the S1 birth animation in a sequence");
+      assertEquals(Engine.Monster.MODE_S1, birth.mode1);
+      assertEquals(Engine.Monster.MODE_NU, birth.mode2);
 
       // A repeated keyframe cannot consume or create from the same corpse.
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(

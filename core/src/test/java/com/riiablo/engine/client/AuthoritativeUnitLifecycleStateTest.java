@@ -14,11 +14,16 @@ import com.riiablo.net.packet.d2gs.VitalsP;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class AuthoritativeUnitLifecycleStateTest {
-  @Test void cyclonePoolsSurviveDetachedSnapshotBufferReuseAndReplicaReplacement() {
+  @ParameterizedTest
+  @ValueSource(ints = {StateId.CYCLONEARMOR, StateId.BONEARMOR})
+  void armorPoolsSurviveDetachedSnapshotBufferReuseAndReplicaReplacement(int stateId) {
     com.riiablo.engine.server.component.UnitStates source = new com.riiablo.engine.server.component.UnitStates().init(77);
-    com.riiablo.engine.server.state.UnitState armor = source.stateList.addStateLayer(StateId.CYCLONEARMOR, 0, 20, 77, 235);
+    com.riiablo.engine.server.state.UnitState armor = source.stateList.addStateLayer(stateId, 0, 20, 77,
+        stateId == StateId.BONEARMOR ? 68 : 235);
     armor.setStatContribution(com.riiablo.attributes.Stat.bonearmor, 0,
         com.riiablo.attributes.NativeStatResolver.Operation.ADD, 123456);
     armor.setStatContribution(com.riiablo.attributes.Stat.bonearmormax, 0,
@@ -35,13 +40,13 @@ class AuthoritativeUnitLifecycleStateTest {
     for (int i = buffer.position(); i < buffer.limit(); i++) buffer.put(i, (byte) 0);
     com.riiablo.engine.server.component.UnitStates replica = new com.riiablo.engine.server.component.UnitStates();
     ClientUnitSnapshotWriter.states(77, replica, store.get(77));
-    com.riiablo.engine.server.state.UnitState restored = replica.stateList.getState(StateId.CYCLONEARMOR);
+    com.riiablo.engine.server.state.UnitState restored = replica.stateList.getState(stateId);
     assertEquals(123456, restored.runtimeValue);
     assertEquals(123456, restored.getStatContributionValue(com.riiablo.attributes.Stat.bonearmor));
     assertEquals(400001, restored.getStatContributionValue(com.riiablo.attributes.Stat.bonearmormax));
     restored.runtimeValue = 1;
     ClientUnitSnapshotWriter.states(77, replica, store.get(77));
-    assertEquals(123456, replica.stateList.getState(StateId.CYCLONEARMOR).runtimeValue);
+    assertEquals(123456, replica.stateList.getState(stateId).runtimeValue);
   }
   @Test void snapshotWriterPreservesEnchantActivationRevision() {
     FlatBufferBuilder b = new FlatBufferBuilder(256);

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.server.d2gs.D2GSSimulationAssemblyTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-26T05:44:11" hostname="DESKTOP-7GGAVHU" time="0.334">
+  <properties/>
+  <testcase name="preservesCompleteDedicatedOrderAndHostBindings" classname="com.riiablo.server.d2gs.D2GSSimulationAssemblyTest" time="0.322"/>
+  <testcase name="rejectsMissingDedicatedInventoryService" classname="com.riiablo.server.d2gs.D2GSSimulationAssemblyTest" time="0.001"/>
+  <testcase name="freshSessionsNeverShareSystems" classname="com.riiablo.server.d2gs.D2GSSimulationAssemblyTest" time="0.004"/>
+  <testcase name="aiTourIsAnExplicitOptionWithoutReordering" classname="com.riiablo.server.d2gs.D2GSSimulationAssemblyTest" time="0.005"/>
+  <testcase name="rejectsBothClientModes" classname="com.riiablo.server.d2gs.D2GSSimulationAssemblyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -144,7 +144,9 @@ def validate_job(job, home):
     if not isinstance(job, dict):
         raise ValueError("job must be an object")
     if "background_probe" in job:
-        if job not in ({"background_probe": "frozen-orb", "entry_only": True, "character": "CXSorc"},
+        if job not in ({"background_probe": "bone-armor-hit-d2gfx", "entry_only": True, "character": "CXNecro"},
+                       {"background_probe": "bone-armor-d2gfx", "entry_only": True, "character": "CXNecro"},
+                       {"background_probe": "frozen-orb", "entry_only": True, "character": "CXSorc"},
                        {"background_probe": "blaze", "entry_only": True, "character": "CXSorc"},
                        {"background_probe": "bone-prison", "entry_only": True, "character": "CXSorc"},
                        {"background_probe": "bone-spear", "entry_only": True, "character": "CXSorc"},
@@ -183,15 +185,20 @@ def validate_job(job, home):
                        {"background_probe": "poison-javelin", "entry_only": True, "character": "CXSorc", "direction_batch": True}):
             raise ValueError("background_probe accepts only the fixed registered private-desktop experiments")
     character = job.get("character", "CXSorc")
-    if character not in ("CXSorc", "CXArctic", "CXDruBatch", "CXDruSurface", "CXDruWind", "CXDruState", "CXDruRaven", "CXDruWolf", "CXEnchant", "CXInferno", "CXMolten", "CXPortal", "CXBarb", "CXBarbWW", "aaa", "MapWalk", "Census", "CensusB", "CensusSorc"):
+    if job.get("cleanup_only") and job != {
+            "cleanup_only": True, "character": "CXNecro", "lifecycle": "restart", "entry_only": True}:
+        raise ValueError("cleanup_only accepts only the pinned Necromancer loader cleanup job")
+    if character not in ("CXSorc", "CXNecro", "CXArctic", "CXDruBatch", "CXDruSurface", "CXDruWind", "CXDruState", "CXDruRaven", "CXDruWolf", "CXEnchant", "CXInferno", "CXMolten", "CXPortal", "CXBarb", "CXBarbWW", "aaa", "MapWalk", "Census", "CensusB", "CensusSorc"):
         raise ValueError("Only the pinned CXSorc/CXBarb/CXBarbWW/aaa/MapWalk/Census/CensusB/CensusSorc fixtures are currently supported")
     lifecycle = job.get("lifecycle")
     if lifecycle not in (None, "restart"):
         raise ValueError("unsupported lifecycle: " + str(lifecycle))
-    if job.get("fixture") not in (None, "fallen-survivor", "shaman-hydra", "shaman-golem"):
+    if job.get("fixture") not in (None, "fallen-survivor", "shaman-hydra", "shaman-golem", "necromancer-skeleton"):
         raise ValueError("unsupported fixture")
     if job.get("fixture") in ("fallen-survivor", "shaman-hydra", "shaman-golem") and (character != "CXSorc" or lifecycle != "restart"):
         raise ValueError("fallen-survivor requires CXSorc and restart")
+    if job.get("fixture") == "necromancer-skeleton" and (character != "CXNecro" or lifecycle != "restart"):
+        raise ValueError("necromancer-skeleton requires CXNecro and restart")
     if job.get("entry_visibility", "hidden") not in ("hidden", "visible"):
         raise ValueError("entry_visibility must be hidden or visible")
     batches = job.get("batches", [])
@@ -276,6 +283,12 @@ def run(args):
     home = args.home.resolve()
     job = read_json(args.job)
     validate_job(job, home)
+    if job.get("background_probe") == "bone-armor-d2gfx":
+        from bone_armor_background import run_private
+        return run_private(home, args.output)
+    if job.get("background_probe") == "bone-armor-hit-d2gfx":
+        from bone_armor_background import run_private
+        return run_private(home, args.output, depletion=True)
     if job.get("background_probe") == "frozen-orb":
         from frozen_orb_background import run_private
         return run_private(home, args.output)
@@ -344,7 +357,7 @@ def run(args):
     loader_pid = None
     session = None
     try:
-        if any(batch.get("collector") == "barbarian_formulas" for batch in job["batches"]):
+        if any(batch.get("collector") == "barbarian_formulas" for batch in job.get("batches", [])):
             port_source = ROOT.parent.parent / "core" / "build" / "barbarian-batch"
             if not (port_source / "formula-values.csv").is_file():
                 raise ValueError("run :core:barbarianRegression before native collection")
@@ -358,7 +371,11 @@ def run(args):
             report["loader_restarted_from"] = existing[0]
             report["loader_forced_termination"] = close_loader(existing[0])
             existing = []
-        if job.get("fixture") in ("fallen-survivor", "shaman-hydra", "shaman-golem"):
+        if job.get("cleanup_only"):
+            report["status"] = "passed"
+            report["meaning"] = "pinned original loader exited; no launch, input or capture"
+            return 0
+        if job.get("fixture") in ("fallen-survivor", "shaman-hydra", "shaman-golem", "necromancer-skeleton"):
             # Only the repository-owned CXSorc fixture is replaced, after the
             # old process exits so it cannot overwrite the new save on exit.
             import importlib.util
@@ -368,14 +385,27 @@ def run(args):
                     r"Software\Blizzard Entertainment\Diablo II", 0,
                     winreg.KEY_READ | winreg.KEY_WOW64_32KEY) as key:
                 save = Path(winreg.QueryValueEx(key, "Save Path")[0])
-            target = save / "CXSorc.d2s"
-            original = target.read_bytes()
-            (args.output / "CXSorc-before.d2s").write_bytes(original)
+            fixture_name = "CXNecro" if job.get("fixture") == "necromancer-skeleton" else "CXSorc"
+            target = save / (fixture_name + ".d2s")
+            source_target = (save / "CXSorc.d2s") if fixture_name == "CXNecro" and not target.exists() else target
+            original = source_target.read_bytes()
+            (args.output / (fixture_name + "-before.d2s")).write_bytes(original)
             spec = importlib.util.spec_from_file_location("fallen_fixture", ROOT / "test-character.py")
             fixture = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(fixture)
             golem = job.get("fixture") == "shaman-golem"
-            data = bytearray(fixture.create(original, "CXSorc", class_id=2 if golem else 1, skill_level=20))
+            necro = job.get("fixture") == "necromancer-skeleton"
+            necro_skill = 70
+            if necro:
+                scenarios = [batch.get("scenario", {}) for batch in job.get("batches", [])]
+                requested = [scenario.get("skill") for scenario in scenarios
+                             if scenario.get("skill") is not None]
+                if requested and any(skill not in (68, 70, 74, 75, 80, 83, 85, 92, 93, 94, 95) for skill in requested):
+                    raise ValueError("Necromancer fixture supports Bone Armor (68), 70, 74, Clay Golem (75), 80, 83, Blood Golem (85), Poison Nova (92), Bone Spirit (93), Fire Golem (94) and Revive (95)")
+                if requested and any(skill != requested[0] for skill in requested):
+                    raise ValueError("necromancer-skeleton fixture requires one summon skill per job")
+                necro_skill = requested[0] if requested else 70
+            data = bytearray(fixture.create(original, fixture_name, class_id=2 if (golem or necro) else 1, skill_level=20))
             stats, end = fixture.read_stats(data)
             for stat in range(6, 12): stats[stat] = 8000 << 8
             data[765:end] = fixture.write_stats(stats)
@@ -384,18 +414,28 @@ def run(args):
                 if data[skill_offset:skill_offset+2] != b"if":
                     raise ValueError("Missing fixture skill section")
                 data[skill_offset+2+(75-66 if golem else 62-36)] = 1
+            if necro:
+                _, skill_offset = fixture.read_stats(data)
+                if data[skill_offset:skill_offset+2] != b"if":
+                    raise ValueError("Missing Necromancer fixture skill section")
+                data[skill_offset + 2 + (necro_skill - 66)] = 20
             # Fire Bolt on both active buttons and swapped slots: one
             # ordinary targeted click can kill a Blood Moor Fallen.
-            struct.pack_into("<4I", data, 120, *((66,66,66,66) if golem else (36,36,36,36)))
+            struct.pack_into("<4I", data, 120, *((necro_skill,)*4 if necro else ((66,66,66,66) if golem else (36,36,36,36))))
             struct.pack_into("<I", data, 12, fixture.checksum(data))
             target.write_bytes(data)
-            report["prepared_fixture"] = {"name": "CXSorc", "life": 8000,
-                "mana": 8000, "firebolt_level": 20, "backup": str(args.output / "CXSorc-before.d2s")}
+            report["prepared_fixture"] = {"name": fixture_name, "life": 8000,
+                "mana": 8000, "firebolt_level": 20, "backup": str(args.output / (fixture_name + "-before.d2s"))}
             if job.get("fixture") == "shaman-hydra":
                 report["prepared_fixture"]["hydra_level"] = 1
             if golem:
                 report["prepared_fixture"]["class_id"] = 2
                 report["prepared_fixture"]["clay_golem_level"] = 1
+                report["prepared_fixture"].pop("firebolt_level", None)
+            if necro:
+                report["prepared_fixture"]["class_id"] = 2
+                report["prepared_fixture"]["summon_skill"] = necro_skill
+                report["prepared_fixture"]["summon_skill_level"] = 20
                 report["prepared_fixture"].pop("firebolt_level", None)
         if existing:
             loader_pid = existing[0]

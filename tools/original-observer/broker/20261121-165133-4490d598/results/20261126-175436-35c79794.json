@@ -1,0 +1,15 @@
+{
+  "id": "20261126-175436-35c79794",
+  "status": "completed",
+  "started": 1795686876.689291,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "necromancer-bone-armor-hit-private-desktop"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261126-175436-35c79794\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795686945.3115141
+}

@@ -289,6 +289,8 @@ int wmain(int argc, wchar_t** argv) {
       } else if (found != labels.end()) labels.erase(found);
       d.resume();
     }
+    trace.flush();
+    require(trace.good(), "D2Gfx trace write failed; event count is not persisted evidence");
     trace.close();
     success = calls > 0;
   } catch (const std::exception& error) {

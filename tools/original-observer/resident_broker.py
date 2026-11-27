@@ -27,7 +27,7 @@ LOADER_HASH = "602d3c638d782df6ad3edf8efbe07bbddd771f625e9491056084b83484848958"
 NAME = re.compile(r"[a-zA-Z0-9_-]{1,80}\Z")
 # Repository-owned fixtures.  ``aaa`` is the user's all-waypoints save and is
 # used only for read-only map/waypoint sampling.
-CHARACTERS = {"CXSorc", "CXBarb", "aaa", "CensusB", "CensusSorc"}
+CHARACTERS = {"CXSorc", "CXNecro", "CXBarb", "aaa", "CensusB", "CensusSorc"}
 SCHEMAS = {
     "ping": set(), "shutdown": set(), "launch": set(), "recover_cleanup": set(),
     "snapshot": set(), "controls": set(), "enter": {"character"}, "enter_town": {"character"}, "install_cxbarb": set(),
@@ -279,7 +279,7 @@ class Broker:
                           status=summary.get("status"), error=summary.get("error"),
                           player=player, level_id=summary.get("scene", {}).get("level_id"),
                           loader_ready=readiness)
-            expected_class = 4 if expected in ("CXBarb", "CXBarbWW") else (0 if expected == "aaa" else 1)
+            expected_class = 4 if expected in ("CXBarb", "CXBarbWW") else (2 if expected == "CXNecro" else (0 if expected == "aaa" else 1))
             if op in ("enter", "enter_town") and (code or player.get("name") != expected or
                                   player.get("class_id") != expected_class or result["level_id"] != 2):
                 raise RuntimeError("entry not verified: " + json.dumps(result, ensure_ascii=False))

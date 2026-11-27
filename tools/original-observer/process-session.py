@@ -300,19 +300,35 @@ def run(args):
         win.checked(win.get_rect(window["hwnd"], C.byref(client)))
         if visible_client_size and (client.right <= 0 or client.bottom <= 0):
             client.right, client.bottom = visible_client_size
-        px, py = project((player["position"]["x"], player["position"]["y"]))
-        tx, ty = int(px + 48), int(py + 24)
+        target_position = (player["position"]["x"], player["position"]["y"])
+        if command.get("scenario", {}).get("target_corpse"):
+            identity_path = args.output / (path.stem + "-artifacts") / "corpse-preparation" / "identity.json"
+            if not identity_path.is_file():
+                raise ValueError("corpse target requested but preparation identity is missing")
+            identity = json.loads(identity_path.read_text(encoding="utf8"))
+            target_position = (identity["corpse_x"], identity["corpse_y"])
+        px, py = project(target_position)
+        if command.get("scenario", {}).get("target_corpse"):
+            tx, ty = int(px), int(py)
+        else:
+            tx, ty = int(px + 48), int(py + 24)
         if not (8 <= tx < client.right - 8 and 8 <= ty < client.bottom - 8):
             tx, ty = int(px), int(py)
         if not (8 <= tx < client.right - 8 and 8 <= ty < client.bottom - 8):
             raise ValueError("player projection is outside client bounds")
         post = api(win.u, "PostMessageW", W.BOOL, W.HWND, W.UINT, C.c_size_t, C.c_ssize_t)
         lparam = tx | (ty << 16)
+        # Corpse selection uses the client's hovered-unit state. A button
+        # message alone may leave that state at the old cursor position.
+        # Update only this HWND's cursor message; never move the OS cursor.
+        win.checked(post(window["hwnd"], 0x200, 0, lparam))  # WM_MOUSEMOVE
+        time.sleep(0.08)
         win.checked(post(window["hwnd"], 0x204, 2, lparam))
         time.sleep(0.08)
         win.checked(post(window["hwnd"], 0x205, 0, lparam))
         return dict(kind="ground", button="right", delivery="PostMessageW",
                     hwnd=window["hwnd"], player=[player["position"]["x"], player["position"]["y"]],
+                    target=list(target_position),
                     camera=list(camera), client=[client.right, client.bottom],
                     click=[tx, ty])
 
@@ -861,11 +877,14 @@ def run(args):
                             show = user32.ShowWindow
                             show.argtypes = [W.HWND, C.c_int]
                             show.restype = W.BOOL
-                            show(game_window["hwnd"], 4)  # SW_SHOWNOACTIVATE
-                            game_window = resume_game_window()
-                            action["render_window_forced_visible"] = True
-                            action["render_window_visible"] = bool(game_window.get("visible"))
                             render_state = command.get("scenario", {}).get("render_state")
+                            # A minimized request must never transiently show a
+                            # restored game window on the user's desktop.
+                            if render_state != "minimized":
+                                show(game_window["hwnd"], 4)  # SW_SHOWNOACTIVATE
+                                game_window = resume_game_window()
+                                action["render_window_forced_visible"] = True
+                                action["render_window_visible"] = bool(game_window.get("visible"))
                             if render_state in ("visible_unfocused", "minimized"):
                                 visible_rect = W.RECT()
                                 win.checked(win.get_rect(game_window["hwnd"], C.byref(visible_rect)))
@@ -873,7 +892,7 @@ def run(args):
                                 # Minimize without activating another application;
                                 # restoring with SW_SHOWNOACTIVATE must not be
                                 # confused with proof of actual foreground state.
-                                show(game_window["hwnd"], 6)  # SW_MINIMIZE yields foreground
+                                show(game_window["hwnd"], 7)  # SW_SHOWMINNOACTIVE
                                 time.sleep(0.3)
                                 if render_state == "visible_unfocused":
                                     show(game_window["hwnd"], 4)
@@ -889,11 +908,75 @@ def run(args):
                             if state["player"].get("name") not in ("aaa", "MapWalk", "Census", "CensusB", "CensusSorc") or state["scene"].get("status") != "scene":
                                 raise ValueError("native_server_population requires the MapWalk/aaa/Census scene")
                         else:
-                            expected_names = {"CXBarb", "CXBarbWW"} if state["player"].get("class_id") == 4 else {"CXSorc"}
+                            expected_names = ({"CXBarb", "CXBarbWW"} if state["player"].get("class_id") == 4
+                                              else ({"CXNecro"} if state["player"].get("class_id") == 2 else {"CXSorc"}))
                             if state["player"].get("name") not in expected_names or state["scene"].get("level_id") != 2:
                                 raise ValueError("Requires existing test character in Blood Moor")
                         artifacts = args.output / (path.stem + "-artifacts")
                         artifacts.mkdir()
+                        if command.get("scenario", {}).get("prepare_bone_armor_attacker"):
+                            preparer = ROOT / "native-harness/build/d2game_bone_armor_attacker.exe"
+                            prep_output = artifacts / "bone-armor-attacker"
+                            prep = subprocess.Popen([str(preparer), str(args.pid), str(args.home), str(prep_output)],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                creationflags=subprocess.CREATE_NO_WINDOW)
+                            action["bone_armor_preparer_pid"] = prep.pid
+                            try:
+                                prep_stdout, prep_stderr = prep.communicate(timeout=30)
+                            except subprocess.TimeoutExpired:
+                                # This process may own an unresolved debug context.
+                                # Leave it alive for cleanup inspection; never let
+                                # subprocess.run's timeout path terminate it.
+                                report["status"] = "native_cleanup_attention_required"
+                                raise ValueError("Bone Armor preparer deadline; helper left alive for cleanup")
+                            prepared = json.loads((prep_output / "summary.json").read_text(encoding="utf8"))
+                            action["bone_armor_attacker"] = {"exit_code": prep.returncode,
+                                "output": str(prep_output), "result": prepared,
+                                "source_sha256": digest(ROOT / "native-harness/d2game_bone_armor_attacker.cpp"),
+                                "executable_sha256": digest(preparer),
+                                "stderr": prep_stderr.decode("utf8", "replace")[-2000:]}
+                            if not prepared.get("cleanup_confirmed") or not prepared.get("detached"):
+                                report["status"] = "native_cleanup_attention_required"
+                                raise ValueError("Bone Armor preparer cleanup unconfirmed")
+                            if prep.returncode:
+                                raise ValueError("Bone Armor attacker preparation failed")
+                            state = snapshot()
+                        if (collector_op == "native_runtime_trace"
+                                and command.get("scenario", {}).get("input") == "d2gfx_callchain"
+                                and command.get("scenario", {}).get("prepare_corpse")):
+                            preparer = ROOT / "native-harness" / "build" / "d2game_fallen_death.exe"
+                            prep_output = artifacts / "corpse-preparation"
+                            prep_profile = ("same-room-native-death-preserve-corpse"
+                                            if command.get("scenario", {}).get("target_corpse")
+                                            else "same-room-native-death")
+                            prep = subprocess.run(
+                                [str(preparer), str(args.pid), str(args.home), str(prep_output), prep_profile],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                creationflags=subprocess.CREATE_NO_WINDOW, timeout=45)
+                            action["corpse_preparer"] = {
+                                "exit_code": prep.returncode,
+                                "stdout": prep.stdout.decode("utf8", "replace")[-2000:],
+                                "stderr": prep.stderr.decode("utf8", "replace")[-2000:],
+                                "output": str(prep_output),
+                            }
+                            if prep.returncode:
+                                raise ValueError("corpse preparation failed: " + str(action["corpse_preparer"]))
+                            # The corpse is a new client unit. Refresh the
+                            # read-only scene snapshot before projecting the
+                            # target click; the pre-preparation snapshot cannot
+                            # contain its pointer or position.
+                            state = snapshot()
+                            identity = json.loads((prep_output / "identity.json").read_text(encoding="utf8"))
+                            corpse_units = []
+                            for candidate in state.get("scene", {}).get("loaded_units", []):
+                                position = candidate.get("position") or {}
+                                if (candidate.get("type") == 1
+                                        and position.get("x") == identity.get("corpse_x")
+                                        and position.get("y") == identity.get("corpse_y")):
+                                    corpse_units.append(candidate)
+                            action["corpse_target_candidates"] = corpse_units
+                            if command.get("scenario", {}).get("target_corpse") and not corpse_units:
+                                action["corpse_target_warning"] = "preserved corpse not present in loaded client units"
                         if op in ("native_cast", "barbarian_bash", "barbarian_bash_target") and state["player"].get("class_id") == 4:
                             native_name = "d2game_barbarian_target.exe" if op == "barbarian_bash_target" else "d2game_barbarian_cast.exe"
                             native = ROOT / "native-harness" / "build" / native_name
@@ -934,6 +1017,8 @@ def run(args):
                                           "--pid", str(args.pid), "--home", str(args.home),
                                           "--output", str(client_dir), "--seconds", "12", "--interval", "0.04",
                                           "--animation-candidates", "--visual"]
+                            if command.get("scenario", {}).get("prepare_bone_armor_attacker"):
+                                client_cmd += ["--bone-armor", "--seconds", "32"]
                             client_observer = subprocess.Popen(client_cmd, stdout=subprocess.PIPE,
                                                                stderr=subprocess.PIPE,
                                                                creationflags=subprocess.CREATE_NO_WINDOW)
@@ -1079,8 +1164,11 @@ def run(args):
                                     frame.get("mode_id") for frame in frames
                                     if frame.get("mode_id") is not None
                                 })
+                                from animation_compare import expected_capture_skill_mode
+                                expected_mode = expected_capture_skill_mode(scenario)
+                                action["client_animation_expected_mode_id"] = expected_mode
                                 action["client_animation_skill_mode_observed"] = any(
-                                    frame.get("mode_id") == 18 for frame in frames
+                                    frame.get("mode_id") == expected_mode for frame in frames
                                 )
                         result_path = args.output / path.stem / "summary.json"
                         result = json.loads(result_path.read_text(encoding="utf8")) if result_path.exists() else {}

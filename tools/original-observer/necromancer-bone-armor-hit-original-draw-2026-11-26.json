@@ -1,0 +1,3224 @@
+{
+  "schema": 1,
+  "skill": "Bone Armor",
+  "skill_id": 68,
+  "runtime_status": "observed_private_desktop_minimized_d2gfx_partial",
+  "source_trace": "tools/original-observer/broker/20261121-165133-4490d598/runs/20261126-175436-35c79794/orchestrator/worker/capture-run/process-session/001-bone-armor-hit-d2gfx-minimized/d2gfx-call-trace.jsonl",
+  "source_sha256": "d446a7b4c367c9d59da9d669e36fc2e8a14cdbb8ec5fe63ce305084b41341aef",
+  "collector": {
+    "status": "passed",
+    "events": 5734,
+    "candidate_count": 82,
+    "detached": true,
+    "cleanup_confirmed": true,
+    "scope": "one-shot D2Gfx entries; temporary software breakpoint code/context writes; no synthetic game calls; not final backend output"
+  },
+  "observed": [
+    {
+      "overlay": 140,
+      "name": "bonearmor_cast",
+      "draws": 19,
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "first_elapsed_ms": 1375,
+      "last_elapsed_ms": 2640,
+      "window_states": [
+        "minimized"
+      ]
+    },
+    {
+      "overlay": 141,
+      "name": "bonearmor_front",
+      "draws": 10,
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        8,
+        9,
+        10
+      ],
+      "first_elapsed_ms": 2281,
+      "last_elapsed_ms": 2734,
+      "window_states": [
+        "minimized"
+      ]
+    },
+    {
+      "overlay": 142,
+      "name": "bonearmor_back",
+      "draws": 10,
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        7,
+        8,
+        9,
+        10
+      ],
+      "first_elapsed_ms": 2281,
+      "last_elapsed_ms": 2734,
+      "window_states": [
+        "minimized"
+      ]
+    },
+    {
+      "overlay": 143,
+      "name": "bonearmor_null1",
+      "draws": 6,
+      "frames": [
+        0,
+        1
+      ],
+      "first_elapsed_ms": 1375,
+      "last_elapsed_ms": 1671,
+      "window_states": [
+        "minimized"
+      ]
+    },
+    {
+      "overlay": 144,
+      "name": "bonearmor_null2",
+      "draws": 11,
+      "frames": [
+        0,
+        1
+      ],
+      "first_elapsed_ms": 1375,
+      "last_elapsed_ms": 2015,
+      "window_states": [
+        "minimized"
+      ]
+    }
+  ],
+  "samples": [
+    {
+      "ordinal": 3155,
+      "render_batch": 17,
+      "elapsed_ms": 1375,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3157,
+      "render_batch": 17,
+      "elapsed_ms": 1375,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 0,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3159,
+      "render_batch": 17,
+      "elapsed_ms": 1375,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 143,
+      "frame": 0,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3355,
+      "render_batch": 18,
+      "elapsed_ms": 1437,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 2,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3357,
+      "render_batch": 18,
+      "elapsed_ms": 1437,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 0,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3359,
+      "render_batch": 18,
+      "elapsed_ms": 1437,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 143,
+      "frame": 0,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3555,
+      "render_batch": 19,
+      "elapsed_ms": 1515,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 0,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3557,
+      "render_batch": 19,
+      "elapsed_ms": 1515,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 143,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3753,
+      "render_batch": 20,
+      "elapsed_ms": 1578,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 0,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3755,
+      "render_batch": 20,
+      "elapsed_ms": 1578,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 143,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3947,
+      "render_batch": 21,
+      "elapsed_ms": 1625,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 0,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 3949,
+      "render_batch": 21,
+      "elapsed_ms": 1625,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 143,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 4141,
+      "render_batch": 22,
+      "elapsed_ms": 1671,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 0,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 4143,
+      "render_batch": 22,
+      "elapsed_ms": 1671,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 143,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 4329,
+      "render_batch": 23,
+      "elapsed_ms": 1718,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 4331,
+      "render_batch": 23,
+      "elapsed_ms": 1718,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 4521,
+      "render_batch": 24,
+      "elapsed_ms": 1812,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 3,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 4523,
+      "render_batch": 24,
+      "elapsed_ms": 1812,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 4707,
+      "render_batch": 25,
+      "elapsed_ms": 1859,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 4,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 4709,
+      "render_batch": 25,
+      "elapsed_ms": 1859,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 4893,
+      "render_batch": 26,
+      "elapsed_ms": 1921,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 5,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 4895,
+      "render_batch": 26,
+      "elapsed_ms": 1921,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5079,
+      "render_batch": 27,
+      "elapsed_ms": 2015,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 7,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5081,
+      "render_batch": 27,
+      "elapsed_ms": 2015,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 144,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5265,
+      "render_batch": 28,
+      "elapsed_ms": 2093,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5267,
+      "render_batch": 28,
+      "elapsed_ms": 2093,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 9,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5451,
+      "render_batch": 29,
+      "elapsed_ms": 2140,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 2,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5453,
+      "render_batch": 29,
+      "elapsed_ms": 2140,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 10,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5637,
+      "render_batch": 30,
+      "elapsed_ms": 2203,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 3,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5639,
+      "render_batch": 30,
+      "elapsed_ms": 2203,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 11,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5805,
+      "render_batch": 31,
+      "elapsed_ms": 2281,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 142,
+      "frame": 2,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5825,
+      "render_batch": 31,
+      "elapsed_ms": 2281,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 141,
+      "frame": 2,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5827,
+      "render_batch": 31,
+      "elapsed_ms": 2281,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 5,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 5993,
+      "render_batch": 32,
+      "elapsed_ms": 2343,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 142,
+      "frame": 3,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6013,
+      "render_batch": 32,
+      "elapsed_ms": 2359,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 141,
+      "frame": 3,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6015,
+      "render_batch": 32,
+      "elapsed_ms": 2359,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 6,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6183,
+      "render_batch": 33,
+      "elapsed_ms": 2437,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 142,
+      "frame": 4,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6203,
+      "render_batch": 33,
+      "elapsed_ms": 2437,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 141,
+      "frame": 4,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6205,
+      "render_batch": 33,
+      "elapsed_ms": 2453,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 7,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6373,
+      "render_batch": 34,
+      "elapsed_ms": 2500,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 142,
+      "frame": 5,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6393,
+      "render_batch": 34,
+      "elapsed_ms": 2500,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 141,
+      "frame": 5,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6395,
+      "render_batch": 34,
+      "elapsed_ms": 2500,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 8,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6565,
+      "render_batch": 35,
+      "elapsed_ms": 2578,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 142,
+      "frame": 7,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6585,
+      "render_batch": 35,
+      "elapsed_ms": 2578,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 141,
+      "frame": 7,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6587,
+      "render_batch": 35,
+      "elapsed_ms": 2578,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 10,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6757,
+      "render_batch": 36,
+      "elapsed_ms": 2625,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 142,
+      "frame": 8,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6777,
+      "render_batch": 36,
+      "elapsed_ms": 2640,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 141,
+      "frame": 8,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6779,
+      "render_batch": 36,
+      "elapsed_ms": 2640,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 140,
+      "frame": 11,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6949,
+      "render_batch": 37,
+      "elapsed_ms": 2671,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 142,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6951,
+      "render_batch": 37,
+      "elapsed_ms": 2671,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 142,
+      "frame": 9,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6971,
+      "render_batch": 37,
+      "elapsed_ms": 2687,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 141,
+      "frame": 1,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 6973,
+      "render_batch": 37,
+      "elapsed_ms": 2687,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 141,
+      "frame": 9,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 7139,
+      "render_batch": 38,
+      "elapsed_ms": 2734,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 142,
+      "frame": 2,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 7141,
+      "render_batch": 38,
+      "elapsed_ms": 2734,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 142,
+      "frame": 10,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 7161,
+      "render_batch": 38,
+      "elapsed_ms": 2734,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 141,
+      "frame": 2,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    },
+    {
+      "ordinal": 7163,
+      "render_batch": 38,
+      "elapsed_ms": 2734,
+      "window_state": "minimized",
+      "screen_x": 320,
+      "screen_y": 232,
+      "name": "D2Gfx_ORD_10072",
+      "overlay": 141,
+      "frame": 10,
+      "direction": 51,
+      "max_frames": 0,
+      "max_directions": 0
+    }
+  ],
+  "render_batches": [
+    {
+      "index": 17,
+      "start_ordinal": 3038,
+      "elapsed_ms": 1328,
+      "draws": [
+        {
+          "overlay": 140,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3155
+        },
+        {
+          "overlay": 144,
+          "frame": 0,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3157
+        },
+        {
+          "overlay": 143,
+          "frame": 0,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3159
+        }
+      ],
+      "body_draw_ordinals": [
+        3137,
+        3139,
+        3141,
+        3143,
+        3145,
+        3147,
+        3149,
+        3151,
+        3153
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "143": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 18,
+      "start_ordinal": 3235,
+      "elapsed_ms": 1406,
+      "draws": [
+        {
+          "overlay": 140,
+          "frame": 2,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3355
+        },
+        {
+          "overlay": 144,
+          "frame": 0,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3357
+        },
+        {
+          "overlay": 143,
+          "frame": 0,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3359
+        }
+      ],
+      "body_draw_ordinals": [
+        3337,
+        3339,
+        3341,
+        3343,
+        3345,
+        3347,
+        3349,
+        3351,
+        3353
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "143": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 19,
+      "start_ordinal": 3435,
+      "elapsed_ms": 1484,
+      "draws": [
+        {
+          "overlay": 144,
+          "frame": 0,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3555
+        },
+        {
+          "overlay": 143,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3557
+        }
+      ],
+      "body_draw_ordinals": [
+        3537,
+        3539,
+        3541,
+        3543,
+        3545,
+        3547,
+        3549,
+        3551,
+        3553
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "143": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 20,
+      "start_ordinal": 3633,
+      "elapsed_ms": 1546,
+      "draws": [
+        {
+          "overlay": 144,
+          "frame": 0,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3753
+        },
+        {
+          "overlay": 143,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3755
+        }
+      ],
+      "body_draw_ordinals": [
+        3735,
+        3737,
+        3739,
+        3741,
+        3743,
+        3745,
+        3747,
+        3749,
+        3751
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "143": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 21,
+      "start_ordinal": 3831,
+      "elapsed_ms": 1593,
+      "draws": [
+        {
+          "overlay": 144,
+          "frame": 0,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3947
+        },
+        {
+          "overlay": 143,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 3949
+        }
+      ],
+      "body_draw_ordinals": [
+        3929,
+        3931,
+        3933,
+        3935,
+        3937,
+        3939,
+        3941,
+        3943,
+        3945
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "143": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 22,
+      "start_ordinal": 4025,
+      "elapsed_ms": 1640,
+      "draws": [
+        {
+          "overlay": 144,
+          "frame": 0,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 4141
+        },
+        {
+          "overlay": 143,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 4143
+        }
+      ],
+      "body_draw_ordinals": [
+        4123,
+        4125,
+        4127,
+        4129,
+        4131,
+        4133,
+        4135,
+        4137,
+        4139
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "143": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 23,
+      "start_ordinal": 4219,
+      "elapsed_ms": 1687,
+      "draws": [
+        {
+          "overlay": 140,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 4329
+        },
+        {
+          "overlay": 144,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 4331
+        }
+      ],
+      "body_draw_ordinals": [
+        4311,
+        4313,
+        4315,
+        4317,
+        4319,
+        4321,
+        4323,
+        4325,
+        4327
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 24,
+      "start_ordinal": 4407,
+      "elapsed_ms": 1781,
+      "draws": [
+        {
+          "overlay": 140,
+          "frame": 3,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 4521
+        },
+        {
+          "overlay": 144,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 4523
+        }
+      ],
+      "body_draw_ordinals": [
+        4503,
+        4505,
+        4507,
+        4509,
+        4511,
+        4513,
+        4515,
+        4517,
+        4519
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 25,
+      "start_ordinal": 4599,
+      "elapsed_ms": 1828,
+      "draws": [
+        {
+          "overlay": 140,
+          "frame": 4,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 4707
+        },
+        {
+          "overlay": 144,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 4709
+        }
+      ],
+      "body_draw_ordinals": [
+        4689,
+        4691,
+        4693,
+        4695,
+        4697,
+        4699,
+        4701,
+        4703,
+        4705
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 26,
+      "start_ordinal": 4785,
+      "elapsed_ms": 1890,
+      "draws": [
+        {
+          "overlay": 140,
+          "frame": 5,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 4893
+        },
+        {
+          "overlay": 144,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 4895
+        }
+      ],
+      "body_draw_ordinals": [
+        4875,
+        4877,
+        4879,
+        4881,
+        4883,
+        4885,
+        4887,
+        4889,
+        4891
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 27,
+      "start_ordinal": 4971,
+      "elapsed_ms": 1984,
+      "draws": [
+        {
+          "overlay": 140,
+          "frame": 7,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5079
+        },
+        {
+          "overlay": 144,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5081
+        }
+      ],
+      "body_draw_ordinals": [
+        5061,
+        5063,
+        5065,
+        5067,
+        5069,
+        5071,
+        5073,
+        5075,
+        5077
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "144": 1
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 28,
+      "start_ordinal": 5157,
+      "elapsed_ms": 2062,
+      "draws": [
+        {
+          "overlay": 140,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5265
+        },
+        {
+          "overlay": 140,
+          "frame": 9,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5267
+        }
+      ],
+      "body_draw_ordinals": [
+        5247,
+        5249,
+        5251,
+        5253,
+        5255,
+        5257,
+        5259,
+        5261,
+        5263
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 2
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 29,
+      "start_ordinal": 5343,
+      "elapsed_ms": 2109,
+      "draws": [
+        {
+          "overlay": 140,
+          "frame": 2,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5451
+        },
+        {
+          "overlay": 140,
+          "frame": 10,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5453
+        }
+      ],
+      "body_draw_ordinals": [
+        5433,
+        5435,
+        5437,
+        5439,
+        5441,
+        5443,
+        5445,
+        5447,
+        5449
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 2
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 30,
+      "start_ordinal": 5529,
+      "elapsed_ms": 2171,
+      "draws": [
+        {
+          "overlay": 140,
+          "frame": 3,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5637
+        },
+        {
+          "overlay": 140,
+          "frame": 11,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5639
+        }
+      ],
+      "body_draw_ordinals": [
+        5619,
+        5621,
+        5623,
+        5625,
+        5627,
+        5629,
+        5631,
+        5633,
+        5635
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 2
+      },
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 31,
+      "start_ordinal": 5715,
+      "elapsed_ms": 2250,
+      "draws": [
+        {
+          "overlay": 142,
+          "frame": 2,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5805
+        },
+        {
+          "overlay": 141,
+          "frame": 2,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5825
+        },
+        {
+          "overlay": 140,
+          "frame": 5,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5827
+        }
+      ],
+      "body_draw_ordinals": [
+        5807,
+        5809,
+        5811,
+        5813,
+        5815,
+        5817,
+        5819,
+        5821,
+        5823
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "141": 1,
+        "142": 1
+      },
+      "back_body_front_order_observed": true
+    },
+    {
+      "index": 32,
+      "start_ordinal": 5903,
+      "elapsed_ms": 2312,
+      "draws": [
+        {
+          "overlay": 142,
+          "frame": 3,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 5993
+        },
+        {
+          "overlay": 141,
+          "frame": 3,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6013
+        },
+        {
+          "overlay": 140,
+          "frame": 6,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6015
+        }
+      ],
+      "body_draw_ordinals": [
+        5995,
+        5997,
+        5999,
+        6001,
+        6003,
+        6005,
+        6007,
+        6009,
+        6011
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "141": 1,
+        "142": 1
+      },
+      "back_body_front_order_observed": true
+    },
+    {
+      "index": 33,
+      "start_ordinal": 6091,
+      "elapsed_ms": 2390,
+      "draws": [
+        {
+          "overlay": 142,
+          "frame": 4,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6183
+        },
+        {
+          "overlay": 141,
+          "frame": 4,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6203
+        },
+        {
+          "overlay": 140,
+          "frame": 7,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6205
+        }
+      ],
+      "body_draw_ordinals": [
+        6185,
+        6187,
+        6189,
+        6191,
+        6193,
+        6195,
+        6197,
+        6199,
+        6201
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "141": 1,
+        "142": 1
+      },
+      "back_body_front_order_observed": true
+    },
+    {
+      "index": 34,
+      "start_ordinal": 6281,
+      "elapsed_ms": 2468,
+      "draws": [
+        {
+          "overlay": 142,
+          "frame": 5,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6373
+        },
+        {
+          "overlay": 141,
+          "frame": 5,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6393
+        },
+        {
+          "overlay": 140,
+          "frame": 8,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6395
+        }
+      ],
+      "body_draw_ordinals": [
+        6375,
+        6377,
+        6379,
+        6381,
+        6383,
+        6385,
+        6387,
+        6389,
+        6391
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "141": 1,
+        "142": 1
+      },
+      "back_body_front_order_observed": true
+    },
+    {
+      "index": 35,
+      "start_ordinal": 6471,
+      "elapsed_ms": 2546,
+      "draws": [
+        {
+          "overlay": 142,
+          "frame": 7,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6565
+        },
+        {
+          "overlay": 141,
+          "frame": 7,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6585
+        },
+        {
+          "overlay": 140,
+          "frame": 10,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6587
+        }
+      ],
+      "body_draw_ordinals": [
+        6567,
+        6569,
+        6571,
+        6573,
+        6575,
+        6577,
+        6579,
+        6581,
+        6583
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "141": 1,
+        "142": 1
+      },
+      "back_body_front_order_observed": true
+    },
+    {
+      "index": 36,
+      "start_ordinal": 6663,
+      "elapsed_ms": 2593,
+      "draws": [
+        {
+          "overlay": 142,
+          "frame": 8,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6757
+        },
+        {
+          "overlay": 141,
+          "frame": 8,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6777
+        },
+        {
+          "overlay": 140,
+          "frame": 11,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6779
+        }
+      ],
+      "body_draw_ordinals": [
+        6759,
+        6761,
+        6763,
+        6765,
+        6767,
+        6769,
+        6771,
+        6773,
+        6775
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "140": 1,
+        "141": 1,
+        "142": 1
+      },
+      "back_body_front_order_observed": true
+    },
+    {
+      "index": 37,
+      "start_ordinal": 6855,
+      "elapsed_ms": 2656,
+      "draws": [
+        {
+          "overlay": 142,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6949
+        },
+        {
+          "overlay": 142,
+          "frame": 9,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6951
+        },
+        {
+          "overlay": 141,
+          "frame": 1,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6971
+        },
+        {
+          "overlay": 141,
+          "frame": 9,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 6973
+        }
+      ],
+      "body_draw_ordinals": [
+        6953,
+        6955,
+        6957,
+        6959,
+        6961,
+        6963,
+        6965,
+        6967,
+        6969
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "141": 2,
+        "142": 2
+      },
+      "back_body_front_order_observed": true
+    },
+    {
+      "index": 38,
+      "start_ordinal": 7049,
+      "elapsed_ms": 2703,
+      "draws": [
+        {
+          "overlay": 142,
+          "frame": 2,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 7139
+        },
+        {
+          "overlay": 142,
+          "frame": 10,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 7141
+        },
+        {
+          "overlay": 141,
+          "frame": 2,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 7161
+        },
+        {
+          "overlay": 141,
+          "frame": 10,
+          "direction": 51,
+          "screen_x": 320,
+          "screen_y": 232,
+          "ordinal": 7163
+        }
+      ],
+      "body_draw_ordinals": [
+        7143,
+        7145,
+        7147,
+        7149,
+        7151,
+        7153,
+        7155,
+        7157,
+        7159
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {
+        "141": 2,
+        "142": 2
+      },
+      "back_body_front_order_observed": true
+    },
+    {
+      "index": 39,
+      "start_ordinal": 7239,
+      "elapsed_ms": 2750,
+      "draws": [],
+      "body_draw_ordinals": [
+        7333,
+        7335,
+        7337,
+        7339,
+        7341,
+        7343,
+        7345,
+        7347,
+        7349
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 40,
+      "start_ordinal": 7425,
+      "elapsed_ms": 2828,
+      "draws": [],
+      "body_draw_ordinals": [
+        7519,
+        7521,
+        7523,
+        7525,
+        7527,
+        7529,
+        7531,
+        7533,
+        7535
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 41,
+      "start_ordinal": 7611,
+      "elapsed_ms": 2875,
+      "draws": [],
+      "body_draw_ordinals": [
+        7701,
+        7703,
+        7705,
+        7707,
+        7709,
+        7711,
+        7713,
+        7715,
+        7717
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 42,
+      "start_ordinal": 7793,
+      "elapsed_ms": 2921,
+      "draws": [],
+      "body_draw_ordinals": [
+        7887,
+        7889,
+        7891,
+        7893,
+        7895,
+        7897,
+        7899,
+        7901,
+        7903
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 43,
+      "start_ordinal": 7979,
+      "elapsed_ms": 2968,
+      "draws": [],
+      "body_draw_ordinals": [
+        8073,
+        8075,
+        8077,
+        8079,
+        8081,
+        8083,
+        8085,
+        8087,
+        8089
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 44,
+      "start_ordinal": 8165,
+      "elapsed_ms": 3031,
+      "draws": [],
+      "body_draw_ordinals": [
+        8255,
+        8257,
+        8259,
+        8261,
+        8263,
+        8265,
+        8267,
+        8269,
+        8271
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 45,
+      "start_ordinal": 8347,
+      "elapsed_ms": 3078,
+      "draws": [],
+      "body_draw_ordinals": [
+        8441,
+        8443,
+        8445,
+        8447,
+        8449,
+        8451,
+        8453,
+        8455,
+        8457
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 46,
+      "start_ordinal": 8533,
+      "elapsed_ms": 3125,
+      "draws": [],
+      "body_draw_ordinals": [
+        8627,
+        8629,
+        8631,
+        8633,
+        8635,
+        8637,
+        8639,
+        8641,
+        8643
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 47,
+      "start_ordinal": 8719,
+      "elapsed_ms": 3187,
+      "draws": [],
+      "body_draw_ordinals": [
+        8807,
+        8809,
+        8811,
+        8813,
+        8815,
+        8817,
+        8819,
+        8821,
+        8823
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 48,
+      "start_ordinal": 8899,
+      "elapsed_ms": 3234,
+      "draws": [],
+      "body_draw_ordinals": [
+        8991,
+        8993,
+        8995,
+        8997,
+        8999,
+        9001,
+        9003,
+        9005,
+        9007
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 49,
+      "start_ordinal": 9083,
+      "elapsed_ms": 3312,
+      "draws": [],
+      "body_draw_ordinals": [
+        9175,
+        9177,
+        9179,
+        9181,
+        9183,
+        9185,
+        9187,
+        9189,
+        9191
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 50,
+      "start_ordinal": 9267,
+      "elapsed_ms": 3375,
+      "draws": [],
+      "body_draw_ordinals": [
+        9355,
+        9357,
+        9359,
+        9361,
+        9363,
+        9365,
+        9367,
+        9369,
+        9371
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 51,
+      "start_ordinal": 9447,
+      "elapsed_ms": 3406,
+      "draws": [],
+      "body_draw_ordinals": [
+        9539,
+        9541,
+        9543,
+        9545,
+        9547,
+        9549,
+        9551,
+        9553,
+        9555
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 52,
+      "start_ordinal": 9631,
+      "elapsed_ms": 3468,
+      "draws": [],
+      "body_draw_ordinals": [
+        9723,
+        9725,
+        9727,
+        9729,
+        9731,
+        9733,
+        9735,
+        9737,
+        9739
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 53,
+      "start_ordinal": 9815,
+      "elapsed_ms": 3531,
+      "draws": [],
+      "body_draw_ordinals": [
+        9901,
+        9903,
+        9905,
+        9907,
+        9909,
+        9911,
+        9913,
+        9915,
+        9917
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    },
+    {
+      "index": 54,
+      "start_ordinal": 9993,
+      "elapsed_ms": 3625,
+      "draws": [],
+      "body_draw_ordinals": [
+        10085,
+        10087,
+        10089,
+        10091,
+        10093,
+        10095,
+        10097,
+        10099,
+        10101
+      ],
+      "closed_by_next_start_draw": true,
+      "overlay_counts": {},
+      "back_body_front_order_observed": null
+    }
+  ],
+  "caster_sc": [
+    {
+      "ordinal": 2314,
+      "frame": 2,
+      "component": 7,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2316,
+      "frame": 2,
+      "component": 4,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2318,
+      "frame": 2,
+      "component": 2,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2320,
+      "frame": 2,
+      "component": 10,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2322,
+      "frame": 2,
+      "component": 1,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2324,
+      "frame": 2,
+      "component": 9,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2326,
+      "frame": 2,
+      "component": 0,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2328,
+      "frame": 2,
+      "component": 3,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2330,
+      "frame": 2,
+      "component": 8,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2360,
+      "frame": 2,
+      "component": 7,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2362,
+      "frame": 2,
+      "component": 4,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2364,
+      "frame": 2,
+      "component": 2,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2366,
+      "frame": 2,
+      "component": 10,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2368,
+      "frame": 2,
+      "component": 1,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2370,
+      "frame": 2,
+      "component": 9,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2372,
+      "frame": 2,
+      "component": 0,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2374,
+      "frame": 2,
+      "component": 3,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2376,
+      "frame": 2,
+      "component": 8,
+      "direction": 54,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2508,
+      "frame": 4,
+      "component": 7,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2510,
+      "frame": 4,
+      "component": 4,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2512,
+      "frame": 4,
+      "component": 10,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2514,
+      "frame": 4,
+      "component": 2,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2516,
+      "frame": 4,
+      "component": 1,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2518,
+      "frame": 4,
+      "component": 9,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2520,
+      "frame": 4,
+      "component": 0,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2522,
+      "frame": 4,
+      "component": 3,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2524,
+      "frame": 4,
+      "component": 8,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2554,
+      "frame": 4,
+      "component": 7,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2556,
+      "frame": 4,
+      "component": 4,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2558,
+      "frame": 4,
+      "component": 10,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2560,
+      "frame": 4,
+      "component": 2,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2562,
+      "frame": 4,
+      "component": 1,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2564,
+      "frame": 4,
+      "component": 9,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2566,
+      "frame": 4,
+      "component": 0,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2568,
+      "frame": 4,
+      "component": 3,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2570,
+      "frame": 4,
+      "component": 8,
+      "direction": 52,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2704,
+      "frame": 6,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2706,
+      "frame": 6,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2708,
+      "frame": 6,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2710,
+      "frame": 6,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2712,
+      "frame": 6,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2714,
+      "frame": 6,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2716,
+      "frame": 6,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2718,
+      "frame": 6,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2720,
+      "frame": 6,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2750,
+      "frame": 6,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2752,
+      "frame": 6,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2754,
+      "frame": 6,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2756,
+      "frame": 6,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2758,
+      "frame": 6,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2760,
+      "frame": 6,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2762,
+      "frame": 6,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2764,
+      "frame": 6,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2766,
+      "frame": 6,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2900,
+      "frame": 7,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2902,
+      "frame": 7,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2904,
+      "frame": 7,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2906,
+      "frame": 7,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2908,
+      "frame": 7,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2910,
+      "frame": 7,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2912,
+      "frame": 7,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2914,
+      "frame": 7,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2916,
+      "frame": 7,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2946,
+      "frame": 7,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2948,
+      "frame": 7,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2950,
+      "frame": 7,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2952,
+      "frame": 7,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2954,
+      "frame": 7,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2956,
+      "frame": 7,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2958,
+      "frame": 7,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2960,
+      "frame": 7,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 2962,
+      "frame": 7,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3091,
+      "frame": 9,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3093,
+      "frame": 9,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3095,
+      "frame": 9,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3097,
+      "frame": 9,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3099,
+      "frame": 9,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3101,
+      "frame": 9,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3103,
+      "frame": 9,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3105,
+      "frame": 9,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3107,
+      "frame": 9,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3137,
+      "frame": 9,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3139,
+      "frame": 9,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3141,
+      "frame": 9,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3143,
+      "frame": 9,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3145,
+      "frame": 9,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3147,
+      "frame": 9,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3149,
+      "frame": 9,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3151,
+      "frame": 9,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3153,
+      "frame": 9,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3291,
+      "frame": 11,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3293,
+      "frame": 11,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3295,
+      "frame": 11,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3297,
+      "frame": 11,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3299,
+      "frame": 11,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3301,
+      "frame": 11,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3303,
+      "frame": 11,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3305,
+      "frame": 11,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3307,
+      "frame": 11,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3337,
+      "frame": 11,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3339,
+      "frame": 11,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3341,
+      "frame": 11,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3343,
+      "frame": 11,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3345,
+      "frame": 11,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3347,
+      "frame": 11,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3349,
+      "frame": 11,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3351,
+      "frame": 11,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3353,
+      "frame": 11,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3491,
+      "frame": 13,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3493,
+      "frame": 13,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3495,
+      "frame": 13,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3497,
+      "frame": 13,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3499,
+      "frame": 13,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3501,
+      "frame": 13,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3503,
+      "frame": 13,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3505,
+      "frame": 13,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3507,
+      "frame": 13,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3537,
+      "frame": 13,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3539,
+      "frame": 13,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3541,
+      "frame": 13,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3543,
+      "frame": 13,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3545,
+      "frame": 13,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3547,
+      "frame": 13,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3549,
+      "frame": 13,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3551,
+      "frame": 13,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3553,
+      "frame": 13,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3689,
+      "frame": 14,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3691,
+      "frame": 14,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3693,
+      "frame": 14,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3695,
+      "frame": 14,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3697,
+      "frame": 14,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3699,
+      "frame": 14,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3701,
+      "frame": 14,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3703,
+      "frame": 14,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3705,
+      "frame": 14,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3735,
+      "frame": 14,
+      "component": 7,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3737,
+      "frame": 14,
+      "component": 4,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3739,
+      "frame": 14,
+      "component": 10,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3741,
+      "frame": 14,
+      "component": 2,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3743,
+      "frame": 14,
+      "component": 1,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3745,
+      "frame": 14,
+      "component": 9,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3747,
+      "frame": 14,
+      "component": 0,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3749,
+      "frame": 14,
+      "component": 3,
+      "direction": 51,
+      "window_state": "minimized"
+    },
+    {
+      "ordinal": 3751,
+      "frame": 14,
+      "component": 8,
+      "direction": 51,
+      "window_state": "minimized"
+    }
+  ],
+  "max_draws_per_closed_render_batch": {
+    "140": 2,
+    "141": 2,
+    "142": 2,
+    "143": 1,
+    "144": 1
+  },
+  "limitations": [
+    "StartDraw intervals are render batches, not native simulation ticks",
+    "Same-id draw multiplicity does not independently establish unique effect GUIDs",
+    "Breakpoint stalls invalidate wall-time animation rate measurements",
+    "No original damage/depletion/recast/removal evidence unless separately captured",
+    "No final GPU, shader or pixel comparison"
+  ]
+}

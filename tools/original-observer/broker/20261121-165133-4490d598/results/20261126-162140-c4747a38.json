@@ -1,0 +1,15 @@
+{
+  "id": "20261126-162140-c4747a38",
+  "status": "completed",
+  "started": 1795681300.5946684,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "necromancer-loader-cleanup"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261126-162140-c4747a38\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795681321.00407
+}

@@ -97,6 +97,12 @@ def observe(args):
                     state = player_snapshot(win, process, modules)
                     sample["candidate_player"] = state
                     if state["status"] == "player":
+                        if getattr(args, "bone_armor", False):
+                            try:
+                                from bone_armor_feedback import snapshot as armor_snapshot
+                                sample["bone_armor"] = armor_snapshot(win, process, state["pointer"])
+                            except (OSError, ValueError) as error:
+                                sample["bone_armor_error"] = str(error)
                         if args.animation_candidates:
                             candidates = animation_candidate_snapshot(win, process, modules, state)
                             sample["animation_candidates"] = candidates
@@ -227,6 +233,7 @@ if __name__ == "__main__":
                         help="Record bounded read-only unit-relative animation field candidates")
     parser.add_argument("--visual", action="store_true",
                         help="Hash a non-activated Diablo II client window bitmap per sample")
+    parser.add_argument("--bone-armor", action="store_true", help="Read bounded client state14 stat-list and overlay snapshots")
     args = parser.parse_args()
     if not 0 < args.seconds <= 60 or not 0.02 <= args.interval <= 5:
         parser.error("seconds must be (0,60], interval [0.02,5]")

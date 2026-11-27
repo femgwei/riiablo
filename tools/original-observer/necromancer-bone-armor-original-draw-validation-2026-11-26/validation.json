@@ -1,0 +1,234 @@
+{
+  "schema": 1,
+  "date": "2026-11-26",
+  "java": "JDK 17",
+  "d2_home": "G:/BaiduNetdiskDownload/Diablo II 1.10F",
+  "mode": "private non-input desktop original plus headless Riiablo; no foreground/global input",
+  "runtime_status": "observed_private_desktop_minimized_d2gfx_partial",
+  "original": {
+    "run_id": "20261126-171517-98b556fb",
+    "status": "passed",
+    "native_collector": "passed",
+    "events": 5255,
+    "complete_triple_pair_batches": 47,
+    "overlay_draws": {
+      "140": 31,
+      "141": 163,
+      "142": 166,
+      "143": 7,
+      "144": 15
+    },
+    "overlay_frames": {
+      "140": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "141": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "142": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "143": [
+        0,
+        1
+      ],
+      "144": [
+        0,
+        1
+      ]
+    },
+    "window_states": [
+      "minimized"
+    ],
+    "caster_mode_ids": [
+      1,
+      10
+    ],
+    "caster_sc_observed": true,
+    "back_body_front_order_batches": 47,
+    "phase_tuple": "0,8,15 relative offsets; first complete frame tuple 1,9,16",
+    "private_desktop": "riiablo_bonearmor_be2f43763c46",
+    "input_desktop_before_after": "Default -> Default",
+    "foreground_before_after": [
+      43780228,
+      43780228
+    ],
+    "desktop_not_input_checks": 113,
+    "owned_game_closed": true,
+    "desktop_handle_closed": true,
+    "cleanup_confirmed": true,
+    "trace": "tools/original-observer/necromancer-bone-armor-original-draw-2026-11-26.json",
+    "overlay_draws_total": 382
+  },
+  "core": {
+    "status": "passed",
+    "tests": 50,
+    "suites": [
+      {
+        "name": "com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest",
+        "timestamp": "2026-11-26T09:20:39",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.NecromancerBoneArmorIntegrationTest",
+        "timestamp": "2026-11-26T09:20:47",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.AuraOverlayResourceTest",
+        "timestamp": "2026-11-26T09:20:50",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.BoneArmorPresentationTest",
+        "timestamp": "2026-11-26T09:20:56",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.CycloneArmorPresentationTest",
+        "timestamp": "2026-11-26T09:20:59",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.presentation.StateOverlaySystemTest",
+        "timestamp": "2026-11-26T09:21:02",
+        "tests": "15",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'; .\\gradlew.bat :core:test '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' --tests com.riiablo.presentation.BoneArmorPresentationTest --tests com.riiablo.presentation.CycloneArmorPresentationTest --tests com.riiablo.presentation.AuraOverlayResourceTest --tests com.riiablo.presentation.StateOverlaySystemTest --tests com.riiablo.engine.server.NecromancerBoneArmorIntegrationTest --tests com.riiablo.engine.client.AuthoritativeUnitLifecycleStateTest --no-daemon",
+    "log": "tools/original-observer/necromancer-bone-armor-original-draw-validation-2026-11-26.log"
+  },
+  "d2gs": {
+    "status": "passed",
+    "tests": 7,
+    "suites": [
+      {
+        "name": "com.riiablo.server.d2gs.D2GSSimulationAssemblyTest",
+        "timestamp": "2026-11-26T09:22:16",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.server.d2gs.ServerEntityLifecycleTest",
+        "timestamp": "2026-11-26T09:22:20",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'; .\\gradlew.bat :server:d2gs:test '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest --no-daemon",
+    "log": "tools/original-observer/necromancer-bone-armor-original-d2gs-validation-2026-11-26.log"
+  },
+  "python": {
+    "status": "passed",
+    "tests": 22,
+    "command": "python -m unittest test_animation_compare test_bone_armor_draw_normalizer",
+    "cwd": "tools/original-observer",
+    "log": "tools/original-observer/necromancer-bone-armor-original-observer-validation-2026-11-26.log"
+  },
+  "previous_attempts": "tools/original-observer/necromancer-bone-armor-validation-2026-11-26/validation.json",
+  "remaining_limits": [
+    "No damage/depletion/recast/removal original draw case",
+    "No final GPU/shader/pixel/color/lighting comparison",
+    "Breakpoints stall wall time; no native rate claim",
+    "Same numeric overlay draws establish multiplicity and phase, not unique GUIDs"
+  ],
+  "total_focused_tests": 79,
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/presentation/OverlayManager.java": "078aa1faf461fb558b2daeba9bde78f26f603f9a74f482087ff7cd873fd72665",
+    "core/src/main/java/com/riiablo/presentation/NativeBoneArmorPresentation.java": "a9e07ecf2c15a890d52986b3c9d4cfad1bf3d644f11d4b52b232833411bebe78",
+    "core/src/test/java/com/riiablo/presentation/BoneArmorPresentationTest.java": "3792e5b8f82fef87f7a45b8ab4b6837230ad9f11d70e12fc714e5a8592cc5a7d",
+    "core/src/test/resources/original/necromancer-bone-armor-draw-1.10f.json": "d9f3eb90223f4b6a4031a4516aa07213f312dc28fe75cf71ec9a5a948536dffe",
+    "tools/original-observer/normalize_d2gfx_bone_armor_trace.py": "a428c6f81ee08e90ab7d160842017e4d0e936d086d39da169c9940a600632989",
+    "tools/original-observer/test_bone_armor_draw_normalizer.py": "be475225a9141acdcb42b07fd28e77ef97ce55dfc16af80e0007afd30cea6a7f",
+    "tools/original-observer/bone_armor_background.py": "0b4b2de39040322d1f29d0b804578bff8eb907f3ec4a36730d379dcb70000a7a",
+    "tools/original-observer/bone_prison_background.py": "051fe21b3305f8cbb9f21d01c0bcc362fa9ceb5c34b41e95149dfd5f2626a4a2",
+    "tools/original-observer/orchestrator.py": "5751f7f8de423d2b6aeac18a1142f950b3c88de29f958aa7e26b243b21bd6353",
+    "tools/original-observer/jobs/necromancer-bone-armor-private-desktop.json": "dc8466d6edbd817a0b361d8f3e62bee5254ceef2c0eefc4c19a3a7c7e8acba0e"
+  },
+  "cleanup": {
+    "broker_status": "ready",
+    "active": null,
+    "child_pid": null,
+    "cleanup_blocked": false,
+    "original_processes_observed": 0
+  },
+  "git_diff_check": "passed"
+}

@@ -1,0 +1,2 @@
+Cleanup-only empty-target smoke passed; no Popen call, fixture mutation or menu input
+Cleanup-only unsupported-shape rejection passed

@@ -17,6 +17,73 @@ import com.riiablo.codec.util.BBox;
 import com.riiablo.graphics.BlendMode;
 
 class AuraOverlayResourceTest extends RiiabloTest {
+  @Test void fireGolemHolyFireOwnsTwoNativeLayersAndReleasesThemWithState() {
+    AssetManager saved = Riiablo.assets;
+    com.riiablo.Colors colors = Riiablo.colors;
+    Riiablo.colors = new com.riiablo.Colors();
+    AssetManager assets = Riiablo.assets = mock(AssetManager.class);
+    int resourceFrames = java.nio.ByteBuffer.wrap(Riiablo.mpqs.resolve(
+        "data/global/overlays/AuraHolyFireFront.dcc").readBytes())
+        .order(java.nio.ByteOrder.LITTLE_ENDIAN).getInt(3);
+    DCC dcc = mock(DCC.class);
+    when(dcc.getNumDirections()).thenReturn(1);
+    when(dcc.getNumFramesPerDir()).thenReturn(resourceFrames);
+    when(dcc.getBox(anyInt())).thenReturn(new BBox());
+    when(assets.isLoaded(any(AssetDescriptor.class))).thenReturn(true);
+    when(assets.get(any(AssetDescriptor.class))).thenReturn(dcc);
+    OverlayManager manager = new OverlayManager();
+    World world = new World(new WorldConfigurationBuilder().with(
+        new net.mostlyoriginal.api.event.common.EventSystem(),
+        new com.riiablo.engine.server.CofManager(), manager, new StateOverlaySystem())
+        .build().register("clientContext", ClientGameplayContext.fromGlobals()));
+    try {
+      int id = world.create();
+      com.riiablo.engine.server.component.UnitStates states = world.getMapper(
+          com.riiablo.engine.server.component.UnitStates.class).create(id).init(id);
+      states.snapshotOnly = true;
+      int holyFire = com.riiablo.engine.server.state.StateId.HOLYFIRE;
+      states.stateList.addStateLayer(holyFire, 0, 27, id, 102);
+      world.process(); world.process();
+      com.riiablo.presentation.component.Overlay root = world.getMapper(
+          com.riiablo.presentation.component.Overlay.class).get(id);
+      assertNotNull(root); assertEquals(1, root.layers.size);
+      java.util.Set<Integer> ids = new java.util.HashSet<>();
+      java.util.Set<String> keys = new java.util.HashSet<>();
+      for (com.riiablo.presentation.component.Overlay layer :
+          new com.riiablo.presentation.component.Overlay[] {root, root.layers.first()}) {
+        int overlayId = Riiablo.files.Overlay.index(layer.entry.overlay);
+        ids.add(overlayId); keys.add(layer.entry.overlay);
+        assertTrue(layer.nativeAura); assertTrue(layer.persistent); assertTrue(layer.isLoaded);
+        assertEquals(BlendMode.ADDITIVE, layer.animation.getLayer(0).getBlendMode());
+        assertEquals(.04f, layer.animation.getFrameDuration(), .000001f);
+        assertEquals(com.riiablo.codec.Animation.Mode.LOOP, layer.animation.getMode());
+        java.nio.ByteBuffer header = java.nio.ByteBuffer.wrap(Riiablo.mpqs.resolve(
+            "data/global/overlays/" + layer.entry.Filename + ".dcc").readBytes())
+            .order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        assertEquals(resourceFrames, header.getInt(3));
+        com.badlogic.gdx.utils.JsonValue observed = new com.badlogic.gdx.utils.JsonReader()
+            .parse(com.badlogic.gdx.Gdx.files.classpath(
+                "original/necromancer-fire-golem-draw-1.10f.json")).get("aura_observed");
+        for (com.badlogic.gdx.utils.JsonValue sample : observed) {
+          if (sample.getInt("overlay_id") == overlayId)
+            for (int frame : sample.get("frames").asIntArray())
+              assertTrue(frame >= 0 && frame < resourceFrames, "observed original aura frame " + frame);
+        }
+        System.out.println("FIRE_GOLEM_AURA id=" + overlayId + " key=" + layer.entry.overlay
+            + " frames=" + header.getInt(3) + " preDraw=" + layer.entry.PreDraw);
+      }
+      assertEquals(new java.util.HashSet<>(java.util.Arrays.asList(15, 16)), ids);
+      assertTrue(keys.contains("aura_holyfire_front")); assertTrue(keys.contains("aura_holyfire_back"));
+      root.animation.setFrame(7);
+      world.process(); world.process();
+      assertSame(root, world.getMapper(com.riiablo.presentation.component.Overlay.class).get(id));
+      assertEquals(1, root.layers.size); assertEquals(7, root.animation.getFrame());
+      states.stateList.removeState(holyFire);
+      world.process();
+      assertFalse(world.getMapper(com.riiablo.presentation.component.Overlay.class).has(id));
+    } finally { world.dispose(); Riiablo.assets = saved; Riiablo.colors = colors; }
+  }
+
   @Test void dimVisionWaitsForTheRealCastOverlayIncludingPendingAssets() {
     AssetManager saved = Riiablo.assets;
     com.riiablo.Colors savedColors = Riiablo.colors;

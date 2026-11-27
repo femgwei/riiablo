@@ -1,0 +1,15 @@
+{
+  "id": "20261125-101531-cdd7f66b",
+  "status": "completed",
+  "started": 1795572931.759562,
+  "broker_pid": 25512,
+  "command": {
+    "op": "run_job",
+    "job": "necromancer-poison-explosion-d2gfx"
+  },
+  "result": {
+    "status": "passed",
+    "report": "F:\\3rd_src\\riiablo\\tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261125-101531-cdd7f66b\\orchestrator\\orchestrator.json"
+  },
+  "finished": 1795572995.712437
+}

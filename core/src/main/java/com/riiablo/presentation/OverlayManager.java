@@ -26,6 +26,7 @@ public class OverlayManager extends IteratingSystem {
   @Wire(name = "clientContext")
   protected ClientGameplayContext clientContext ;
   private AssetManager assets;
+  private long nextOverlayOrder;
   private final IntMap<Array<OwnedOverlay>> owned = new IntMap<>();
   private boolean disposed;
 
@@ -33,12 +34,14 @@ public class OverlayManager extends IteratingSystem {
     final com.riiablo.presentation.component.Overlay root, component;
     final AssetDescriptor descriptor;
     final AssetReferenceScope references;
+    final long order;
     OwnedOverlay(com.riiablo.presentation.component.Overlay root,
-        com.riiablo.presentation.component.Overlay component, AssetReferenceScope references) {
+        com.riiablo.presentation.component.Overlay component, AssetReferenceScope references, long order) {
       this.root = root;
       this.component = component;
       descriptor = component.assetDescriptor;
       this.references = references;
+      this.order = order;
     }
   }
 
@@ -81,23 +84,24 @@ public class OverlayManager extends IteratingSystem {
       if (!assets.isLoaded(effect.descriptor)) continue;
       Animation animation = overlay.animation;
       boolean loadedBefore = overlay.isLoaded;
-      if (!loadedBefore) {
-        DC dc = assets.get(overlay.assetDescriptor);
-        animation.edit().layer(dc, overlay.usesNativeRendering()
-            ? AuraRenderPolicy.blendMode(overlay.entry.Trans)
-            : overlay.entry.Trans == 3 ? BlendMode.LUMINOSITY : BlendMode.ID).build();
-        if (overlay.usesNativeRendering()) {
-          animation.setFrameDuration(AuraRenderPolicy.frameDuration(overlay.entry.AnimRate));
-          animation.getLayer(0).setAlpha(AuraRenderPolicy.alpha(overlay.entry.Trans));
-        } else if (overlay.entry.AnimRate > 0) {
-          animation.setFrameDuration(1f / overlay.entry.AnimRate);
-        }
-        animation.setMode(overlay.persistent ? Animation.Mode.LOOP : Animation.Mode.CLAMP);
-        overlay.isLoaded = true;
-      }
+      if (!loadedBefore) loadAnimation(overlay);
       if (arctic) {
         NativeArcticCastOverlay.apply(overlay);
         continue; // No asset-dependent minimum-display extension of the native ONCE lifetime.
+      }
+      if (NativeBoneArmorPresentation.handles(overlay)) {
+        if (!NativeBoneArmorPresentation.advance(overlay, world.delta)) {
+          int group = overlay.boneArmorGroup;
+          boolean emerge = "bonearmor_cast".equalsIgnoreCase(overlay.entry.overlay);
+          retire(entity, effect);
+          com.riiablo.codec.excel.States.Entry state = clientContext.files().States.get(
+              com.riiablo.engine.server.state.StateId.BONEARMOR);
+          if (emerge) {
+            continueBoneArmorStage(entity, group, state.overlays[0]);
+            continueBoneArmorStage(entity, group, state.overlays[1]);
+          } else continueBoneArmorStage(entity, group, state.castOverlay);
+        }
+        continue;
       }
       if (!overlay.persistent && loadedBefore && overlay.minimumDisplayFrames > 0)
         overlay.minimumDisplayFrames--;
@@ -181,6 +185,61 @@ public class OverlayManager extends IteratingSystem {
     removeEmptyComponent(entity);
   }
 
+  void setBoneArmorStage(int entity, int group, String name) {
+    ensureOpen();
+    Overlay.Entry entry = resolveEntry(name);
+    if (entry != null) install(entity, entry, true,
+        com.riiablo.engine.server.state.StateId.BONEARMOR, group);
+  }
+
+  private void continueBoneArmorStage(int entity, int group, String name) {
+    setBoneArmorStage(entity, group, name);
+    Array<OwnedOverlay> effects = owned.get(entity);
+    if (effects == null) return;
+    for (OwnedOverlay effect : effects) {
+      com.riiablo.presentation.component.Overlay layer = effect.component;
+      if (layer.boneArmorGroup != group || layer.entry == null || !same(layer.entry.overlay, name)) continue;
+      // Retail restarts its linked-list scan after replacement, advancing the
+      // new stage in the same native tick. Original three-pair draws preserve
+      // offsets 0,8,15; holding a birth cel here instead produces 0,8,16.
+      layer.nativeClockTime = com.riiablo.engine.SimulationClock.STEP_SECONDS;
+      layer.nativeClockStarted = false;
+      if (layer.isLoaded) NativeBoneArmorPresentation.advance(layer, 0);
+    }
+  }
+
+  private void loadAnimation(com.riiablo.presentation.component.Overlay overlay) {
+    Animation animation = overlay.animation;
+    DC dc = assets.get(overlay.assetDescriptor);
+    animation.edit().layer(dc, overlay.usesNativeRendering()
+        ? AuraRenderPolicy.blendMode(overlay.entry.Trans)
+        : overlay.entry.Trans == 3 ? BlendMode.LUMINOSITY : BlendMode.ID).build();
+    if (overlay.usesNativeRendering()) {
+      animation.setFrameDuration(AuraRenderPolicy.frameDuration(overlay.entry.AnimRate));
+      animation.getLayer(0).setAlpha(AuraRenderPolicy.alpha(overlay.entry.Trans));
+    } else if (overlay.entry.AnimRate > 0) animation.setFrameDuration(1f / overlay.entry.AnimRate);
+    animation.setMode(overlay.persistent ? Animation.Mode.LOOP : Animation.Mode.CLAMP);
+    overlay.isLoaded = true;
+  }
+
+  /** Retail RemoveOverlay also matches mode4 emergence's front/back continuations. */
+  void removeBoneArmorPair(int entity) {
+    for (String name : new String[] {"bonearmor_front", "bonearmor_back"}) {
+      Array<OwnedOverlay> effects = owned.get(entity);
+      OwnedOverlay newest = null;
+      if (effects != null) for (OwnedOverlay effect : effects) {
+        com.riiablo.presentation.component.Overlay layer = effect.component;
+        if (!NativeBoneArmorPresentation.handles(layer) || layer.entry == null) continue;
+        boolean match = same(layer.entry.overlay, name) || same(layer.entry.overlay, "bonearmor_cast");
+        // The ledger is unordered for fast removal. Use allocation order to
+        // reproduce the native head-first linked list, never its array slot.
+        if (match && (newest == null || effect.order > newest.order)) newest = effect;
+      }
+      if (newest != null) retire(entity, newest);
+    }
+    removeEmptyComponent(entity);
+  }
+
   public void setShrineIcon(int entity, String overlayId) {
     setPersistent(entity, SHRINE_ICON_STATE, overlayId);
   }
@@ -246,6 +305,10 @@ public class OverlayManager extends IteratingSystem {
   }
 
   private void install(int entity, Overlay.Entry entry, boolean persistent, int stateId) {
+    install(entity, entry, persistent, stateId, 0);
+  }
+
+  private void install(int entity, Overlay.Entry entry, boolean persistent, int stateId, int boneArmorGroup) {
     if (assets == null) assets = java.util.Objects.requireNonNull(clientContext.assets(), "assets");
     Array<OwnedOverlay> effects = owned.get(entity);
     if (effects == null) { effects = new Array<>(false, 4); owned.put(entity, effects); }
@@ -254,6 +317,7 @@ public class OverlayManager extends IteratingSystem {
       OwnedOverlay effect = effects.get(i);
       com.riiablo.presentation.component.Overlay current = effect.component;
       if (current.persistent == persistent && current.stateId == stateId
+          && current.boneArmorGroup == boneArmorGroup
           && current.entry != null && same(current.entry.overlay, entry.overlay)) retire(entity, effect);
     }
     // retire may remove the map entry when replacing the final owned effect.
@@ -264,6 +328,7 @@ public class OverlayManager extends IteratingSystem {
     component.set(entry);
     component.persistent = persistent;
     component.stateId = stateId;
+    component.boneArmorGroup = boneArmorGroup;
     com.riiablo.codec.excel.States.Entry state = clientContext.files() == null
         || clientContext.files().States == null ? null : clientContext.files().States.get(stateId);
     component.nativeAura = state != null && state.aura;
@@ -271,8 +336,14 @@ public class OverlayManager extends IteratingSystem {
     AssetReferenceScope references = new AssetReferenceScope(assets);
     try {
       references.load(component.assetDescriptor);
-      effects.add(new OwnedOverlay(root, component, references));
+      effects.add(new OwnedOverlay(root, component, references, ++nextOverlayOrder));
+      if (boneArmorGroup > 0 && assets.isLoaded(component.assetDescriptor)) {
+        loadAnimation(component);
+        component.nativeClockStarted = true;
+      }
     } catch (RuntimeException | Error failure) {
+      for (int i = effects.size - 1; i >= 0; i--)
+        if (effects.get(i).component == component) effects.removeIndex(i);
       try (Disposal cleanup = new Disposal()) {
         cleanup.run(() -> {
           if (failure instanceof Error) throw (Error) failure;

@@ -1,0 +1,3244 @@
+{
+  "schema": 1,
+  "runtime_status": "observed_private_desktop_minimized_early_hit_and_depletion_partial",
+  "cases": [
+    {
+      "run_id": "20261126-175436-35c79794",
+      "outer_status": "passed",
+      "private_desktop_checks": 133,
+      "input_desktop_before": "Default",
+      "input_desktop_after": "Default",
+      "foreground_before": 27860342,
+      "foreground_after": 27860342,
+      "owned_game_closed": true,
+      "attacker": {
+        "player_id": 1,
+        "attacker_id": 15,
+        "attacker_class": 19,
+        "server_frame": 526,
+        "player_position": [
+          4522,
+          5642
+        ],
+        "attacker_position": [
+          4524,
+          5644
+        ],
+        "min_physical": 80,
+        "max_physical": 80,
+        "attack_rating": 100000,
+        "shield_values_changed": false,
+        "synthetic_damage_call": false,
+        "native_ai_after_detach": true,
+        "lifetime": "owned private game closes after capture"
+      },
+      "attacker_stats": [
+        {
+          "stat": 12,
+          "before": 1,
+          "set_base": 99,
+          "after_aggregate": 99
+        },
+        {
+          "stat": 19,
+          "before": 8,
+          "set_base": 100000,
+          "after_aggregate": 100008
+        },
+        {
+          "stat": 21,
+          "before": 1,
+          "set_base": 80,
+          "after_aggregate": 81
+        },
+        {
+          "stat": 22,
+          "before": 2,
+          "set_base": 80,
+          "after_aggregate": 82
+        }
+      ],
+      "collector": {
+        "status": "passed",
+        "events": 5734,
+        "candidate_count": 82,
+        "detached": true,
+        "cleanup_confirmed": true,
+        "scope": "one-shot D2Gfx entries; temporary software breakpoint code/context writes; no synthetic game calls; not final backend output"
+      }
+    },
+    {
+      "run_id": "20261126-175702-b9aec434",
+      "outer_status": "failed",
+      "private_desktop_checks": 136,
+      "input_desktop_before": "Default",
+      "input_desktop_after": "Default",
+      "foreground_before": 27860342,
+      "foreground_after": 43780228,
+      "owned_game_closed": true,
+      "attacker": {
+        "player_id": 1,
+        "attacker_id": 23,
+        "attacker_class": 19,
+        "server_frame": 528,
+        "player_position": [
+          4522,
+          5642
+        ],
+        "attacker_position": [
+          4524,
+          5644
+        ],
+        "min_physical": 80,
+        "max_physical": 80,
+        "attack_rating": 100000,
+        "shield_values_changed": false,
+        "synthetic_damage_call": false,
+        "native_ai_after_detach": true,
+        "lifetime": "owned private game closes after capture"
+      },
+      "attacker_stats": [
+        {
+          "stat": 12,
+          "before": 1,
+          "set_base": 99,
+          "after_aggregate": 99
+        },
+        {
+          "stat": 19,
+          "before": 8,
+          "set_base": 100000,
+          "after_aggregate": 100008
+        },
+        {
+          "stat": 21,
+          "before": 1,
+          "set_base": 80,
+          "after_aggregate": 81
+        },
+        {
+          "stat": 22,
+          "before": 2,
+          "set_base": 80,
+          "after_aggregate": 82
+        }
+      ],
+      "collector": {
+        "status": "passed",
+        "events": 5754,
+        "candidate_count": 82,
+        "detached": true,
+        "cleanup_confirmed": true,
+        "scope": "one-shot D2Gfx entries; temporary software breakpoint code/context writes; no synthetic game calls; not final backend output"
+      }
+    }
+  ],
+  "client_feedback_samples": 555,
+  "state_and_overlay_stages": [
+    {
+      "elapsed_ms": 16,
+      "state_bit": false,
+      "current_fixed": 0,
+      "maximum_fixed": 0,
+      "native_count": 0,
+      "overlay_ids": [],
+      "hp_fixed": 2048000,
+      "stat_list_count": 0
+    },
+    {
+      "elapsed_ms": 1484,
+      "state_bit": true,
+      "current_fixed": 53760,
+      "maximum_fixed": 53760,
+      "native_count": 3,
+      "overlay_ids": [
+        140,
+        144,
+        143
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 1656,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        144,
+        143
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 1828,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        140,
+        144
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 2172,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        140,
+        140
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 2359,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        142,
+        141,
+        140
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 2703,
+      "state_bit": true,
+      "current_fixed": 19632,
+      "maximum_fixed": 53760,
+      "native_count": 2,
+      "overlay_ids": [
+        142,
+        141,
+        142,
+        141
+      ],
+      "hp_fixed": 2047488,
+      "stat_list_count": 1
+    },
+    {
+      "elapsed_ms": 3516,
+      "state_bit": false,
+      "current_fixed": 0,
+      "maximum_fixed": 0,
+      "native_count": 0,
+      "overlay_ids": [],
+      "hp_fixed": 2047488,
+      "stat_list_count": 0
+    }
+  ],
+  "full": {
+    "elapsed_ms": 1484,
+    "state_bit": true,
+    "current_fixed": 53760,
+    "maximum_fixed": 53760,
+    "native_count": 3,
+    "overlay_ids": [
+      140,
+      144,
+      143
+    ],
+    "hp_fixed": 2047488,
+    "stat_list_count": 1
+  },
+  "early_hit": {
+    "elapsed_ms": 1656,
+    "state_bit": true,
+    "current_fixed": 19632,
+    "maximum_fixed": 53760,
+    "native_count": 2,
+    "overlay_ids": [
+      144,
+      143
+    ],
+    "hp_fixed": 2047488,
+    "stat_list_count": 1
+  },
+  "stable_two_pairs": {
+    "elapsed_ms": 2703,
+    "state_bit": true,
+    "current_fixed": 19632,
+    "maximum_fixed": 53760,
+    "native_count": 2,
+    "overlay_ids": [
+      142,
+      141,
+      142,
+      141
+    ],
+    "hp_fixed": 2047488,
+    "stat_list_count": 1
+  },
+  "depleted": {
+    "elapsed_ms": 3516,
+    "state_bit": false,
+    "current_fixed": 0,
+    "maximum_fixed": 0,
+    "native_count": 0,
+    "overlay_ids": [],
+    "hp_fixed": 2047488,
+    "stat_list_count": 0
+  },
+  "disappeared_draw_batches_with_body": 16,
+  "draw_case": {
+    "run_id": "20261126-175436-35c79794",
+    "observed": [
+      {
+        "overlay": 140,
+        "name": "bonearmor_cast",
+        "draws": 19,
+        "frames": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "first_elapsed_ms": 1375,
+        "last_elapsed_ms": 2640,
+        "window_states": [
+          "minimized"
+        ]
+      },
+      {
+        "overlay": 141,
+        "name": "bonearmor_front",
+        "draws": 10,
+        "frames": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          8,
+          9,
+          10
+        ],
+        "first_elapsed_ms": 2281,
+        "last_elapsed_ms": 2734,
+        "window_states": [
+          "minimized"
+        ]
+      },
+      {
+        "overlay": 142,
+        "name": "bonearmor_back",
+        "draws": 10,
+        "frames": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          8,
+          9,
+          10
+        ],
+        "first_elapsed_ms": 2281,
+        "last_elapsed_ms": 2734,
+        "window_states": [
+          "minimized"
+        ]
+      },
+      {
+        "overlay": 143,
+        "name": "bonearmor_null1",
+        "draws": 6,
+        "frames": [
+          0,
+          1
+        ],
+        "first_elapsed_ms": 1375,
+        "last_elapsed_ms": 1671,
+        "window_states": [
+          "minimized"
+        ]
+      },
+      {
+        "overlay": 144,
+        "name": "bonearmor_null2",
+        "draws": 11,
+        "frames": [
+          0,
+          1
+        ],
+        "first_elapsed_ms": 1375,
+        "last_elapsed_ms": 2015,
+        "window_states": [
+          "minimized"
+        ]
+      }
+    ],
+    "render_batches": [
+      {
+        "index": 17,
+        "start_ordinal": 3038,
+        "elapsed_ms": 1328,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3155
+          },
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3157
+          },
+          {
+            "overlay": 143,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3159
+          }
+        ],
+        "body_draw_ordinals": [
+          3137,
+          3139,
+          3141,
+          3143,
+          3145,
+          3147,
+          3149,
+          3151,
+          3153
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 18,
+        "start_ordinal": 3235,
+        "elapsed_ms": 1406,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3355
+          },
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3357
+          },
+          {
+            "overlay": 143,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3359
+          }
+        ],
+        "body_draw_ordinals": [
+          3337,
+          3339,
+          3341,
+          3343,
+          3345,
+          3347,
+          3349,
+          3351,
+          3353
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 19,
+        "start_ordinal": 3435,
+        "elapsed_ms": 1484,
+        "draws": [
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3555
+          },
+          {
+            "overlay": 143,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3557
+          }
+        ],
+        "body_draw_ordinals": [
+          3537,
+          3539,
+          3541,
+          3543,
+          3545,
+          3547,
+          3549,
+          3551,
+          3553
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 20,
+        "start_ordinal": 3633,
+        "elapsed_ms": 1546,
+        "draws": [
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3753
+          },
+          {
+            "overlay": 143,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3755
+          }
+        ],
+        "body_draw_ordinals": [
+          3735,
+          3737,
+          3739,
+          3741,
+          3743,
+          3745,
+          3747,
+          3749,
+          3751
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 21,
+        "start_ordinal": 3831,
+        "elapsed_ms": 1593,
+        "draws": [
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3947
+          },
+          {
+            "overlay": 143,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 3949
+          }
+        ],
+        "body_draw_ordinals": [
+          3929,
+          3931,
+          3933,
+          3935,
+          3937,
+          3939,
+          3941,
+          3943,
+          3945
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 22,
+        "start_ordinal": 4025,
+        "elapsed_ms": 1640,
+        "draws": [
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4141
+          },
+          {
+            "overlay": 143,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4143
+          }
+        ],
+        "body_draw_ordinals": [
+          4123,
+          4125,
+          4127,
+          4129,
+          4131,
+          4133,
+          4135,
+          4137,
+          4139
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 23,
+        "start_ordinal": 4219,
+        "elapsed_ms": 1687,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4329
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4331
+          }
+        ],
+        "body_draw_ordinals": [
+          4311,
+          4313,
+          4315,
+          4317,
+          4319,
+          4321,
+          4323,
+          4325,
+          4327
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 24,
+        "start_ordinal": 4407,
+        "elapsed_ms": 1781,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 3,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4521
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4523
+          }
+        ],
+        "body_draw_ordinals": [
+          4503,
+          4505,
+          4507,
+          4509,
+          4511,
+          4513,
+          4515,
+          4517,
+          4519
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 25,
+        "start_ordinal": 4599,
+        "elapsed_ms": 1828,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 4,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4707
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4709
+          }
+        ],
+        "body_draw_ordinals": [
+          4689,
+          4691,
+          4693,
+          4695,
+          4697,
+          4699,
+          4701,
+          4703,
+          4705
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 26,
+        "start_ordinal": 4785,
+        "elapsed_ms": 1890,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 5,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4893
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4895
+          }
+        ],
+        "body_draw_ordinals": [
+          4875,
+          4877,
+          4879,
+          4881,
+          4883,
+          4885,
+          4887,
+          4889,
+          4891
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 27,
+        "start_ordinal": 4971,
+        "elapsed_ms": 1984,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 7,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5079
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5081
+          }
+        ],
+        "body_draw_ordinals": [
+          5061,
+          5063,
+          5065,
+          5067,
+          5069,
+          5071,
+          5073,
+          5075,
+          5077
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 28,
+        "start_ordinal": 5157,
+        "elapsed_ms": 2062,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5265
+          },
+          {
+            "overlay": 140,
+            "frame": 9,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5267
+          }
+        ],
+        "body_draw_ordinals": [
+          5247,
+          5249,
+          5251,
+          5253,
+          5255,
+          5257,
+          5259,
+          5261,
+          5263
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 2
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 29,
+        "start_ordinal": 5343,
+        "elapsed_ms": 2109,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5451
+          },
+          {
+            "overlay": 140,
+            "frame": 10,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5453
+          }
+        ],
+        "body_draw_ordinals": [
+          5433,
+          5435,
+          5437,
+          5439,
+          5441,
+          5443,
+          5445,
+          5447,
+          5449
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 2
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 30,
+        "start_ordinal": 5529,
+        "elapsed_ms": 2171,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 3,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5637
+          },
+          {
+            "overlay": 140,
+            "frame": 11,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5639
+          }
+        ],
+        "body_draw_ordinals": [
+          5619,
+          5621,
+          5623,
+          5625,
+          5627,
+          5629,
+          5631,
+          5633,
+          5635
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 2
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 31,
+        "start_ordinal": 5715,
+        "elapsed_ms": 2250,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5805
+          },
+          {
+            "overlay": 141,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5825
+          },
+          {
+            "overlay": 140,
+            "frame": 5,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5827
+          }
+        ],
+        "body_draw_ordinals": [
+          5807,
+          5809,
+          5811,
+          5813,
+          5815,
+          5817,
+          5819,
+          5821,
+          5823
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 32,
+        "start_ordinal": 5903,
+        "elapsed_ms": 2312,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 3,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5993
+          },
+          {
+            "overlay": 141,
+            "frame": 3,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6013
+          },
+          {
+            "overlay": 140,
+            "frame": 6,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6015
+          }
+        ],
+        "body_draw_ordinals": [
+          5995,
+          5997,
+          5999,
+          6001,
+          6003,
+          6005,
+          6007,
+          6009,
+          6011
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 33,
+        "start_ordinal": 6091,
+        "elapsed_ms": 2390,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 4,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6183
+          },
+          {
+            "overlay": 141,
+            "frame": 4,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6203
+          },
+          {
+            "overlay": 140,
+            "frame": 7,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6205
+          }
+        ],
+        "body_draw_ordinals": [
+          6185,
+          6187,
+          6189,
+          6191,
+          6193,
+          6195,
+          6197,
+          6199,
+          6201
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 34,
+        "start_ordinal": 6281,
+        "elapsed_ms": 2468,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 5,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6373
+          },
+          {
+            "overlay": 141,
+            "frame": 5,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6393
+          },
+          {
+            "overlay": 140,
+            "frame": 8,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6395
+          }
+        ],
+        "body_draw_ordinals": [
+          6375,
+          6377,
+          6379,
+          6381,
+          6383,
+          6385,
+          6387,
+          6389,
+          6391
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 35,
+        "start_ordinal": 6471,
+        "elapsed_ms": 2546,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 7,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6565
+          },
+          {
+            "overlay": 141,
+            "frame": 7,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6585
+          },
+          {
+            "overlay": 140,
+            "frame": 10,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6587
+          }
+        ],
+        "body_draw_ordinals": [
+          6567,
+          6569,
+          6571,
+          6573,
+          6575,
+          6577,
+          6579,
+          6581,
+          6583
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 36,
+        "start_ordinal": 6663,
+        "elapsed_ms": 2593,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 8,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6757
+          },
+          {
+            "overlay": 141,
+            "frame": 8,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6777
+          },
+          {
+            "overlay": 140,
+            "frame": 11,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6779
+          }
+        ],
+        "body_draw_ordinals": [
+          6759,
+          6761,
+          6763,
+          6765,
+          6767,
+          6769,
+          6771,
+          6773,
+          6775
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 37,
+        "start_ordinal": 6855,
+        "elapsed_ms": 2656,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6949
+          },
+          {
+            "overlay": 142,
+            "frame": 9,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6951
+          },
+          {
+            "overlay": 141,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6971
+          },
+          {
+            "overlay": 141,
+            "frame": 9,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6973
+          }
+        ],
+        "body_draw_ordinals": [
+          6953,
+          6955,
+          6957,
+          6959,
+          6961,
+          6963,
+          6965,
+          6967,
+          6969
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 38,
+        "start_ordinal": 7049,
+        "elapsed_ms": 2703,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7139
+          },
+          {
+            "overlay": 142,
+            "frame": 10,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7141
+          },
+          {
+            "overlay": 141,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7161
+          },
+          {
+            "overlay": 141,
+            "frame": 10,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7163
+          }
+        ],
+        "body_draw_ordinals": [
+          7143,
+          7145,
+          7147,
+          7149,
+          7151,
+          7153,
+          7155,
+          7157,
+          7159
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 39,
+        "start_ordinal": 7239,
+        "elapsed_ms": 2750,
+        "draws": [],
+        "body_draw_ordinals": [
+          7333,
+          7335,
+          7337,
+          7339,
+          7341,
+          7343,
+          7345,
+          7347,
+          7349
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 40,
+        "start_ordinal": 7425,
+        "elapsed_ms": 2828,
+        "draws": [],
+        "body_draw_ordinals": [
+          7519,
+          7521,
+          7523,
+          7525,
+          7527,
+          7529,
+          7531,
+          7533,
+          7535
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 41,
+        "start_ordinal": 7611,
+        "elapsed_ms": 2875,
+        "draws": [],
+        "body_draw_ordinals": [
+          7701,
+          7703,
+          7705,
+          7707,
+          7709,
+          7711,
+          7713,
+          7715,
+          7717
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 42,
+        "start_ordinal": 7793,
+        "elapsed_ms": 2921,
+        "draws": [],
+        "body_draw_ordinals": [
+          7887,
+          7889,
+          7891,
+          7893,
+          7895,
+          7897,
+          7899,
+          7901,
+          7903
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 43,
+        "start_ordinal": 7979,
+        "elapsed_ms": 2968,
+        "draws": [],
+        "body_draw_ordinals": [
+          8073,
+          8075,
+          8077,
+          8079,
+          8081,
+          8083,
+          8085,
+          8087,
+          8089
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 44,
+        "start_ordinal": 8165,
+        "elapsed_ms": 3031,
+        "draws": [],
+        "body_draw_ordinals": [
+          8255,
+          8257,
+          8259,
+          8261,
+          8263,
+          8265,
+          8267,
+          8269,
+          8271
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 45,
+        "start_ordinal": 8347,
+        "elapsed_ms": 3078,
+        "draws": [],
+        "body_draw_ordinals": [
+          8441,
+          8443,
+          8445,
+          8447,
+          8449,
+          8451,
+          8453,
+          8455,
+          8457
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 46,
+        "start_ordinal": 8533,
+        "elapsed_ms": 3125,
+        "draws": [],
+        "body_draw_ordinals": [
+          8627,
+          8629,
+          8631,
+          8633,
+          8635,
+          8637,
+          8639,
+          8641,
+          8643
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 47,
+        "start_ordinal": 8719,
+        "elapsed_ms": 3187,
+        "draws": [],
+        "body_draw_ordinals": [
+          8807,
+          8809,
+          8811,
+          8813,
+          8815,
+          8817,
+          8819,
+          8821,
+          8823
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 48,
+        "start_ordinal": 8899,
+        "elapsed_ms": 3234,
+        "draws": [],
+        "body_draw_ordinals": [
+          8991,
+          8993,
+          8995,
+          8997,
+          8999,
+          9001,
+          9003,
+          9005,
+          9007
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 49,
+        "start_ordinal": 9083,
+        "elapsed_ms": 3312,
+        "draws": [],
+        "body_draw_ordinals": [
+          9175,
+          9177,
+          9179,
+          9181,
+          9183,
+          9185,
+          9187,
+          9189,
+          9191
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 50,
+        "start_ordinal": 9267,
+        "elapsed_ms": 3375,
+        "draws": [],
+        "body_draw_ordinals": [
+          9355,
+          9357,
+          9359,
+          9361,
+          9363,
+          9365,
+          9367,
+          9369,
+          9371
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 51,
+        "start_ordinal": 9447,
+        "elapsed_ms": 3406,
+        "draws": [],
+        "body_draw_ordinals": [
+          9539,
+          9541,
+          9543,
+          9545,
+          9547,
+          9549,
+          9551,
+          9553,
+          9555
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 52,
+        "start_ordinal": 9631,
+        "elapsed_ms": 3468,
+        "draws": [],
+        "body_draw_ordinals": [
+          9723,
+          9725,
+          9727,
+          9729,
+          9731,
+          9733,
+          9735,
+          9737,
+          9739
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 53,
+        "start_ordinal": 9815,
+        "elapsed_ms": 3531,
+        "draws": [],
+        "body_draw_ordinals": [
+          9901,
+          9903,
+          9905,
+          9907,
+          9909,
+          9911,
+          9913,
+          9915,
+          9917
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 54,
+        "start_ordinal": 9993,
+        "elapsed_ms": 3625,
+        "draws": [],
+        "body_draw_ordinals": [
+          10085,
+          10087,
+          10089,
+          10091,
+          10093,
+          10095,
+          10097,
+          10099,
+          10101
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {},
+        "back_body_front_order_observed": null
+      }
+    ]
+  },
+  "feedback_draw_case": {
+    "run_id": "20261126-175702-b9aec434",
+    "observed": [
+      {
+        "overlay": 140,
+        "name": "bonearmor_cast",
+        "draws": 21,
+        "frames": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "first_elapsed_ms": 1406,
+        "last_elapsed_ms": 2516,
+        "window_states": [
+          "minimized"
+        ]
+      },
+      {
+        "overlay": 141,
+        "name": "bonearmor_front",
+        "draws": 24,
+        "frames": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          15,
+          16,
+          18,
+          19
+        ],
+        "first_elapsed_ms": 2203,
+        "last_elapsed_ms": 3078,
+        "window_states": [
+          "minimized"
+        ]
+      },
+      {
+        "overlay": 142,
+        "name": "bonearmor_back",
+        "draws": 24,
+        "frames": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          15,
+          16,
+          18,
+          19
+        ],
+        "first_elapsed_ms": 2203,
+        "last_elapsed_ms": 3078,
+        "window_states": [
+          "minimized"
+        ]
+      },
+      {
+        "overlay": 143,
+        "name": "bonearmor_null1",
+        "draws": 6,
+        "frames": [
+          0,
+          1
+        ],
+        "first_elapsed_ms": 1406,
+        "last_elapsed_ms": 1656,
+        "window_states": [
+          "minimized"
+        ]
+      },
+      {
+        "overlay": 144,
+        "name": "bonearmor_null2",
+        "draws": 12,
+        "frames": [
+          0,
+          1
+        ],
+        "first_elapsed_ms": 1406,
+        "last_elapsed_ms": 1984,
+        "window_states": [
+          "minimized"
+        ]
+      }
+    ],
+    "render_batches": [
+      {
+        "index": 28,
+        "start_ordinal": 4668,
+        "elapsed_ms": 1375,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4774
+          },
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4776
+          },
+          {
+            "overlay": 143,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4778
+          }
+        ],
+        "body_draw_ordinals": [
+          4756,
+          4758,
+          4760,
+          4762,
+          4764,
+          4766,
+          4768,
+          4770,
+          4772
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 29,
+        "start_ordinal": 4854,
+        "elapsed_ms": 1422,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 3,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4960
+          },
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4962
+          },
+          {
+            "overlay": 143,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 4964
+          }
+        ],
+        "body_draw_ordinals": [
+          4942,
+          4944,
+          4946,
+          4948,
+          4950,
+          4952,
+          4954,
+          4956,
+          4958
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 30,
+        "start_ordinal": 5040,
+        "elapsed_ms": 1484,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 4,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5147
+          },
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5149
+          },
+          {
+            "overlay": 143,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5151
+          }
+        ],
+        "body_draw_ordinals": [
+          5129,
+          5131,
+          5133,
+          5135,
+          5137,
+          5139,
+          5141,
+          5143,
+          5145
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 31,
+        "start_ordinal": 5227,
+        "elapsed_ms": 1516,
+        "draws": [
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5329
+          },
+          {
+            "overlay": 143,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5331
+          }
+        ],
+        "body_draw_ordinals": [
+          5311,
+          5313,
+          5315,
+          5317,
+          5319,
+          5321,
+          5323,
+          5325,
+          5327
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 32,
+        "start_ordinal": 5407,
+        "elapsed_ms": 1563,
+        "draws": [
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5511
+          },
+          {
+            "overlay": 143,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5513
+          }
+        ],
+        "body_draw_ordinals": [
+          5493,
+          5495,
+          5497,
+          5499,
+          5501,
+          5503,
+          5505,
+          5507,
+          5509
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 33,
+        "start_ordinal": 5589,
+        "elapsed_ms": 1609,
+        "draws": [
+          {
+            "overlay": 144,
+            "frame": 0,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5693
+          },
+          {
+            "overlay": 143,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5695
+          }
+        ],
+        "body_draw_ordinals": [
+          5675,
+          5677,
+          5679,
+          5681,
+          5683,
+          5685,
+          5687,
+          5689,
+          5691
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "143": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 34,
+        "start_ordinal": 5771,
+        "elapsed_ms": 1688,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5875
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 5877
+          }
+        ],
+        "body_draw_ordinals": [
+          5857,
+          5859,
+          5861,
+          5863,
+          5865,
+          5867,
+          5869,
+          5871,
+          5873
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 35,
+        "start_ordinal": 5953,
+        "elapsed_ms": 1766,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 3,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6055
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6057
+          }
+        ],
+        "body_draw_ordinals": [
+          6037,
+          6039,
+          6041,
+          6043,
+          6045,
+          6047,
+          6049,
+          6051,
+          6053
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 36,
+        "start_ordinal": 6133,
+        "elapsed_ms": 1813,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 4,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6235
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6237
+          }
+        ],
+        "body_draw_ordinals": [
+          6217,
+          6219,
+          6221,
+          6223,
+          6225,
+          6227,
+          6229,
+          6231,
+          6233
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 37,
+        "start_ordinal": 6313,
+        "elapsed_ms": 1859,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 5,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6415
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6417
+          }
+        ],
+        "body_draw_ordinals": [
+          6397,
+          6399,
+          6401,
+          6403,
+          6405,
+          6407,
+          6409,
+          6411,
+          6413
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 38,
+        "start_ordinal": 6493,
+        "elapsed_ms": 1906,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 6,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6591
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6593
+          }
+        ],
+        "body_draw_ordinals": [
+          6573,
+          6575,
+          6577,
+          6579,
+          6581,
+          6583,
+          6585,
+          6587,
+          6589
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 39,
+        "start_ordinal": 6669,
+        "elapsed_ms": 1953,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 7,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6771
+          },
+          {
+            "overlay": 144,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6773
+          }
+        ],
+        "body_draw_ordinals": [
+          6753,
+          6755,
+          6757,
+          6759,
+          6761,
+          6763,
+          6765,
+          6767,
+          6769
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "144": 1
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 40,
+        "start_ordinal": 6849,
+        "elapsed_ms": 2047,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6951
+          },
+          {
+            "overlay": 140,
+            "frame": 9,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 6953
+          }
+        ],
+        "body_draw_ordinals": [
+          6933,
+          6935,
+          6937,
+          6939,
+          6941,
+          6943,
+          6945,
+          6947,
+          6949
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 2
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 41,
+        "start_ordinal": 7029,
+        "elapsed_ms": 2094,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7125
+          },
+          {
+            "overlay": 140,
+            "frame": 10,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7127
+          }
+        ],
+        "body_draw_ordinals": [
+          7107,
+          7109,
+          7111,
+          7113,
+          7115,
+          7117,
+          7119,
+          7121,
+          7123
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 2
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 42,
+        "start_ordinal": 7203,
+        "elapsed_ms": 2125,
+        "draws": [
+          {
+            "overlay": 140,
+            "frame": 3,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7301
+          },
+          {
+            "overlay": 140,
+            "frame": 11,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7303
+          }
+        ],
+        "body_draw_ordinals": [
+          7283,
+          7285,
+          7287,
+          7289,
+          7291,
+          7293,
+          7295,
+          7297,
+          7299
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 2
+        },
+        "back_body_front_order_observed": null
+      },
+      {
+        "index": 43,
+        "start_ordinal": 7379,
+        "elapsed_ms": 2188,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7459
+          },
+          {
+            "overlay": 141,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7479
+          },
+          {
+            "overlay": 140,
+            "frame": 4,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7481
+          }
+        ],
+        "body_draw_ordinals": [
+          7461,
+          7463,
+          7465,
+          7467,
+          7469,
+          7471,
+          7473,
+          7475,
+          7477
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 44,
+        "start_ordinal": 7557,
+        "elapsed_ms": 2234,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7637
+          },
+          {
+            "overlay": 141,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7657
+          },
+          {
+            "overlay": 140,
+            "frame": 5,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7659
+          }
+        ],
+        "body_draw_ordinals": [
+          7639,
+          7641,
+          7643,
+          7645,
+          7647,
+          7649,
+          7651,
+          7653,
+          7655
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 45,
+        "start_ordinal": 7735,
+        "elapsed_ms": 2328,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 4,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7815
+          },
+          {
+            "overlay": 141,
+            "frame": 4,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7835
+          },
+          {
+            "overlay": 140,
+            "frame": 7,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7837
+          }
+        ],
+        "body_draw_ordinals": [
+          7817,
+          7819,
+          7821,
+          7823,
+          7825,
+          7827,
+          7829,
+          7831,
+          7833
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 46,
+        "start_ordinal": 7913,
+        "elapsed_ms": 2375,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 5,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 7993
+          },
+          {
+            "overlay": 141,
+            "frame": 5,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8013
+          },
+          {
+            "overlay": 140,
+            "frame": 8,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8015
+          }
+        ],
+        "body_draw_ordinals": [
+          7995,
+          7997,
+          7999,
+          8001,
+          8003,
+          8005,
+          8007,
+          8009,
+          8011
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 47,
+        "start_ordinal": 8091,
+        "elapsed_ms": 2438,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 7,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8171
+          },
+          {
+            "overlay": 141,
+            "frame": 7,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8191
+          },
+          {
+            "overlay": 140,
+            "frame": 10,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8193
+          }
+        ],
+        "body_draw_ordinals": [
+          8173,
+          8175,
+          8177,
+          8179,
+          8181,
+          8183,
+          8185,
+          8187,
+          8189
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 48,
+        "start_ordinal": 8269,
+        "elapsed_ms": 2500,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 8,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8349
+          },
+          {
+            "overlay": 141,
+            "frame": 8,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8369
+          },
+          {
+            "overlay": 140,
+            "frame": 11,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8371
+          }
+        ],
+        "body_draw_ordinals": [
+          8351,
+          8353,
+          8355,
+          8357,
+          8359,
+          8361,
+          8363,
+          8365,
+          8367
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "140": 1,
+          "141": 1,
+          "142": 1
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 49,
+        "start_ordinal": 8447,
+        "elapsed_ms": 2547,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8527
+          },
+          {
+            "overlay": 142,
+            "frame": 9,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8529
+          },
+          {
+            "overlay": 141,
+            "frame": 1,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8549
+          },
+          {
+            "overlay": 141,
+            "frame": 9,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8551
+          }
+        ],
+        "body_draw_ordinals": [
+          8531,
+          8533,
+          8535,
+          8537,
+          8539,
+          8541,
+          8543,
+          8545,
+          8547
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 50,
+        "start_ordinal": 8627,
+        "elapsed_ms": 2578,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8707
+          },
+          {
+            "overlay": 142,
+            "frame": 10,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8709
+          },
+          {
+            "overlay": 141,
+            "frame": 2,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8729
+          },
+          {
+            "overlay": 141,
+            "frame": 10,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8731
+          }
+        ],
+        "body_draw_ordinals": [
+          8711,
+          8713,
+          8715,
+          8717,
+          8719,
+          8721,
+          8723,
+          8725,
+          8727
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 51,
+        "start_ordinal": 8807,
+        "elapsed_ms": 2625,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 3,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8887
+          },
+          {
+            "overlay": 142,
+            "frame": 11,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8889
+          },
+          {
+            "overlay": 141,
+            "frame": 3,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8909
+          },
+          {
+            "overlay": 141,
+            "frame": 11,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 8911
+          }
+        ],
+        "body_draw_ordinals": [
+          8891,
+          8893,
+          8895,
+          8897,
+          8899,
+          8901,
+          8903,
+          8905,
+          8907
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 52,
+        "start_ordinal": 8987,
+        "elapsed_ms": 2672,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 4,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9069
+          },
+          {
+            "overlay": 142,
+            "frame": 12,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9071
+          },
+          {
+            "overlay": 141,
+            "frame": 4,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9091
+          },
+          {
+            "overlay": 141,
+            "frame": 12,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9093
+          }
+        ],
+        "body_draw_ordinals": [
+          9073,
+          9075,
+          9077,
+          9079,
+          9081,
+          9083,
+          9085,
+          9087,
+          9089
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 53,
+        "start_ordinal": 9169,
+        "elapsed_ms": 2750,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 5,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9251
+          },
+          {
+            "overlay": 142,
+            "frame": 13,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9253
+          },
+          {
+            "overlay": 141,
+            "frame": 5,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9273
+          },
+          {
+            "overlay": 141,
+            "frame": 13,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9275
+          }
+        ],
+        "body_draw_ordinals": [
+          9255,
+          9257,
+          9259,
+          9261,
+          9263,
+          9265,
+          9267,
+          9269,
+          9271
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 54,
+        "start_ordinal": 9351,
+        "elapsed_ms": 2828,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 7,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9437
+          },
+          {
+            "overlay": 142,
+            "frame": 15,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9439
+          },
+          {
+            "overlay": 141,
+            "frame": 7,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9459
+          },
+          {
+            "overlay": 141,
+            "frame": 15,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9461
+          }
+        ],
+        "body_draw_ordinals": [
+          9441,
+          9443,
+          9445,
+          9447,
+          9449,
+          9451,
+          9453,
+          9455,
+          9457
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 55,
+        "start_ordinal": 9537,
+        "elapsed_ms": 2906,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 8,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9621
+          },
+          {
+            "overlay": 142,
+            "frame": 16,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9623
+          },
+          {
+            "overlay": 141,
+            "frame": 8,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9643
+          },
+          {
+            "overlay": 141,
+            "frame": 16,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9645
+          }
+        ],
+        "body_draw_ordinals": [
+          9625,
+          9627,
+          9629,
+          9631,
+          9633,
+          9635,
+          9637,
+          9639,
+          9641
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 56,
+        "start_ordinal": 9721,
+        "elapsed_ms": 3000,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 10,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9811
+          },
+          {
+            "overlay": 142,
+            "frame": 18,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9813
+          },
+          {
+            "overlay": 141,
+            "frame": 10,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9833
+          },
+          {
+            "overlay": 141,
+            "frame": 18,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 9835
+          }
+        ],
+        "body_draw_ordinals": [
+          9815,
+          9817,
+          9819,
+          9821,
+          9823,
+          9825,
+          9827,
+          9829,
+          9831
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      },
+      {
+        "index": 57,
+        "start_ordinal": 9911,
+        "elapsed_ms": 3047,
+        "draws": [
+          {
+            "overlay": 142,
+            "frame": 11,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 10001
+          },
+          {
+            "overlay": 142,
+            "frame": 19,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 10003
+          },
+          {
+            "overlay": 141,
+            "frame": 11,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 10023
+          },
+          {
+            "overlay": 141,
+            "frame": 19,
+            "direction": 51,
+            "screen_x": 320,
+            "screen_y": 232,
+            "ordinal": 10025
+          }
+        ],
+        "body_draw_ordinals": [
+          10005,
+          10007,
+          10009,
+          10011,
+          10013,
+          10015,
+          10017,
+          10019,
+          10021
+        ],
+        "closed_by_next_start_draw": true,
+        "overlay_counts": {
+          "141": 2,
+          "142": 2
+        },
+        "back_body_front_order_observed": true
+      }
+    ]
+  },
+  "sha256": {
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261126-175436-35c79794\\orchestrator\\worker\\capture-run\\process-session\\001-bone-armor-hit-d2gfx-minimized\\d2gfx-call-trace.jsonl": "d446a7b4c367c9d59da9d669e36fc2e8a14cdbb8ec5fe63ce305084b41341aef",
+    "tools\\original-observer\\broker\\20261121-165133-4490d598\\runs\\20261126-175702-b9aec434\\orchestrator\\worker\\capture-run\\process-session\\001-bone-armor-hit-d2gfx-minimized\\d2gfx-call-trace.jsonl": "a108536f4f14d38cb191ed23a271490f889e66f3156aeb83fe76577da0d48a7d"
+  },
+  "limitations": [
+    "Separate runs; no cross-run or D2Gfx-to-poller clock alignment",
+    "Client stat and overlay polling is read-only but non-atomic",
+    "High-AR same-level 80-base-damage test attacker; natural room enemies remain active",
+    "No per-hit attribution or exact original damage-formula equivalence is claimed",
+    "Second run native collector passed but outer failed after original exit; retained as partial evidence",
+    "Sprite collector cap is not disappearance evidence; require a closed live-body render batch",
+    "No original single-pair stage, recast or GPU/pixel parity in these samples"
+  ]
+}

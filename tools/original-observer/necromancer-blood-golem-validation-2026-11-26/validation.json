@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "date": "2026-11-26",
+  "java": "JDK 17",
+  "d2_home": "G:/BaiduNetdiskDownload/Diablo II 1.10F",
+  "mode": "headless Riiablo tests and hidden/minimized original; no foreground or global input",
+  "core": {
+    "status": "passed",
+    "tests": 37,
+    "suites": [
+      {
+        "name": "com.riiablo.engine.server.NecromancerGolemBirthPresentationTest",
+        "timestamp": "2026-11-26T05:56:32",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.NecromancerGolemReviveIntegrationTest",
+        "timestamp": "2026-11-26T05:56:38",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.NecromancerGolemSideEffectTest",
+        "timestamp": "2026-11-26T05:56:27",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.ServerEntityFactorySummonQuotaTest",
+        "timestamp": "2026-11-26T05:56:41",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.engine.server.SummonedPetSystemTest",
+        "timestamp": "2026-11-26T05:56:41",
+        "tests": "18",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'; .\\gradlew.bat :core:test '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' --tests com.riiablo.engine.server.NecromancerGolemBirthPresentationTest --tests com.riiablo.engine.server.NecromancerGolemReviveIntegrationTest --tests com.riiablo.engine.server.NecromancerGolemSideEffectTest --tests com.riiablo.engine.server.ServerEntityFactorySummonQuotaTest --tests com.riiablo.engine.server.SummonedPetSystemTest --no-daemon",
+    "log": "tools/original-observer/necromancer-blood-golem-validation-2026-11-26.log"
+  },
+  "python": {
+    "status": "passed",
+    "tests": 17,
+    "command": "python -m unittest test_animation_compare",
+    "cwd": "tools/original-observer",
+    "log": "tools/original-observer/necromancer-blood-golem-observer-validation-2026-11-26.log"
+  },
+  "original": {
+    "run_id": "20261126-134950-874b1584",
+    "runtime_status": "observed_minimized_d2gfx_partial",
+    "draws": 131,
+    "native_collector": "passed",
+    "outer_task": "failed: Original exited",
+    "action_error": "WinError 299 after original exit",
+    "mode_order": [
+      "S1",
+      "NU",
+      "WL",
+      "NU"
+    ],
+    "cleanup_confirmed": true
+  },
+  "riiablo_birth_ticks": {
+    "clay": 32,
+    "blood": 26
+  },
+  "resource_correction": "Initial run used inherited D2_HOME=G:/BaiduNetdiskDownload/Diablo II; BloodGolem Param5 read 0 instead of 1.10f 10. Final tests explicitly fixed 1.10F and passed. No gameplay values changed to hide this failure.",
+  "limitations": [
+    "Source preload and entity/path fixtures; not full GPU pipeline",
+    "Original unit_index is monster class, not unique GUID",
+    "No runtime attack, hit, life-steal visual, death or cleanup parity",
+    "Breakpoint wall times do not establish motion speeds"
+  ],
+  "d2gs": {
+    "status": "passed",
+    "tests": 7,
+    "suites": [
+      {
+        "name": "com.riiablo.server.d2gs.D2GSSimulationAssemblyTest",
+        "timestamp": "2026-11-26T05:58:34",
+        "tests": "5",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.riiablo.server.d2gs.ServerEntityLifecycleTest",
+        "timestamp": "2026-11-26T05:58:38",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "command": "$env:JAVA_HOME='C:\\Program Files\\Java\\jdk-17'; $env:D2_HOME='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'; .\\gradlew.bat :server:d2gs:test '-Pd2Home=G:/BaiduNetdiskDownload/Diablo II 1.10F' --tests com.riiablo.server.d2gs.D2GSSimulationAssemblyTest --tests com.riiablo.server.d2gs.ServerEntityLifecycleTest --no-daemon",
+    "log": "tools/original-observer/necromancer-blood-golem-d2gs-validation-2026-11-26.log"
+  },
+  "total_tests": 61,
+  "cleanup": {
+    "broker_status": "ready",
+    "active": null,
+    "child_pid": null,
+    "cleanup_blocked": false,
+    "original_processes_observed": 0
+  },
+  "source_sha256": {
+    "core/src/test/java/com/riiablo/engine/server/NecromancerGolemBirthPresentationTest.java": "8900b672f8b90a711bd9e8ac1050cd04c843353120094ff6afabb508f02e7038",
+    "core/src/test/resources/original/necromancer-blood-golem-draw-1.10f.json": "32276dda25afa0631b9c6caa6a0a7940e6fbd6975d2cf1624535e547b2ee0b68",
+    "tools/original-observer/normalize_d2gfx_necromancer_golem_trace.py": "894e01bc3dce884a3b82a5594d8a1955fd75d7d065cb94128f80b403d6918730",
+    "tools/original-observer/animation_compare.py": "09b2ce636674f84e77460de0ee14d2e1fed8fa6a0ea096ba0b875b4c65a7c5b3",
+    "tools/original-observer/process-session.py": "a04f99213feb829d9973b294e416eeeaf7ac7eb367890509a4853c61bf62bf38",
+    "tools/original-observer/test_animation_compare.py": "3af6a9bb941389e9982716e38128e0fd6a974e321b296995ca313510be642db1"
+  }
+}

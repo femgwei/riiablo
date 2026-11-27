@@ -24,6 +24,7 @@ public class OverlayStepper extends IntervalIteratingSystem {
 
   private void step(Overlay overlay) {
     if (NativeArcticCastOverlay.handles(overlay)) return; // OverlayManager owns its independent clock.
+    if (NativeBoneArmorPresentation.handles(overlay)) return;
     if (overlay.entry != null && "enchant".equalsIgnoreCase(overlay.entry.overlay)) {
       overlay.nativeFrame++;
       int frames = overlay.animation.getNumFramesPerDir();

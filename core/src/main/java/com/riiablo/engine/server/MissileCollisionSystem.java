@@ -454,8 +454,11 @@ public class MissileCollisionSystem extends IteratingSystem {
           || com.riiablo.engine.server.missile.NativeInfernoMotion.handles(missile.missile)
           || com.riiablo.engine.server.missile.NativeBoneSpearMotion.handles(missile.missile)
           || com.riiablo.engine.server.missile.NativePoisonJavelinMotion.usesCellOrigin(missile.missile)
+          || com.riiablo.engine.server.missile.NativePoisonNovaMotion.handles(missile.missile)
+          || com.riiablo.engine.server.missile.NativeBoneSpiritMotion.handles(missile.missile)
           || missile.poisonCloudTraveling && missile.missile != null
-          && ("plaguejavcloud".equalsIgnoreCase(missile.missile.Missile)
+          && ("poisonexplosioncloud".equalsIgnoreCase(missile.missile.Missile)
+              || "plaguejavcloud".equalsIgnoreCase(missile.missile.Missile)
               || "poisonjavcloud".equalsIgnoreCase(missile.missile.Missile));
       int nextPrecisionX = 0, nextPrecisionY = 0;
       boolean rawPoisonPath = fixedPoisonPath && position.hasNativePrecision();

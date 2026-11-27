@@ -45,6 +45,7 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<com.riiablo.presentation.component.DruidWindAnimationClock> mDruidWindClock;
   protected ComponentMapper<com.riiablo.presentation.component.DruidWindFlight> mDruidWindFlight;
+  protected ComponentMapper<com.riiablo.presentation.component.CorpseFragment> mCorpseFragment;
   @com.artemis.annotations.Wire(name = "factory")
   protected EntityFactory factory;
   @com.artemis.annotations.Wire(failOnNull = false)
@@ -80,6 +81,11 @@ public class MissileImpactPresentationSystem extends IteratingSystem {
         world.getSystem(ReferenceElementalPresentationSystem.class);
     if (referenceElemental != null && referenceElemental.ownsPresentation(entityId)) return;
     Missile visual = mMissile.get(entityId);
+    if (mCorpseFragment.has(entityId)) {
+      if (NativeCorpseFragmentPresentation.advance(visual, mCorpseFragment.get(entityId),
+          mPosition.get(entityId), mVelocity.get(entityId).velocity, world.delta)) world.delete(entityId);
+      return;
+    }
     if (mDruidWindFlight.has(entityId)) return; // Native client wind system owns motion and TTL, including cold assets.
     if (NativeDruidWindPresentation.handles(visual) && !visual.authoritative && !visual.presentationOnly) {
       com.riiablo.presentation.component.DruidWindAnimationClock clock = mDruidWindClock.create(entityId);

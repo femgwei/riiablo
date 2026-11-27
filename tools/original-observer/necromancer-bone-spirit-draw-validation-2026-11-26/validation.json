@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "status": "partial_original_draw_and_native_motion_validated",
+  "tests": [
+    {
+      "name": "com.riiablo.engine.server.NativeBoneSpiritMotionTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.NativePoisonNovaMotionTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.NecromancerPoisonNovaIntegrationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "com.riiablo.engine.server.NecromancerDamageOwnershipTest",
+      "tests": "passed",
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "com.riiablo.server.d2gs.D2GSSimulationAssemblyTest",
+      "tests": "passed",
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "com.riiablo.server.d2gs.ServerEntityLifecycleTest",
+      "tests": "passed",
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "source_sha256": {
+    "core/src/main/java/com/riiablo/engine/server/ServerEntityFactory.java": "5c45cf143855f465cfa8c28aa88ff525f6d146d0845060dcede0594b8722f37d",
+    "core/src/main/java/com/riiablo/engine/server/MissileCollisionSystem.java": "e58709c1bcf0d6f3ddd797a7ef122620eb9423bc18c384031081f644210a0c44",
+    "core/src/main/java/com/riiablo/engine/server/missile/NativeBoneSpiritMotion.java": "c82bc236c443cd3c445a08979df636328db0dfb553c11e8ff802607a66a8fd12",
+    "core/src/test/java/com/riiablo/engine/server/NativeBoneSpiritMotionTest.java": "e1c7b3a6fb16c66c3bccf64ca914c1a2893478d95259034880664b296074550c",
+    "tools/original-observer/orchestrator.py": "118b5ce1a1f56c0d152b7c85ba1592251ec953a1198862ccbf33ed0d94effe55",
+    "tools/original-observer/normalize_d2gfx_necromancer_bone_spirit_trace.py": "911d0b940ee1a8fdfacb692dedde0eed64666fb8242dad6abffe5b9e9782942e"
+  },
+  "original": {
+    "run": "20261126-084711-c125e2a8",
+    "draw_trace": "tools/original-observer/necromancer-bone-spirit-original-draw-2026-11-26.json",
+    "draw_count": 80,
+    "window_state": "minimized",
+    "collector_status": "passed",
+    "outer_job_status": "passed",
+    "debugger_cleanup_confirmed": true,
+    "impact_class_327_observed": false
+  },
+  "replay": {
+    "sampled_direction": 56,
+    "frame_sequence": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "native_velocity": 14.0625,
+    "native_range_frames": 128
+  },
+  "unknown": [
+    "caster COF body animation",
+    "controlled impact timing",
+    "final native cleanup",
+    "GPU blend/palette equality"
+  ]
+}

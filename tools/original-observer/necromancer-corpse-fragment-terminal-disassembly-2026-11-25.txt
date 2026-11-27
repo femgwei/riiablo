@@ -1,0 +1,20 @@
+
+G:/BaiduNetdiskDownload/Diablo II 1.10F/D2Client.dll:     file format pei-i386
+
+
+Disassembly of section .text:
+
+6fb31540 <.text+0x90540>:
+6fb31540:	56                   	push   %esi
+6fb31541:	8b f1                	mov    %ecx,%esi
+6fb31543:	56                   	push   %esi
+6fb31544:	e8 b7 9e 03 00       	call   0x6fb6b400
+6fb31549:	85 c0                	test   %eax,%eax
+6fb3154b:	8b ce                	mov    %esi,%ecx
+6fb3154d:	74 0d                	je     0x6fb3155c
+6fb3154f:	e8 ec 7f ff ff       	call   0x6fb29540
+6fb31554:	8b ce                	mov    %esi,%ecx
+6fb31556:	5e                   	pop    %esi
+6fb31557:	e9 84 81 ff ff       	jmp    0x6fb296e0
+6fb3155c:	5e                   	pop    %esi
+6fb3155d:	e9 1e c3 00 00       	jmp    0x6fb3d880

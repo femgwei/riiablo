@@ -44,6 +44,20 @@ class AuthoritativeAreaSkillPresentationTest extends RiiabloTest {
   }
 
   @Test
+  void teethReusesAuthoritativeSrvDo008FanOnLocalAndNetworkCasts() {
+    Skills.Entry skill = Riiablo.files.skills.get("Teeth");
+    assertNotNull(skill);
+    assertEquals(8, skill.srvdofunc);
+    // Teeth shares SrvDo008 with Multiple Shot. The callback must not add a
+    // second ownerless cltmissilea fan: server entities own trajectory,
+    // collision, expiry, and cleanup on both local and network clients.
+    assertTrue(SkillCastHandler.shouldReuseServerMissile(skill,
+        false, false, false, false, false, false, false, true), skill.skill);
+    assertTrue(SkillCastHandler.shouldReuseServerMissile(skill,
+        true, false, false, false, false, false, false), skill.skill);
+  }
+
+  @Test
   void arcticBlastUsesTheLocalAuthoritativeStreamMissile() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.ARCTIC_BLAST);
     assertNotNull(skill);

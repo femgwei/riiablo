@@ -525,12 +525,25 @@ public class ClientEntityFactory extends ServerEntityFactory {
   @Override
   public boolean resurrectMonster(int monsterId, int sourceId) {
     if (!super.resurrectMonster(monsterId, sourceId)) return false;
+    attachRestoredMonsterPresentation(monsterId);
+    return true;
+  }
+
+  @Override
+  public boolean reviveMonster(int monsterId, int ownerId) {
+    if (!super.reviveMonster(monsterId, ownerId)) return false;
+    attachRestoredMonsterPresentation(monsterId);
+    return true;
+  }
+
+  private void attachRestoredMonsterPresentation(int monsterId) {
+    // DeathHandler removes the physics marker at DD. Both resurrection entry
+    // points must reinsert it so Box2D can rebuild the local movement body.
+    attachMonsterPresentation(monsterId);
     Monster monster = mMonster.get(monsterId);
     if (monster.monstats2 != null && monster.monstats2.isSel) {
       mSelectable.create(monsterId);
     }
-    mBox2DBody.create(monsterId);
-    return true;
   }
 
   @Override

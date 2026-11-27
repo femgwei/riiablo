@@ -228,7 +228,7 @@ public class Pathfinder extends IteratingSystem {
       boolean ownerFollowTarget = mMercenary.has(entityId)
           && isMercenaryOwnerTarget(mMercenary.get(entityId), targetId);
       if (!ownerFollowTarget && mSummonedPet.has(entityId)) {
-        ownerFollowTarget = isValkyrieOwnerTarget(mSummonedPet.get(entityId), targetId);
+        ownerFollowTarget = isSummonOwnerTarget(mSummonedPet.get(entityId), targetId);
       }
       // Charge owns a melee impact even when the monster also fires missiles.
       if (!ownerFollowTarget && !isMonsterCharge(entityId) && mMonster.has(entityId)) {
@@ -423,9 +423,9 @@ public class Pathfinder extends IteratingSystem {
         && mercenary.ownerId == targetId;
   }
 
-  static boolean isValkyrieOwnerTarget(SummonedPet pet, int targetId) {
+  static boolean isSummonOwnerTarget(SummonedPet pet, int targetId) {
     return pet != null && !pet.passive && !pet.boneWall
-        && pet.petType != null && pet.petType.equalsIgnoreCase("valkyrie")
+        && pet.petType != null
         && pet.ownerId != Engine.INVALID_ENTITY && pet.ownerId == targetId;
   }
 

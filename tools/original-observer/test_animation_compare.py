@@ -3,8 +3,19 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from animation_compare import (client_trace, compare, promote_client_candidates,
-                               semantic_event_diff, validate, write_trace)
+from animation_compare import (client_trace, compare, expected_capture_skill_mode,
+                               promote_client_candidates, semantic_event_diff,
+                               validate, write_trace)
+
+
+class CaptureSkillModeTest(unittest.TestCase):
+    def test_reviewed_necromancer_fixtures_expect_sc(self):
+        for skill in (68, 70, 74, 75, 80, 83, 85, 92, 93, 94, 95):
+            with self.subTest(skill=skill):
+                self.assertEqual(10, expected_capture_skill_mode({"class": 2, "skill": skill}))
+
+    def test_whirlwind_sequence_contract_is_preserved(self):
+        self.assertEqual(18, expected_capture_skill_mode({"class": 4, "skill": 151}))
 
 
 def trace(root, name, animation=True, visual=False, position=1000):

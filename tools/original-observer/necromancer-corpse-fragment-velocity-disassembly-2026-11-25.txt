@@ -1,0 +1,127 @@
+
+G:/BaiduNetdiskDownload/Diablo II 1.10F/D2Client.dll:     file format pei-i386
+
+
+Disassembly of section .text:
+
+6fb3e2f0 <.text+0x9d2f0>:
+6fb3e2f0:	74 09                	je     0x6fb3e2fb
+6fb3e2f2:	8b 6b 28             	mov    0x28(%ebx),%ebp
+6fb3e2f5:	a8 10                	test   $0x10,%al
+6fb3e2f7:	75 26                	jne    0x6fb3e31f
+6fb3e2f9:	eb 21                	jmp    0x6fb3e31c
+6fb3e2fb:	33 c0                	xor    %eax,%eax
+6fb3e2fd:	8a 87 9b 00 00 00    	mov    0x9b(%edi),%al
+6fb3e303:	0f af 43 30          	imul   0x30(%ebx),%eax
+6fb3e307:	99                   	cltd   
+6fb3e308:	83 e2 07             	and    $0x7,%edx
+6fb3e30b:	03 c2                	add    %edx,%eax
+6fb3e30d:	33 d2                	xor    %edx,%edx
+6fb3e30f:	8a 97 9a 00 00 00    	mov    0x9a(%edi),%dl
+6fb3e315:	8b e8                	mov    %eax,%ebp
+6fb3e317:	c1 fd 03             	sar    $0x3,%ebp
+6fb3e31a:	03 ea                	add    %edx,%ebp
+6fb3e31c:	c1 e5 08             	shl    $0x8,%ebp
+6fb3e31f:	8b 43 04             	mov    0x4(%ebx),%eax
+6fb3e322:	c7 44 24 28 64 00 00 	movl   $0x64,0x28(%esp)
+6fb3e329:	00 
+6fb3e32a:	85 c0                	test   %eax,%eax
+6fb3e32c:	0f 84 c7 00 00 00    	je     0x6fb3e3f9
+6fb3e332:	8b 15 b4 dd b6 6f    	mov    0x6fb6ddb4,%edx
+6fb3e338:	8a 4f 04             	mov    0x4(%edi),%cl
+6fb3e33b:	84 4a 0c             	test   %cl,0xc(%edx)
+6fb3e33e:	0f 84 b5 00 00 00    	je     0x6fb3e3f9
+6fb3e344:	6a 57                	push   $0x57
+6fb3e346:	50                   	push   %eax
+6fb3e347:	e8 c6 c7 02 00       	call   0x6fb6ab12
+6fb3e34c:	85 c0                	test   %eax,%eax
+6fb3e34e:	0f 84 a5 00 00 00    	je     0x6fb3e3f9
+6fb3e354:	8b 43 04             	mov    0x4(%ebx),%eax
+6fb3e357:	6a 57                	push   $0x57
+6fb3e359:	50                   	push   %eax
+6fb3e35a:	e8 21 c9 02 00       	call   0x6fb6ac80
+6fb3e35f:	85 c0                	test   %eax,%eax
+6fb3e361:	0f 84 92 00 00 00    	je     0x6fb3e3f9
+6fb3e367:	6a 00                	push   $0x0
+6fb3e369:	68 a1 00 00 00       	push   $0xa1
+6fb3e36e:	50                   	push   %eax
+6fb3e36f:	e8 42 c9 02 00       	call   0x6fb6acb6
+6fb3e374:	8b c8                	mov    %eax,%ecx
+6fb3e376:	81 fd 00 00 10 00    	cmp    $0x100000,%ebp
+6fb3e37c:	89 4c 24 28          	mov    %ecx,0x28(%esp)
+6fb3e380:	7e 23                	jle    0x6fb3e3a5
+6fb3e382:	8b d5                	mov    %ebp,%edx
+6fb3e384:	83 e2 f0             	and    $0xfffffff0,%edx
+6fb3e387:	81 fa 40 06 00 00    	cmp    $0x640,%edx
+6fb3e38d:	7c 2b                	jl     0x6fb3e3ba
+6fb3e38f:	b8 1f 85 eb 51       	mov    $0x51eb851f,%eax
+6fb3e394:	f7 ed                	imul   %ebp
+6fb3e396:	c1 fa 05             	sar    $0x5,%edx
+6fb3e399:	8b c2                	mov    %edx,%eax
+6fb3e39b:	c1 e8 1f             	shr    $0x1f,%eax
+6fb3e39e:	03 d0                	add    %eax,%edx
+6fb3e3a0:	0f af d1             	imul   %ecx,%edx
+6fb3e3a3:	eb 52                	jmp    0x6fb3e3f7
+6fb3e3a5:	81 f9 00 00 01 00    	cmp    $0x10000,%ecx
+6fb3e3ab:	7e 36                	jle    0x6fb3e3e3
+6fb3e3ad:	8b d1                	mov    %ecx,%edx
+6fb3e3af:	83 e2 f0             	and    $0xfffffff0,%edx
+6fb3e3b2:	81 fa 40 06 00 00    	cmp    $0x640,%edx
+6fb3e3b8:	7d 13                	jge    0x6fb3e3cd
+6fb3e3ba:	8b c1                	mov    %ecx,%eax
+6fb3e3bc:	6a 00                	push   $0x0
+6fb3e3be:	f7 ed                	imul   %ebp
+6fb3e3c0:	6a 64                	push   $0x64
+6fb3e3c2:	52                   	push   %edx
+6fb3e3c3:	50                   	push   %eax
+6fb3e3c4:	e8 d7 2c 02 00       	call   0x6fb610a0
+6fb3e3c9:	8b e8                	mov    %eax,%ebp
+6fb3e3cb:	eb 2c                	jmp    0x6fb3e3f9
+6fb3e3cd:	b8 1f 85 eb 51       	mov    $0x51eb851f,%eax
+6fb3e3d2:	f7 e9                	imul   %ecx
+6fb3e3d4:	c1 fa 05             	sar    $0x5,%edx
+6fb3e3d7:	8b c2                	mov    %edx,%eax
+6fb3e3d9:	c1 e8 1f             	shr    $0x1f,%eax
+6fb3e3dc:	03 d0                	add    %eax,%edx
+6fb3e3de:	0f af ea             	imul   %edx,%ebp
+6fb3e3e1:	eb 16                	jmp    0x6fb3e3f9
+6fb3e3e3:	0f af cd             	imul   %ebp,%ecx
+6fb3e3e6:	b8 1f 85 eb 51       	mov    $0x51eb851f,%eax
+6fb3e3eb:	f7 e9                	imul   %ecx
+6fb3e3ed:	c1 fa 05             	sar    $0x5,%edx
+6fb3e3f0:	8b ca                	mov    %edx,%ecx
+6fb3e3f2:	c1 e9 1f             	shr    $0x1f,%ecx
+6fb3e3f5:	03 d1                	add    %ecx,%edx
+6fb3e3f7:	8b ea                	mov    %edx,%ebp
+6fb3e3f9:	85 ed                	test   %ebp,%ebp
+6fb3e3fb:	74 6b                	je     0x6fb3e468
+6fb3e3fd:	81 fd 00 00 10 00    	cmp    $0x100000,%ebp
+6fb3e403:	7e 46                	jle    0x6fb3e44b
+6fb3e405:	8b d5                	mov    %ebp,%edx
+6fb3e407:	83 e2 f0             	and    $0xfffffff0,%edx
+6fb3e40a:	81 fa 40 06 00 00    	cmp    $0x640,%edx
+6fb3e410:	7d 1d                	jge    0x6fb3e42f
+6fb3e412:	8b c5                	mov    %ebp,%eax
+6fb3e414:	6a 00                	push   $0x0
+6fb3e416:	99                   	cltd   
+6fb3e417:	6a 4b                	push   $0x4b
+6fb3e419:	52                   	push   %edx
+6fb3e41a:	50                   	push   %eax
+6fb3e41b:	e8 a0 34 02 00       	call   0x6fb618c0
+6fb3e420:	6a 00                	push   $0x0
+6fb3e422:	6a 64                	push   $0x64
+6fb3e424:	52                   	push   %edx
+6fb3e425:	50                   	push   %eax
+6fb3e426:	e8 75 2c 02 00       	call   0x6fb610a0
+6fb3e42b:	8b e8                	mov    %eax,%ebp
+6fb3e42d:	eb 39                	jmp    0x6fb3e468
+6fb3e42f:	b8 1f 85 eb 51       	mov    $0x51eb851f,%eax
+6fb3e434:	f7 ed                	imul   %ebp
+6fb3e436:	c1 fa 05             	sar    $0x5,%edx
+6fb3e439:	8b c2                	mov    %edx,%eax
+6fb3e43b:	c1 e8 1f             	shr    $0x1f,%eax
+6fb3e43e:	03 d0                	add    %eax,%edx
+6fb3e440:	8d 04 52             	lea    (%edx,%edx,2),%eax
+6fb3e443:	8d 04 80             	lea    (%eax,%eax,4),%eax
+6fb3e446:	8d 2c 80             	lea    (%eax,%eax,4),%ebp
+6fb3e449:	eb 1d                	jmp    0x6fb3e468

@@ -52,6 +52,7 @@ public class StateOverlaySystem extends IteratingSystem {
   private final IntSet summonSpawnOverlays = new IntSet();
   private final com.badlogic.gdx.utils.IntIntMap cycloneCounts = new com.badlogic.gdx.utils.IntIntMap();
   private final com.badlogic.gdx.utils.IntIntMap cycloneRevisions = new com.badlogic.gdx.utils.IntIntMap();
+  private final NativeBoneArmorPresentation boneArmor = new NativeBoneArmorPresentation();
 
   /** Native States.txt owns curse/buff visuals; damage is not required to display a state. */
   private void reconcileStateOverlays(int entity, UnitStates states) {
@@ -69,6 +70,10 @@ public class StateOverlaySystem extends IteratingSystem {
       active.add(id);
       States.Entry definition = clientContext.files() == null || clientContext.files().States == null
           ? null : clientContext.files().States.get(id);
+      if (id == StateId.BONEARMOR) {
+        boneArmor.reconcile(entity, state, clientContext.files(), overlays);
+        continue;
+      }
       if (id == StateId.CYCLONEARMOR) {
         int count = NativeCycloneArmorPresentation.count(state);
         // Retail rebuilds every pair on a count increase; loss only removes
@@ -129,6 +134,7 @@ public class StateOverlaySystem extends IteratingSystem {
         overlays.set(entity, definition.removeOverlay);
     }
     overlayStates.put(entity, active);
+    if (!active.contains(StateId.BONEARMOR)) boneArmor.removed(entity);
     if (!active.contains(StateId.ENCHANT)) enchantRevisions.remove(entity, -1);
     if (!active.contains(StateId.CYCLONEARMOR)) {
       cycloneCounts.remove(entity, 0);
@@ -153,7 +159,7 @@ public class StateOverlaySystem extends IteratingSystem {
 
     reconcileStateOverlays(entityId, states);
     reconcileWeaponTransforms(entityId, states);
-    reconcileColdTransform(entityId, elementalColorShift(states));
+    reconcileColdTransform(entityId, stateColorShift(states));
   }
 
   /** Native elemental presentation: COLD/FREEZE blue or POISON green. */
@@ -199,6 +205,25 @@ public class StateOverlaySystem extends IteratingSystem {
       }
     }
     return best == null ? fallback : best.colorShift;
+  }
+
+  /** Native States.txt colorshift, including Revive's black/gray palette. */
+  int stateColorShift(UnitStates states) {
+    int elemental = elementalColorShift(states);
+    if (!states.stateList.hasState(StateId.REVIVE)) return elemental;
+    States table = clientContext.files() == null ? null : clientContext.files().States;
+    States.Entry revive = table == null ? null : table.get(StateId.REVIVE);
+    if (revive == null) return elemental;
+    // Keep the established cold/poison hue policy; Revive is the resident
+    // base state and yields to elemental states with a higher color priority.
+    if (elemental >= 0) {
+      for (int id : new int[] {StateId.COLD, StateId.FREEZE, StateId.POISON}) {
+        States.Entry row = table.get(id);
+        if (states.stateList.hasState(id) && row != null
+            && row.colorPriority > revive.colorPriority) return elemental;
+      }
+    }
+    return revive.colorShift;
   }
 
   /** Applies the native PL2 hue row directly to loaded animation layers. */
@@ -308,6 +333,7 @@ public class StateOverlaySystem extends IteratingSystem {
 
   @Override
   protected void removed(int entityId) {
+    boneArmor.removed(entityId);
     cycloneCounts.remove(entityId, 0);
     cycloneRevisions.remove(entityId, -1);
     enchantRevisions.remove(entityId, -1);

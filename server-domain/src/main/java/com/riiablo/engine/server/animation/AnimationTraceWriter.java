@@ -63,8 +63,18 @@ public final class AnimationTraceWriter implements AutoCloseable {
       String token, String wclass, int animationFrameRaw, int frameCount, int speed,
       Collection<String> keyframes, Integer xFp16, Integer yFp16,
       Collection<String> combatEvents, String visualSha256) throws IOException {
+    frame(tick, gameFrame, -1, modeId, mode, token, wclass, animationFrameRaw,
+        frameCount, speed, keyframes, xFp16, yFp16, combatEvents, visualSha256);
+  }
+
+  /** Standard frame with an optional authoritative entity identity. */
+  public synchronized void frame(long tick, int gameFrame, int entityId, int modeId, String mode,
+      String token, String wclass, int animationFrameRaw, int frameCount, int speed,
+      Collection<String> keyframes, Integer xFp16, Integer yFp16,
+      Collection<String> combatEvents, String visualSha256) throws IOException {
     Map<String, Object> values = new LinkedHashMap<>();
     values.put("game_frame", gameFrame);
+    if (entityId >= 0) values.put("entity_id", entityId);
     values.put("mode_id", modeId);
     values.put("mode", mode);
     values.put("token", token);

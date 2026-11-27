@@ -132,10 +132,12 @@ struct Controller {
   void handles() {
     if (event.dwDebugEventCode == CREATE_PROCESS_DEBUG_EVENT) {
       if (event.u.CreateProcessInfo.hFile) CloseHandle(event.u.CreateProcessInfo.hFile);
-      if (event.u.CreateProcessInfo.hProcess) CloseHandle(event.u.CreateProcessInfo.hProcess);
-      if (event.u.CreateProcessInfo.hThread) CloseHandle(event.u.CreateProcessInfo.hThread);
-    } else if (event.dwDebugEventCode == CREATE_THREAD_DEBUG_EVENT) {
-      if (event.u.CreateThread.hThread) CloseHandle(event.u.CreateThread.hThread);
+      // Debug-event process/thread handles belong to the debugger lifecycle:
+      // Windows closes them when the matching EXIT event is continued.
+      // Closing early permits a trace file to reuse the value, after which
+      // ContinueDebugEvent closes that file instead. See the owned no-window
+      // debug_event_handle_probe reproduction. Independently opened handles
+      // in process/threads remain ours and are closed by the destructor.
     } else if (event.dwDebugEventCode == LOAD_DLL_DEBUG_EVENT && event.u.LoadDll.hFile) {
       CloseHandle(event.u.LoadDll.hFile);
     }

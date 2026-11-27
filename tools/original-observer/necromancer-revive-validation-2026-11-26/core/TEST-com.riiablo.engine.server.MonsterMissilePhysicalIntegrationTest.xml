@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-11-26T03:45:26" hostname="DESKTOP-7GGAVHU" time="3.066">
+  <properties/>
+  <testcase name="shieldBlocksSubHpPhysicalEvenWhenLegacySummaryIsZero()" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="2.728"/>
+  <testcase name="[1] 10, 11, 128, 8, 0, 0, 0, 2815" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.065"/>
+  <testcase name="[2] 10, 10, 128, 8, 0, 0, 0, 2560" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.009"/>
+  <testcase name="[3] 11, 10, 128, 8, 0, 0, 0, 2815" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.007"/>
+  <testcase name="[4] 10, 11, 128, 8, 75, 0, 0, 4926" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.007"/>
+  <testcase name="[5] 10, 11, 128, 8, -100, 0, 0, 282" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.009"/>
+  <testcase name="[6] 1, 1, 64, 8, 0, 0, 0, 128" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.006"/>
+  <testcase name="[7] 0, 0, 0, 7, 0, 0, 0, 128" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.005"/>
+  <testcase name="[8] 10, 11, 128, 8, 0, 10, 50, 127" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.006"/>
+  <testcase name="[9] 10, 11, 128, 8, 0, 10, -50, 382" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.005"/>
+  <testcase name="[10] 10, 11, 128, 8, 0, 11, 0, 0" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.005"/>
+  <testcase name="[11] 0, 0, 128, 8, 0, 0, 0, 0" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.005"/>
+  <testcase name="[12] 0, 11, 128, 8, 0, 0, 0, 0" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.005"/>
+  <testcase name="realQuillRatRowsCaptureWholeSourceBeforeSourceScaleDivision()" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.004"/>
+  <testcase name="missedRatingCheckDoesNotApplyPhysicalDamage()" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.004"/>
+  <testcase name="skillAndFormulaReinitializationDoNotReuseStaleNativePacket()" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.01"/>
+  <testcase name="inFlightSourceAndStateChangesDoNotChangePhysicalSnapshot()" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.015"/>
+  <testcase name="attackTwoProfileReplacesFixedEndpointsWithoutLosingCapturedBonus()" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.006"/>
+  <testcase name="playerAndExplicitHirelingOptOutRetainLegacyCreationPolicy()" classname="com.riiablo.engine.server.MonsterMissilePhysicalIntegrationTest" time="0.004"/>
+  <system-out><![CDATA[[MPQ] Loading patch_d2.mpq...
+[MPQ] Loading d2exp.mpq...
+[MPQ] Loading d2xmusic.mpq...
+[MPQ] Loading d2xtalk.mpq...
+[MPQ] Loading d2xvideo.mpq...
+[MPQ] Loading d2data.mpq...
+[MPQ] Loading d2char.mpq...
+[MPQ] Loading d2sfx.mpq...
+[MPQ] Loading d2music.mpq...
+[MPQ] Loading d2speech.mpq...
+[MPQ] Loading d2video.mpq...
+]]></system-out>
+  <system-err><![CDATA[[Excel] class com.riiablo.codec.excel.AutoMap$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using LevelName
+[Excel] class com.riiablo.codec.excel.LvlSub$Entry does not have a interface com.riiablo.codec.excel.Excel$Entry$Key set! Using Name
+]]></system-err>
+</testsuite>

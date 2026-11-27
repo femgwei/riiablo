@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.riiablo.engine.server.PathfinderTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-26T03:45:41" hostname="DESKTOP-7GGAVHU" time="0.056">
+  <properties/>
+  <testcase name="pathfindRetainsFinalDestinationIndependentlyOfCurrentWaypoint()" classname="com.riiablo.engine.server.PathfinderTest" time="0.016"/>
+  <testcase name="movementStopsAtTheCurrentWaypointInsteadOfCuttingTheNextCorner()" classname="com.riiablo.engine.server.PathfinderTest" time="0.017"/>
+  <testcase name="sharpMovementTurnChangesFacingImmediately()" classname="com.riiablo.engine.server.PathfinderTest" time="0.002"/>
+  <testcase name="playerRecoversOnFirstBlockedTickWithoutWaitingForHeldInput()" classname="com.riiablo.engine.server.PathfinderTest" time="0.001"/>
+  <testcase name="blockedRaycastFallbackStopsInsteadOfMovingDirectlyToTarget()" classname="com.riiablo.engine.server.PathfinderTest" time="0.0"/>
+  <testcase name="offCentreStartKeepsTheSourceWaypointWithoutConsumingTheNextNode()" classname="com.riiablo.engine.server.PathfinderTest" time="0.0"/>
+  <testcase name="meleeApproachDoesNotUsePlayerHitAllowance()" classname="com.riiablo.engine.server.PathfinderTest" time="0.007"/>
+  <testcase name="pooledAngleResetRestoresDefaultFacingInsteadOfAccumulatingRotation()" classname="com.riiablo.engine.server.PathfinderTest" time="0.001"/>
+  <testcase name="rangedReviveFollowsOwnerWithoutStoppingAtItsHostileMissileRange()" classname="com.riiablo.engine.server.PathfinderTest" time="0.0"/>
+  <testcase name="adjacentMovementDirectionMustRemainStableBeforeChangingFacing()" classname="com.riiablo.engine.server.PathfinderTest" time="0.0"/>
+  <testcase name="ordinaryMonstersCannotUseTownAsPathDestination()" classname="com.riiablo.engine.server.PathfinderTest" time="0.001"/>
+  <testcase name="mercenaryOwnerFollowIsNotRangedAttackApproach()" classname="com.riiablo.engine.server.PathfinderTest" time="0.0"/>
+  <testcase name="dynamicBlockTriggersRepathOnlyAfterARealStall()" classname="com.riiablo.engine.server.PathfinderTest" time="0.0"/>
+  <testcase name="pathfindTracksOnlyRequestedMovementWithoutProgress()" classname="com.riiablo.engine.server.PathfinderTest" time="0.001"/>
+  <testcase name="d2DirectionIdDoesNotChangeTheAuthoritativeMovementAngle()" classname="com.riiablo.engine.server.PathfinderTest" time="0.0"/>
+  <testcase name="overlappingDynamicTargetStopsApproach()" classname="com.riiablo.engine.server.PathfinderTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

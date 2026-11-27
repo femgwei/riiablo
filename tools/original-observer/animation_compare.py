@@ -32,6 +32,14 @@ FIELD_CAPABILITIES = {
 FRAME_FLAG_KEYFRAMES = {1: "ATK", 2: "MIS", 3: "SND", 4: "SKL"}
 
 
+def expected_capture_skill_mode(scenario):
+    """Player mode expected by the reviewed runtime-capture fixtures."""
+    if scenario.get("class") == 2 and scenario.get("skill") in (
+            68, 70, 74, 75, 80, 83, 85, 92, 93, 94, 95):
+        return 10  # Necromancer SC, not Whirlwind's SQ.
+    return 18  # Preserve the pre-existing sequence-capture contract.
+
+
 def _json(path):
     return json.loads(path.read_text(encoding="utf8"))
 
